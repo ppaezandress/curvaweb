@@ -1,36 +1,171 @@
 @import "tailwindcss";
 
+/* ============================================================
+   CURVA — Design System
+   Concepto: "la curva de transformación" (de esfuerzo a estructura).
+   Paleta morado→azul→verde (disruptiva, confiable, profesional) + Poppins/Inter.
+   Los nombres de token se conservan; cambian los valores.
+   ============================================================ */
+
 @theme {
-  --color-slate-950: #020617;
-  --color-slate-900: #0f172a;
-  --color-slate-800: #1e293b;
-  --color-slate-700: #334155;
-  --color-slate-600: #475569;
-  --color-slate-500: #64748b;
-  --color-slate-400: #94a3b8;
-  --color-slate-300: #cbd5e1;
-  --color-slate-200: #e2e8f0;
-  --color-slate-100: #f1f5f9;
-  --color-slate-50: #f8fafc;
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Neutros fríos (gris pizarra) */
+  --color-sand-50:  #f8fafc;
+  --color-sand-100: #f1f5f9;
+  --color-sand-200: #e2e8f0;
+  --color-sand-300: #cbd5e1;
+  --color-sand-400: #94a3b8;
+  --color-sand-500: #64748b;
+  --color-sand-600: #475569;
+  --color-sand-700: #334155;
+  --color-sand-800: #1e293b;
+  --color-sand-900: #0f172a;
+
+  /* Tinta profunda (fondos oscuros, tinte violáceo) */
+  --color-ink:   #0b0a14;
+  --color-ink-2: #12101e;
+
+  /* Acento primario — violeta disruptivo */
+  --color-ember-300: #a78bfa;
+  --color-ember:     #7c3aed;
+  --color-ember-600: #6d28d9;
+
+  /* Acento de crecimiento — esmeralda */
+  --color-jade-300: #6ee7b7;
+  --color-jade:     #10b981;
+
+  /* Acento de confianza — azul */
+  --color-gold: #2563eb;
+
+  /* Compatibilidad */
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+
+  /* Tipografía de antes: Poppins (display) + Inter (texto) */
+  --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-sans:    'Inter Variable', system-ui, -apple-system, sans-serif;
+
+  /* Movimiento */
+  --ease-curve: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-draw:  cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* Tokens que no son del theme de Tailwind */
+:root {
+  --gradient-curve: linear-gradient(110deg, #7c3aed 0%, #2563eb 50%, #10b981 100%);
+  --gradient-curve-soft: linear-gradient(110deg, #a78bfa 0%, #60a5fa 50%, #6ee7b7 100%);
+  --dur-1: 160ms; --dur-2: 320ms; --dur-3: 600ms; --dur-4: 900ms;
+}
+
+/* ----------------------------- Utilidades de marca ----------------------------- */
+
+@utility display {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
+}
+
+@utility eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* Texto con el gradiente firma (de esfuerzo a estructura) */
+@utility curve-text {
+  background: var(--gradient-curve);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility curve-text-soft {
+  background: var(--gradient-curve-soft);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ----------------------------- Superficies ----------------------------- */
+
+/* Mesh oscuro frío: morado / magenta / azul / verde */
+.surface-ink {
+  background-color: var(--color-ink);
+  background-image:
+    radial-gradient(62% 80% at 6% -5%, rgba(124, 58, 237, 0.30) 0%, transparent 55%),
+    radial-gradient(50% 60% at 102% 6%, rgba(240, 53, 106, 0.20) 0%, transparent 55%),
+    radial-gradient(72% 80% at 12% 105%, rgba(37, 99, 235, 0.26) 0%, transparent 58%),
+    radial-gradient(60% 70% at 96% 100%, rgba(16, 185, 129, 0.20) 0%, transparent 58%);
+}
+.surface-ink-soft {
+  background-color: var(--color-ink-2);
+  background-image:
+    radial-gradient(80% 90% at 50% -10%, rgba(124, 58, 237, 0.22) 0%, transparent 60%),
+    radial-gradient(64% 70% at 100% 100%, rgba(16, 185, 129, 0.16) 0%, transparent 60%),
+    radial-gradient(64% 70% at 0% 100%, rgba(37, 99, 235, 0.18) 0%, transparent 60%);
+}
+
+/* En móvil los radiales grandes son caros de pintar: los simplificamos */
+@media (max-width: 640px) {
+  .surface-ink, .surface-ink-soft {
+    background-image:
+      radial-gradient(85% 60% at 50% 0%, rgba(124, 58, 237, 0.26) 0%, transparent 60%),
+      radial-gradient(70% 50% at 100% 100%, rgba(37, 99, 235, 0.18) 0%, transparent 60%);
+  }
+}
+
+/* ----------------------------- Base ----------------------------- */
+
 html {
-  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  /* el smooth-scroll lo gestiona Lenis; sin scroll-behavior aquí */
+}
+
+body {
+  font-family: var(--font-sans);
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-ember);
+  outline-offset: 3px;
   border-radius: 4px;
 }
+
+/* Cursor glow ambiental (desktop) */
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 460px;
+  height: 460px;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transform: translate3d(var(--cx, 0), var(--cy, 0), 0) translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 60%);
+  transition: opacity 0.4s ease;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity var(--dur-3) var(--ease-curve), transform var(--dur-3) var(--ease-curve);
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+.reveal-d1 { transition-delay: 70ms; }
+.reveal-d2 { transition-delay: 140ms; }
+.reveal-d3 { transition-delay: 210ms; }
+.reveal-d4 { transition-delay: 280ms; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .reveal { opacity: 1; transform: none; }
+  .cursor-glow { display: none; }
 }

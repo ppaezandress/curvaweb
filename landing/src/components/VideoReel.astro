@@ -1,0 +1,24 @@
+---
+// Video reutilizable: autoplay solo cuando es visible (vía media.ts).
+// El poster y el <source> webm se añaden en la Fase 4 (optimización con ffmpeg).
+interface Props {
+  src: string;
+  poster?: string;
+  class?: string;
+}
+const { src, poster, class: className = '' } = Astro.props;
+const webm = src.replace(/\.mp4$/, '.webm');
+const posterSrc = poster ?? src.replace(/\.mp4$/, '-poster.jpg');
+---
+<video
+  class={className}
+  muted
+  loop
+  playsinline
+  preload="none"
+  poster={posterSrc}
+  data-autoplay
+>
+  <source src={webm} type="video/webm" />
+  <source src={src} type="video/mp4" />
+</video>

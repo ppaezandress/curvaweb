@@ -1,0 +1,125 @@
+---
+import { areas } from '../data/areas';
+
+interface Props {
+  overHero?: boolean;
+  calLink: string;
+}
+const { overHero = false, calLink } = Astro.props;
+
+const dotColor: Record<string, string> = {
+  ember: '#7c3aed',
+  gold: '#2563eb',
+  jade: '#10b981',
+};
+---
+
+<div id="site-nav" class="nav-bar fixed top-0 inset-x-0 z-50 px-3 sm:px-4 pt-3" data-over-hero={overHero ? '' : undefined}>
+  <nav class="nav-inner mx-auto max-w-6xl flex items-center justify-between rounded-2xl pl-5 pr-2.5 py-2.5" aria-label="Principal">
+    <a href="/" class="nav-logo display text-xl font-semibold tracking-tight flex items-center gap-2">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#2563eb"></stop><stop offset="1" stop-color="#10b981"></stop></linearGradient></defs></svg>
+      curva
+    </a>
+
+    <div class="flex items-center gap-1">
+      <!-- Dropdown servicios -->
+      <div class="hidden md:block relative">
+        <button data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-controls="nav-servicios-menu" class="nav-link inline-flex items-center gap-1.5">
+          Servicios
+          <svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
+        </button>
+        <div id="nav-servicios-menu" data-dropdown-menu role="menu" class="nav-menu absolute right-0 top-full mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-sand-200 p-2">
+          {areas.map((a) => (
+            <a href={a.href} role="menuitem" class="menu-item flex items-start gap-3 p-3 rounded-xl">
+              <span class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={`background:${dotColor[a.accent]}1a`}>
+                <span class="w-2.5 h-2.5 rounded-full" style={`background:${dotColor[a.accent]}`}></span>
+              </span>
+              <span>
+                <span class="text-sm font-semibold block text-ink">{a.menuLabel}</span>
+                <span class="text-xs text-sand-500 leading-snug block mt-0.5">{a.menuDesc}</span>
+              </span>
+            </a>
+          ))}
+          <a href="/#servicios" class="block text-center text-xs font-semibold text-ember px-3 py-2.5 mt-1 hover:bg-sand-50 rounded-xl transition-colors">Ver todos los servicios →</a>
+        </div>
+      </div>
+
+      <a href="/#casos" class="nav-link hidden md:inline-flex">Resultados</a>
+      <a href="/nosotros" class="nav-link hidden md:inline-flex">Nosotros</a>
+      <a href={calLink} target="_blank" rel="noopener" class="nav-cta hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors ml-1">
+        Conversemos
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+      </a>
+
+      <button data-burger aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu" class="burger md:hidden flex flex-col gap-[5px] p-2.5">
+        <span class="burger-line"></span>
+        <span class="burger-line"></span>
+        <span class="burger-line"></span>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<!-- Menú móvil -->
+<div id="mobile-menu" class="mobile-menu md:hidden">
+  <div class="flex flex-col h-full pt-24 px-7 pb-8 bg-sand-50">
+    <p class="eyebrow text-sand-400 mb-3">Servicios</p>
+    <nav class="flex flex-col" aria-label="Móvil">
+      {areas.map((a) => (
+        <a href={a.href} class="flex items-center gap-3 py-3.5 border-b border-sand-200 text-ink">
+          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={`background:${dotColor[a.accent]}`}></span>
+          <span class="text-lg font-semibold">{a.menuLabel}</span>
+        </a>
+      ))}
+    </nav>
+    <div class="flex flex-col mt-6">
+      <a href="/#casos" class="py-3.5 border-b border-sand-200 text-lg font-semibold text-sand-700">Resultados</a>
+      <a href="/nosotros" class="py-3.5 border-b border-sand-200 text-lg font-semibold text-sand-700">Nosotros</a>
+    </div>
+    <div class="mt-auto pt-8">
+      <a href={calLink} target="_blank" rel="noopener" class="block w-full text-center text-base font-semibold bg-ink text-sand-50 px-6 py-4 rounded-full">Conversemos</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .nav-inner {
+    transition: background-color .35s ease, border-color .35s ease, box-shadow .35s ease;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    background: rgba(11, 10, 20, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+  }
+  .nav-bar .nav-logo { color: #fff; }
+  .nav-bar .nav-link {
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 0.875rem; font-weight: 500;
+    padding: 0.5rem 0.85rem; border-radius: 9999px;
+    transition: background-color .2s ease, color .2s ease;
+  }
+  .nav-bar .nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+  .nav-bar .nav-cta { background: #fff; color: var(--color-ink); }
+  .nav-bar .nav-cta:hover { background: rgba(255, 255, 255, 0.88); }
+  .nav-bar .burger-line { display: block; width: 20px; height: 2px; background: #fff; transition: transform .3s ease, opacity .3s ease, background-color .35s ease; }
+
+  /* Scrolled: barra clara */
+  .nav-bar.scrolled .nav-inner { background: rgba(248, 250, 252, 0.88); border-color: var(--color-sand-200); box-shadow: 0 10px 34px rgba(11, 10, 20, 0.10); }
+  .nav-bar.scrolled .nav-logo { color: var(--color-ink); }
+  .nav-bar.scrolled .nav-link { color: var(--color-sand-600); }
+  .nav-bar.scrolled .nav-link:hover { color: var(--color-ink); background: var(--color-sand-100); }
+  .nav-bar.scrolled .nav-cta { background: var(--color-ink); color: var(--color-sand-50); }
+  .nav-bar.scrolled .nav-cta:hover { background: #2a2440; }
+  .nav-bar.scrolled .burger-line { background: var(--color-ink); }
+
+  .burger.active .burger-line:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+  .burger.active .burger-line:nth-child(2) { opacity: 0; }
+  .burger.active .burger-line:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+
+  .nav-menu { opacity: 0; transform: translateY(-8px) scale(.97); pointer-events: none; transition: opacity .25s ease, transform .25s ease; transform-origin: top right; }
+  .nav-menu.open { opacity: 1; transform: none; pointer-events: auto; }
+  .menu-item { transition: background-color .15s ease; }
+  .menu-item:hover { background-color: var(--color-sand-50); }
+
+  .mobile-menu { position: fixed; inset: 0; z-index: 40; transform: translateX(100%); transition: transform .35s var(--ease-curve); }
+  .mobile-menu.open { transform: translateX(0); }
+</style>

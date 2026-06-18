@@ -1,0 +1,79 @@
+---
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/poppins/800.css';
+import '@fontsource-variable/inter';
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import Seo from '../components/Seo.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  type?: 'website' | 'article';
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  bodyClass?: string;
+}
+
+const {
+  title,
+  description,
+  image,
+  type,
+  jsonLd,
+  bodyClass = '',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#1a1410" />
+    <Seo title={title} description={description} image={image} type={type} jsonLd={jsonLd} />
+    <ClientRouter />
+  </head>
+
+  <body class={`bg-sand-50 text-ink antialiased overflow-x-hidden ${bodyClass}`}>
+    <!-- Glow ambiental del cursor (persistente entre navegaciones) -->
+    <div id="cursor-glow" class="cursor-glow" aria-hidden="true" transition:persist></div>
+
+    <slot />
+
+    <script>
+      import { initReveal } from '../scripts/reveal';
+      import { initCursorGlow } from '../scripts/cursor-glow';
+      import { initLenis, resetLenis } from '../scripts/lenis';
+      import { initCurveDraw } from '../scripts/curve-draw';
+      import { initTilt } from '../scripts/tilt';
+      import { initNav } from '../scripts/nav';
+      import { initVideos, initAudioToggle } from '../scripts/media';
+      import { initHome } from '../scripts/home';
+
+      // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
+      initLenis();
+      initCursorGlow();
+
+      // Efímeros: re-armar en cada carga y tras cada navegación con View Transitions.
+      document.addEventListener('astro:page-load', () => {
+        initReveal();
+        initCursorGlow();
+        initCurveDraw();
+        initTilt();
+        initNav();
+        initVideos();
+        initAudioToggle();
+        initHome();
+      });
+
+      // Sincronizar Lenis tras el swap del router.
+      document.addEventListener('astro:after-swap', () => {
+        resetLenis();
+      });
+    </script>
+  </body>
+</html>

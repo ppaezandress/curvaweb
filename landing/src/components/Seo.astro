@@ -1,0 +1,51 @@
+---
+// SEO unificado: meta básicos + Open Graph + Twitter + canonical + JSON-LD.
+// Usado por BaseLayout en TODAS las páginas (home y servicios).
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  type?: 'website' | 'article';
+  canonical?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description,
+  image = '/og-default.png',
+  type = 'website',
+  canonical,
+  jsonLd,
+} = Astro.props;
+
+const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, origin).href;
+const ogImage = image.startsWith('http') ? image : new URL(image, origin).href;
+const jsonLdArray = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Open Graph -->
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={type} />
+<meta property="og:locale" content="es_MX" />
+<meta property="og:site_name" content="CURVA" />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={ogImage} />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+{
+  jsonLdArray.map((schema) => (
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  ))
+}

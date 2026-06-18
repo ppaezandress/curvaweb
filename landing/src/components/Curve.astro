@@ -1,0 +1,50 @@
+---
+// Motivo firma de CURVA: la curva de transformación (de esfuerzo a estructura).
+// Trazo con gradiente ember→gold→jade que se dibuja al cargar o con el scroll.
+interface Props {
+  variant?: 'divider' | 'band' | 'hero';
+  draw?: 'auto' | 'scroll' | 'none';
+  class?: string;
+  stroke?: number;
+}
+const {
+  variant = 'divider',
+  draw = 'scroll',
+  class: className = '',
+  stroke = 2.5,
+} = Astro.props;
+
+const uid = Math.random().toString(36).slice(2, 9);
+
+const paths: Record<string, string> = {
+  divider: 'M0,120 C220,120 300,40 600,40 C900,40 980,120 1200,70',
+  band: 'M0,150 C300,150 320,45 600,80 C880,115 900,25 1200,45',
+  hero: 'M0,175 C260,175 300,55 620,60 C940,65 980,160 1200,90',
+};
+const d = paths[variant] ?? paths.divider;
+const drawAttr = draw === 'none' ? undefined : draw;
+---
+
+<svg
+  class={className}
+  viewBox="0 0 1200 200"
+  fill="none"
+  aria-hidden="true"
+>
+  <defs>
+    <linearGradient id={`cg-${uid}`} x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff5b22"></stop>
+      <stop offset="0.5" stop-color="#e0a83e"></stop>
+      <stop offset="1" stop-color="#1f8a70"></stop>
+    </linearGradient>
+  </defs>
+  <path
+    d={d}
+    stroke={`url(#cg-${uid})`}
+    stroke-width={stroke}
+    stroke-linecap="round"
+    pathLength="1"
+    data-curve-draw={drawAttr}
+    style={drawAttr ? 'stroke-dasharray:1; stroke-dashoffset:1;' : undefined}
+  ></path>
+</svg>
