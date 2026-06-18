@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200">
+  <!-- Isotipo 5: Agua → Vapor → Cristal nuevo — estados de la materia como metáfora -->
+  <defs>
+    <linearGradient id="lw5" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+    <filter id="gl5">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="gl5soft">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="500" height="200" fill="#09090b"/>
+
+  <!-- Estado 1: Cristal congelado (hexágono, como molécula de hielo) -->
+  <polygon points="40,70 55,60 70,70 70,87 55,97 40,87" fill="none" stroke="#475569" stroke-width="2" opacity="0.5"/>
+  <!-- Grietas de descongelamiento -->
+  <line x1="50" y1="72" x2="60" y2="82" stroke="#64748b" stroke-width="0.8" opacity="0.4"/>
+  <line x1="58" y1="68" x2="52" y2="88" stroke="#64748b" stroke-width="0.8" opacity="0.3"/>
+
+  <!-- Transición: partículas dispersándose y reagrupándose -->
+  <!-- Partículas en movimiento (fase de cambio) -->
+  <circle cx="85" cy="78" r="3" fill="#6366f1" opacity="0.4" filter="url(#gl5soft)"/>
+  <circle cx="95" cy="68" r="2.5" fill="#818cf8" opacity="0.5"/>
+  <circle cx="92" cy="88" r="2" fill="#2563eb" opacity="0.4"/>
+  <circle cx="105" cy="72" r="3" fill="#2563eb" opacity="0.6" filter="url(#gl5)"/>
+  <circle cx="100" cy="82" r="1.5" fill="#38bdf8" opacity="0.5"/>
+  <circle cx="112" cy="65" r="2" fill="#38bdf8" opacity="0.5"/>
+  <circle cx="115" cy="80" r="2.5" fill="#06b6d4" opacity="0.6"/>
+
+  <!-- La curva S que guía la transformación (sutil, conectando estados) -->
+  <path d="M 70 83 C 85 90, 95 60, 125 70"
+        stroke="url(#lw5)" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4" stroke-dasharray="4,3"/>
+
+  <!-- Estado 3: Nuevo cristal (hexágono más brillante, elevado) -->
+  <polygon points="130,62 145,52 160,62 160,79 145,89 130,79" fill="none" stroke="#bfdbfe" stroke-width="2" opacity="0.8"/>
+  <!-- Estructura interna del nuevo cristal (orden) -->
+  <line x1="145" y1="52" x2="145" y2="89" stroke="#bfdbfe" stroke-width="0.5" opacity="0.3"/>
+  <line x1="130" y1="70" x2="160" y2="70" stroke="#bfdbfe" stroke-width="0.5" opacity="0.3"/>
+  <!-- Brillo -->
+  <circle cx="152" cy="55" r="3" fill="#e0f2fe" opacity="0.3" filter="url(#gl5)"/>
+
+  <!-- Wordmark -->
+  <text x="260" y="112" font-family="Inter, system-ui, sans-serif" font-size="58" font-weight="800" fill="white" letter-spacing="4">CURVA</text>
+  <text x="262" y="137" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="400" fill="#475569" letter-spacing="6">CONSULTORÍA ESTRATÉGICA</text>
+</svg>

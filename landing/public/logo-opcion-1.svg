@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <!-- Opción 1: Wordmark puro con U curva exagerada -->
+  <rect width="400" height="120" fill="#0f172a"/>
+  <text x="200" y="82" font-family="Inter, system-ui, sans-serif" font-size="64" font-weight="700" fill="white" text-anchor="middle" letter-spacing="8">CURVA</text>
+  <!-- Curva sutil debajo de la U -->
+  <path d="M 142 85 Q 162 105 182 85" stroke="#2563eb" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

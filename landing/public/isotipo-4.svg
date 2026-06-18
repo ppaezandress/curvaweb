@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200">
+  <!-- Isotipo 4: Tres barras de temperatura / estado — abstracto y bold -->
+  <defs>
+    <linearGradient id="lw4a" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <linearGradient id="lw4b" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="lw4c" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="gl4">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="500" height="200" fill="#09090b"/>
+
+  <!-- Barra 1: Congelado — rígida, horizontal -->
+  <rect x="30" y="55" width="55" height="8" rx="4" fill="url(#lw4a)" opacity="0.6"/>
+
+  <!-- Barra 2: Cambio — curva, diagonal, energía -->
+  <path d="M 30 95 C 50 95, 55 80, 85 75" stroke="url(#lw4b)" stroke-width="8" fill="none" stroke-linecap="round" filter="url(#gl4)"/>
+
+  <!-- Barra 3: Recongelado — rígida pero elevada, nueva posición -->
+  <rect x="30" y="130" width="55" height="8" rx="4" fill="url(#lw4c)" opacity="0.9"/>
+
+  <!-- Flecha de progresión sutil -->
+  <path d="M 100 60 L 100 135" stroke="#1e293b" stroke-width="1" stroke-dasharray="3,5"/>
+  <path d="M 96 130 L 100 138 L 104 130" fill="none" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Labels -->
+  <text x="105" y="62" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b" letter-spacing="1">FREEZE</text>
+  <text x="105" y="92" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#6366f1" letter-spacing="1">CHANGE</text>
+  <text x="105" y="137" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#06b6d4" letter-spacing="1">REFREEZE</text>
+
+  <!-- Wordmark -->
+  <text x="290" y="115" font-family="Inter, system-ui, sans-serif" font-size="58" font-weight="800" fill="white" letter-spacing="4">CURVA</text>
+  <text x="292" y="140" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="400" fill="#475569" letter-spacing="6">CONSULTORÍA ESTRATÉGICA</text>
+</svg>

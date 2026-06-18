@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <!-- Opción 5: Logotipo con subrayado curvo -->
+  <rect width="400" height="120" fill="#0f172a"/>
+  <!-- Wordmark -->
+  <text x="200" y="72" font-family="Inter, system-ui, sans-serif" font-size="58" font-weight="700" fill="white" text-anchor="middle" letter-spacing="12">CURVA</text>
+  <!-- Subrayado curvo elegante que recorre la palabra -->
+  <path d="M 75 88 Q 140 100 200 88 Q 260 76 325 88" stroke="#2563eb" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

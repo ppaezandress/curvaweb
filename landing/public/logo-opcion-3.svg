@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 130">
+  <!-- Opción 3: Línea curva abstracta (sigmoid) + wordmark -->
+  <rect width="400" height="130" fill="#0f172a"/>
+  <!-- Curva sigmoid de transformación A→B -->
+  <circle cx="60" cy="40" r="5" fill="#64748b"/>
+  <path d="M 65 40 Q 140 40 200 25 Q 260 10 335 10" stroke="#2563eb" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="340" cy="10" r="5" fill="#2563eb"/>
+  <!-- Wordmark debajo -->
+  <text x="200" y="100" font-family="Inter, system-ui, sans-serif" font-size="52" font-weight="700" fill="white" text-anchor="middle" letter-spacing="10">CURVA</text>
+</svg>

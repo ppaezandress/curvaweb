@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <!-- Opción 2: C con curva de crecimiento + wordmark -->
+  <rect width="400" height="120" fill="#0f172a"/>
+  <!-- Ícono C con curva ascendente -->
+  <circle cx="50" cy="60" r="30" fill="none" stroke="white" stroke-width="5"/>
+  <!-- Corte de la C -->
+  <rect x="65" y="40" width="20" height="40" fill="#0f172a"/>
+  <!-- Curva ascendente que sale de la C -->
+  <path d="M 68 72 Q 78 68 82 55 Q 86 42 95 38" stroke="#2563eb" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Wordmark -->
+  <text x="250" y="78" font-family="Inter, system-ui, sans-serif" font-size="52" font-weight="600" fill="white" text-anchor="middle" letter-spacing="6">CURVA</text>
+</svg>

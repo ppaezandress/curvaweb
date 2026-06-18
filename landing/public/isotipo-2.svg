@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200">
+  <!-- Isotipo 2: Tres estados — cristal roto → flujo → cristal nuevo -->
+  <defs>
+    <linearGradient id="lw2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="gl2">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="500" height="200" fill="#09090b"/>
+
+  <!-- FASE 1: Descongelar — cubo fragmentado -->
+  <path d="M 25 75 L 45 65 L 55 80 L 35 90 Z" fill="none" stroke="#475569" stroke-width="1.5" opacity="0.6"/>
+  <path d="M 30 90 L 42 100 L 55 92" fill="none" stroke="#475569" stroke-width="1" opacity="0.3"/>
+  <!-- Fragmentos saliendo -->
+  <rect x="48" y="62" width="6" height="6" fill="#475569" opacity="0.3" transform="rotate(15 51 65)"/>
+  <rect x="55" y="72" width="4" height="4" fill="#475569" opacity="0.2" transform="rotate(30 57 74)"/>
+
+  <!-- FASE 2: Cambio — la curva S fluida con energía -->
+  <path d="M 65 88 C 80 88, 85 115, 100 100 C 115 85, 110 55, 130 55"
+        stroke="url(#lw2)" stroke-width="5" fill="none" stroke-linecap="round" filter="url(#gl2)"/>
+  <!-- Partículas de energía en la transición -->
+  <circle cx="88" cy="102" r="2" fill="#6366f1" opacity="0.6"/>
+  <circle cx="96" cy="95" r="1.5" fill="#2563eb" opacity="0.5"/>
+  <circle cx="108" cy="72" r="2" fill="#06b6d4" opacity="0.6"/>
+  <circle cx="118" cy="60" r="1.5" fill="#06b6d4" opacity="0.4"/>
+
+  <!-- FASE 3: Recongelar — forma sólida nueva, más brillante -->
+  <path d="M 140 60 L 165 50 L 175 68 L 150 78 Z" fill="none" stroke="#bfdbfe" stroke-width="2" opacity="0.8"/>
+  <path d="M 140 60 L 150 78 L 150 92 L 140 75 Z" fill="#06b6d4" opacity="0.1"/>
+  <path d="M 150 78 L 175 68 L 175 82 L 150 92 Z" fill="#06b6d4" opacity="0.08"/>
+  <!-- Brillo -->
+  <circle cx="165" cy="50" r="3" fill="#e0f2fe" opacity="0.5"/>
+
+  <!-- Wordmark -->
+  <text x="255" y="115" font-family="Inter, system-ui, sans-serif" font-size="58" font-weight="800" fill="white" letter-spacing="4">CURVA</text>
+  <text x="257" y="140" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="400" fill="#475569" letter-spacing="6">CONSULTORÍA ESTRATÉGICA</text>
+</svg>
