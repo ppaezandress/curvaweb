@@ -1,0 +1,69 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutGrid, BarChart3, type LucideIcon } from "lucide-react";
+import { useApp } from "@/lib/app-context";
+import { memberById } from "@/lib/mock-data";
+import { Logo } from "@/components/Logo";
+import { Avatar } from "@/components/Avatar";
+
+const links: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/dashboard", label: "Mis tareas", icon: LayoutGrid },
+  { href: "/reportes", label: "Reportes", icon: BarChart3 },
+];
+
+export function TopNav() {
+  const pathname = usePathname();
+  const { currentUserId, logout } = useApp();
+  const me = currentUserId ? memberById[currentUserId] : undefined;
+
+  return (
+    <header className="sticky top-0 z-30 border-b border-line bg-white/80 backdrop-blur">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className="text-xl text-ink">
+            <Logo />
+            <span className="ml-2 align-middle text-xs font-medium text-zinc-400">
+              tiempos
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-1 sm:flex">
+            {links.map((l) => {
+              const activeLink = pathname === l.href;
+              const Icon = l.icon;
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                    activeLink
+                      ? "bg-ink text-white"
+                      : "text-zinc-600 hover:bg-zinc-100"
+                  }`}
+                >
+                  <Icon size={15} /> {l.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {me && (
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold leading-tight text-ink">{me.name}</p>
+              <button
+                onClick={logout}
+                className="text-xs text-zinc-400 transition hover:text-curva-pink"
+              >
+                Cambiar usuario
+              </button>
+            </div>
+            <Avatar member={me} size={38} />
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}

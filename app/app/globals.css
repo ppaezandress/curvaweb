@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta de marca CURVA (del alineamiento interno) */
+  --color-curva-purple: #7c3aed;
+  --color-curva-indigo: #6366f1;
+  --color-curva-blue: #3b82f6;
+  --color-curva-teal: #10b981;
+  --color-curva-pink: #ec4899;
+
+  /* Neutros */
+  --color-ink: #0b0b14;
+  --color-ink-soft: #16161f;
+  --color-cloud: #f4f4f6;
+  --color-line: #e5e5ea;
+
+  --font-display: var(--font-outfit);
+  --font-sans: var(--font-outfit);
+}
+
+:root {
+  --background: #f4f4f6;
+  --foreground: #0b0b14;
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Gradiente firma de CURVA */
+.curva-gradient {
+  background-image: linear-gradient(
+    115deg,
+    #6d28d9 0%,
+    #4f46e5 28%,
+    #2563eb 46%,
+    #0ea5e9 60%,
+    #10b981 76%,
+    #ec4899 100%
+  );
+}
+
+.curva-gradient-text {
+  background-image: linear-gradient(
+    115deg,
+    #a78bfa 0%,
+    #818cf8 30%,
+    #60a5fa 50%,
+    #34d399 72%,
+    #f472b6 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Punto "en vivo" del cronómetro */
+@keyframes curva-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+.curva-live-dot {
+  animation: curva-pulse 1.4s ease-in-out infinite;
+}
+
+/* Números del cronómetro: tabulares para que no "bailen" */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
