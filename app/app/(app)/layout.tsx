@@ -11,6 +11,8 @@ import { IdleNudge } from "@/components/IdleNudge";
 import { DesktopBridge } from "@/components/DesktopBridge";
 import { NotionSync } from "@/components/NotionSync";
 import { Hotkeys } from "@/components/Hotkeys";
+import { DoneCelebration } from "@/components/DoneCelebration";
+import { MusicProbe } from "@/components/MusicProbe";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -47,6 +49,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <DesktopBridge />
       <NotionSync />
       <Hotkeys />
+      <DoneCelebration />
+      <MusicProbe />
     </div>
   );
 }

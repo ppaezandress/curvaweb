@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, CalendarDays, BarChart3, type LucideIcon } from "lucide-react";
+import { Home, ListTodo, CalendarDays, BarChart3, Sparkles, type LucideIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { Logo } from "@/components/Logo";
@@ -13,6 +13,7 @@ const links: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/tareas", label: "Tareas", icon: ListTodo },
   { href: "/timesheet", label: "Timesheet", icon: CalendarDays },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
+  { href: "/recap", label: "Recap", icon: Sparkles },
 ];
 
 export function TopNav() {

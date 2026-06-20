@@ -3,6 +3,7 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/lib/app-context";
 import { DataProvider } from "@/lib/data-context";
+import { CelebrateProvider } from "@/lib/celebrate-context";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -25,7 +26,9 @@ export default function RootLayout({
     <html lang="es" className={`${outfit.variable} h-full antialiased`}>
       <body className="min-h-full">
         <DataProvider>
-          <AppProvider>{children}</AppProvider>
+          <AppProvider>
+            <CelebrateProvider>{children}</CelebrateProvider>
+          </AppProvider>
         </DataProvider>
       </body>
     </html>

@@ -1,0 +1,150 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Camera, X, Check, RefreshCw } from "lucide-react";
+import { useCelebrate } from "@/lib/celebrate-context";
+import { addReaction } from "@/lib/reactions";
+
+const EMOJIS = ["🔥", "🎉", "😮‍💨", "💪", "🧠", "😴", "🙌", "😅"];
+const PHRASES = ["¡Tarea cerrada!", "¡Bien hecho!", "Una menos 💥", "¡A celebrar!", "¡Lo lograste!"];
+
+export function DoneCelebration() {
+  const { celebrating, dismiss } = useCelebrate();
+  const [emoji, setEmoji] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [photoURL, setPhotoURL] = useState<string | null>(null);
+  const [camOn, setCamOn] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const phrase = useRef(PHRASES[Math.floor((Date.now() / 1000) % PHRASES.length)]);
+
+  // Reset al abrir/cerrar
+  useEffect(() => {
+    if (!celebrating) {
+      setEmoji(null); setPhoto(null);
+      if (photoURL) URL.revokeObjectURL(photoURL);
+      setPhotoURL(null); stopCam();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [celebrating]);
+
+  const stopCam = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCamOn(false);
+  };
+
+  const startCam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      streamRef.current = stream;
+      setCamOn(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 50);
+    } catch {
+      /* permiso denegado: seguimos con emoji */
+    }
+  };
+
+  const snap = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 480; canvas.height = 480;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    // recorte cuadrado centrado, espejo
+    const side = Math.min(v.videoWidth, v.videoHeight);
+    const sx = (v.videoWidth - side) / 2;
+    const sy = (v.videoHeight - side) / 2;
+    ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
+    ctx.drawImage(v, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (blob) {
+        setPhoto(blob);
+        setPhotoURL(URL.createObjectURL(blob));
+      }
+      stopCam();
+    }, "image/jpeg", 0.85);
+  };
+
+  const save = async () => {
+    if (!celebrating) return;
+    await addReaction({
+      taskId: celebrating.taskId,
+      taskName: celebrating.taskName,
+      emoji: emoji || "🎉",
+      photo,
+    });
+    dismiss();
+  };
+
+  if (!celebrating) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      {/* confetti emoji simple */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {Array.from({ length: 14 }).map((_, i) => (
+          <span key={i} className="confetti" style={{ left: `${(i * 7 + 4) % 100}%`, animationDelay: `${(i % 7) * 0.15}s` }}>
+            {EMOJIS[i % EMOJIS.length]}
+          </span>
+        ))}
+      </div>
+
+      <div className="relative w-full max-w-md rounded-t-3xl bg-white p-6 shadow-float sm:rounded-3xl">
+        <button onClick={dismiss} className="absolute right-4 top-4 rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-100">
+          <X size={18} />
+        </button>
+
+        <p className="text-sm font-medium text-curva-purple">Tarea completada</p>
+        <h2 className="mt-1 font-display text-2xl font-bold text-ink">{phrase.current}</h2>
+        <p className="mt-1 truncate text-sm text-zinc-500">{celebrating.taskName}</p>
+
+        {/* Selfie */}
+        <div className="mt-5">
+          {photoURL ? (
+            <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-2xl">
+              <img src={photoURL} alt="tu reacción" className="h-full w-full object-cover" />
+              <button onClick={() => { setPhoto(null); if (photoURL) URL.revokeObjectURL(photoURL); setPhotoURL(null); startCam(); }} className="absolute bottom-1 right-1 rounded-full bg-ink/70 p-1.5 text-white">
+                <RefreshCw size={14} />
+              </button>
+            </div>
+          ) : camOn ? (
+            <div className="mx-auto flex w-fit flex-col items-center gap-2">
+              <video ref={videoRef} className="h-40 w-40 -scale-x-100 rounded-2xl object-cover" muted playsInline />
+              <button onClick={snap} className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white">
+                <Camera size={15} /> Capturar
+              </button>
+            </div>
+          ) : (
+            <button onClick={startCam} className="mx-auto flex h-20 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line text-sm font-medium text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple">
+              <Camera size={18} /> Tómate una selfie de tu reacción (opcional)
+            </button>
+          )}
+        </div>
+
+        {/* Emoji */}
+        <p className="mt-5 mb-2 text-sm font-semibold text-zinc-600">¿Cómo te sentiste?</p>
+        <div className="flex flex-wrap gap-1.5">
+          {EMOJIS.map((e) => (
+            <button key={e} onClick={() => setEmoji(e)} className={`rounded-xl px-3 py-2 text-xl transition ${emoji === e ? "bg-curva-purple/10 ring-2 ring-curva-purple" : "hover:bg-zinc-100"}`}>
+              {e}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button onClick={dismiss} className="rounded-full px-4 py-2 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100">Saltar</button>
+          <button onClick={save} className="inline-flex items-center gap-2 rounded-full bg-curva-purple px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90">
+            <Check size={15} /> Guardar al muro
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

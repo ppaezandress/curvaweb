@@ -89,6 +89,18 @@ body {
 .rise-3 { animation-delay: 0.19s; }
 .rise-4 { animation-delay: 0.26s; }
 
+/* Confetti de celebración al completar tarea */
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(420deg); opacity: 0; }
+}
+.confetti {
+  position: absolute;
+  top: 0;
+  font-size: 1.6rem;
+  animation: confetti-fall 2.4s linear forwards;
+}
+
 /* Sombra suave y elevada (cards premium) */
 .shadow-soft {
   box-shadow: 0 1px 2px rgba(11, 11, 20, 0.04),
