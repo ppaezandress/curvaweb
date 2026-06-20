@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, BarChart3, type LucideIcon } from "lucide-react";
+import { Home, ListTodo, CalendarDays, BarChart3, type LucideIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
-import { memberById } from "@/lib/mock-data";
+import { useData } from "@/lib/data-context";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 
 const links: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Mis tareas", icon: LayoutGrid },
+  { href: "/dashboard", label: "Inicio", icon: Home },
+  { href: "/tareas", label: "Tareas", icon: ListTodo },
+  { href: "/timesheet", label: "Timesheet", icon: CalendarDays },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
 ];
 
 export function TopNav() {
   const pathname = usePathname();
   const { currentUserId, logout } = useApp();
+  const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   return (
@@ -28,7 +31,7 @@ export function TopNav() {
               tiempos
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 sm:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             {links.map((l) => {
               const activeLink = pathname === l.href;
               const Icon = l.icon;

@@ -44,6 +44,18 @@ type AppState = {
   start: (taskId: string) => void;
   stop: () => void;
 
+  // ---- Multi-tarea (pestañas) ----
+  /** Tareas "abiertas" en la barra de pestañas (working set). */
+  openTasks: string[];
+  /** Abre una tarea en la barra SIN arrancar el cronómetro. */
+  openTask: (taskId: string) => void;
+  /** Cambia el cronómetro a esa tarea: pausa la actual y arranca la nueva. */
+  switchTo: (taskId: string) => void;
+  /** Pausa el cronómetro activo (la pestaña se queda abierta). */
+  pause: () => void;
+  /** Cierra una pestaña (si está activa, la pausa antes). */
+  closeTask: (taskId: string) => void;
+
   /** Aviso de inactividad pendiente de resolver. */
   nudge: Nudge;
   /** Conservar el tiempo inactivo (sí estaba trabajando: pensando, leyendo, en llamada). */
@@ -85,6 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [active, setActive] = useState<ActiveTimer>(null);
+  const [openTasks, setOpenTasks] = useState<string[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [now, setNow] = useState<number>(0);
   const [nudge, setNudge] = useState<Nudge>(null);
@@ -123,9 +136,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(raw) as {
             active: ActiveTimer;
             entries: TimeEntry[];
+            openTasks?: string[];
           };
           setActive(parsed.active ?? null);
           setEntries(parsed.entries ?? []);
+          setOpenTasks(parsed.openTasks ?? []);
         }
       }
     } catch {
@@ -145,9 +160,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!ready || !currentUserId) return;
     localStorage.setItem(
       dataKey(currentUserId),
-      JSON.stringify({ active, entries }),
+      JSON.stringify({ active, entries, openTasks }),
     );
-  }, [ready, currentUserId, active, entries]);
+  }, [ready, currentUserId, active, entries, openTasks]);
 
   // Registrar actividad del usuario (dentro de la app) mientras hay cronómetro.
   useEffect(() => {
@@ -191,16 +206,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (id) {
       try {
         const raw = localStorage.getItem(dataKey(id));
-        const parsed = raw ? JSON.parse(raw) : { active: null, entries: [] };
+        const parsed = raw ? JSON.parse(raw) : { active: null, entries: [], openTasks: [] };
         setActive(parsed.active ?? null);
         setEntries(parsed.entries ?? []);
+        setOpenTasks(parsed.openTasks ?? []);
       } catch {
         setActive(null);
         setEntries([]);
+        setOpenTasks([]);
       }
     } else {
       setActive(null);
       setEntries([]);
+      setOpenTasks([]);
     }
   };
 
@@ -213,6 +231,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const setFocus = (f: FocusApp) => setFocusApp(f);
 
+  // Arranca/cambia el cronómetro a una tarea, cerrando el segmento anterior.
   const start = (taskId: string) => {
     const startedAt = Date.now();
     setActive((prev) => {
@@ -221,6 +240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return { taskId, startedAt };
     });
+    setOpenTasks((prev) => (prev.includes(taskId) ? prev : [...prev, taskId]));
     lastActivity.current = startedAt;
     setNudge(null);
     setNow(startedAt);
@@ -231,6 +251,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pushEntry(currentUserId, active.taskId, active.startedAt, Date.now());
     setActive(null);
     setNudge(null);
+  };
+
+  // ---- Multi-tarea (pestañas) ----
+
+  // Abre una tarea en la barra sin arrancarla.
+  const openTask = (taskId: string) => {
+    setOpenTasks((prev) => (prev.includes(taskId) ? prev : [...prev, taskId]));
+  };
+
+  // Cambia el cronómetro a esa tarea: pausa la actual, arranca la nueva.
+  const switchTo = (taskId: string) => start(taskId);
+
+  // Pausa el activo (la pestaña sigue abierta).
+  const pause = () => stop();
+
+  // Cierra una pestaña; si está activa la pausa primero.
+  const closeTask = (taskId: string) => {
+    if (active?.taskId === taskId && currentUserId) {
+      pushEntry(currentUserId, active.taskId, active.startedAt, Date.now());
+      setActive(null);
+      setNudge(null);
+    }
+    setOpenTasks((prev) => prev.filter((t) => t !== taskId));
   };
 
   // El usuario confirma que SÍ estaba trabajando: el hueco cuenta, seguimos corriendo.
@@ -273,6 +316,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     elapsed,
     start,
     stop,
+    openTasks,
+    openTask,
+    switchTo,
+    pause,
+    closeTask,
     nudge,
     keepIdle,
     discardIdle,

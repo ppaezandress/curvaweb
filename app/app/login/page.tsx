@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/app-context";
-import { members } from "@/lib/mock-data";
+import { useData } from "@/lib/data-context";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 
 export default function LoginPage() {
   const router = useRouter();
   const { setCurrentUser } = useApp();
+  const { members, ready } = useData();
 
   const enter = (id: string) => {
     setCurrentUser(id);
@@ -44,6 +45,16 @@ export default function LoginPage() {
           </p>
 
           <div className="mt-6 space-y-2">
+            {!ready && (
+              <p className="py-6 text-center text-sm text-zinc-400">
+                Cargando equipo desde Notion…
+              </p>
+            )}
+            {ready && members.length === 0 && (
+              <p className="py-6 text-center text-sm text-zinc-400">
+                No se encontraron personas. ¿La conexión tiene acceso a las bases?
+              </p>
+            )}
             {members.map((m) => (
               <button
                 key={m.id}

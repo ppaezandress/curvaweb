@@ -9,7 +9,7 @@ export type Member = {
   name: string;
   short: string; // inicial(es) para el avatar
   role: string;
-  level: Level;
+  level?: Level;
   color: string; // color de marca asignado a la persona
 };
 
@@ -48,8 +48,8 @@ export type Task = {
   clientId: string;
   projectId: string;
   typeId: string;
-  status: TaskStatus;
-  // Tiempo histórico ya acumulado (segundos) — simula lo que ya estaría en Notion.
+  status: string; // nombre del Status en Notion (tolerante)
+  // Tiempo histórico ya acumulado (segundos) — del rollup de Notion (o mock).
   baselineSeconds: number;
 };
 
@@ -114,11 +114,18 @@ export const projectById = Object.fromEntries(projects.map((p) => [p.id, p]));
 export const taskTypeById = Object.fromEntries(taskTypes.map((t) => [t.id, t]));
 export const taskById = Object.fromEntries(tasks.map((t) => [t.id, t]));
 
-export const statusTone: Record<TaskStatus, string> = {
-  "Sin empezar": "bg-zinc-100 text-zinc-600",
-  "En curso": "bg-blue-100 text-blue-700",
-  "Por validar": "bg-amber-100 text-amber-700",
-  "En espera": "bg-purple-100 text-purple-700",
-  Demorada: "bg-rose-100 text-rose-700",
-  Done: "bg-emerald-100 text-emerald-700",
-};
+// Tono del badge según el Status (tolerante a nombres reales de Notion).
+export function statusToneClass(status: string): string {
+  const s = (status || "").toLowerCase();
+  if (s.includes("done") || s.includes("complet") || s.includes("listo"))
+    return "bg-emerald-100 text-emerald-700";
+  if (s.includes("curso") || s.includes("progress") || s.includes("haciendo"))
+    return "bg-blue-100 text-blue-700";
+  if (s.includes("validar") || s.includes("revis"))
+    return "bg-amber-100 text-amber-700";
+  if (s.includes("espera") || s.includes("hold") || s.includes("pausa"))
+    return "bg-purple-100 text-purple-700";
+  if (s.includes("demor") || s.includes("atras") || s.includes("blocked"))
+    return "bg-rose-100 text-rose-700";
+  return "bg-zinc-100 text-zinc-600"; // sin empezar / desconocido
+}

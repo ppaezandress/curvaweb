@@ -2,7 +2,7 @@
 
 import { Clock } from "lucide-react";
 import { useApp } from "@/lib/app-context";
-import { taskById, clientById } from "@/lib/mock-data";
+import { useData } from "@/lib/data-context";
 import { formatDuration } from "@/lib/format";
 
 function hhmm(ms: number) {
@@ -15,6 +15,7 @@ function hhmm(ms: number) {
 
 export function RecentSessions() {
   const { entries } = useApp();
+  const { taskById, clientById } = useData();
   const recent = [...entries].reverse().slice(0, 6);
 
   return (

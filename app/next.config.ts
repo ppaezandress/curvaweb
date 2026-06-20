@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Export estático para empaquetar dentro de la app de escritorio (Tauri).
-  output: "export",
+  // Con servidor (Route Handlers) para llamar a Notion del lado servidor.
+  // El empaquetado de escritorio pasa a apuntar a la app servida (fase posterior).
   images: { unoptimized: true },
 };
 

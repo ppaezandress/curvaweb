@@ -1,11 +1,12 @@
 "use client";
 
 import { useApp } from "@/lib/app-context";
-import { taskById } from "@/lib/mock-data";
+import { useData } from "@/lib/data-context";
 import { formatDuration } from "@/lib/format";
 
 export function IdleNudge() {
   const { nudge, keepIdle, discardIdle } = useApp();
+  const { taskById } = useData();
   if (!nudge) return null;
 
   const task = taskById[nudge.taskId];

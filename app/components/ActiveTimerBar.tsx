@@ -1,11 +1,12 @@
 "use client";
 
 import { useApp } from "@/lib/app-context";
-import { taskById, clientById } from "@/lib/mock-data";
+import { useData } from "@/lib/data-context";
 import { formatClock } from "@/lib/format";
 
 export function ActiveTimerBar() {
   const { active, elapsed, stop } = useApp();
+  const { taskById, clientById } = useData();
   if (!active) return null;
 
   const task = taskById[active.taskId];

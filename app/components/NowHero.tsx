@@ -2,7 +2,7 @@
 
 import { Pause, Play, Clock } from "lucide-react";
 import { useApp } from "@/lib/app-context";
-import { taskById, clientById, projectById } from "@/lib/mock-data";
+import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
 
 export function NowHero({
@@ -13,6 +13,7 @@ export function NowHero({
   runningCount: number;
 }) {
   const { active, elapsed, stop, loggedSecondsToday, focusApp } = useApp();
+  const { taskById, clientById, projectById } = useData();
 
   const focusStyle =
     focusApp?.tone === "work"

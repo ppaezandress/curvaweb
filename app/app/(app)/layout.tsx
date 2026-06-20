@@ -3,20 +3,25 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/app-context";
+import { useData } from "@/lib/data-context";
 import { TopNav } from "@/components/TopNav";
-import { ActiveTimerBar } from "@/components/ActiveTimerBar";
+import { BottomNav } from "@/components/BottomNav";
+import { TaskSwitcher } from "@/components/TaskSwitcher";
 import { IdleNudge } from "@/components/IdleNudge";
 import { DesktopBridge } from "@/components/DesktopBridge";
+import { NotionSync } from "@/components/NotionSync";
+import { Hotkeys } from "@/components/Hotkeys";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { ready, currentUserId } = useApp();
+  const { ready, currentUserId, openTasks } = useApp();
+  const { ready: dataReady } = useData();
 
   useEffect(() => {
     if (ready && !currentUserId) router.replace("/login");
   }, [ready, currentUserId, router]);
 
-  if (!ready || !currentUserId) {
+  if (!ready || !dataReady || !currentUserId) {
     return (
       <div className="flex min-h-screen items-center justify-center text-zinc-400">
         Cargando…
@@ -24,13 +29,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Espacio inferior para que el dock de pestañas / bottom nav no tapen contenido.
+  const hasDock = openTasks.length > 0;
+
   return (
     <div className="min-h-screen">
-      <ActiveTimerBar />
       <TopNav />
-      <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+      <main
+        className="mx-auto max-w-5xl px-4 py-6 sm:py-8"
+        style={{ paddingBottom: hasDock ? 140 : 88 }}
+      >
+        {children}
+      </main>
+      <TaskSwitcher />
+      <BottomNav />
       <IdleNudge />
       <DesktopBridge />
+      <NotionSync />
+      <Hotkeys />
     </div>
   );
 }

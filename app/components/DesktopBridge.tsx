@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useApp } from "@/lib/app-context";
+import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
-import { taskById } from "@/lib/mock-data";
 import { categorizeFocus } from "@/lib/app-category";
 
 function isTauri() {
@@ -40,6 +40,7 @@ function reminderSeconds() {
 
 export function DesktopBridge() {
   const { active, elapsed, nudge, stop, markActivity, setFocus } = useApp();
+  const { taskById } = useData();
   const lastTitle = useRef("");
   const nextReminder = useRef(reminderSeconds());
   const prevNudge = useRef(false);

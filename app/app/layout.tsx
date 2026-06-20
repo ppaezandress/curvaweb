@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/lib/app-context";
+import { DataProvider } from "@/lib/data-context";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${outfit.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <AppProvider>{children}</AppProvider>
+        <DataProvider>
+          <AppProvider>{children}</AppProvider>
+        </DataProvider>
       </body>
     </html>
   );
