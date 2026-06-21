@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "skills": {
+    "app-store-optimization": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "749f85e87ff153a98ffbb9f84be5ed1d6d73af560d25567d5080d92a2fe784a5"
+    },
+    "brand-guidelines": {
+      "source": "anthropics/skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/brand-guidelines/SKILL.md",
+      "computedHash": "e48840db6ea772ceecdb68b4e50f8cc77e2534b7580aeaf4a6fe6ee7bd845d7d"
+    },
+    "canvas-design": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "a1b2711c3153f632e8ce27ae6087494ccdebc02a24c2f1a76419efc7f687317d"
+    },
+    "data-visualization": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "64055493de5ff4afed716cc871018cf6e020338b76d3e7ed5c2985707cb43cec"
+    },
+    "internal-comms": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "0bdc8867452b7ab9ef6167f6b0db2025ce5fb03773d3f85efcef2dfeb9d4976d"
+    },
+    "security-best-practices": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "c27616fb4e27999605b90b261dc729784420c8d77bd1a98748384ffaa5b35704"
+    },
+    "senior-fullstack": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "ba1e155eb5772e59e4f4ce1805538940d5725c1edf14fbd0eb0e0ec249767194"
+    },
+    "smithery-ai-cli": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "dc17f090c975afe1d96a25dbe843fc9c978e96d5699eed1bb7c12b411e10b830"
+    },
+    "statistical-analysis": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "6dba9b6a31e7ffc7205120700151a3522df91c19a6dba3d13bb9b4835e768feb"
+    },
+    "using-superpowers": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "75fb918d6ddbdfea9abe9d67a8d9214b1c95d9da58078c078b04fc658526c1cf"
+    },
+    "web-design-reviewer": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "10c6fad8b4f01dbeae969009d81d6c306c8a96d56077cad9bfe2a73a38f5dcbe"
+    }
+  }
+}
