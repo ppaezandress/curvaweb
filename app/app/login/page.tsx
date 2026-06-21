@@ -23,10 +23,6 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [needMap, setNeedMap] = useState(false);
-  const [uid, setUid] = useState<string | null>(null);
-  const [taken, setTaken] = useState<Set<string>>(new Set());
-  const [mapErr, setMapErr] = useState("");
   // "Bienvenido de nuevo": recordamos quién entró en este dispositivo
   const [remembered, setRemembered] = useState<{ email: string; memberId: string } | null>(null);
   const [welcomeMode, setWelcomeMode] = useState(true);
@@ -63,6 +59,12 @@ export default function LoginPage() {
     if (!emailVal || password.length < 6) { setErr("Escribe tu contraseña (6+)"); return; }
     const sb = getSupabase();
     if (!sb) { setErr("Backend no configurado"); return; }
+    // El correo DEBE estar dado de alta en el equipo (en Notion) — valida antes de crear cuenta.
+    const member = members.find((m) => m.email && m.email.toLowerCase() === emailVal.toLowerCase());
+    if (!member) {
+      setErr("Tu correo no está dado de alta en el equipo (debe ser el que está en Notion).");
+      return;
+    }
     setBusy(true);
     try {
       await fetch("/api/auth/register", {
@@ -73,35 +75,23 @@ export default function LoginPage() {
       if (error) { setErr("Correo o contraseña incorrectos"); return; }
       const { data: u } = await sb.auth.getUser();
       if (!u.user) { setErr("No se pudo iniciar sesión"); return; }
-      setUid(u.user.id);
       const { data: prof } = await sb.from("profiles").select("notion_user_id").eq("id", u.user.id).maybeSingle();
+
+      // Ya mapeado → entra directo
       if (prof?.notion_user_id) {
         persist(prof.notion_user_id as string);
         setCurrentUser(prof.notion_user_id as string);
         router.push("/dashboard");
-      } else {
-        const { data: claimed } = await sb.from("profiles").select("notion_user_id").not("notion_user_id", "is", null);
-        setTaken(new Set((claimed || []).map((c: { notion_user_id: string }) => c.notion_user_id)));
-        setNeedMap(true);
-      }
-    } finally { setBusy(false); }
-  };
-
-  const chooseMember = async (memberId: string, name: string) => {
-    setMapErr("");
-    const sb = getSupabase();
-    if (sb && uid) {
-      const { error } = await sb.from("profiles").upsert({ id: uid, name, notion_user_id: memberId, email: email.trim() });
-      if (error) {
-        setMapErr("Esa persona ya fue elegida por otra cuenta. Elige otra.");
-        const { data: claimed } = await sb.from("profiles").select("notion_user_id").not("notion_user_id", "is", null);
-        setTaken(new Set((claimed || []).map((c: { notion_user_id: string }) => c.notion_user_id)));
         return;
       }
-    }
-    persist(memberId);
-    setCurrentUser(memberId);
-    router.push("/dashboard");
+
+      // Auto-asignar por correo (member ya validado arriba)
+      const { error: upErr } = await sb.from("profiles").upsert({ id: u.user.id, name: member.name, notion_user_id: member.id, email: emailVal });
+      if (upErr) { setErr("Esa persona ya tiene una cuenta. Contacta a tu admin."); await sb.auth.signOut(); return; }
+      persist(member.id);
+      setCurrentUser(member.id);
+      router.push("/dashboard");
+    } finally { setBusy(false); }
   };
 
   const rememberedMember = remembered ? memberById[remembered.memberId] : undefined;
@@ -125,20 +115,6 @@ export default function LoginPage() {
 
           {noBackend ? (
             <Picker title="¿Quién eres?" subtitle="Entra con tu usuario." list={members} onPick={(m) => enterLegacy(m.id)} />
-          ) : needMap ? (
-            <>
-              <h2 className="font-display text-2xl font-bold text-ink">¿Quién eres del equipo?</h2>
-              <p className="mt-1 text-sm text-zinc-500">Solo la primera vez — lo recordaremos. Las personas ya tomadas no aparecen.</p>
-              {mapErr && <p className="mt-2 text-sm text-rose-500">{mapErr}</p>}
-              <div className="mt-6 space-y-2">
-                {members.filter((m) => m.name && m.name !== "—" && !taken.has(m.id)).map((m) => (
-                  <PickRow key={m.id} m={m} onClick={() => chooseMember(m.id, m.name)} />
-                ))}
-                {members.filter((m) => m.name && m.name !== "—" && !taken.has(m.id)).length === 0 && (
-                  <p className="rounded-xl border border-dashed border-line py-6 text-center text-sm text-zinc-400">Todas las personas del equipo ya están tomadas.</p>
-                )}
-              </div>
-            </>
           ) : welcomeMode && remembered && rememberedMember ? (
             // ----- Bienvenido de nuevo: solo contraseña -----
             <>

@@ -146,6 +146,7 @@ export async function getCurvaData(): Promise<CurvaData> {
     name: u.name || "—",
     short: initials(u.name),
     role: u.email || "Equipo CURVA",
+    email: u.email || "",
     color: MEMBER_COLORS[i % MEMBER_COLORS.length],
   }));
 

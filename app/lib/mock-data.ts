@@ -9,6 +9,7 @@ export type Member = {
   name: string;
   short: string; // inicial(es) para el avatar
   role: string;
+  email?: string; // correo (de Notion) — para auto-asignar al iniciar sesión
   level?: Level;
   color: string; // color de marca asignado a la persona
 };
