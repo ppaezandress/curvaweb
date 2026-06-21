@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ListTodo, SmilePlus } from "lucide-react";
+import { ListTodo, SmilePlus, AtSign } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { hhmmFromISO } from "@/lib/format";
 import { parseMessage, notionTaskUrl } from "@/lib/notion-url";
@@ -39,6 +39,16 @@ export function MessageItem({
           {parts.map((p, i) =>
             p.type === "text" ? (
               <span key={i} className="whitespace-pre-wrap">{p.text}</span>
+            ) : p.type === "user" ? (
+              <span
+                key={i}
+                className={cn(
+                  "mx-0.5 inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 align-middle text-xs font-semibold",
+                  mine ? "bg-white/20" : "bg-curva-indigo/10 text-curva-indigo",
+                )}
+              >
+                <AtSign size={10} />{p.name}
+              </span>
             ) : (
               <a
                 key={i}

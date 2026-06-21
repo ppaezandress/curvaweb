@@ -242,7 +242,7 @@ export default function MensajesPage() {
           <div ref={endRef} />
         </div>
 
-        <Composer tasks={tasks} onSend={send} />
+        <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} />
       </div>
 
       {/* Presencia del equipo */}
