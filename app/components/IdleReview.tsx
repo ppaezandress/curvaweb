@@ -2,12 +2,7 @@
 
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { formatDuration } from "@/lib/format";
-
-function hhmm(ms: number) {
-  const d = new Date(ms);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-}
+import { formatDuration, hhmmFromMs as hhmm } from "@/lib/format";
 
 // Al pausar, si hubo inactividad, el usuario revisa una LÍNEA DE TIEMPO de la
 // sesión y decide: descontar solo los huecos inactivos, o mantenerlos (marcados).

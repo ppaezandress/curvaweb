@@ -67,22 +67,14 @@ export function ProfileMenu() {
 
   return (
     <div className="relative" ref={boxRef}>
-      <button onClick={() => setOpen((o) => !o)} className="rounded-full ring-curva-purple/40 transition hover:ring-2">
-        {photoUrl ? (
-          <img src={photoUrl} alt={me.name} className="h-[38px] w-[38px] rounded-full object-cover" />
-        ) : (
-          <Avatar member={me} size={38} />
-        )}
+      <button onClick={() => setOpen((o) => !o)} className="rounded-full ring-curva-purple/40 transition hover:ring-2 focus-ring" aria-label="Tu perfil">
+        <Avatar member={me} src={photoUrl} size={38} />
       </button>
 
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-line bg-white shadow-float">
           <div className="flex items-center gap-3 border-b border-line p-4">
-            {photoUrl ? (
-              <img src={photoUrl} alt={me.name} className="h-12 w-12 rounded-full object-cover" />
-            ) : (
-              <Avatar member={me} size={48} />
-            )}
+            <Avatar member={me} src={photoUrl} size={48} />
             <div className="min-w-0">
               <p className="truncate font-semibold text-ink">{me.name}</p>
               <p className="truncate text-xs text-zinc-400">{me.email || me.role}</p>

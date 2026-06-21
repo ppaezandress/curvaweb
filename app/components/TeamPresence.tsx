@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Music, Circle } from "lucide-react";
+import { Music } from "lucide-react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { Avatar } from "@/components/Avatar";
 
 type Presence = {
   user_id: string;
@@ -15,10 +16,6 @@ type Presence = {
 };
 type Profile = { id: string; name: string; avatar_url: string | null };
 
-function initials(name: string) {
-  const p = (name || "?").trim().split(/\s+/);
-  return (p.length > 1 ? p[0][0] + p[1][0] : p[0].slice(0, 2)).toUpperCase();
-}
 function onlineRecently(updated: string) {
   return Date.now() - new Date(updated).getTime() < 90_000; // 90s
 }
@@ -64,9 +61,7 @@ export function TeamPresence() {
           return (
             <div key={r.user_id} className="flex items-start gap-2.5">
               <div className="relative">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-curva-purple/15 text-xs font-bold text-curva-purple">
-                  {prof?.avatar_url ? <img src={prof.avatar_url} alt="" className="h-full w-full rounded-full object-cover" /> : initials(prof?.name || "?")}
-                </span>
+                <Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={36} />
                 <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${r.is_active ? "bg-curva-teal" : online ? "bg-amber-400" : "bg-zinc-300"}`} />
               </div>
               <div className="min-w-0 flex-1">
@@ -75,7 +70,7 @@ export function TeamPresence() {
                   {r.is_active ? (r.current_task ? `⏱ ${r.current_task}` : "trabajando") : online ? "en línea" : "desconectado"}
                 </p>
                 {r.track && (
-                  <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-[#1DB954]">
+                  <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-spotify">
                     <Music size={11} className="shrink-0" /> {r.track}{r.artist ? ` · ${r.artist}` : ""}
                   </p>
                 )}

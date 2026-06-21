@@ -14,8 +14,14 @@
   --color-cloud: #f4f4f6;
   --color-line: #e5e5ea;
 
+  /* Marcas externas (no son color de CURVA, viven en su token) */
+  --color-spotify: #1db954;
+
   --font-display: var(--font-outfit);
   --font-sans: var(--font-outfit);
+
+  /* Curva de movimiento estándar del producto */
+  --ease-curva: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
@@ -109,4 +115,24 @@ body {
 .shadow-float {
   box-shadow: 0 2px 4px rgba(11, 11, 20, 0.05),
     0 20px 40px -16px rgba(11, 11, 20, 0.18);
+}
+
+/* Foco accesible consistente (teclado) — un solo estilo en todo el producto */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-curva-purple);
+}
+
+/* Respeta el área segura inferior (notch / barra de gestos) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Respeta la preferencia de menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .confetti,
+  .curva-live-dot {
+    animation: none;
+  }
 }

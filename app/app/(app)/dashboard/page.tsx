@@ -11,15 +11,13 @@ import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
 import { formatClock, formatDuration } from "@/lib/format";
 import { dayKey, computeStreak } from "@/lib/culture";
+import { isDone, isActionable } from "@/lib/task-status";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { SpotifyConnect } from "@/components/SpotifyConnect";
 import { WeekProgress } from "@/components/WeekProgress";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
-
-const isActionable = (s: string) => /curso|progress|haciendo|demor|atras|blocked|validar|revis|espera|hold/i.test(s || "");
-const isDone = (s: string) => /done|complet|listo|termin/i.test(s || "");
 
 function greeting() {
   const h = new Date().getHours();

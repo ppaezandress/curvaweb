@@ -7,10 +7,9 @@ import { statusToneClass, type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
 import { useCelebrate } from "@/lib/celebrate-context";
 import { formatClock, formatDuration } from "@/lib/format";
+import { isDone as isDoneStatus } from "@/lib/task-status";
 import { Avatar } from "@/components/Avatar";
 import { TypeIcon } from "@/components/TypeIcon";
-
-const isDoneStatus = (s: string) => /done|complet|listo|termin/i.test(s || "");
 
 export function TaskCard({ task }: { task: Task }) {
   const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask } = useApp();

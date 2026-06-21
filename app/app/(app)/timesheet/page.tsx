@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
+import { mondayOf } from "@/lib/date";
 
 type Record = {
   id: string;
@@ -22,14 +23,6 @@ type Record = {
 
 const DAY_MS = 86400000;
 
-// Lunes de la semana de una fecha.
-function mondayOf(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  const day = (x.getDay() + 6) % 7; // 0 = lunes
-  x.setDate(x.getDate() - day);
-  return x;
-}
 function fmtH(mins: number) {
   if (!mins) return "·";
   const h = mins / 60;

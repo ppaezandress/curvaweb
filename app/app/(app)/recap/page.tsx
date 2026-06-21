@@ -6,6 +6,7 @@ import { useData } from "@/lib/data-context";
 import { listReactions, type Reaction } from "@/lib/reactions";
 import { readMusicLog, type MusicEntry } from "@/lib/music-log";
 import { formatHours } from "@/lib/format";
+import { isDone } from "@/lib/task-status";
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number };
 
@@ -35,7 +36,7 @@ export default function RecapPage() {
   const musicM = music.filter((m) => inMonth(m.at));
 
   const totalMin = recsM.reduce((a, r) => a + r.minutes, 0);
-  const doneCount = tasks.filter((t) => /done|complet|listo|termin/i.test(t.status)).length;
+  const doneCount = tasks.filter((t) => isDone(t.status)).length;
 
   // Música: género top + tareas×género
   const genreCount = useMemo(() => {
@@ -119,7 +120,7 @@ export default function RecapPage() {
                       <span className="tabular text-xs text-zinc-400">{n}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-                      <div className="h-full rounded-full bg-[#1DB954]" style={{ width: `${(n / (genreCount[0]?.[1] || 1)) * 100}%` }} />
+                      <div className="h-full rounded-full bg-spotify" style={{ width: `${(n / (genreCount[0]?.[1] || 1)) * 100}%` }} />
                     </div>
                   </div>
                 ))}

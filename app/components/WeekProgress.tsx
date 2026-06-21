@@ -4,16 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatHours } from "@/lib/format";
+import { mondayOf, DIAS_CORTOS as DOW } from "@/lib/date";
 
 type Rec = { person: string; start: string; minutes: number };
 const DAY_MS = 86400000;
-const DOW = ["L", "M", "M", "J", "V", "S", "D"];
-
-function mondayOf(d: Date) {
-  const x = new Date(d); x.setHours(0, 0, 0, 0);
-  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-  return x;
-}
 
 // Mini-gráfica: horas por día de ESTA semana (solo del usuario actual).
 export function WeekProgress() {

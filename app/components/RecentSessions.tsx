@@ -3,15 +3,7 @@
 import { Clock } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { formatDuration } from "@/lib/format";
-
-function hhmm(ms: number) {
-  const d = new Date(ms);
-  return `${d.getHours().toString().padStart(2, "0")}:${d
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-}
+import { formatDuration, hhmmFromMs as hhmm } from "@/lib/format";
 
 export function RecentSessions() {
   const { entries } = useApp();

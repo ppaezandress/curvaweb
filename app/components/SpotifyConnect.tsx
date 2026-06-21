@@ -42,7 +42,7 @@ export function SpotifyConnect() {
   if (state.connected) {
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-soft">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#1DB954]/10 text-[#1DB954]">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-spotify/10 text-spotify">
           <Music size={20} />
         </span>
         <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export function SpotifyConnect() {
               {state.genres && state.genres.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {state.genres.slice(0, 3).map((g) => (
-                    <span key={g} className="rounded-full bg-[#1DB954]/10 px-2 py-0.5 text-[10px] font-medium capitalize text-[#1DB954]">{g}</span>
+                    <span key={g} className="rounded-full bg-spotify/10 px-2 py-0.5 text-[10px] font-medium capitalize text-spotify">{g}</span>
                   ))}
                 </div>
               )}
@@ -65,7 +65,7 @@ export function SpotifyConnect() {
             </>
           )}
         </div>
-        <span className="curva-live-dot inline-block h-2 w-2 rounded-full bg-[#1DB954]" />
+        <span className="curva-live-dot inline-block h-2 w-2 rounded-full bg-spotify" />
       </div>
     );
   }
@@ -73,16 +73,16 @@ export function SpotifyConnect() {
   return (
     <a
       href="/api/spotify/login"
-      className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-soft transition hover:border-[#1DB954]"
+      className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-soft transition hover:border-spotify"
     >
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#1DB954] text-white">
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-spotify text-white">
         <Music size={20} />
       </span>
       <div className="flex-1">
         <p className="text-sm font-semibold text-ink">Conectar Spotify</p>
         <p className="text-xs text-zinc-500">Descubre qué música acompaña tu mejor trabajo.</p>
       </div>
-      <span className="rounded-full bg-[#1DB954] px-3 py-1.5 text-xs font-semibold text-white">Conectar</span>
+      <span className="rounded-full bg-spotify px-3 py-1.5 text-xs font-semibold text-white">Conectar</span>
     </a>
   );
 }

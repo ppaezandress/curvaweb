@@ -6,18 +6,11 @@ import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { TeamPresence } from "@/components/TeamPresence";
+import { Avatar } from "@/components/Avatar";
+import { hhmmFromISO } from "@/lib/format";
 
 type Msg = { id: number; user_id: string | null; body: string; kind: string; created_at: string };
 type Profile = { id: string; name: string; avatar_url: string | null };
-
-function hhmm(s: string) {
-  const d = new Date(s);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-}
-function initials(name: string) {
-  const p = (name || "?").trim().split(/\s+/);
-  return (p.length > 1 ? p[0][0] + p[1][0] : p[0].slice(0, 2)).toUpperCase();
-}
 
 export default function MensajesPage() {
   const { currentUserId } = useApp();
@@ -121,11 +114,9 @@ export default function MensajesPage() {
           const mine = m.user_id === myUid;
           return (
             <div key={m.id} className={`flex gap-2.5 ${mine ? "flex-row-reverse" : ""}`}>
-              <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-curva-purple/15 text-xs font-bold text-curva-purple">
-                {prof?.avatar_url ? <img src={prof.avatar_url} alt="" className="h-full w-full rounded-full object-cover" /> : initials(prof?.name || "?")}
-              </span>
+              <div className="mt-0.5"><Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={32} /></div>
               <div className={`max-w-[75%] ${mine ? "text-right" : ""}`}>
-                <p className="text-xs text-zinc-400">{prof?.name || "—"} · {hhmm(m.created_at)}</p>
+                <p className="text-xs text-zinc-400">{prof?.name || "—"} · {hhmmFromISO(m.created_at)}</p>
                 <div className={`mt-0.5 inline-block rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-curva-purple text-white" : "bg-white text-ink shadow-soft"}`}>{m.body}</div>
               </div>
             </div>

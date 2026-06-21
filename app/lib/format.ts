@@ -26,3 +26,22 @@ export function formatHours(totalSeconds: number): string {
   const hours = totalSeconds / 3600;
   return `${hours.toFixed(1).replace(".0", "")} h`;
 }
+
+const pad2 = (n: number) => n.toString().padStart(2, "0");
+
+/** "14:05" desde milisegundos epoch. */
+export function hhmmFromMs(ms: number): string {
+  const d = new Date(ms);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/** "14:05" desde una fecha ISO (timestamp de Supabase). */
+export function hhmmFromISO(iso: string): string {
+  return hhmmFromMs(new Date(iso).getTime());
+}
+
+/** Iniciales para avatar: "Andrés Páez" → "AP". */
+export function initials(name: string): string {
+  const p = (name || "?").trim().split(/\s+/);
+  return (p.length > 1 ? p[0][0] + p[1][0] : p[0].slice(0, 2)).toUpperCase();
+}
