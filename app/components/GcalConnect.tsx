@@ -35,6 +35,10 @@ export function GcalConnect() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-ink">Calendario conectado</p>
           <p className="text-xs text-zinc-500">{state.busy ? "Ahora: en junta 📅" : "Ahora: libre"}</p>
+          <div className="mt-1 flex gap-3 text-[11px]">
+            <a href="/api/gcal/login" className="font-medium text-curva-blue hover:underline">Reconectar</a>
+            <a href="/api/gcal/logout" className="text-zinc-400 hover:text-rose-500 hover:underline">Desconectar</a>
+          </div>
         </div>
         <span className={`inline-block h-2 w-2 rounded-full ${state.busy ? "bg-rose-500" : "bg-curva-teal"}`} />
       </div>
