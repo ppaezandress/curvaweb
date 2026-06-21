@@ -24,6 +24,8 @@ export default function LoginPage() {
   // tras autenticar, si falta mapear a un miembro:
   const [needMap, setNeedMap] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
+  const [taken, setTaken] = useState<Set<string>>(new Set());
+  const [mapErr, setMapErr] = useState("");
 
   // Fallback sin Supabase: el viejo selector de persona.
   const noBackend = !supabaseConfigured();
@@ -53,15 +55,26 @@ export default function LoginPage() {
         setCurrentUser(prof.notion_user_id as string);
         router.push("/dashboard");
       } else {
+        // cargar personas YA tomadas para no dejar elegirlas
+        const { data: claimed } = await sb.from("profiles").select("notion_user_id").not("notion_user_id", "is", null);
+        setTaken(new Set((claimed || []).map((c: { notion_user_id: string }) => c.notion_user_id)));
         setNeedMap(true); // primera vez → elegir quién eres
       }
     } finally { setBusy(false); }
   };
 
   const chooseMember = async (memberId: string, name: string) => {
+    setMapErr("");
     const sb = getSupabase();
     if (sb && uid) {
-      await sb.from("profiles").upsert({ id: uid, name, notion_user_id: memberId, email: email.trim() });
+      const { error } = await sb.from("profiles").upsert({ id: uid, name, notion_user_id: memberId, email: email.trim() });
+      if (error) {
+        // unique violation → alguien la tomó primero
+        setMapErr("Esa persona ya fue elegida por otra cuenta. Elige otra.");
+        const { data: claimed } = await sb.from("profiles").select("notion_user_id").not("notion_user_id", "is", null);
+        setTaken(new Set((claimed || []).map((c: { notion_user_id: string }) => c.notion_user_id)));
+        return;
+      }
     }
     setCurrentUser(memberId);
     router.push("/dashboard");
@@ -101,14 +114,18 @@ export default function LoginPage() {
           ) : needMap ? (
             <>
               <h2 className="font-display text-2xl font-bold text-ink">¿Quién eres del equipo?</h2>
-              <p className="mt-1 text-sm text-zinc-500">Solo la primera vez — lo recordaremos.</p>
+              <p className="mt-1 text-sm text-zinc-500">Solo la primera vez — lo recordaremos. Las personas ya tomadas no aparecen.</p>
+              {mapErr && <p className="mt-2 text-sm text-rose-500">{mapErr}</p>}
               <div className="mt-6 space-y-2">
-                {members.filter((m) => m.name && m.name !== "—").map((m) => (
+                {members.filter((m) => m.name && m.name !== "—" && !taken.has(m.id)).map((m) => (
                   <button key={m.id} onClick={() => chooseMember(m.id, m.name)} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-white p-3 text-left transition hover:border-curva-purple">
                     <Avatar member={m} size={42} />
                     <span className="min-w-0"><span className="block font-semibold text-ink">{m.name}</span><span className="block truncate text-xs text-zinc-500">{m.role}</span></span>
                   </button>
                 ))}
+                {members.filter((m) => m.name && m.name !== "—" && !taken.has(m.id)).length === 0 && (
+                  <p className="rounded-xl border border-dashed border-line py-6 text-center text-sm text-zinc-400">Todas las personas del equipo ya están tomadas.</p>
+                )}
               </div>
             </>
           ) : (
