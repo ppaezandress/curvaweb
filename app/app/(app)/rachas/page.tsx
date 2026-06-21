@@ -6,6 +6,7 @@ import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { computeStreak, dayKey, badgeFor, STREAK_BADGES } from "@/lib/streaks";
 import { Avatar } from "@/components/Avatar";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type Rec = { person: string; start: string; minutes: number };
 
@@ -61,10 +62,10 @@ export default function RachasPage() {
 
   return (
     <div className="space-y-7">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Rachas</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">Días seguidos midiendo tu tiempo. Cuenta L–V; tienes escudos. 🛡️</p>
-      </div>
+      <SectionHeader
+        title="Rachas"
+        subtitle="Días seguidos midiendo tu tiempo. Cuenta L–V; tienes escudos. 🛡️"
+      />
 
       {loading ? (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-white py-16 text-sm text-zinc-400">

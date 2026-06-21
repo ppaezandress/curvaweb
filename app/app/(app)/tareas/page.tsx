@@ -16,6 +16,7 @@ import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/format";
 import { TaskCard } from "@/components/TaskCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type View = "mine" | "all";
 const NO_CLIENT = "__sin_cliente__";
@@ -124,17 +125,20 @@ export default function TareasPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Tareas</h1>
-        <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
-          <button onClick={() => { setView("mine"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition ${view === "mine" ? "bg-ink text-white" : "text-zinc-500"}`}>
-            <ListTodo size={15} /> Mías
-          </button>
-          <button onClick={() => { setView("all"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition ${view === "all" ? "bg-ink text-white" : "text-zinc-500"}`}>
-            <Users size={15} /> Equipo
-          </button>
-        </div>
-      </div>
+      <SectionHeader
+        title="Tareas"
+        subtitle="Tus pendientes por cliente y proyecto — mide el tiempo de cada uno."
+        action={
+          <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
+            <button onClick={() => { setView("mine"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "mine" ? "bg-ink text-white" : "text-zinc-500"}`}>
+              <ListTodo size={15} /> Mías
+            </button>
+            <button onClick={() => { setView("all"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "all" ? "bg-ink text-white" : "text-zinc-500"}`}>
+              <Users size={15} /> Equipo
+            </button>
+          </div>
+        }
+      />
 
       <div className="flex gap-6">
         {/* Sidebar: CLIENTES */}

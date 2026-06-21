@@ -16,6 +16,7 @@ import {
 import { useData } from "@/lib/data-context";
 import { formatHours } from "@/lib/format";
 import { useRates, money } from "@/lib/rates";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { toCSV, downloadCSV } from "@/lib/export";
 import { TypeIcon } from "@/components/TypeIcon";
 
@@ -121,29 +122,31 @@ export default function ReportesPage() {
   return (
     <div className="space-y-7">
       {/* Encabezado + acciones */}
-      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Reportes</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">A dónde se va el tiempo — la base para cobrar bien.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
-            {(["week", "month", "all"] as Range[]).map((r) => (
-              <button key={r} onClick={() => setRange(r)} className={`rounded-full px-3 py-1.5 font-medium transition ${range === r ? "bg-ink text-white" : "text-zinc-500"}`}>
-                {r === "week" ? "Semana" : r === "month" ? "Mes" : "Todo"}
+      <div className="print:hidden">
+        <SectionHeader
+          title="Reportes"
+          subtitle="A dónde se va el tiempo — la base para cobrar bien."
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
+                {(["week", "month", "all"] as Range[]).map((r) => (
+                  <button key={r} onClick={() => setRange(r)} className={`rounded-full px-3 py-1.5 font-medium transition focus-ring ${range === r ? "bg-ink text-white" : "text-zinc-500"}`}>
+                    {r === "week" ? "Semana" : r === "month" ? "Mes" : "Todo"}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-soft transition focus-ring hover:border-zinc-300">
+                <Settings2 size={15} /> Tarifas
               </button>
-            ))}
-          </div>
-          <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-soft transition hover:border-zinc-300">
-            <Settings2 size={15} /> Tarifas
-          </button>
-          <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-soft transition hover:border-zinc-300">
-            <Download size={15} /> CSV
-          </button>
-          <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white transition hover:bg-ink-soft">
-            <Printer size={15} /> PDF
-          </button>
-        </div>
+              <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-soft transition focus-ring hover:border-zinc-300">
+                <Download size={15} /> CSV
+              </button>
+              <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white transition focus-ring hover:bg-ink-soft">
+                <Printer size={15} /> PDF
+              </button>
+            </div>
+          }
+        />
       </div>
 
       {/* Editor de tarifas */}

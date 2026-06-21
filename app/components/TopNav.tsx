@@ -12,7 +12,7 @@ const links: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Inicio", icon: Home },
   { href: "/tareas", label: "Tareas", icon: ListTodo },
   { href: "/mensajes", label: "Mensajes", icon: MessageCircle },
-  { href: "/timesheet", label: "Timesheet", icon: CalendarDays },
+  { href: "/timesheet", label: "Semana", icon: CalendarDays },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/rachas", label: "Rachas", icon: Flame },
   { href: "/recap", label: "Recap", icon: Sparkles },

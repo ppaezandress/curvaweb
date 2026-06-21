@@ -12,6 +12,7 @@ import {
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { mondayOf } from "@/lib/date";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type Record = {
   id: string;
@@ -108,20 +109,20 @@ export default function TimesheetPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Timesheet</h1>
-          <p className="mt-0.5 text-sm text-zinc-500">Tu semana en horas, por tarea y día.</p>
-        </div>
-        <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
-          <button onClick={() => setScope("me")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition ${scope === "me" ? "bg-ink text-white" : "text-zinc-500"}`}>
-            <User size={15} /> Yo
-          </button>
-          <button onClick={() => setScope("team")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition ${scope === "team" ? "bg-ink text-white" : "text-zinc-500"}`}>
-            <Users size={15} /> Equipo
-          </button>
-        </div>
-      </div>
+      <SectionHeader
+        title="Semana"
+        subtitle="Tu semana en horas, por tarea y día."
+        action={
+          <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
+            <button onClick={() => setScope("me")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "me" ? "bg-ink text-white" : "text-zinc-500"}`}>
+              <User size={15} /> Yo
+            </button>
+            <button onClick={() => setScope("team")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "team" ? "bg-ink text-white" : "text-zinc-500"}`}>
+              <Users size={15} /> Equipo
+            </button>
+          </div>
+        }
+      />
 
       {/* Navegación de semana */}
       <div className="mb-4 flex items-center justify-between rounded-2xl border border-line bg-white px-4 py-3 shadow-soft">

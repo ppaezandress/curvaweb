@@ -3,12 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Search, Plus, PencilLine, CalendarDays, BarChart3, Building2,
-  Flame, Sparkles, ArrowRight, Play, Pause, Loader2,
+  Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause, Loader2,
 } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { type Task } from "@/lib/mock-data";
 import { formatClock, formatDuration } from "@/lib/format";
 import { dayKey, computeStreak } from "@/lib/culture";
 import { isDone, isActionable } from "@/lib/task-status";
@@ -18,6 +16,8 @@ import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { SpotifyConnect } from "@/components/SpotifyConnect";
 import { WeekProgress } from "@/components/WeekProgress";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
+import { StatCard } from "@/components/ui/StatCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function greeting() {
   const h = new Date().getHours();
@@ -98,7 +98,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-7">
-      {/* Saludo */}
+      {/* Saludo + núcleo del producto */}
       <header className="rise">
         <p className="text-sm text-zinc-400">{greeting()}</p>
         <h1 className="mt-0.5 font-display text-3xl font-bold tracking-tight text-ink">
@@ -109,6 +109,7 @@ export default function HomePage() {
             </span>
           )}
         </h1>
+        <p className="mt-1 text-sm text-zinc-500">Mide el tiempo de tus tareas. Empieza escribiendo abajo. 👇</p>
       </header>
 
       {/* Command bar — z alto para que el dropdown quede SOBRE las demás secciones */}
@@ -160,19 +161,19 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Acciones rápidas */}
-      <section className="rise rise-2">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <Action onClick={() => { setNewName(""); setShowNew(true); }} icon={<Plus size={20} />} label="Nueva tarea" accent />
-          <Action onClick={() => setShowManual(true)} icon={<PencilLine size={20} />} label="Registrar tiempo" />
-          <ActionLink href="/tareas" icon={<Building2 size={20} />} label="Por cliente" />
-          <ActionLink href="/timesheet" icon={<CalendarDays size={20} />} label="Semana" />
-          <ActionLink href="/reportes" icon={<BarChart3 size={20} />} label="Reportes" />
-          <ActionLink href="/recap" icon={<Sparkles size={20} />} label="Recap" />
-        </div>
+      {/* Acciones primarias (sin duplicar el nav) */}
+      <section className="rise rise-2 grid grid-cols-2 gap-3">
+        <button onClick={() => { setNewName(""); setShowNew(true); }} className="flex items-center gap-3 rounded-2xl border border-curva-purple bg-curva-purple p-4 text-left text-white shadow-soft transition focus-ring hover:opacity-95 active:scale-[0.99]">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20"><Plus size={20} /></span>
+          <span className="min-w-0"><span className="block font-semibold">Nueva tarea</span><span className="block truncate text-xs text-white/80">Créala y empieza a medir</span></span>
+        </button>
+        <button onClick={() => setShowManual(true)} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 text-left text-ink shadow-soft transition focus-ring hover:border-curva-purple active:scale-[0.99]">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100"><PencilLine size={20} /></span>
+          <span className="min-w-0"><span className="block font-semibold">Registrar tiempo</span><span className="block truncate text-xs text-zinc-500">¿Ya trabajaste? Anótalo</span></span>
+        </button>
       </section>
 
-      {/* Spotify */}
+      {/* Spotify (cultura) */}
       <section className="rise rise-3">
         <SpotifyConnect />
       </section>
@@ -180,9 +181,9 @@ export default function HomePage() {
       {/* Stats + progreso semanal */}
       <section className="rise rise-3 grid gap-3 sm:gap-4 lg:grid-cols-2">
         <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <Stat label="Hoy" value={formatDuration(loggedSecondsToday)} />
-          <Stat label="En curso" value={String(mine.filter((t) => isActionable(t.status)).length)} accent />
-          <Stat label="Proyectos" value={String(projectCount)} />
+          <StatCard label="Hoy" value={formatDuration(loggedSecondsToday)} />
+          <StatCard label="En curso" value={mine.filter((t) => isActionable(t.status)).length} accent />
+          <StatCard label="Proyectos" value={projectCount} />
         </div>
         <WeekProgress />
       </section>
@@ -196,12 +197,14 @@ export default function HomePage() {
       <section className="rise rise-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-ink">Para hoy</h2>
-          <Link href="/tareas" className="inline-flex items-center gap-1 text-sm font-medium text-curva-purple">Ver todas <ArrowRight size={14} /></Link>
+          <Link href="/tareas" className="inline-flex items-center gap-1 text-sm font-medium text-curva-purple focus-ring rounded-full">Ver todas <ArrowRight size={14} /></Link>
         </div>
         {focusList.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-zinc-400">
-            Nada urgente. Usa la barra de arriba para empezar algo. 🎯
-          </div>
+          <EmptyState
+            icon={<Search size={28} />}
+            title="Nada urgente por ahora"
+            hint="Escribe en la barra de arriba para crear una tarea y empezar a medir tu tiempo."
+          />
         ) : (
           <div className="space-y-2">{focusList.map((t) => <TaskCard key={t.id} task={t} />)}</div>
         )}
@@ -209,31 +212,6 @@ export default function HomePage() {
 
       <NewTaskModal open={showNew} onClose={() => setShowNew(false)} initialName={newName} />
       <ManualEntryModal open={showManual} onClose={() => setShowManual(false)} />
-    </div>
-  );
-}
-
-function Action({ icon, label, onClick, accent }: { icon: React.ReactNode; label: string; onClick: () => void; accent?: boolean }) {
-  return (
-    <button onClick={onClick} className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-4 text-center text-sm font-semibold shadow-soft transition hover:-translate-y-0.5 ${accent ? "border-curva-purple bg-curva-purple text-white" : "border-line bg-white text-ink hover:border-zinc-300"}`}>
-      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${accent ? "bg-white/20" : "bg-zinc-100"}`}>{icon}</span>
-      {label}
-    </button>
-  );
-}
-function ActionLink({ icon, label, href }: { icon: React.ReactNode; label: string; href: string }) {
-  return (
-    <Link href={href} className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-white p-4 text-center text-sm font-semibold text-ink shadow-soft transition hover:-translate-y-0.5 hover:border-zinc-300">
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">{icon}</span>
-      {label}
-    </Link>
-  );
-}
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div className="rounded-2xl border border-line bg-white p-4 shadow-soft">
-      <p className="text-xs uppercase tracking-wide text-zinc-400">{label}</p>
-      <p className={`tabular mt-1 font-display text-2xl font-bold ${accent ? "text-curva-purple" : "text-ink"}`}>{value}</p>
     </div>
   );
 }
