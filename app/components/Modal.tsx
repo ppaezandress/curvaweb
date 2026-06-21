@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export function Modal({
@@ -16,6 +17,9 @@ export function Modal({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -29,11 +33,13 @@ export function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  // Portal a <body>: evita que un ancestro con transform (animaciones .rise)
+  // "atrape" el backdrop fixed y lo recorte a un rectángulo.
+  return createPortal(
     <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-ink/25 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -49,7 +55,8 @@ export function Modal({
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="border-t border-line px-5 py-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
