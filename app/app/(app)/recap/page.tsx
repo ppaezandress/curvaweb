@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Clock, Flame, Music 
 import { useData } from "@/lib/data-context";
 import { listReactions, type Reaction } from "@/lib/reactions";
 import { readMusicLog, type MusicEntry } from "@/lib/music-log";
-import { formatHours } from "@/lib/format";
+import { formatHours, hhmmFromISO } from "@/lib/format";
 import { isDone } from "@/lib/task-status";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { notionTaskUrl } from "@/lib/notion-url";
@@ -18,6 +18,17 @@ type Rec = { id: string; taskId: string; person: string; start: string; minutes:
 function monthLabel(d: Date) {
   const s = d.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Emoji según el momento del día en que se subió la foto.
+function timeOfDay(iso: string): { emoji: string; label: string } {
+  const h = new Date(iso).getHours();
+  if (h < 5) return { emoji: "🌙", label: "madrugada" };
+  if (h < 8) return { emoji: "🌅", label: "amanecer" };
+  if (h < 12) return { emoji: "☀️", label: "mañana" };
+  if (h < 18) return { emoji: "🌤️", label: "tarde" };
+  if (h < 21) return { emoji: "🌆", label: "atardecer" };
+  return { emoji: "🦉", label: "noche" };
 }
 
 export default function RecapPage() {
@@ -146,7 +157,11 @@ export default function RecapPage() {
                       <ExternalLink size={11} className="shrink-0 text-curva-purple" /> {t?.name || "Tarea"}
                     </p>
                     {p.caption && <p className="mt-0.5 truncate text-[11px] text-zinc-500">{p.caption}</p>}
-                    {p.user_id && profileNames[p.user_id] && <p className="mt-0.5 truncate text-[10px] text-zinc-400">{profileNames[p.user_id]}</p>}
+                    <p className="mt-1 flex items-center gap-1 text-[10px] text-zinc-400" title={timeOfDay(p.created_at).label}>
+                      <span className="text-xs">{timeOfDay(p.created_at).emoji}</span>
+                      {hhmmFromISO(p.created_at)}
+                      {p.user_id && profileNames[p.user_id] ? ` · ${profileNames[p.user_id]}` : ""}
+                    </p>
                   </div>
                 </a>
               );
