@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pause, Plus, Layers, Check, CircleCheck } from "lucide-react";
+import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { statusToneClass, type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
@@ -10,6 +10,7 @@ import { formatClock, formatDuration } from "@/lib/format";
 import { isDone as isDoneStatus } from "@/lib/task-status";
 import { Avatar } from "@/components/Avatar";
 import { TypeIcon } from "@/components/TypeIcon";
+import { TaskPhotos } from "@/components/TaskPhotos";
 
 export function TaskCard({ task }: { task: Task }) {
   const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask } = useApp();
@@ -17,6 +18,7 @@ export function TaskCard({ task }: { task: Task }) {
   const { memberById, taskTypeById, reload } = useData();
   const { celebrate } = useCelebrate();
   const [marking, setMarking] = useState(false);
+  const [showPhotos, setShowPhotos] = useState(false);
   const isRunning = active?.taskId === task.id;
   const isOpen = openTasks.includes(task.id);
   const done = isDoneStatus(task.status);
@@ -88,6 +90,15 @@ export function TaskCard({ task }: { task: Task }) {
 
       {/* Acción */}
       <div className="flex shrink-0 items-center gap-1.5">
+        {/* Fotos de la tarea (en cualquier momento) */}
+        <button
+          onClick={() => setShowPhotos(true)}
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple focus-ring sm:inline-flex"
+          aria-label="Fotos de la tarea"
+          title="Fotos de la tarea"
+        >
+          <Camera size={15} />
+        </button>
         {/* Marcar Done (oculto si ya está done) */}
         {!done && (
           <button
@@ -135,6 +146,8 @@ export function TaskCard({ task }: { task: Task }) {
           </button>
         )}
       </div>
+
+      <TaskPhotos taskId={task.id} taskName={task.name} open={showPhotos} onClose={() => setShowPhotos(false)} />
     </div>
   );
 }
