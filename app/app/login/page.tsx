@@ -59,13 +59,19 @@ export default function LoginPage() {
     if (!emailVal || password.length < 6) { setErr("Escribe tu contraseña (6+)"); return; }
     const sb = getSupabase();
     if (!sb) { setErr("Backend no configurado"); return; }
-    // El correo DEBE estar dado de alta en el equipo (en Notion) — valida antes de crear cuenta.
-    const member = members.find((m) => m.email && m.email.toLowerCase() === emailVal.toLowerCase());
+    setBusy(true);
+    // El correo DEBE estar dado de alta en el equipo (en Notion). Si la lista
+    // aún no cargó, la consultamos en el momento (evita rechazar a alguien válido).
+    let roster = members;
+    if (!roster.length) {
+      try { roster = (await fetch("/api/data").then((r) => r.json())).members || []; } catch { /* */ }
+    }
+    const member = roster.find((m) => m.email && m.email.toLowerCase() === emailVal.toLowerCase());
     if (!member) {
       setErr("Tu correo no está dado de alta en el equipo (debe ser el que está en Notion).");
+      setBusy(false);
       return;
     }
-    setBusy(true);
     try {
       await fetch("/api/auth/register", {
         method: "POST", headers: { "Content-Type": "application/json" },

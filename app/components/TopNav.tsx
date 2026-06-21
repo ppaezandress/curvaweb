@@ -6,7 +6,7 @@ import { Home, ListTodo, CalendarDays, BarChart3, Sparkles, Flame, MessageCircle
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { Logo } from "@/components/Logo";
-import { Avatar } from "@/components/Avatar";
+import { ProfileMenu } from "@/components/ProfileMenu";
 
 const links: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Inicio", icon: Home },
@@ -20,7 +20,7 @@ const links: { href: string; label: string; icon: LucideIcon }[] = [
 
 export function TopNav() {
   const pathname = usePathname();
-  const { currentUserId, logout } = useApp();
+  const { currentUserId } = useApp();
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
@@ -57,16 +57,8 @@ export function TopNav() {
 
         {me && (
           <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold leading-tight text-ink">{me.name}</p>
-              <button
-                onClick={logout}
-                className="text-xs text-zinc-400 transition hover:text-curva-pink"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-            <Avatar member={me} size={38} />
+            <p className="hidden text-sm font-semibold leading-tight text-ink sm:block">{me.name}</p>
+            <ProfileMenu />
           </div>
         )}
       </div>
