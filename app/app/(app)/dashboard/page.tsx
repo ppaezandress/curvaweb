@@ -112,8 +112,8 @@ export default function HomePage() {
         </h1>
       </header>
 
-      {/* Command bar */}
-      <div className="rise rise-1 relative">
+      {/* Command bar — z alto para que el dropdown quede SOBRE las demás secciones */}
+      <div className="rise rise-1 relative z-40">
         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
         <input
           ref={searchRef}
@@ -124,7 +124,7 @@ export default function HomePage() {
           className="w-full rounded-2xl border border-line bg-white py-4 pl-12 pr-4 text-base shadow-soft outline-none transition focus:border-curva-purple"
         />
         {q.trim() && (
-          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-white shadow-float">
+          <div className="absolute z-50 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-2xl border border-line bg-white shadow-float">
             {matches.map((t) => {
               const c = clientById[t.clientId];
               return (
