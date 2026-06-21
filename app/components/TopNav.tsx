@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, CalendarDays, BarChart3, Sparkles, Flame, type LucideIcon } from "lucide-react";
+import { Home, ListTodo, CalendarDays, BarChart3, Sparkles, Flame, MessageCircle, type LucideIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { Logo } from "@/components/Logo";
@@ -11,6 +11,7 @@ import { Avatar } from "@/components/Avatar";
 const links: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "Inicio", icon: Home },
   { href: "/tareas", label: "Tareas", icon: ListTodo },
+  { href: "/mensajes", label: "Mensajes", icon: MessageCircle },
   { href: "/timesheet", label: "Timesheet", icon: CalendarDays },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/rachas", label: "Rachas", icon: Flame },
