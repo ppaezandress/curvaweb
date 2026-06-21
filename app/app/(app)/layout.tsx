@@ -14,6 +14,7 @@ import { Hotkeys } from "@/components/Hotkeys";
 import { DoneCelebration } from "@/components/DoneCelebration";
 import { MusicProbe } from "@/components/MusicProbe";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
+import { MeetingWatcher } from "@/components/MeetingWatcher";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -53,6 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <DoneCelebration />
       <MusicProbe />
       <PresenceHeartbeat />
+      <MeetingWatcher />
     </div>
   );
 }
