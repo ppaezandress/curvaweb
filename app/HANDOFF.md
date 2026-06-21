@@ -1,154 +1,81 @@
-# CURVA · Tiempos — Estado del proyecto y handoff
+# CURVA Tiempos — HANDOFF (estado completo)
 
-> Última sesión: **2026-06-18**. Este documento resume TODO lo que se construyó para poder retomar después sin perder contexto.
+> App de **medición de tiempo + gestión de tareas + capa social** para el equipo de CURVA, conectada a Notion. Meta: producto interno hoy, **SaaS** después.
+> Última actualización: 2026-06-21. Repo: **`ppaezandress/curvaweb`**, carpeta **`/app`** (la landing Astro vive en `/landing`).
 
----
-
-## 1. Qué es esto
-
-Herramienta de **medición de tiempos** para el equipo de CURVA (consultoría de Andrés Páez).
-Cada consultor entra con su usuario, le da **play/stop** a una tarea, y se registra cuánto tiempo
-toma cada cosa — **por persona, proyecto y tipo de entregable**. Objetivo real: saber **cuánto
-cuesta cada tipo de trabajo para fijar precios** + cultura de medición (NO vigilancia).
-
-Vive en el **mismo repo** que la landing de CURVA (`ppaezandress/curvaweb`):
-
-```
-curva/
-  landing/   → la página pública (Astro)        → (Vercel proyecto aparte)
-  app/        → ESTA herramienta (Next.js + Tauri)  ← aquí estamos
-```
-
----
-
-## 2. Decisiones tomadas (con Andrés)
-
-- **Plataforma aparte de la landing**, pero en el mismo repo (monorepo).
-- **Nivel de medición:** "Confianza + contexto de apps" (cronómetro + aviso de inactividad +
-  detección de app en foco). **Sin** screenshots ni keylogging. Cultura: *medición, no vigilancia*.
-- **Empezar por:** PWA/web → app de escritorio (Tauri) → (después) backend.
-- **No** hay dominio propio todavía. **No** hay costo/hora por persona (la herramienta ayudará a medirlo).
-- Notion es el "cerebro" real (Tasks Tracker / Team Tracker / CRM / Planeación). La herramienta
-  será una **capa de cronómetro encima** de lo que ya vive en Notion (cuando se conecte).
-- Falta agregar un campo **"Tipo de tarea / área"** al Tasks Tracker de Notion (clave para el pricing).
-
----
-
-## 3. Qué está CONSTRUIDO y funcionando
-
-### Frontend (Next.js 16 + React 19 + Tailwind v4 + Outfit)
-- **Login** = selector de usuario (Google "próximamente").
-- **Dashboard:** héroe "Ahora" (cronómetro grande cuando corre / KPIs cuando no), tareas
-  agrupadas por proyecto, toggle Mis tareas / Todas, panel "Lo que registraste hoy".
-- **Reportes:** KPIs (tiempo total, proyecto más caro, entregable más costoso) + barras por
-  tipo de entregable / proyecto / persona.
-- **Idle nudge:** detecta inactividad y pregunta "¿sigues trabajando?" → conservar / descartar.
-- **PWA:** instalable (manifest + service worker + íconos de marca).
-- Datos = **de prueba** (`lib/mock-data.ts`), se reemplazan por Notion en Fase B.
-
-### App de escritorio (Tauri v2 — `src-tauri/`)
-- **Cronómetro en la barra de menú** del Mac (visible aunque estés en otra app).
-- **Menú del tray:** Abrir CURVA / Detener cronómetro / Salir.
-- **Notificaciones:** recordatorio de sesión larga + aviso de inactividad (con sonido).
-- **Idle del SISTEMA** (todo el Mac, no solo la ventana) → trabajar en otra app ya no marca inactivo.
-- **Contexto de app en foco** (incluye sitio dentro del navegador, ej. "Atlas · YouTube") —
-  requiere permiso de **Accesibilidad**; degrada a solo-app si no se concede.
-- **Logo de CURVA** en Dock / Launchpad / Aplicaciones.
-- **Instalador `.dmg` generado** (ver sección 6).
-
----
-
-## 4. Cómo correrlo (desarrollo)
-
-Necesitas Rust en PATH (ya instalado vía rustup):
+## Cómo correr
 ```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-cd ~/Documents/curva/app
-
-# Solo la web:
-npm run dev               # http://localhost:3000
-
-# La app de escritorio (necesita la web corriendo en :3000):
-npx tauri dev
+cd /Users/andrespaez/Documents/curva/app
+npm run dev    # SIEMPRE abrir en http://127.0.0.1:3000  (NO localhost — ver gotcha cookies)
+npm run build  # debe compilar limpio
 ```
+Login: **código de equipo `CURVA`** + correo (el que está en Notion) + contraseña. 1ª vez crea la cuenta sola y se auto-mapea por correo.
 
-## 5. Cómo generar el instalador (.dmg)
-```bash
-export PATH="$HOME/.cargo/bin:$PATH"
-cd ~/Documents/curva/app
-npx tauri build
-# Resultado:
-#   src-tauri/target/release/bundle/dmg/CURVA Tiempos_0.1.0_aarch64.dmg
-#   src-tauri/target/release/bundle/macos/CURVA Tiempos.app
-```
+## Stack
+- **Next.js 16.2.9** (Turbopack) + React 19 + **Tailwind v4** (`@theme` en `app/globals.css`) + TypeScript.
+- **Supabase** (auth, Postgres, RLS, Realtime, Storage) — `@supabase/ssr`, `@supabase/supabase-js`.
+- **Notion API** (REST 2022-06-28) — fuente de verdad de tareas/clientes/proyectos/equipo/tiempos.
+- **Spotify** + **Google Calendar** OAuth (cookies httpOnly por usuario).
+- Tauri v2 (app de escritorio, cronómetro en barra de menú) — en `/app` también.
+- ⚠️ **AGENTS.md**: esta versión de Next tiene cambios disruptivos; leer `node_modules/next/dist/docs/` antes de tocar APIs de Next.
 
-## 6. Instalar la app
-1. Abrir el `.dmg` → arrastrar **CURVA Tiempos** a **Aplicaciones**.
-2. 1ª vez (sin firma): clic derecho → **Abrir** → Abrir.
-3. Permisos opcionales: **Notificaciones** (Permitir) y **Accesibilidad** (para ver el sitio
-   dentro del navegador) en Ajustes → Privacidad y seguridad.
+## Identidad / Design system (workstream A)
+- **Híbrido sobrio + cultura**: base limpia tipo Linear/Revolut, UN acento `curva-purple`; el gradiente/color solo en cultura (música, rachas, celebración, cronómetro activo).
+- `app/globals.css`: tokens (curva-*, ink, line, **spotify**, ease-curva), `.focus-ring`, `.safe-bottom`, animaciones (`.rise`, `.modal-fade`, `.modal-pop`), `prefers-reduced-motion`.
+- `components/ui/`: `Button`/`IconButton`, `Card`, `Badge`/`StatusBadge`, `Chip`, `StatCard`, `EmptyState`, `SectionHeader`. Úsalos en vez de estilos ad-hoc.
+- Utilidades únicas (NO duplicar): `lib/task-status.ts` (`isDone`, `isActionable`, `isAssignedTo`), `lib/date.ts` (`mondayOf`, `monthLabel`, `DIAS_CORTOS`), `lib/format.ts` (duración/clock/horas, `hhmmFromMs/ISO`, `initials`), `lib/cn.ts`.
+- `components/Avatar.tsx`: unificado, soporta foto (`src`) o iniciales+color.
 
----
+## Navegación (workstream B)
+- `TopNav` (desktop): Inicio, Tareas, Mensajes, Semana, Reportes, Rachas, Recap + `ProfileMenu` (avatar → cambiar foto / cerrar sesión).
+- `BottomNav` (móvil): 4 directos (Inicio/Tareas/Mensajes/Reportes) + hoja **"Más"** (Semana/Rachas/Recap).
+- Home (`dashboard`): claim "Mide el tiempo de tus tareas", command bar (crear/buscar tarea), 2 acciones primarias, conexiones (Spotify/Calendar), stats, WeekProgress, "Para hoy".
 
-## 7. Mapa de archivos clave
+## Núcleo: tiempo + tareas
+- Datos reales de Notion vía `/api/data` (`lib/notion/fetchers.ts` → `getCurvaData`). Member expone `email` (auto-login) y las tareas exponen `responsableIds[]`/`auxiliarIds[]` (una tarea puede tener varios; **"es mía" = `isAssignedTo`**).
+- Cronómetro multi-tarea en `lib/app-context.tsx` (play/pause/switch, idle review opt-in sin vigilancia).
+- **Iniciar (play) cambia el estatus de Notion a "EN CURSO"** si estaba sin empezar (`TaskCard.start` → PATCH `/api/tasks`). Marcar Done → "DONE" + celebración.
+- `/api/time-entries` registra en Notion (modo cronómetro o modo asistentes = N filas). `/api/tasks` crea (POST, default "SIN EMPEZAR") y actualiza estatus (PATCH).
 
-```
-app/
-  app/
-    layout.tsx                 raíz (fuente Outfit + AppProvider)
-    page.tsx                   redirige a /dashboard (client, compatible con export)
-    manifest.ts                PWA manifest (force-static)
-    login/page.tsx             selector de usuario
-    (app)/layout.tsx           guard de sesión + nav + barra activa + IdleNudge + DesktopBridge
-    (app)/dashboard/page.tsx   dashboard
-    (app)/reportes/page.tsx    reportes
-  components/
-    NowHero, TaskCard, RecentSessions, ActiveTimerBar, TopNav,
-    IdleNudge, DesktopBridge, TypeIcon, Avatar, Logo
-  lib/
-    app-context.tsx            cerebro: sesión + cronómetro + idle + focus (localStorage)
-    mock-data.ts               datos de prueba (equipo/CRM/proyectos/tipos/tareas)
-    app-category.ts            categorizeFocus(app, title) → work/distraction/neutral
-    format.ts                  formato de tiempo
-  src-tauri/
-    src/lib.rs                 tray, menú, comandos: set_tray_title, system_idle_seconds, frontmost_app
-    tauri.conf.json            config (ventana, devUrl, beforeBuildCommand, identifier vc.curva.tiempos)
-    Cargo.toml                 deps: tauri(tray-icon), notification, user-idle
-    capabilities/default.json  permisos (core, event, notification)
-  next.config.ts               output: "export" (para empaquetar en Tauri)
-```
+## Capa social (Supabase) — migración 0001
+- **Auth**: email+password, alta confirmada server-side (`/api/auth/register` con service key). Auto-mapeo por correo (member.email == login). HostGuard redirige localhost→127.0.0.1.
+- **Mensajes (Chat 2.0)** `/mensajes`: canal `equipo` + **canales propios** + **DMs** + **reacciones**, todo realtime. Composer: **`@` menciona personas**, **`/` menciona tareas** (chip → abre la tarea en Notion). Panel de presencia a la derecha.
+  - Migraciones 0004/0005: `channel_members`, `message_reactions`, `created_by`; RLS por membresía con `can_see_channel` (SECURITY DEFINER). GOTCHA: el creador debe ver su canal (created_by en RLS) o el INSERT...RETURNING lo bloquea.
+- **Presencia** (`PresenceHeartbeat`, cada ~20s): activo/tarea/app/canción + **"📅 En junta"** (Calendar). `TeamPresence` lo muestra. Match musical (mismo artista → mensaje de sistema).
+- **Rachas** `/rachas` (`lib/streaks.ts`): modo L-V + escudos, leaderboard, medallas (desde Notion, sin backend).
+- **Fotos de perfil**: bucket `avatars` (migración 0003), `ProfileMenu` sube.
 
----
+## Spotify (por usuario)
+- `lib/spotify.ts` + `app/api/spotify/{login,callback,now}`. Cookie `sp_refresh` httpOnly. `SpotifyConnect` en Home. Alimenta presencia/match/recap.
 
-## 8. PENDIENTE (próximos pasos)
+## Google Calendar (privado)
+- `lib/gcal.ts` + `app/api/gcal/{login,callback,now,events,logout}`. Cookie `gc_refresh`. Scope **`calendar.events.readonly`** (lee TUS eventos; el equipo solo ve "En junta", nunca títulos).
+- `GcalConnect` en Home (Reconectar/Desconectar). **Auto-registro de juntas**: `MeetingWatcher` (en `(app)/layout`) detecta junta terminada (≥10 min, con asistentes/Meet) → modal: proyecto sugerido por título (`lib/meeting-match.ts`) + asistentes del equipo → registra tiempo (modo asistentes). Anti-repetición en localStorage.
+- SETUP: requiere `GOOGLE_CLIENT_ID`/`SECRET` (Google Cloud, OAuth web, redirect `http://127.0.0.1:3000/api/gcal/callback`, scope events.readonly, usuarios de prueba). Ya configurado en `.env.local`.
 
-### Fase B — Backend real (lo más importante para que sea "de verdad")
-- **Supabase** (reusar el patrón de `~/Documents/porra`): auth Google + base de datos como
-  fuente de verdad de las sesiones de tiempo, + **sync a Notion** para visualizar.
-- **Conectar Notion** (Andrés está consiguiendo el acceso): reemplazar `lib/mock-data.ts` por
-  lecturas reales del workspace "CURVA - Centro de Control".
-- Agregar campo **"Tipo de tarea"** al Tasks Tracker de Notion.
+## Fotos de tareas → Recap (migración 0007)
+- Botón de cámara en cada `TaskCard` → `TaskPhotos`: **cámara automática** (getUserMedia) + ícono para subir archivo; preview con **comentario + emojis** → **Enviar**. Bucket `task-photos`.
+- Las fotos van al **Recap → "Fotos del equipo"** (compartidas): muestran tarea, comentario, autor, **hora + emoji por momento del día** (🌅 amanecer / ☀️ mañana / 🌤️ tarde / 🌆 atardecer / 🦉 noche / 🌙 madrugada), y **al picarlas abren la tarea en Notion** (`lib/notion-url.ts`).
 
-### Pulido de la app de escritorio
-- **Auto-arranque** al prender el Mac.
-- **Firma + notarización** para repartir el `.dmg` al equipo sin el aviso de Gatekeeper.
-- **Persistir** el dato de "app en foco" en cada registro (hoy solo se muestra).
+## Esquema Supabase (migraciones en `app/supabase/migrations/`)
+0001 social (profiles, presence, music_log, channels, messages) · 0002 unique member · 0003 avatars · 0004 chat (channel_members, reactions) · 0005 channel creator visibility · 0006 presence.in_meeting · 0007 task_photos.
+Proyecto Supabase ref: `aafbrygvgkiynpmmihbt`. Conexión directa para migraciones: `host=db.<ref>.supabase.co port=5432 user=postgres sslmode=require` + `PGPASSWORD=$SUPABASE_DB_PASSWORD`.
 
-### Otros
-- Dominio propio para CURVA (cuando lo decidan) → habilita `app.curva.vc` + Google login real.
-- Definir costo/hora por persona (con Balmo) → habilita la vista de **rentabilidad**.
-- Limpieza pendiente (de la landing): borrar repo viejo `andresnazca/curva` y el proyecto
-  Vercel viejo (sin dominio, seguro borrar) — confirmar si ya se hizo.
+## GOTCHAS críticos
+- **Abrir SIEMPRE en `127.0.0.1:3000`** (las cookies OAuth viven ahí; localhost = otro sitio → "desconectado"). HostGuard lo fuerza.
+- **Modales con Portal** (`components/Modal.tsx` usa `createPortal` a body): si no, un ancestro con `transform` (animación `.rise`) recorta el backdrop `fixed` a un rectángulo feo.
+- **`ppaezandress@gmail.com` tiene la contraseña REAL de Andrés** (NO `curva1234`). Para QA con Playwright usar OTROS correos de miembro (eivana.gardunomayo@, emilianolombarderoduo@) con `curva1234` y **limpiarlos después** (la data es de PRODUCCIÓN).
+- Notion token = `CURVA_NOTION_TOKEN` (no `NOTION_TOKEN`, que lo pisaba el `.zshrc`).
+- members se deriva de personas asignadas en tareas; quien no tenga tareas no aparece (a futuro: leer Team Tracker completo).
+- `.claude/skills` está gitignored (tooling del agente, no va al repo).
 
----
+## QA / testing
+- Skill `webapp-testing` (Playwright headless). Para cámara: args `--use-fake-ui-for-media-stream --use-fake-device-for-media-stream` + `permissions=["camera"]`.
+- Última regresión: 7 rutas desktop+móvil, 0 errores de consola, sin overflow.
 
-## 9. Gotchas / notas técnicas
-- **Next 16** trae cambios: leer `node_modules/next/dist/docs/` antes de tocar (lo pide AGENTS.md).
-- `output: "export"` exige que `/manifest` tenga `export const dynamic = "force-static"` y que el
-  redirect de `/` sea client-side (ya está así).
-- **App en foco:** `lsappinfo` da el nombre de app sin permiso; el **título de ventana** (para ver
-  el sitio dentro del navegador) usa System Events → requiere **Accesibilidad**.
-- El umbral de inactividad (`DEFAULT_IDLE_SECONDS=60`) y el recordatorio (`3600s`) se pueden bajar
-  para demo con `localStorage["curva.idleSeconds"]` / `["curva.reminderSeconds"]`.
-- Recordatorio de consultoría: la detección dentro del navegador es un *plus* informativo y
-  transparente, **no** punitivo — alineado a la cultura "medición, no vigilancia".
+## Pendiente / roadmap
+- Insights/"CURVA Wrapped" (skills `metrics-review`, `build-dashboard`, `data-visualization`, `statistical-analysis` ya instaladas en `app/.claude/skills`).
+- **"Entrar con Notion"** (OAuth) → salto multi-tenant SaaS (cada empresa conecta su Notion).
+- Deploy a Vercel para el equipo (segundo proyecto, Root Dir `app`).
+- Calendar producción: webhooks (en vez de polling), Google Workspace a nivel organización, Spotify Extended Quota >25 users.
+- Campo "Tipo de entregable" en Notion Tasks Tracker (para pricing por tipo).
