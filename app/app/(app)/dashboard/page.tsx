@@ -14,6 +14,9 @@ import { dayKey, computeStreak } from "@/lib/culture";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
+import { SpotifyConnect } from "@/components/SpotifyConnect";
+import { WeekProgress } from "@/components/WeekProgress";
+import { AchievementsStrip } from "@/components/AchievementsStrip";
 
 const isActionable = (s: string) => /curso|progress|haciendo|demor|atras|blocked|validar|revis|espera|hold/i.test(s || "");
 const isDone = (s: string) => /done|complet|listo|termin/i.test(s || "");
@@ -170,11 +173,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="rise rise-3 grid grid-cols-3 gap-3 sm:gap-4">
-        <Stat label="Hoy" value={formatDuration(loggedSecondsToday)} />
-        <Stat label="En curso" value={String(mine.filter((t) => isActionable(t.status)).length)} accent />
-        <Stat label="Proyectos" value={String(projectCount)} />
+      {/* Spotify */}
+      <section className="rise rise-3">
+        <SpotifyConnect />
+      </section>
+
+      {/* Stats + progreso semanal */}
+      <section className="rise rise-3 grid gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <Stat label="Hoy" value={formatDuration(loggedSecondsToday)} />
+          <Stat label="En curso" value={String(mine.filter((t) => isActionable(t.status)).length)} accent />
+          <Stat label="Proyectos" value={String(projectCount)} />
+        </div>
+        <WeekProgress />
+      </section>
+
+      {/* Muro de logros (cultura) */}
+      <section className="rise rise-4">
+        <AchievementsStrip />
       </section>
 
       {/* Mi día */}

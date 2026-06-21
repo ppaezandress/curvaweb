@@ -12,7 +12,8 @@ export async function GET() {
   if (!refresh) return NextResponse.json({ connected: false });
 
   try {
-    const { access_token } = await refreshAccess(refresh);
+    const ref = await refreshAccess(refresh);
+    const access_token = ref.access_token;
     if (!access_token) return NextResponse.json({ connected: false });
     const H = { Authorization: `Bearer ${access_token}` };
 
