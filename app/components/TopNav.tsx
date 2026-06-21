@@ -63,7 +63,7 @@ export function TopNav() {
                 onClick={logout}
                 className="text-xs text-zinc-400 transition hover:text-curva-pink"
               >
-                Cambiar usuario
+                Cerrar sesión
               </button>
             </div>
             <Avatar member={me} size={38} />
