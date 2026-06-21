@@ -14,6 +14,7 @@ import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { SpotifyConnect } from "@/components/SpotifyConnect";
+import { GcalConnect } from "@/components/GcalConnect";
 import { WeekProgress } from "@/components/WeekProgress";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
 import { StatCard } from "@/components/ui/StatCard";
@@ -175,9 +176,10 @@ export default function HomePage() {
         </button>
       </section>
 
-      {/* Spotify (cultura) */}
-      <section className="rise rise-3">
+      {/* Conexiones (cultura + presencia) */}
+      <section className="rise rise-3 grid gap-3 lg:grid-cols-2">
         <SpotifyConnect />
+        <GcalConnect />
       </section>
 
       {/* Stats + progreso semanal */}

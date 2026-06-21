@@ -12,6 +12,7 @@ type Presence = {
   app_focus: string | null;
   track: string | null;
   artist: string | null;
+  in_meeting: boolean | null;
   updated_at: string;
 };
 type Profile = { id: string; name: string; avatar_url: string | null };
@@ -62,12 +63,14 @@ export function TeamPresence() {
             <div key={r.user_id} className="flex items-start gap-2.5">
               <div className="relative">
                 <Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={36} />
-                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${r.is_active ? "bg-curva-teal" : online ? "bg-amber-400" : "bg-zinc-300"}`} />
+                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${r.in_meeting ? "bg-rose-500" : r.is_active ? "bg-curva-teal" : online ? "bg-amber-400" : "bg-zinc-300"}`} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{prof?.name || "—"}</p>
-                <p className="truncate text-xs text-zinc-500">
-                  {r.is_active ? (r.current_task ? `⏱ ${r.current_task}` : "trabajando") : online ? "en línea" : "desconectado"}
+                <p className={`truncate text-xs ${r.in_meeting ? "font-medium text-rose-500" : "text-zinc-500"}`}>
+                  {r.in_meeting ? "📅 En junta"
+                    : r.is_active ? (r.current_task ? `⏱ ${r.current_task}` : "trabajando")
+                    : online ? "en línea" : "desconectado"}
                 </p>
                 {r.track && (
                   <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-spotify">

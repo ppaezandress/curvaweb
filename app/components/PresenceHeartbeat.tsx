@@ -44,12 +44,20 @@ export function PresenceHeartbeat() {
         }
       } catch { /* */ }
 
+      // ¿En junta? (Google Calendar freebusy — solo ocupado/libre, sin títulos)
+      let inMeeting = false;
+      try {
+        const cal = await fetch("/api/gcal/now").then((r) => r.json());
+        if (cal?.connected && cal?.busy) inMeeting = true;
+      } catch { /* */ }
+
       const row: Record<string, unknown> = {
         user_id: uid,
         is_active: !!a,
         current_task: task ?? null,
         app_focus: focusRef.current?.label ?? null,
         focus_tone: focusRef.current?.tone ?? null,
+        in_meeting: inMeeting,
         updated_at: new Date().toISOString(),
       };
       // Solo actualizar canción si hay una (conserva la "última")
