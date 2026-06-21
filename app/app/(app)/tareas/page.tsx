@@ -17,6 +17,7 @@ import { type Task } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/format";
 import { TaskCard } from "@/components/TaskCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { isAssignedTo } from "@/lib/task-status";
 
 type View = "mine" | "all";
 const NO_CLIENT = "__sin_cliente__";
@@ -33,8 +34,7 @@ export default function TareasPage() {
   const [openClients, setOpenClients] = useState<Set<string>>(new Set());
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set());
 
-  const isMine = (t: Task) =>
-    t.responsableId === currentUserId || t.auxiliarId === currentUserId;
+  const isMine = (t: Task) => isAssignedTo(t, currentUserId);
 
   // Cliente de una tarea: directo, o heredado de su proyecto.
   const clientOf = (t: Task) =>

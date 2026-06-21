@@ -1,5 +1,15 @@
+import type { Task } from "@/lib/mock-data";
+
 // Estado de tareas — tolerante a los nombres reales del Status en Notion.
 // Fuente única de verdad (antes estaba duplicado en dashboard, TaskCard y recap).
+
+/** ¿La persona (userId) está asignada a la tarea? (responsable O auxiliar, soporta varios). */
+export function isAssignedTo(task: Task, userId: string | null): boolean {
+  if (!userId) return false;
+  const resp = task.responsableIds?.length ? task.responsableIds : [task.responsableId];
+  const aux = task.auxiliarIds?.length ? task.auxiliarIds : (task.auxiliarId ? [task.auxiliarId] : []);
+  return resp.includes(userId) || aux.includes(userId);
+}
 
 /** ¿La tarea está terminada? */
 export const isDone = (status: string): boolean =>

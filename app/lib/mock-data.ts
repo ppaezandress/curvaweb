@@ -44,8 +44,10 @@ export type TaskStatus =
 export type Task = {
   id: string;
   name: string;
-  responsableId: string;
+  responsableId: string; // primer responsable (para mostrar)
   auxiliarId?: string;
+  responsableIds?: string[]; // TODOS los responsables (una tarea puede tener varios)
+  auxiliarIds?: string[]; // TODOS los auxiliares
   clientId: string;
   projectId: string;
   typeId: string;

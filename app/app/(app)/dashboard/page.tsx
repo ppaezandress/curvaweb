@@ -9,7 +9,7 @@ import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
 import { dayKey, computeStreak } from "@/lib/culture";
-import { isDone, isActionable } from "@/lib/task-status";
+import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
@@ -51,7 +51,7 @@ export default function HomePage() {
   }, []);
 
   const mine = useMemo(
-    () => tasks.filter((t) => t.responsableId === currentUserId || t.auxiliarId === currentUserId),
+    () => tasks.filter((t) => isAssignedTo(t, currentUserId)),
     [tasks, currentUserId],
   );
   const focusList = useMemo(

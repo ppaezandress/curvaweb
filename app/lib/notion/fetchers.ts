@@ -132,6 +132,8 @@ export async function getCurvaData(): Promise<CurvaData> {
       name: title(pg, "Task name") || "(sin nombre)",
       responsableId: resp[0]?.id || "",
       auxiliarId: aux[0]?.id || undefined,
+      responsableIds: resp.map((u) => u.id).filter(Boolean),
+      auxiliarIds: aux.map((u) => u.id).filter(Boolean),
       clientId: relIds(pg, "CRM - Curva")[0] || "",
       projectId: relIds(pg, "Planeación")[0] || "",
       typeId,
