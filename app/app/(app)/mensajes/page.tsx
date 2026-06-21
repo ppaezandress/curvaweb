@@ -5,6 +5,7 @@ import { Send, Hash, Loader2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { TeamPresence } from "@/components/TeamPresence";
 
 type Msg = { id: number; user_id: string | null; body: string; kind: string; created_at: string };
 type Profile = { id: string; name: string; avatar_url: string | null };
@@ -101,7 +102,8 @@ export default function MensajesPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-220px)] flex-col">
+    <div className="flex gap-6">
+    <div className="flex h-[calc(100vh-200px)] min-w-0 flex-1 flex-col">
       <div className="mb-3 flex items-center gap-2 border-b border-line pb-3">
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-ink/5 text-ink"><Hash size={16} /></span>
         <div>
@@ -137,6 +139,8 @@ export default function MensajesPage() {
         <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }} placeholder="Escribe un mensaje…" className="flex-1 rounded-full border border-line px-4 py-2.5 text-sm outline-none focus:border-curva-purple" />
         <button onClick={send} disabled={!text.trim()} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-curva-purple text-white transition hover:opacity-90 disabled:opacity-40"><Send size={16} /></button>
       </div>
+    </div>
+      <aside className="hidden w-64 shrink-0 lg:block"><TeamPresence /></aside>
     </div>
   );
 }
