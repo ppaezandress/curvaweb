@@ -93,7 +93,7 @@ export function TaskCard({ task }: { task: Task }) {
           <button
             onClick={markDone}
             disabled={marking}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
             aria-label="Marcar como completada"
             title="Marcar Done"
           >
@@ -109,7 +109,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!isOpen && !done && (
           <button
             onClick={() => openTask(task.id)}
-            className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple sm:inline-flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple sm:inline-flex focus-ring"
             aria-label="Agregar a pestañas"
             title="Agregar a pestañas (sin arrancar)"
           >
@@ -119,7 +119,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!done && isRunning && (
           <button
             onClick={pause}
-            className="inline-flex items-center gap-2 rounded-full bg-curva-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-full bg-curva-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-ring"
           >
             <span className="tabular tracking-tight">{formatClock(elapsed)}</span>
             <Pause size={14} fill="currentColor" />
@@ -128,7 +128,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!done && !isRunning && (
           <button
             onClick={() => switchTo(task.id)}
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-curva-purple hover:text-curva-purple"
+            className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-curva-purple hover:text-curva-purple focus-ring"
             aria-label={`Iniciar ${task.name}`}
           >
             <Play size={14} fill="currentColor" /> {isOpen ? "Reanudar" : "Iniciar"}

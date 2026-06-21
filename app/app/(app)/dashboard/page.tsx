@@ -88,9 +88,11 @@ export default function HomePage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: q.trim(), responsableId: currentUserId }),
       });
+      if (!res.ok) throw new Error("create-failed");
       const d = await res.json();
       if (d.ok && d.id) { switchTo(d.id); setQ(""); }
-    } finally { setCreating(false); }
+    } catch { /* la tarea no se creó; el usuario puede reintentar */ }
+    finally { setCreating(false); }
   };
 
   const activeTask = active ? taskById[active.taskId] : undefined;
