@@ -7,6 +7,11 @@ import { listReactions, type Reaction } from "@/lib/reactions";
 import { readMusicLog, type MusicEntry } from "@/lib/music-log";
 import { formatHours } from "@/lib/format";
 import { isDone } from "@/lib/task-status";
+import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { notionTaskUrl } from "@/lib/notion-url";
+import { Camera, ExternalLink } from "lucide-react";
+
+type TeamPhoto = { id: number; task_id: string; url: string; caption: string | null; user_id: string | null; created_at: string };
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number };
 
@@ -56,6 +61,26 @@ export default function RecapPage() {
   );
   useEffect(() => () => photoURLs.forEach((p) => p.url && URL.revokeObjectURL(p.url)), [photoURLs]);
 
+  // Fotos de tareas del equipo (compartidas) — click → abre la tarea en Notion.
+  const [teamPhotos, setTeamPhotos] = useState<TeamPhoto[]>([]);
+  const [profileNames, setProfileNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!supabaseConfigured()) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    (async () => {
+      const [{ data: ph }, { data: profs }] = await Promise.all([
+        sb.from("task_photos").select("id,task_id,url,caption,user_id,created_at").order("created_at", { ascending: false }).limit(60),
+        sb.from("profiles").select("id,name"),
+      ]);
+      setTeamPhotos((ph as TeamPhoto[]) || []);
+      const map: Record<string, string> = {};
+      (profs || []).forEach((p: { id: string; name: string }) => (map[p.id] = p.name));
+      setProfileNames(map);
+    })();
+  }, []);
+  const photosM = teamPhotos.filter((p) => inMonth(new Date(p.created_at).getTime()));
+
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -98,6 +123,34 @@ export default function RecapPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Fotos de tareas del equipo — click abre la tarea en Notion */}
+      <section className="rounded-2xl border border-line bg-white p-6 shadow-soft">
+        <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink"><Camera size={20} /> Fotos del equipo</h2>
+        <p className="mb-4 text-sm text-zinc-500">Avances y evidencia de las tareas. Toca una para abrirla en Notion.</p>
+        {photosM.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-line py-8 text-center text-sm text-zinc-400">Aún no hay fotos este mes. Toma una desde cualquier tarea (ícono de cámara). 📸</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {photosM.map((p) => {
+              const t = taskById[p.task_id];
+              return (
+                <a key={p.id} href={notionTaskUrl(p.task_id)} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-2xl border border-line transition hover:border-curva-purple" title="Abrir en Notion">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.caption || ""} className="aspect-square w-full object-cover" />
+                  <div className="p-2">
+                    <p className="flex items-center gap-1 truncate text-xs font-medium text-ink">
+                      <ExternalLink size={11} className="shrink-0 text-curva-purple" /> {t?.name || "Tarea"}
+                    </p>
+                    {p.caption && <p className="mt-0.5 truncate text-[11px] text-zinc-500">{p.caption}</p>}
+                    {p.user_id && profileNames[p.user_id] && <p className="mt-0.5 truncate text-[10px] text-zinc-400">{profileNames[p.user_id]}</p>}
+                  </div>
+                </a>
+              );
+            })}
           </div>
         )}
       </section>

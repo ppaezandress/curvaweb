@@ -40,6 +40,21 @@ export function TaskCard({ task }: { task: Task }) {
     }
   };
 
+  // Iniciar el cronómetro + mover el estatus a "EN CURSO" si estaba sin empezar.
+  const start = async () => {
+    switchTo(task.id);
+    const s = (task.status || "").toLowerCase();
+    if (!done && !/curso|progress|haciendo/.test(s)) {
+      try {
+        await fetch("/api/tasks", {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId: task.id, status: "EN CURSO" }),
+        });
+        await reload();
+      } catch { /* el cronómetro ya corre; el estatus se reintenta luego */ }
+    }
+  };
+
   const type = taskTypeById[task.typeId];
   const responsable = memberById[task.responsableId];
   const auxiliar = task.auxiliarId ? memberById[task.auxiliarId] : undefined;
@@ -138,7 +153,7 @@ export function TaskCard({ task }: { task: Task }) {
         )}
         {!done && !isRunning && (
           <button
-            onClick={() => switchTo(task.id)}
+            onClick={start}
             className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-curva-purple hover:text-curva-purple focus-ring"
             aria-label={`Iniciar ${task.name}`}
           >
