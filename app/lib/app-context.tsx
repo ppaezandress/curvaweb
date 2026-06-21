@@ -14,17 +14,25 @@ export type TimeEntry = {
   userId: string;
   startedAt: number; // epoch ms
   endedAt: number; // epoch ms
-  seconds: number;
+  seconds: number; // segundos CONTADOS (lo que vale el registro)
+  inactiveSeconds: number; // de esos, cuántos fueron sin actividad (marcados)
 };
 
 type ActiveTimer = {
   taskId: string;
-  startedAt: number; // epoch ms
+  startedAt: number;
 } | null;
 
-type Nudge = {
+type Segment = { start: number; end: number };
+
+export type PendingReview = {
   taskId: string;
-  idleSince: number; // epoch ms — desde cuándo no hay actividad
+  startedAt: number;
+  endedAt: number;
+  segments: Segment[];
+  totalSec: number;
+  activeSec: number;
+  inactiveSec: number;
 } | null;
 
 export type FocusApp = {
@@ -40,38 +48,26 @@ type AppState = {
 
   active: ActiveTimer;
   entries: TimeEntry[];
-  elapsed: number; // segundos del cronómetro activo, en vivo
   start: (taskId: string) => void;
   stop: () => void;
 
-  // ---- Multi-tarea (pestañas) ----
-  /** Tareas "abiertas" en la barra de pestañas (working set). */
+  // Multi-tarea
   openTasks: string[];
-  /** Abre una tarea en la barra SIN arrancar el cronómetro. */
   openTask: (taskId: string) => void;
-  /** Cambia el cronómetro a esa tarea: pausa la actual y arranca la nueva. */
   switchTo: (taskId: string) => void;
-  /** Pausa el cronómetro activo (la pestaña se queda abierta). */
   pause: () => void;
-  /** Cierra una pestaña (si está activa, la pausa antes). */
   closeTask: (taskId: string) => void;
 
-  /** Aviso de inactividad pendiente de resolver. */
-  nudge: Nudge;
-  /** Conservar el tiempo inactivo (sí estaba trabajando: pensando, leyendo, en llamada). */
-  keepIdle: () => void;
-  /** Descartar el tiempo inactivo (se fue) — no se cuenta el hueco. */
-  discardIdle: () => void;
+  // Revisión de inactividad al pausar
+  pendingReview: PendingReview;
+  resolveReview: (discount: boolean) => void;
 
-  /** Marca actividad del usuario (usado por el idle del SISTEMA en escritorio). */
+  // Actividad / foco
   markActivity: () => void;
-  /** App en foco del sistema (solo escritorio; null en web). */
   focusApp: FocusApp;
   setFocus: (f: FocusApp) => void;
 
-  /** Segundos registrados en esta sesión (no incluye baseline) para una tarea. */
   sessionSecondsForTask: (taskId: string) => number;
-  /** Segundos totales del usuario actual hoy (entries de esta sesión). */
   loggedSecondsToday: number;
 };
 
@@ -80,9 +76,13 @@ const AppContext = createContext<AppState | null>(null);
 const SESSION_KEY = "curva.session.user";
 const dataKey = (userId: string) => `curva.timer.${userId}`;
 
-// Umbral de inactividad. Producción: ~5 min (300). Configurable por persona/equipo.
-// Override para demos/pruebas vía localStorage["curva.idleSeconds"].
-const DEFAULT_IDLE_SECONDS = 60;
+// Gracia de inactividad: 5 min. Override demo vía localStorage["curva.graceSeconds"].
+const DEFAULT_GRACE_SECONDS = 300;
+function graceMs() {
+  if (typeof window === "undefined") return DEFAULT_GRACE_SECONDS * 1000;
+  const raw = Number(localStorage.getItem("curva.graceSeconds"));
+  return (raw > 0 ? raw : DEFAULT_GRACE_SECONDS) * 1000;
+}
 
 const ACTIVITY_EVENTS = [
   "mousemove",
@@ -93,25 +93,34 @@ const ACTIVITY_EVENTS = [
   "wheel",
 ] as const;
 
+const round = (ms: number) => Math.max(0, Math.round(ms / 1000));
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [active, setActive] = useState<ActiveTimer>(null);
   const [openTasks, setOpenTasks] = useState<string[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [now, setNow] = useState<number>(0);
-  const [nudge, setNudge] = useState<Nudge>(null);
+  const [pendingReview, setPendingReview] = useState<PendingReview>(null);
   const [focusApp, setFocusApp] = useState<FocusApp>(null);
+
   const counter = useRef(0);
   const lastActivity = useRef(0);
+  const segments = useRef<Segment[]>([]); // segmentos inactivos de la corrida actual
+  const activeRef = useRef<ActiveTimer>(null);
+  const userRef = useRef<string | null>(null);
+  useEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { userRef.current = currentUserId; }, [currentUserId]);
 
+  // Registra una sesión de tiempo (con su porción inactiva).
   const pushEntry = (
     userId: string,
     taskId: string,
     startedAt: number,
     endedAt: number,
+    seconds: number,
+    inactiveSeconds: number,
   ) => {
-    const seconds = Math.round((endedAt - startedAt) / 1000);
     if (seconds <= 0) return;
     counter.current += 1;
     const entry: TimeEntry = {
@@ -121,11 +130,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       startedAt,
       endedAt,
       seconds,
+      inactiveSeconds,
     };
     setEntries((e) => [...e, entry]);
   };
 
-  // Hidratar desde localStorage al montar + registrar service worker (PWA).
+  // Marca actividad y, si hubo un hueco mayor a la gracia, registra el tramo inactivo.
+  const markRef = useRef<() => void>(() => {});
+  markRef.current = () => {
+    const t = Date.now();
+    if (activeRef.current) {
+      const g = graceMs();
+      const gap = t - lastActivity.current;
+      if (gap > g) segments.current.push({ start: lastActivity.current + g, end: t });
+    }
+    lastActivity.current = t;
+  };
+
+  // Cierra la corrida actual y calcula activo/inactivo (incluye el hueco final).
+  const computeRun = (startedAt: number, endedAt: number) => {
+    const segs = [...segments.current];
+    const g = graceMs();
+    const tailGap = endedAt - lastActivity.current;
+    if (tailGap > g) segs.push({ start: lastActivity.current + g, end: endedAt });
+    const inactiveMs = segs.reduce((a, s) => a + Math.max(0, s.end - s.start), 0);
+    const totalMs = Math.max(0, endedAt - startedAt);
+    return {
+      segs,
+      totalSec: round(totalMs),
+      inactiveSec: round(inactiveMs),
+      activeSec: round(totalMs - inactiveMs),
+    };
+  };
+
+  const resetRun = (at: number) => {
+    segments.current = [];
+    lastActivity.current = at;
+  };
+
+  // --- Hidratar + service worker ---
   useEffect(() => {
     try {
       const userId = localStorage.getItem(SESSION_KEY);
@@ -133,202 +176,124 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCurrentUserId(userId);
         const raw = localStorage.getItem(dataKey(userId));
         if (raw) {
-          const parsed = JSON.parse(raw) as {
-            active: ActiveTimer;
-            entries: TimeEntry[];
-            openTasks?: string[];
-          };
+          const parsed = JSON.parse(raw);
           setActive(parsed.active ?? null);
-          setEntries(parsed.entries ?? []);
+          setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0 })));
           setOpenTasks(parsed.openTasks ?? []);
         }
       }
     } catch {
-      // estado limpio si algo falla
+      /* limpio si falla */
     }
     lastActivity.current = Date.now();
-    setNow(Date.now());
     setReady(true);
-
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
   }, []);
 
-  // Persistir cronómetro + entries por usuario.
+  // Persistir
   useEffect(() => {
     if (!ready || !currentUserId) return;
-    localStorage.setItem(
-      dataKey(currentUserId),
-      JSON.stringify({ active, entries, openTasks }),
-    );
+    localStorage.setItem(dataKey(currentUserId), JSON.stringify({ active, entries, openTasks }));
   }, [ready, currentUserId, active, entries, openTasks]);
 
-  // Registrar actividad del usuario (dentro de la app) mientras hay cronómetro.
+  // Escuchar actividad del usuario (web) mientras corre el cronómetro.
   useEffect(() => {
     if (!active) return;
-    const mark = () => {
-      lastActivity.current = Date.now();
-    };
-    ACTIVITY_EVENTS.forEach((ev) =>
-      window.addEventListener(ev, mark, { passive: true }),
-    );
-    return () =>
-      ACTIVITY_EVENTS.forEach((ev) => window.removeEventListener(ev, mark));
-  }, [active]);
-
-  // Tick de 1s: actualiza el reloj y detecta inactividad.
-  useEffect(() => {
-    if (!active) return;
-    const idleSeconds = (() => {
-      const raw = Number(localStorage.getItem("curva.idleSeconds"));
-      return raw > 0 ? raw : DEFAULT_IDLE_SECONDS;
-    })();
-    const id = setInterval(() => {
-      const t = Date.now();
-      setNow(t);
-      const idleFor = (t - lastActivity.current) / 1000;
-      if (idleFor >= idleSeconds) {
-        setNudge((prev) =>
-          prev ? prev : { taskId: active.taskId, idleSince: lastActivity.current },
-        );
-      }
-    }, 1000);
-    return () => clearInterval(id);
+    const handler = () => markRef.current();
+    ACTIVITY_EVENTS.forEach((ev) => window.addEventListener(ev, handler, { passive: true }));
+    return () => ACTIVITY_EVENTS.forEach((ev) => window.removeEventListener(ev, handler));
   }, [active]);
 
   const setCurrentUser = (id: string | null) => {
     if (id) localStorage.setItem(SESSION_KEY, id);
     else localStorage.removeItem(SESSION_KEY);
     setCurrentUserId(id);
-    setNudge(null);
-    lastActivity.current = Date.now();
+    setPendingReview(null);
+    resetRun(Date.now());
     if (id) {
       try {
         const raw = localStorage.getItem(dataKey(id));
         const parsed = raw ? JSON.parse(raw) : { active: null, entries: [], openTasks: [] };
         setActive(parsed.active ?? null);
-        setEntries(parsed.entries ?? []);
+        setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0 })));
         setOpenTasks(parsed.openTasks ?? []);
       } catch {
-        setActive(null);
-        setEntries([]);
-        setOpenTasks([]);
+        setActive(null); setEntries([]); setOpenTasks([]);
       }
     } else {
-      setActive(null);
-      setEntries([]);
-      setOpenTasks([]);
+      setActive(null); setEntries([]); setOpenTasks([]);
     }
   };
 
   const logout = () => setCurrentUser(null);
-
-  // Marca actividad: lo usa el idle del SISTEMA (escritorio) para resetear el
-  // contador cuando hay actividad en CUALQUIER app, no solo en la ventana de CURVA.
-  const markActivity = () => {
-    lastActivity.current = Date.now();
-  };
+  const markActivity = () => markRef.current();
   const setFocus = (f: FocusApp) => setFocusApp(f);
 
-  // Arranca/cambia el cronómetro a una tarea, cerrando el segmento anterior.
+  // Arranca/cambia de tarea. Al cambiar, cierra la anterior manteniendo+marcando inactivo (sin modal).
   const start = (taskId: string) => {
     const startedAt = Date.now();
-    setActive((prev) => {
-      if (prev && currentUserId) {
-        pushEntry(currentUserId, prev.taskId, prev.startedAt, startedAt);
-      }
-      return { taskId, startedAt };
-    });
-    setOpenTasks((prev) => (prev.includes(taskId) ? prev : [...prev, taskId]));
-    lastActivity.current = startedAt;
-    setNudge(null);
-    setNow(startedAt);
+    const prev = activeRef.current;
+    if (prev && userRef.current) {
+      const run = computeRun(prev.startedAt, startedAt);
+      pushEntry(userRef.current, prev.taskId, prev.startedAt, startedAt, run.totalSec, run.inactiveSec);
+    }
+    setActive({ taskId, startedAt });
+    setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
+    resetRun(startedAt);
   };
 
+  // Pausar/Detener: si hubo inactividad, abre revisión; si no, registra directo.
   const stop = () => {
-    if (!active || !currentUserId) return;
-    pushEntry(currentUserId, active.taskId, active.startedAt, Date.now());
+    const a = activeRef.current;
+    if (!a || !userRef.current) return;
+    const endedAt = Date.now();
+    const run = computeRun(a.startedAt, endedAt);
+    if (run.inactiveSec <= 0) {
+      pushEntry(userRef.current, a.taskId, a.startedAt, endedAt, run.totalSec, 0);
+    } else {
+      setPendingReview({
+        taskId: a.taskId, startedAt: a.startedAt, endedAt,
+        segments: run.segs, totalSec: run.totalSec, activeSec: run.activeSec, inactiveSec: run.inactiveSec,
+      });
+    }
     setActive(null);
-    setNudge(null);
+    resetRun(endedAt);
   };
 
-  // ---- Multi-tarea (pestañas) ----
-
-  // Abre una tarea en la barra sin arrancarla.
-  const openTask = (taskId: string) => {
-    setOpenTasks((prev) => (prev.includes(taskId) ? prev : [...prev, taskId]));
+  const resolveReview = (discount: boolean) => {
+    const pr = pendingReview;
+    if (!pr || !userRef.current) { setPendingReview(null); return; }
+    if (discount) {
+      pushEntry(userRef.current, pr.taskId, pr.startedAt, pr.endedAt, pr.activeSec, 0);
+    } else {
+      pushEntry(userRef.current, pr.taskId, pr.startedAt, pr.endedAt, pr.totalSec, pr.inactiveSec);
+    }
+    setPendingReview(null);
   };
 
-  // Cambia el cronómetro a esa tarea: pausa la actual, arranca la nueva.
+  // Multi-tarea
+  const openTask = (taskId: string) =>
+    setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
   const switchTo = (taskId: string) => start(taskId);
-
-  // Pausa el activo (la pestaña sigue abierta).
   const pause = () => stop();
-
-  // Cierra una pestaña; si está activa la pausa primero.
   const closeTask = (taskId: string) => {
-    if (active?.taskId === taskId && currentUserId) {
-      pushEntry(currentUserId, active.taskId, active.startedAt, Date.now());
-      setActive(null);
-      setNudge(null);
-    }
-    setOpenTasks((prev) => prev.filter((t) => t !== taskId));
+    if (activeRef.current?.taskId === taskId) stop();
+    setOpenTasks((p) => p.filter((t) => t !== taskId));
   };
-
-  // El usuario confirma que SÍ estaba trabajando: el hueco cuenta, seguimos corriendo.
-  const keepIdle = () => {
-    lastActivity.current = Date.now();
-    setNudge(null);
-  };
-
-  // El usuario se había ido: cerramos el tramo hasta el último momento activo
-  // (sin contar el hueco) y reiniciamos desde ahora.
-  const discardIdle = () => {
-    if (!active || !currentUserId || !nudge) {
-      setNudge(null);
-      return;
-    }
-    pushEntry(currentUserId, active.taskId, active.startedAt, nudge.idleSince);
-    const restartedAt = Date.now();
-    setActive({ taskId: active.taskId, startedAt: restartedAt });
-    lastActivity.current = restartedAt;
-    setNow(restartedAt);
-    setNudge(null);
-  };
-
-  const elapsed = active
-    ? Math.max(0, Math.round((now - active.startedAt) / 1000))
-    : 0;
 
   const sessionSecondsForTask = (taskId: string) =>
     entries.filter((e) => e.taskId === taskId).reduce((a, e) => a + e.seconds, 0);
-
   const loggedSecondsToday = entries.reduce((a, e) => a + e.seconds, 0);
 
   const value: AppState = {
-    ready,
-    currentUserId,
-    setCurrentUser,
-    logout,
-    active,
-    entries,
-    elapsed,
-    start,
-    stop,
-    openTasks,
-    openTask,
-    switchTo,
-    pause,
-    closeTask,
-    nudge,
-    keepIdle,
-    discardIdle,
-    markActivity,
-    focusApp,
-    setFocus,
-    sessionSecondsForTask,
-    loggedSecondsToday,
+    ready, currentUserId, setCurrentUser, logout,
+    active, entries, start, stop,
+    openTasks, openTask, switchTo, pause, closeTask,
+    pendingReview, resolveReview,
+    markActivity, focusApp, setFocus,
+    sessionSecondsForTask, loggedSecondsToday,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -338,4 +303,19 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useApp debe usarse dentro de <AppProvider>");
   return ctx;
+}
+
+// Reloj en vivo aislado: solo el componente que lo usa re-renderiza cada segundo
+// (evita re-render de listas grandes). Pasa taskId para que SOLO la tarjeta activa tickee.
+export function useLiveElapsed(taskId?: string) {
+  const { active } = useApp();
+  const isThis = taskId == null ? !!active : active?.taskId === taskId;
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!isThis || !active) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isThis, active]);
+  return active && isThis ? Math.max(0, Math.round((now - active.startedAt) / 1000)) : 0;
 }

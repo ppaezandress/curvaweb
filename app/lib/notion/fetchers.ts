@@ -57,6 +57,7 @@ export type TimeRecord = {
   person: string;
   start: string; // ISO
   minutes: number;
+  inactiveMinutes: number;
 };
 
 export async function getTimeRecords(): Promise<TimeRecord[]> {
@@ -73,6 +74,7 @@ export async function getTimeRecords(): Promise<TimeRecord[]> {
         person: rich.trim(),
         start: P(pg, "Inicio")?.date?.start || "",
         minutes: P(pg, "Minutos")?.number || 0,
+        inactiveMinutes: P(pg, "Min. inactivos")?.number || 0,
       };
     })
     .filter((r) => r.minutes > 0);

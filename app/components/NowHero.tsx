@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play, Clock } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
 
@@ -12,7 +12,8 @@ export function NowHero({
   assignedCount: number;
   runningCount: number;
 }) {
-  const { active, elapsed, stop, loggedSecondsToday, focusApp } = useApp();
+  const { active, stop, loggedSecondsToday, focusApp } = useApp();
+  const elapsed = useLiveElapsed();
   const { taskById, clientById, projectById } = useData();
 
   const focusStyle =

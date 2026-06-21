@@ -107,26 +107,39 @@ export default function RecapPage() {
         {musicM.length === 0 ? (
           <p className="mt-3 rounded-xl border border-dashed border-line py-8 text-center text-sm text-zinc-400">Conecta Spotify en Ajustes para ver qué escuchaste mientras trabajabas. 🎧</p>
         ) : (
-          <div className="mt-4 grid gap-6 sm:grid-cols-2">
-            <div>
-              <p className="mb-2 text-sm font-semibold text-zinc-600">Géneros top</p>
-              {genreCount.map(([g, n]) => (
-                <div key={g} className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="capitalize text-ink">{g}</span>
-                  <span className="tabular text-zinc-500">{n}</span>
-                </div>
-              ))}
+          <>
+            <p className="mt-1 text-sm text-zinc-500">{musicM.length} canciones registradas mientras trabajabas.</p>
+            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+              <div>
+                <p className="mb-2 text-sm font-semibold text-zinc-600">Géneros top</p>
+                {genreCount.map(([g, n]) => (
+                  <div key={g} className="mb-2">
+                    <div className="mb-0.5 flex items-center justify-between text-sm">
+                      <span className="capitalize text-ink">{g}</span>
+                      <span className="tabular text-xs text-zinc-400">{n}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+                      <div className="h-full rounded-full bg-[#1DB954]" style={{ width: `${(n / (genreCount[0]?.[1] || 1)) * 100}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="mb-2 text-sm font-semibold text-zinc-600">Artistas top</p>
+                {artistCount.map(([a, n]) => (
+                  <div key={a} className="mb-2">
+                    <div className="mb-0.5 flex items-center justify-between text-sm">
+                      <span className="truncate text-ink">{a}</span>
+                      <span className="tabular text-xs text-zinc-400">{n}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+                      <div className="curva-gradient h-full rounded-full" style={{ width: `${(n / (artistCount[0]?.[1] || 1)) * 100}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="mb-2 text-sm font-semibold text-zinc-600">Artistas top</p>
-              {artistCount.map(([a, n]) => (
-                <div key={a} className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="truncate text-ink">{a}</span>
-                  <span className="tabular text-zinc-500">{n}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          </>
         )}
       </section>
     </div>

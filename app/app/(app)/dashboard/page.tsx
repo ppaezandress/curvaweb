@@ -6,7 +6,7 @@ import {
   Search, Plus, PencilLine, CalendarDays, BarChart3, Building2,
   Flame, Sparkles, ArrowRight, Play, Pause, Loader2,
 } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
 import { formatClock, formatDuration } from "@/lib/format";
@@ -27,7 +27,8 @@ function greeting() {
 }
 
 export default function HomePage() {
-  const { currentUserId, active, elapsed, stop, switchTo, loggedSecondsToday } = useApp();
+  const { currentUserId, active, stop, switchTo, loggedSecondsToday } = useApp();
+  const elapsed = useLiveElapsed();
   const { tasks, taskById, clientById, memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 

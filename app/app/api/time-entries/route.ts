@@ -27,6 +27,7 @@ async function createRow(props: {
   startedAt: number;
   endedAt: number;
   minutes: number;
+  inactiveMinutes?: number;
   area?: string;
 }) {
   const title = `${props.userName || "—"} · ${(props.taskName || props.area || "Tiempo").slice(0, 50)}`;
@@ -40,6 +41,8 @@ async function createRow(props: {
   if (props.taskId) properties["Tarea"] = { relation: [{ id: props.taskId }] };
   if (props.clientId) properties["Cliente"] = { relation: [{ id: props.clientId }] };
   if (props.area) properties["Área"] = { select: { name: props.area } };
+  if (props.inactiveMinutes && props.inactiveMinutes > 0)
+    properties["Min. inactivos"] = { number: Math.round(props.inactiveMinutes * 10) / 10 };
   const page = await notionFetch<{ id: string }>("/pages", {
     method: "POST",
     body: JSON.stringify({ parent: { database_id: DB }, properties }),
@@ -78,10 +81,11 @@ export async function POST(req: Request) {
 
     // Modo cronómetro (una persona)
     const minutes = Math.round((Number(b.seconds) / 60) * 10) / 10;
+    const inactiveMinutes = b.inactiveSeconds ? (Number(b.inactiveSeconds) / 60) : 0;
     const id = await createRow({
       taskId, clientId, taskName, area,
       userName: b.userName || "",
-      startedAt, endedAt, minutes,
+      startedAt, endedAt, minutes, inactiveMinutes,
     });
     return NextResponse.json({ ok: true, id });
   } catch (e) {

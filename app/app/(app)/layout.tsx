@@ -7,7 +7,7 @@ import { useData } from "@/lib/data-context";
 import { TopNav } from "@/components/TopNav";
 import { BottomNav } from "@/components/BottomNav";
 import { TaskSwitcher } from "@/components/TaskSwitcher";
-import { IdleNudge } from "@/components/IdleNudge";
+import { IdleReview } from "@/components/IdleReview";
 import { DesktopBridge } from "@/components/DesktopBridge";
 import { NotionSync } from "@/components/NotionSync";
 import { Hotkeys } from "@/components/Hotkeys";
@@ -45,7 +45,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
       <TaskSwitcher />
       <BottomNav />
-      <IdleNudge />
+      <IdleReview />
       <DesktopBridge />
       <NotionSync />
       <Hotkeys />

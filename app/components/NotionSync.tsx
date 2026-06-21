@@ -31,6 +31,7 @@ export function NotionSync() {
           startedAt: e.startedAt,
           endedAt: e.endedAt,
           seconds: e.seconds,
+          inactiveSeconds: e.inactiveSeconds || 0,
         }),
       }).catch(() => {});
     });

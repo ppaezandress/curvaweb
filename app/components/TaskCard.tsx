@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Play, Pause, Plus, Layers, Check, CircleCheck } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { statusToneClass, type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
 import { useCelebrate } from "@/lib/celebrate-context";
@@ -13,7 +13,8 @@ import { TypeIcon } from "@/components/TypeIcon";
 const isDoneStatus = (s: string) => /done|complet|listo|termin/i.test(s || "");
 
 export function TaskCard({ task }: { task: Task }) {
-  const { active, elapsed, switchTo, pause, openTask, openTasks, sessionSecondsForTask } = useApp();
+  const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask } = useApp();
+  const elapsed = useLiveElapsed(task.id);
   const { memberById, taskTypeById, reload } = useData();
   const { celebrate } = useCelebrate();
   const [marking, setMarking] = useState(false);

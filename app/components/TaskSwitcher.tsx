@@ -1,12 +1,13 @@
 "use client";
 
 import { Play, Pause, X } from "lucide-react";
-import { useApp } from "@/lib/app-context";
+import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock } from "@/lib/format";
 
 export function TaskSwitcher() {
-  const { openTasks, active, elapsed, switchTo, pause, closeTask, sessionSecondsForTask } = useApp();
+  const { openTasks, active, switchTo, pause, closeTask, sessionSecondsForTask } = useApp();
+  const elapsed = useLiveElapsed();
   const { taskById, clientById, projectById } = useData();
 
   if (openTasks.length === 0) return null;

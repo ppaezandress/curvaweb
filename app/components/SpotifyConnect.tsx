@@ -5,7 +5,7 @@ import { Music, Loader2 } from "lucide-react";
 
 type NowState =
   | { loading: true }
-  | { loading: false; configured: boolean; connected: boolean; playing?: boolean; track?: string; artist?: string };
+  | { loading: false; configured: boolean; connected: boolean; playing?: boolean; track?: string; artist?: string; genres?: string[] };
 
 // Tarjeta para conectar Spotify y ver qué suena. Si Spotify no está configurado
 // (sin credenciales), no muestra nada.
@@ -23,6 +23,7 @@ export function SpotifyConnect() {
           playing: d.playing,
           track: d.track,
           artist: d.artist,
+          genres: d.genres,
         }),
       )
       .catch(() => setState({ loading: false, configured: false, connected: false }));
@@ -49,6 +50,13 @@ export function SpotifyConnect() {
             <>
               <p className="truncate text-sm font-semibold text-ink">{state.track}</p>
               <p className="truncate text-xs text-zinc-500">{state.artist} · sonando ahora</p>
+              {state.genres && state.genres.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {state.genres.slice(0, 3).map((g) => (
+                    <span key={g} className="rounded-full bg-[#1DB954]/10 px-2 py-0.5 text-[10px] font-medium capitalize text-[#1DB954]">{g}</span>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             <>
