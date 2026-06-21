@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Send, Hash, Loader2, LogIn, Lock } from "lucide-react";
+import { Send, Hash, Loader2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -33,12 +33,6 @@ export default function MensajesPage() {
   const [text, setText] = useState("");
   const [myUid, setMyUid] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-
-  // auth form
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [authErr, setAuthErr] = useState("");
 
   const loadProfiles = useCallback(async () => {
     if (!sb) return;
@@ -84,24 +78,6 @@ export default function MensajesPage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const signIn = async () => {
-    if (!sb || busy) return;
-    setBusy(true); setAuthErr("");
-    try {
-      // intenta registrar (idempotente, confirma sin email) y luego entra
-      await fetch("/api/auth/register", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: me?.name, notionUserId: currentUserId }),
-      });
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { setAuthErr(error.message); return; }
-      // asegurar perfil con mi nombre/miembro
-      const { data: u } = await sb.auth.getUser();
-      if (u.user) await sb.from("profiles").upsert({ id: u.user.id, name: me?.name || email.split("@")[0], notion_user_id: currentUserId, email });
-      await init();
-    } finally { setBusy(false); }
-  };
-
   const send = async () => {
     if (!sb || !channelId || !text.trim() || !myUid) return;
     const body = text.trim();
@@ -118,19 +94,8 @@ export default function MensajesPage() {
 
   if (!authed) {
     return (
-      <div className="mx-auto max-w-sm">
-        <h1 className="font-display text-2xl font-bold text-ink">Mensajes</h1>
-        <p className="mt-1 text-sm text-zinc-500">Entra a tu cuenta del equipo para chatear en tiempo real.</p>
-        <div className="mt-5 space-y-3 rounded-2xl border border-line bg-white p-5 shadow-soft">
-          <p className="flex items-center gap-2 text-xs text-zinc-400"><Lock size={13} /> Tu correo del equipo + una contraseña</p>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tucorreo@curva.vc" className="w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-curva-purple" />
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Contraseña (6+)" className="w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-curva-purple" />
-          {authErr && <p className="text-xs text-rose-500">{authErr}</p>}
-          <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-curva-purple px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <LogIn size={15} />} Entrar / Crear cuenta
-          </button>
-          <p className="text-center text-[11px] text-zinc-400">Si es tu primera vez, se crea tu cuenta automáticamente.</p>
-        </div>
+      <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-zinc-400">
+        Tu sesión expiró. Vuelve a iniciar sesión para ver los mensajes.
       </div>
     );
   }

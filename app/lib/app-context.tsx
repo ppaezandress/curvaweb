@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 
 export type TimeEntry = {
   id: string;
@@ -168,28 +169,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     lastActivity.current = at;
   };
 
-  // --- Hidratar + service worker ---
+  // --- Hidratar + validar sesión Supabase + service worker ---
   useEffect(() => {
-    try {
-      const userId = localStorage.getItem(SESSION_KEY);
+    let cancelled = false;
+    (async () => {
+      let userId: string | null = null;
+      try { userId = localStorage.getItem(SESSION_KEY); } catch { /* */ }
+
+      // Con Supabase: la sesión real manda. Sin sesión → exigir login.
+      if (supabaseConfigured()) {
+        const sb = getSupabase();
+        try {
+          const { data } = await sb!.auth.getUser();
+          if (!data.user) {
+            userId = null;
+          } else if (!userId) {
+            const { data: prof } = await sb!
+              .from("profiles").select("notion_user_id").eq("id", data.user.id).maybeSingle();
+            userId = (prof?.notion_user_id as string) ?? null;
+          }
+        } catch { /* si falla, cae a localStorage */ }
+      }
+
+      if (cancelled) return;
       if (userId) {
         setCurrentUserId(userId);
-        const raw = localStorage.getItem(dataKey(userId));
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setActive(parsed.active ?? null);
-          setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0 })));
-          setOpenTasks(parsed.openTasks ?? []);
-        }
+        try {
+          const raw = localStorage.getItem(dataKey(userId));
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            setActive(parsed.active ?? null);
+            setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0 })));
+            setOpenTasks(parsed.openTasks ?? []);
+          }
+        } catch { /* */ }
       }
-    } catch {
-      /* limpio si falla */
-    }
-    lastActivity.current = Date.now();
-    setReady(true);
+      lastActivity.current = Date.now();
+      setReady(true);
+    })();
+
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+    return () => { cancelled = true; };
   }, []);
 
   // Persistir
@@ -227,7 +249,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => setCurrentUser(null);
+  const logout = () => {
+    if (supabaseConfigured()) {
+      try { getSupabase()?.auth.signOut(); } catch { /* */ }
+    }
+    setCurrentUser(null);
+  };
   const markActivity = () => markRef.current();
   const setFocus = (f: FocusApp) => setFocusApp(f);
 
