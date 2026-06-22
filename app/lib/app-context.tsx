@@ -65,9 +65,9 @@ type AppState = {
   // Al delegar una tarea a la IA, si te quedas sin reloj manual, "saltas"
   // automáticamente a otra tarea abierta (opts.autoResume fuerza/anula cuál).
   aiActive: AiTimer[];
-  startAI: (taskId: string, opts?: { autoResume?: string | null }) => void;
+  startAI: (taskId: string, opts?: { autoResume?: string | null; silent?: boolean }) => void;
   stopAI: (taskId: string) => void;
-  toggleAI: (taskId: string, opts?: { autoResume?: string | null }) => void;
+  toggleAI: (taskId: string, opts?: { autoResume?: string | null; silent?: boolean }) => void;
   isAI: (taskId: string) => boolean;
   // taskId al que saltó el reloj manual por delegar otra a la IA (para resaltarlo
   // un instante). Se limpia solo tras ~2.5s.
@@ -134,6 +134,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const activeRef = useRef<ActiveTimer>(null);
   const aiActiveRef = useRef<AiTimer[]>([]);
   const openTasksRef = useRef<string[]>([]);
+  // Tareas marcadas como IA por el conector (Claude Code/Desktop): visuales, NO registran
+  // entry propio (el tiempo IA lo registra el conector en Notion → evita doble conteo).
+  const silentAIRef = useRef<Set<string>>(new Set());
   const userRef = useRef<string | null>(null);
   const autoResumedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { activeRef.current = active; }, [active]);
@@ -300,9 +303,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Cierra el reloj de IA de una tarea (registra el tramo) y lo quita de la lista.
   const closeAI = (taskId: string, endedAt: number) => {
     const timer = aiActiveRef.current.find((a) => a.taskId === taskId);
-    if (timer && userRef.current) {
+    // No registra si es "silent" (lo registra el conector de IA en Notion).
+    if (timer && userRef.current && !silentAIRef.current.has(taskId)) {
       pushEntry(userRef.current, taskId, timer.startedAt, endedAt, round(endedAt - timer.startedAt), 0, "ai");
     }
+    silentAIRef.current.delete(taskId);
     const next = aiActiveRef.current.filter((a) => a.taskId !== taskId);
     aiActiveRef.current = next;
     setAiActive(next);
@@ -326,9 +331,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Marca una tarea como "IA trabajando": corre en paralelo, sin tocar tu reloj manual de otra tarea.
   // Si al delegarla te quedas sin reloj manual, saltas (play) a otra tarea abierta:
   // "se lo paso a la IA y sigo a mano con lo siguiente" — sin tener que picar play.
-  const startAI = (taskId: string, opts?: { autoResume?: string | null }) => {
+  const startAI = (taskId: string, opts?: { autoResume?: string | null; silent?: boolean }) => {
     const startedAt = Date.now();
     if (aiActiveRef.current.some((a) => a.taskId === taskId)) return; // ya en IA
+    if (opts?.silent) silentAIRef.current.add(taskId);
     const wasManualHere = activeRef.current?.taskId === taskId;
     // Si era tu tarea manual actual, ciérrala como manual y pásala a modo IA.
     if (wasManualHere && userRef.current) {
@@ -360,7 +366,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const stopAI = (taskId: string) => closeAI(taskId, Date.now());
-  const toggleAI = (taskId: string, opts?: { autoResume?: string | null }) => {
+  const toggleAI = (taskId: string, opts?: { autoResume?: string | null; silent?: boolean }) => {
     if (aiActiveRef.current.some((a) => a.taskId === taskId)) stopAI(taskId);
     else startAI(taskId, opts);
   };

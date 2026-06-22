@@ -15,6 +15,7 @@ import { DoneCelebration } from "@/components/DoneCelebration";
 import { MusicProbe } from "@/components/MusicProbe";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { MeetingWatcher } from "@/components/MeetingWatcher";
+import { AISync } from "@/components/AISync";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -55,6 +56,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MusicProbe />
       <PresenceHeartbeat />
       <MeetingWatcher />
+      <AISync />
     </div>
   );
 }
