@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timing, projectFromCwd } from "@/lib/timing-store";
 import { logAITime } from "@/lib/notion/time";
+import { broadcastAI } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
   const s = sid ? timing.open.get(sid) : undefined;
   if (!s) return NextResponse.json({ ok: true, skipped: "no-open-session" });
   timing.open.delete(sid);
+  // Push en vivo: la IA terminó (independiente de si el turno se registra).
+  void broadcastAI({ email: s.email || email, event: "stop" });
 
   const endedAt = Date.now();
   const secs = Math.round((endedAt - s.startedAt) / 1000);

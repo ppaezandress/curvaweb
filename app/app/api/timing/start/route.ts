@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { timing } from "@/lib/timing-store";
+import { timing, projectFromCwd } from "@/lib/timing-store";
+import { broadcastAI } from "@/lib/realtime";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,13 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({} as Record<string, unknown>));
   const sid = String((body as { session_id?: string }).session_id || "");
   if (!sid) return NextResponse.json({ ok: false, error: "no session_id" });
-  timing.open.set(sid, { email, cwd: String((body as { cwd?: string }).cwd || ""), startedAt: Date.now() });
-  if (email) timing.lastSignal.set(email.toLowerCase(), Date.now());
+  const startedAt = Date.now();
+  const cwd = String((body as { cwd?: string }).cwd || "");
+  timing.open.set(sid, { email, cwd, startedAt });
+  if (email) {
+    timing.lastSignal.set(email.toLowerCase(), startedAt);
+    // Push en vivo: la IA empezó a trabajar.
+    void broadcastAI({ email, event: "start", project: projectFromCwd(cwd), startedAt });
+  }
   return NextResponse.json({ ok: true });
 }
