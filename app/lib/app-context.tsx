@@ -31,7 +31,9 @@ type ActiveTimer = {
 } | null;
 
 // Relojes de IA corriendo en paralelo (uno por tarea que la IA está resolviendo).
-type AiTimer = { taskId: string; startedAt: number };
+// silent = lo puso el conector (Claude Code/Desktop); no registra entry propio y
+// puede limpiarse si queda huérfano tras una recarga.
+type AiTimer = { taskId: string; startedAt: number; silent?: boolean };
 
 type Segment = { start: number; end: number };
 
@@ -304,7 +306,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const closeAI = (taskId: string, endedAt: number) => {
     const timer = aiActiveRef.current.find((a) => a.taskId === taskId);
     // No registra si es "silent" (lo registra el conector de IA en Notion).
-    if (timer && userRef.current && !silentAIRef.current.has(taskId)) {
+    // El flag vive en el Set (sesión actual) o en el propio timer (sobrevive recargas).
+    if (timer && userRef.current && !silentAIRef.current.has(taskId) && !timer.silent) {
       pushEntry(userRef.current, taskId, timer.startedAt, endedAt, round(endedAt - timer.startedAt), 0, "ai");
     }
     silentAIRef.current.delete(taskId);
@@ -344,7 +347,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       activeRef.current = null;
       resetRun(startedAt);
     }
-    const next = [...aiActiveRef.current, { taskId, startedAt }];
+    const next = [...aiActiveRef.current, { taskId, startedAt, silent: !!opts?.silent }];
     aiActiveRef.current = next;
     setAiActive(next);
     setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
