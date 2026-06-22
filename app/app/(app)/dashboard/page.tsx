@@ -13,6 +13,7 @@ import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
 import { CoachPanel } from "@/components/CoachPanel";
+import { AITodayCard } from "@/components/AITodayCard";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { WeekProgress } from "@/components/WeekProgress";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
@@ -174,6 +175,11 @@ export default function HomePage() {
           <span className="min-w-0"><span className="block font-semibold">Registrar tiempo</span><span className="block truncate text-xs text-zinc-500">¿Ya trabajaste? Anótalo</span></span>
         </button>
       </section>
+
+      {/* Tiempo de IA en vivo (conector Claude Code/Desktop) */}
+      <div className="rise rise-3">
+        <AITodayCard />
+      </div>
 
       {/* Motor de recomendaciones: cómo viene el día + qué hacer */}
       <div className="rise rise-3">
