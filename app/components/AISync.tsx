@@ -45,9 +45,11 @@ export function AISync() {
             const t = autoTask.current;
             fns.current.stopAI(t); pendingResume.current = t; autoTask.current = null;
           }
-          // Limpia marcas de IA del conector que quedaron huérfanas (sin sesión viva).
+          // Limpia marcas de IA huérfanas (sin sesión viva): las automáticas (silent:true)
+          // y las heredadas de versiones previas (silent indefinido). Respeta solo las que
+          // marcaste a mano con el botón ✨IA (silent:false).
           aiRef.current
-            .filter((a) => a.silent && a.taskId !== pendingResume.current)
+            .filter((a) => a.silent !== false && a.taskId !== pendingResume.current)
             .forEach((a) => fns.current.stopAI(a.taskId));
         }
         wasLive.current = liveNow;
