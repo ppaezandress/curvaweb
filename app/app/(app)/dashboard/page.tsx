@@ -12,9 +12,8 @@ import { dayKey, computeStreak } from "@/lib/culture";
 import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
+import { CoachPanel } from "@/components/CoachPanel";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
-import { SpotifyConnect } from "@/components/SpotifyConnect";
-import { GcalConnect } from "@/components/GcalConnect";
 import { WeekProgress } from "@/components/WeekProgress";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
 import { StatCard } from "@/components/ui/StatCard";
@@ -176,11 +175,10 @@ export default function HomePage() {
         </button>
       </section>
 
-      {/* Conexiones (cultura + presencia) */}
-      <section className="rise rise-3 grid gap-3 lg:grid-cols-2">
-        <SpotifyConnect />
-        <GcalConnect />
-      </section>
+      {/* Motor de recomendaciones: cómo viene el día + qué hacer */}
+      <div className="rise rise-3">
+        <CoachPanel />
+      </div>
 
       {/* Stats + progreso semanal */}
       <section className="rise rise-3 grid gap-3 sm:gap-4 lg:grid-cols-2">

@@ -55,6 +55,8 @@ export type NotionProp = {
   rollup?: { number?: number | null };
   date?: { start: string; end?: string | null } | null;
   number?: number | null;
+  checkbox?: boolean;
+  created_time?: string;
 };
 
 /** Trae TODAS las páginas de una base (paginando). */

@@ -22,6 +22,8 @@ export function NewTaskModal({
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [auxIds, setAuxIds] = useState<string[]>([]);
+  const [internal, setInternal] = useState(false);
+  const [weight, setWeight] = useState<"" | "Ligera" | "Media" | "Pesada">("");
   const [saving, setSaving] = useState(false);
 
   const projectsForClient = clientId
@@ -39,15 +41,17 @@ export function NewTaskModal({
           name: name.trim(),
           responsableId: currentUserId,
           auxiliarIds: auxIds,
-          clientId: clientId || undefined,
-          projectId: projectId || undefined,
+          clientId: internal ? undefined : clientId || undefined,
+          projectId: internal ? undefined : projectId || undefined,
+          weight: weight || undefined,
+          internal,
         }),
       });
       const d = await res.json();
       await reload();
       if (startNow && d.ok && d.id) switchTo(d.id);
       // reset
-      setName(""); setClientId(""); setProjectId(""); setAuxIds([]);
+      setName(""); setClientId(""); setProjectId(""); setAuxIds([]); setInternal(false); setWeight("");
       onClose();
     } finally {
       setSaving(false);
@@ -74,22 +78,56 @@ export function NewTaskModal({
       }
     >
       <Field label="¿Qué vas a hacer?">
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Benchmark de competidores" className={inputCls} />
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && name.trim() && !saving) { e.preventDefault(); create(true); }
+          }}
+          placeholder="Ej. Benchmark de competidores"
+          className={inputCls}
+        />
       </Field>
-      <div className="grid gap-0 sm:grid-cols-2 sm:gap-4">
-        <Field label="Cliente">
-          <select value={clientId} onChange={(e) => { setClientId(e.target.value); setProjectId(""); }} className={inputCls}>
-            <option value="">— Sin cliente —</option>
-            {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-          </select>
-        </Field>
-        <Field label="Proyecto (opcional)">
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputCls}>
-            <option value="">— Sin proyecto —</option>
-            {projectsForClient.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
-          </select>
-        </Field>
-      </div>
+      {/* ¿Trabajo interno? (sin cliente) */}
+      <Field label="¿Para quién es?">
+        <div className="flex gap-1.5">
+          <button onClick={() => setInternal(false)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition ${!internal ? "border-curva-purple bg-curva-purple/5 text-curva-purple" : "border-line text-zinc-500 hover:border-zinc-300"}`}>
+            Para un cliente
+          </button>
+          <button onClick={() => { setInternal(true); setClientId(""); setProjectId(""); }} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition ${internal ? "border-curva-teal bg-curva-teal/5 text-curva-teal" : "border-line text-zinc-500 hover:border-zinc-300"}`}>
+            Interno (CURVA)
+          </button>
+        </div>
+      </Field>
+
+      {!internal && (
+        <div className="grid gap-0 sm:grid-cols-2 sm:gap-4">
+          <Field label="Cliente">
+            <select value={clientId} onChange={(e) => { setClientId(e.target.value); setProjectId(""); }} className={inputCls}>
+              <option value="">— Sin cliente —</option>
+              {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          </Field>
+          <Field label="Proyecto (opcional)">
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputCls}>
+              <option value="">— Sin proyecto —</option>
+              {projectsForClient.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+            </select>
+          </Field>
+        </div>
+      )}
+
+      {/* Peso / carga mental — para que la app pueda recomendar qué hacer */}
+      <Field label="¿Qué tan pesada es?">
+        <div className="flex gap-1.5">
+          {(["Ligera", "Media", "Pesada"] as const).map((w) => (
+            <button key={w} onClick={() => setWeight(weight === w ? "" : w)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition ${weight === w ? "border-curva-purple bg-curva-purple text-white" : "border-line text-zinc-600 hover:border-zinc-300"}`}>
+              {w}
+            </button>
+          ))}
+        </div>
+      </Field>
       <Field label="Apoyo (auxiliares)">
         <div className="flex flex-wrap gap-1.5">
           {members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—").map((m) => (

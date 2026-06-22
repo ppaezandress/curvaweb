@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Notion no configurado" }, { status: 400 });
   }
   try {
-    const { name, responsableId, auxiliarIds, clientId, projectId } = await req.json();
+    const { name, responsableId, auxiliarIds, clientId, projectId, weight, internal } = await req.json();
     if (!name?.trim()) {
       return NextResponse.json({ ok: false, error: "Falta el nombre" }, { status: 400 });
     }
@@ -24,6 +24,8 @@ export async function POST(req: Request) {
       properties["Auxiliar"] = { people: auxiliarIds.map((id: string) => ({ id })) };
     if (clientId) properties["CRM - Curva"] = { relation: [{ id: clientId }] };
     if (projectId) properties["Planeación"] = { relation: [{ id: projectId }] };
+    if (weight) properties["Peso"] = { select: { name: weight } };
+    if (internal) properties["Interno"] = { checkbox: true };
 
     const page = await notionFetch<{ id: string }>("/pages", {
       method: "POST",
@@ -41,13 +43,20 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Notion no configurado" }, { status: 400 });
   }
   try {
-    const { taskId, status } = await req.json();
-    if (!taskId || !status) {
-      return NextResponse.json({ ok: false, error: "Faltan datos" }, { status: 400 });
+    const { taskId, status, weight, internal } = await req.json();
+    if (!taskId) {
+      return NextResponse.json({ ok: false, error: "Falta taskId" }, { status: 400 });
+    }
+    const properties: Record<string, unknown> = {};
+    if (status) properties["Status"] = { status: { name: status } };
+    if (weight) properties["Peso"] = { select: { name: weight } };
+    if (typeof internal === "boolean") properties["Interno"] = { checkbox: internal };
+    if (Object.keys(properties).length === 0) {
+      return NextResponse.json({ ok: false, error: "Nada que actualizar" }, { status: 400 });
     }
     await notionFetch(`/pages/${taskId}`, {
       method: "PATCH",
-      body: JSON.stringify({ properties: { Status: { status: { name: status } } } }),
+      body: JSON.stringify({ properties }),
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -32,6 +32,7 @@ export function NotionSync() {
           endedAt: e.endedAt,
           seconds: e.seconds,
           inactiveSeconds: e.inactiveSeconds || 0,
+          mode: e.mode || "manual",
         }),
       }).catch(() => {});
     });

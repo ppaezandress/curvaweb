@@ -129,6 +129,56 @@ body {
 .modal-backdrop { animation: modal-fade 0.22s ease-out both; }
 .modal-panel { animation: modal-pop 0.26s var(--ease-curva) both; }
 
+/* ── Lenguaje "IA" ─────────────────────────────────────────────
+   El trabajo a mano usa púrpura (energía humana). La IA tiene su
+   propio carácter: índigo etéreo con un brillo que recorre, para que
+   se SIENTA "trabajando en paralelo" sin competir con tu cronómetro. */
+.ai-surface {
+  background:
+    linear-gradient(115deg, rgba(99, 102, 241, 0.10), rgba(124, 58, 237, 0.06) 60%, rgba(14, 165, 233, 0.08));
+}
+@keyframes ai-shimmer {
+  0% { background-position: -150% 0; }
+  100% { background-position: 250% 0; }
+}
+.ai-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.ai-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(129, 140, 248, 0.22) 48%,
+    rgba(255, 255, 255, 0.28) 52%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: ai-shimmer 2.6s var(--ease-curva) infinite;
+  pointer-events: none;
+}
+
+/* Anillo que late una vez cuando saltas a una tarea por delegar otra a la IA. */
+@keyframes curva-handoff {
+  0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(124, 58, 237, 0); }
+}
+.curva-handoff {
+  animation: curva-handoff 1.6s var(--ease-curva) 2;
+}
+
+/* Chip que entra al dock (manual→IA, o aparición). */
+@keyframes dock-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dock-in {
+  animation: dock-in 0.32s var(--ease-curva) both;
+}
+
 /* Foco accesible consistente (teclado) — un solo estilo en todo el producto */
 .focus-ring:focus-visible {
   outline: none;
@@ -146,7 +196,10 @@ body {
   .confetti,
   .curva-live-dot,
   .modal-backdrop,
-  .modal-panel {
+  .modal-panel,
+  .ai-shimmer::after,
+  .curva-handoff,
+  .dock-in {
     animation: none;
   }
 }

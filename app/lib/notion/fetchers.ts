@@ -58,6 +58,7 @@ export type TimeRecord = {
   start: string; // ISO
   minutes: number;
   inactiveMinutes: number;
+  mode: "manual" | "ai"; // manual (tus manos) o ai (espera/IA trabajando)
 };
 
 export async function getTimeRecords(): Promise<TimeRecord[]> {
@@ -75,6 +76,7 @@ export async function getTimeRecords(): Promise<TimeRecord[]> {
         start: P(pg, "Inicio")?.date?.start || "",
         minutes: P(pg, "Minutos")?.number || 0,
         inactiveMinutes: P(pg, "Min. inactivos")?.number || 0,
+        mode: (P(pg, "Modo")?.select?.name === "IA" ? "ai" : "manual") as "manual" | "ai",
       };
     })
     .filter((r) => r.minutes > 0);
@@ -139,6 +141,10 @@ export async function getCurvaData(): Promise<CurvaData> {
       typeId,
       status: statusName(pg, "Status") || "Sin empezar",
       baselineSeconds: mins ? Math.round(mins * 60) : 0,
+      weight: (selName(pg, "Peso") || undefined) as Task["weight"],
+      internal: P(pg, "Interno")?.checkbox ?? false,
+      dueDate: P(pg, "Due date")?.date?.start || undefined,
+      createdAt: P(pg, "Fecha de creación")?.created_time || undefined,
     };
   });
 

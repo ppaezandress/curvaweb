@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera } from "lucide-react";
+import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { statusToneClass, type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
@@ -13,13 +13,14 @@ import { TypeIcon } from "@/components/TypeIcon";
 import { TaskPhotos } from "@/components/TaskPhotos";
 
 export function TaskCard({ task }: { task: Task }) {
-  const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask } = useApp();
+  const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask, toggleAI, isAI, autoResumed } = useApp();
   const elapsed = useLiveElapsed(task.id);
   const { memberById, taskTypeById, reload } = useData();
   const { celebrate } = useCelebrate();
   const [marking, setMarking] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
   const isRunning = active?.taskId === task.id;
+  const onAI = isAI(task.id); // la IA está resolviendo esta tarea (en paralelo)
   const isOpen = openTasks.includes(task.id);
   const done = isDoneStatus(task.status);
 
@@ -62,15 +63,17 @@ export function TaskCard({ task }: { task: Task }) {
   const total =
     task.baselineSeconds +
     sessionSecondsForTask(task.id) +
-    (isRunning ? elapsed : 0);
+    (isRunning || onAI ? elapsed : 0);
 
   return (
     <div
       className={`flex items-center gap-4 rounded-2xl border bg-white p-4 transition ${
         isRunning
           ? "border-curva-purple shadow-lg shadow-curva-purple/10"
-          : "border-line hover:border-zinc-300"
-      }`}
+          : onAI
+            ? "border-curva-indigo shadow-lg shadow-curva-indigo/10"
+            : "border-line hover:border-zinc-300"
+      } ${autoResumed === task.id ? "curva-handoff" : ""}`}
     >
       {/* Ícono de tipo */}
       <span
@@ -87,6 +90,12 @@ export function TaskCard({ task }: { task: Task }) {
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusToneClass(task.status)}`}>
             {task.status}
           </span>
+          {task.internal && (
+            <span className="rounded-full bg-curva-teal/10 px-2 py-0.5 text-[11px] font-semibold text-curva-teal">Interno</span>
+          )}
+          {task.weight && (
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">{task.weight}</span>
+          )}
         </div>
         <h3 className="truncate font-display font-semibold text-ink">{task.name}</h3>
         <div className="mt-1.5 flex items-center gap-2">
@@ -95,10 +104,16 @@ export function TaskCard({ task }: { task: Task }) {
             {auxiliar && <Avatar member={auxiliar} size={20} />}
           </span>
           <span className="tabular text-sm text-zinc-500">{formatDuration(total)}</span>
-          {isOpen && !isRunning && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-curva-purple/10 px-2 py-0.5 text-[11px] font-medium text-curva-purple">
-              <Layers size={11} /> en pausa
+          {onAI ? (
+            <span className="ai-shimmer inline-flex items-center gap-1 rounded-full bg-curva-indigo/10 px-2 py-0.5 text-[11px] font-semibold text-curva-indigo">
+              <Sparkles size={11} className="curva-live-dot" /> IA · {formatClock(elapsed)}
             </span>
+          ) : (
+            isOpen && !isRunning && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-curva-purple/10 px-2 py-0.5 text-[11px] font-medium text-curva-purple">
+                <Layers size={11} /> en pausa
+              </span>
+            )
           )}
         </div>
       </div>
@@ -140,6 +155,22 @@ export function TaskCard({ task }: { task: Task }) {
             title="Agregar a pestañas (sin arrancar)"
           >
             <Plus size={15} />
+          </button>
+        )}
+        {/* La IA está trabajando (corre en paralelo a tu reloj manual de otra tarea) */}
+        {!done && (
+          <button
+            onClick={() => toggleAI(task.id)}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition focus-ring ${
+              onAI
+                ? "border-curva-indigo bg-curva-indigo text-white shadow-sm shadow-curva-indigo/20"
+                : "border-line bg-white text-zinc-400 hover:border-curva-indigo hover:text-curva-indigo"
+            }`}
+            aria-label={onAI ? "Detener IA" : "Pasar a la IA"}
+            title={onAI ? "La IA está trabajando — toca para detener" : "Pásala a la IA y sigue a mano con la siguiente"}
+          >
+            <Sparkles size={15} className={onAI ? "curva-live-dot" : ""} />
+            <span className="hidden sm:inline">IA</span>
           </button>
         )}
         {!done && isRunning && (

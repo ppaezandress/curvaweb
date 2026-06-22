@@ -29,6 +29,7 @@ async function createRow(props: {
   minutes: number;
   inactiveMinutes?: number;
   area?: string;
+  mode?: "manual" | "ai";
 }) {
   const title = `${props.userName || "—"} · ${(props.taskName || props.area || "Tiempo").slice(0, 50)}`;
   const properties: Record<string, unknown> = {
@@ -43,11 +44,26 @@ async function createRow(props: {
   if (props.area) properties["Área"] = { select: { name: props.area } };
   if (props.inactiveMinutes && props.inactiveMinutes > 0)
     properties["Min. inactivos"] = { number: Math.round(props.inactiveMinutes * 10) / 10 };
-  const page = await notionFetch<{ id: string }>("/pages", {
-    method: "POST",
-    body: JSON.stringify({ parent: { database_id: DB }, properties }),
-  });
-  return page.id;
+  // Modo (Manual / IA). Si la propiedad aún no existe en la DB, se reintenta sin ella.
+  if (props.mode) properties["Modo"] = { select: { name: props.mode === "ai" ? "IA" : "Manual" } };
+
+  const post = (p: Record<string, unknown>) =>
+    notionFetch<{ id: string }>("/pages", {
+      method: "POST",
+      body: JSON.stringify({ parent: { database_id: DB }, properties: p }),
+    });
+
+  try {
+    return (await post(properties)).id;
+  } catch (e) {
+    // La propiedad "Modo" todavía no existe en Notion → registra sin ella (no perder el tiempo).
+    if (props.mode && /Modo|is not a property|does not exist|validation_error/i.test(String(e))) {
+      const { Modo, ...rest } = properties as { Modo?: unknown };
+      void Modo;
+      return (await post(rest)).id;
+    }
+    throw e;
+  }
 }
 
 // POST: crea registro(s) de tiempo.
@@ -86,6 +102,7 @@ export async function POST(req: Request) {
       taskId, clientId, taskName, area,
       userName: b.userName || "",
       startedAt, endedAt, minutes, inactiveMinutes,
+      mode: b.mode === "ai" ? "ai" : "manual",
     });
     return NextResponse.json({ ok: true, id });
   } catch (e) {

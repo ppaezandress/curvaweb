@@ -54,6 +54,10 @@ export type Task = {
   status: string; // nombre del Status en Notion (tolerante)
   // Tiempo histórico ya acumulado (segundos) — del rollup de Notion (o mock).
   baselineSeconds: number;
+  weight?: "Ligera" | "Media" | "Pesada"; // carga mental / esfuerzo (para recomendaciones)
+  internal?: boolean; // trabajo interno de CURVA (sin cliente)
+  dueDate?: string; // ISO — fecha de entrega (para detectar vencidas)
+  createdAt?: string; // ISO — para detectar tareas recién asignadas
 };
 
 // ---- Equipo (Team Tracker) ----

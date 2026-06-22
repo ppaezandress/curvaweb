@@ -22,6 +22,7 @@ import { isAssignedTo } from "@/lib/task-status";
 type View = "mine" | "all";
 const NO_CLIENT = "__sin_cliente__";
 const NO_PROJECT = "__sin_proyecto__";
+const INTERNAL = "__interno__";
 
 export default function TareasPage() {
   const { currentUserId, sessionSecondsForTask } = useApp();
@@ -38,9 +39,9 @@ export default function TareasPage() {
 
   // Cliente de una tarea: directo, o heredado de su proyecto.
   const clientOf = (t: Task) =>
-    t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT;
+    t.internal ? INTERNAL : t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT;
   const clientName = (id: string) =>
-    id === NO_CLIENT ? "Sin cliente" : clientById[id]?.name || "Cliente";
+    id === INTERNAL ? "Interno (CURVA)" : id === NO_CLIENT ? "Sin cliente" : clientById[id]?.name || "Cliente";
   const projectName = (id: string) =>
     id === NO_PROJECT || !id ? "Sin proyecto" : projectById[id]?.name || "Proyecto";
 

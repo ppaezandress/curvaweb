@@ -9,6 +9,11 @@ import {
 } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 
+// Naturaleza de una sesión de tiempo:
+//  - "manual": tú trabajando con tus manos (máximo una a la vez).
+//  - "ai": la IA resuelve la tarea / estás esperando su resultado (varias en paralelo).
+export type TimeMode = "manual" | "ai";
+
 export type TimeEntry = {
   id: string;
   taskId: string;
@@ -17,12 +22,16 @@ export type TimeEntry = {
   endedAt: number; // epoch ms
   seconds: number; // segundos CONTADOS (lo que vale el registro)
   inactiveSeconds: number; // de esos, cuántos fueron sin actividad (marcados)
+  mode: TimeMode; // manual (tus manos) o ai (espera/IA trabajando)
 };
 
 type ActiveTimer = {
   taskId: string;
   startedAt: number;
 } | null;
+
+// Relojes de IA corriendo en paralelo (uno por tarea que la IA está resolviendo).
+type AiTimer = { taskId: string; startedAt: number };
 
 type Segment = { start: number; end: number };
 
@@ -47,10 +56,22 @@ type AppState = {
   setCurrentUser: (id: string | null) => void;
   logout: () => void;
 
-  active: ActiveTimer;
+  active: ActiveTimer; // tu reloj MANUAL (uno a la vez)
   entries: TimeEntry[];
   start: (taskId: string) => void;
   stop: () => void;
+
+  // Relojes de IA en paralelo (la IA trabaja mientras tú haces otra cosa).
+  // Al delegar una tarea a la IA, si te quedas sin reloj manual, "saltas"
+  // automáticamente a otra tarea abierta (opts.autoResume fuerza/anula cuál).
+  aiActive: AiTimer[];
+  startAI: (taskId: string, opts?: { autoResume?: string | null }) => void;
+  stopAI: (taskId: string) => void;
+  toggleAI: (taskId: string, opts?: { autoResume?: string | null }) => void;
+  isAI: (taskId: string) => boolean;
+  // taskId al que saltó el reloj manual por delegar otra a la IA (para resaltarlo
+  // un instante). Se limpia solo tras ~2.5s.
+  autoResumed: string | null;
 
   // Multi-tarea
   openTasks: string[];
@@ -100,18 +121,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [active, setActive] = useState<ActiveTimer>(null);
+  const [aiActive, setAiActive] = useState<AiTimer[]>([]);
   const [openTasks, setOpenTasks] = useState<string[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [pendingReview, setPendingReview] = useState<PendingReview>(null);
   const [focusApp, setFocusApp] = useState<FocusApp>(null);
+  const [autoResumed, setAutoResumed] = useState<string | null>(null);
 
   const counter = useRef(0);
   const lastActivity = useRef(0);
   const segments = useRef<Segment[]>([]); // segmentos inactivos de la corrida actual
   const activeRef = useRef<ActiveTimer>(null);
+  const aiActiveRef = useRef<AiTimer[]>([]);
+  const openTasksRef = useRef<string[]>([]);
   const userRef = useRef<string | null>(null);
+  const autoResumedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { aiActiveRef.current = aiActive; }, [aiActive]);
+  useEffect(() => { openTasksRef.current = openTasks; }, [openTasks]);
   useEffect(() => { userRef.current = currentUserId; }, [currentUserId]);
+
+  // Resalta brevemente la tarea a la que saltaste al delegar otra a la IA.
+  const flagAutoResume = (taskId: string) => {
+    setAutoResumed(taskId);
+    if (autoResumedTimer.current) clearTimeout(autoResumedTimer.current);
+    autoResumedTimer.current = setTimeout(() => setAutoResumed(null), 2500);
+  };
 
   // Registra una sesión de tiempo (con su porción inactiva).
   const pushEntry = (
@@ -121,6 +156,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     endedAt: number,
     seconds: number,
     inactiveSeconds: number,
+    mode: TimeMode = "manual",
   ) => {
     if (seconds <= 0) return;
     counter.current += 1;
@@ -132,6 +168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       endedAt,
       seconds,
       inactiveSeconds,
+      mode,
     };
     setEntries((e) => [...e, entry]);
   };
@@ -199,7 +236,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (raw) {
             const parsed = JSON.parse(raw);
             setActive(parsed.active ?? null);
-            setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0 })));
+            setAiActive(parsed.aiActive ?? []);
+            setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual" })));
             setOpenTasks(parsed.openTasks ?? []);
           }
         } catch { /* */ }
@@ -217,8 +255,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Persistir
   useEffect(() => {
     if (!ready || !currentUserId) return;
-    localStorage.setItem(dataKey(currentUserId), JSON.stringify({ active, entries, openTasks }));
-  }, [ready, currentUserId, active, entries, openTasks]);
+    localStorage.setItem(dataKey(currentUserId), JSON.stringify({ active, aiActive, entries, openTasks }));
+  }, [ready, currentUserId, active, aiActive, entries, openTasks]);
 
   // Escuchar actividad del usuario (web) mientras corre el cronómetro.
   useEffect(() => {
@@ -237,15 +275,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (id) {
       try {
         const raw = localStorage.getItem(dataKey(id));
-        const parsed = raw ? JSON.parse(raw) : { active: null, entries: [], openTasks: [] };
+        const parsed = raw ? JSON.parse(raw) : { active: null, aiActive: [], entries: [], openTasks: [] };
         setActive(parsed.active ?? null);
-        setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0 })));
+        setAiActive(parsed.aiActive ?? []);
+        setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual" })));
         setOpenTasks(parsed.openTasks ?? []);
       } catch {
-        setActive(null); setEntries([]); setOpenTasks([]);
+        setActive(null); setAiActive([]); setEntries([]); setOpenTasks([]);
       }
     } else {
-      setActive(null); setEntries([]); setOpenTasks([]);
+      setActive(null); setAiActive([]); setEntries([]); setOpenTasks([]);
     }
   };
 
@@ -258,17 +297,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const markActivity = () => markRef.current();
   const setFocus = (f: FocusApp) => setFocusApp(f);
 
-  // Arranca/cambia de tarea. Al cambiar, cierra la anterior manteniendo+marcando inactivo (sin modal).
+  // Cierra el reloj de IA de una tarea (registra el tramo) y lo quita de la lista.
+  const closeAI = (taskId: string, endedAt: number) => {
+    const timer = aiActiveRef.current.find((a) => a.taskId === taskId);
+    if (timer && userRef.current) {
+      pushEntry(userRef.current, taskId, timer.startedAt, endedAt, round(endedAt - timer.startedAt), 0, "ai");
+    }
+    const next = aiActiveRef.current.filter((a) => a.taskId !== taskId);
+    aiActiveRef.current = next;
+    setAiActive(next);
+  };
+
+  // Arranca/cambia de tarea (MANUAL). Al cambiar, cierra la anterior manteniendo+marcando inactivo (sin modal).
   const start = (taskId: string) => {
     const startedAt = Date.now();
+    // Si la IA estaba resolviendo esta tarea y ahora la tocas tú, cierra su tramo de IA.
+    closeAI(taskId, startedAt);
     const prev = activeRef.current;
     if (prev && userRef.current) {
       const run = computeRun(prev.startedAt, startedAt);
-      pushEntry(userRef.current, prev.taskId, prev.startedAt, startedAt, run.totalSec, run.inactiveSec);
+      pushEntry(userRef.current, prev.taskId, prev.startedAt, startedAt, run.totalSec, run.inactiveSec, "manual");
     }
     setActive({ taskId, startedAt });
     setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
     resetRun(startedAt);
+  };
+
+  // Marca una tarea como "IA trabajando": corre en paralelo, sin tocar tu reloj manual de otra tarea.
+  // Si al delegarla te quedas sin reloj manual, saltas (play) a otra tarea abierta:
+  // "se lo paso a la IA y sigo a mano con lo siguiente" — sin tener que picar play.
+  const startAI = (taskId: string, opts?: { autoResume?: string | null }) => {
+    const startedAt = Date.now();
+    if (aiActiveRef.current.some((a) => a.taskId === taskId)) return; // ya en IA
+    const wasManualHere = activeRef.current?.taskId === taskId;
+    // Si era tu tarea manual actual, ciérrala como manual y pásala a modo IA.
+    if (wasManualHere && userRef.current) {
+      const run = computeRun(activeRef.current!.startedAt, startedAt);
+      pushEntry(userRef.current, taskId, activeRef.current!.startedAt, startedAt, run.totalSec, run.inactiveSec, "manual");
+      setActive(null);
+      activeRef.current = null;
+      resetRun(startedAt);
+    }
+    const next = [...aiActiveRef.current, { taskId, startedAt }];
+    aiActiveRef.current = next;
+    setAiActive(next);
+    setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
+
+    // Auto-salto: solo si quedaste SIN reloj manual (si ya trabajas a mano en
+    // otra, no te robamos el foco). Candidata = la indicada, o la última tarea
+    // abierta que no sea esta ni esté en IA.
+    if (!activeRef.current) {
+      const inAI = new Set(next.map((a) => a.taskId));
+      let resume: string | null | undefined = opts?.autoResume;
+      if (resume === undefined) {
+        resume = [...openTasksRef.current].reverse().find((t) => t !== taskId && !inAI.has(t)) ?? null;
+      }
+      if (resume && resume !== taskId && !inAI.has(resume)) {
+        start(resume); // arranca el reloj manual en la otra tarea
+        flagAutoResume(resume);
+      }
+    }
+  };
+
+  const stopAI = (taskId: string) => closeAI(taskId, Date.now());
+  const toggleAI = (taskId: string, opts?: { autoResume?: string | null }) => {
+    if (aiActiveRef.current.some((a) => a.taskId === taskId)) stopAI(taskId);
+    else startAI(taskId, opts);
   };
 
   // Pausar/Detener: si hubo inactividad, abre revisión; si no, registra directo.
@@ -278,7 +372,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const endedAt = Date.now();
     const run = computeRun(a.startedAt, endedAt);
     if (run.inactiveSec <= 0) {
-      pushEntry(userRef.current, a.taskId, a.startedAt, endedAt, run.totalSec, 0);
+      pushEntry(userRef.current, a.taskId, a.startedAt, endedAt, run.totalSec, 0, "manual");
     } else {
       setPendingReview({
         taskId: a.taskId, startedAt: a.startedAt, endedAt,
@@ -293,9 +387,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const pr = pendingReview;
     if (!pr || !userRef.current) { setPendingReview(null); return; }
     if (discount) {
-      pushEntry(userRef.current, pr.taskId, pr.startedAt, pr.endedAt, pr.activeSec, 0);
+      pushEntry(userRef.current, pr.taskId, pr.startedAt, pr.endedAt, pr.activeSec, 0, "manual");
     } else {
-      pushEntry(userRef.current, pr.taskId, pr.startedAt, pr.endedAt, pr.totalSec, pr.inactiveSec);
+      pushEntry(userRef.current, pr.taskId, pr.startedAt, pr.endedAt, pr.totalSec, pr.inactiveSec, "manual");
     }
     setPendingReview(null);
   };
@@ -307,8 +401,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const pause = () => stop();
   const closeTask = (taskId: string) => {
     if (activeRef.current?.taskId === taskId) stop();
+    if (aiActiveRef.current.some((a) => a.taskId === taskId)) stopAI(taskId);
     setOpenTasks((p) => p.filter((t) => t !== taskId));
   };
+
+  const isAI = (taskId: string) => aiActive.some((a) => a.taskId === taskId);
 
   const sessionSecondsForTask = (taskId: string) =>
     entries.filter((e) => e.taskId === taskId).reduce((a, e) => a + e.seconds, 0);
@@ -317,6 +414,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value: AppState = {
     ready, currentUserId, setCurrentUser, logout,
     active, entries, start, stop,
+    aiActive, startAI, stopAI, toggleAI, isAI, autoResumed,
     openTasks, openTask, switchTo, pause, closeTask,
     pendingReview, resolveReview,
     markActivity, focusApp, setFocus,
@@ -335,14 +433,18 @@ export function useApp() {
 // Reloj en vivo aislado: solo el componente que lo usa re-renderiza cada segundo
 // (evita re-render de listas grandes). Pasa taskId para que SOLO la tarjeta activa tickee.
 export function useLiveElapsed(taskId?: string) {
-  const { active } = useApp();
-  const isThis = taskId == null ? !!active : active?.taskId === taskId;
+  const { active, aiActive } = useApp();
+  // Una tarea puede estar en tu reloj manual o en un reloj de IA (nunca ambos a la vez).
+  const aiTimer = taskId != null ? aiActive.find((a) => a.taskId === taskId) : undefined;
+  const manualThis = taskId == null ? !!active : active?.taskId === taskId;
+  const startedAt = manualThis ? active?.startedAt : aiTimer?.startedAt;
+  const live = manualThis || !!aiTimer;
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
-    if (!isThis || !active) return;
+    if (!live || !startedAt) return;
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [isThis, active]);
-  return active && isThis ? Math.max(0, Math.round((now - active.startedAt) / 1000)) : 0;
+  }, [live, startedAt]);
+  return live && startedAt ? Math.max(0, Math.round((now - startedAt) / 1000)) : 0;
 }

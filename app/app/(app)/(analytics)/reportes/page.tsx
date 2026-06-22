@@ -12,6 +12,7 @@ import {
   Printer,
   Loader2,
   Settings2,
+  Sparkles,
 } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { formatHours } from "@/lib/format";
@@ -20,7 +21,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { toCSV, downloadCSV } from "@/lib/export";
 import { TypeIcon } from "@/components/TypeIcon";
 
-type Rec = { id: string; taskId: string; person: string; start: string; minutes: number };
+type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
 type Range = "week" | "month" | "all";
 
 function rangeStart(range: Range): number {
@@ -85,6 +86,9 @@ export default function ReportesPage() {
 
   const totalMin = rows.reduce((a, r) => a + r.minutes, 0);
   const totalCost = rows.reduce((a, r) => a + r.cost, 0);
+  const aiMin = rows.filter((r) => r.mode === "ai").reduce((a, r) => a + r.minutes, 0);
+  const manualMin = totalMin - aiMin;
+  const aiShare = totalMin > 0 ? Math.round((aiMin / totalMin) * 100) : 0;
 
   type Agg = { key: string; label: string; minutes: number; cost: number; color?: string };
   const groupBy = (fn: (r: (typeof rows)[number]) => { key: string; label: string; color?: string }) => {
@@ -185,6 +189,28 @@ export default function ReportesPage() {
             <Kpi icon={<Building2 size={18} />} label="Cliente más demandante" value={topClient ? formatHours(topClient.minutes * 60) : "—"} sub={topClient?.label} />
             <Kpi icon={<Wallet size={18} />} label="Costo del tiempo" value={showCost ? money(totalCost) : "Setea tarifas"} sub={showCost ? undefined : "para ver costo"} />
           </div>
+
+          {/* Manual vs IA */}
+          {aiMin > 0 && (
+            <Section icon={<Sparkles size={20} />} title="Manual vs IA" desc="Cuánto del tiempo lo trabajaste a mano y cuánto lo resolvió la IA.">
+              <div className="flex h-3.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                <div className="h-full bg-ink" style={{ width: `${100 - aiShare}%` }} title={`Manual ${100 - aiShare}%`} />
+                <div className="h-full bg-curva-indigo" style={{ width: `${aiShare}%` }} title={`IA ${aiShare}%`} />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />
+                  <span className="font-semibold text-ink">Manual</span>
+                  <span className="tabular text-zinc-500">{formatHours(manualMin * 60)} · {100 - aiShare}%</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-curva-indigo" />
+                  <span className="font-semibold text-curva-indigo">IA (espera)</span>
+                  <span className="tabular text-zinc-500">{formatHours(aiMin * 60)} · {aiShare}%</span>
+                </span>
+              </div>
+            </Section>
+          )}
 
           {/* Por tipo de entregable */}
           <Section icon={<TrendingUp size={20} />} title="Por tipo de entregable" desc="Tu tabulador: cuántas horas cuesta cada tipo de trabajo.">

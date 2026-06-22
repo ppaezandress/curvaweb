@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, CalendarDays, BarChart3, Sparkles, Flame, MessageCircle, type LucideIcon } from "lucide-react";
+import { Home, ListTodo, MessageCircle, LineChart, type LucideIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { Logo } from "@/components/Logo";
 import { ProfileMenu } from "@/components/ProfileMenu";
 
-const links: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Inicio", icon: Home },
-  { href: "/tareas", label: "Tareas", icon: ListTodo },
-  { href: "/mensajes", label: "Mensajes", icon: MessageCircle },
-  { href: "/timesheet", label: "Semana", icon: CalendarDays },
-  { href: "/reportes", label: "Reportes", icon: BarChart3 },
-  { href: "/rachas", label: "Rachas", icon: Flame },
-  { href: "/recap", label: "Recap", icon: Sparkles },
+// 4 destinos: Hacer · Organizar · Hablar · Entender.
+// `match` decide el estado activo agrupando las sub-rutas de cada destino.
+const links: { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
+  { href: "/dashboard", label: "Hoy", icon: Home, match: (p) => p === "/dashboard" },
+  { href: "/tareas", label: "Tareas", icon: ListTodo, match: (p) => p === "/tareas" || p === "/timesheet" },
+  { href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" },
+  {
+    href: "/insights",
+    label: "Análisis",
+    icon: LineChart,
+    match: (p) => ["/insights", "/reportes", "/rachas", "/recap"].includes(p),
+  },
 ];
 
 export function TopNav() {
@@ -36,13 +40,13 @@ export function TopNav() {
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {links.map((l) => {
-              const activeLink = pathname === l.href;
+              const activeLink = l.match(pathname);
               const Icon = l.icon;
               return (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`focus-ring inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  className={`focus-ring inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
                     activeLink
                       ? "bg-ink text-white"
                       : "text-zinc-600 hover:bg-zinc-100"

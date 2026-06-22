@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, LogOut, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Camera, LogOut, Loader2, Settings } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -89,6 +90,9 @@ export function ProfileMenu() {
             {uploading ? "Subiendo…" : "Cambiar foto de perfil"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+          <Link href="/ajustes" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50">
+            <Settings size={16} /> Ajustes
+          </Link>
           <button onClick={logout} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-rose-500 transition hover:bg-rose-50">
             <LogOut size={16} /> Cerrar sesión
           </button>
