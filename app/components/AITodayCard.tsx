@@ -13,7 +13,7 @@ export function AITodayCard() {
   const { currentUserId } = useApp();
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
-  const live = useAILive(me?.email);
+  const live = useAILive();
 
   const [todayMin, setTodayMin] = useState(0);
   const [now, setNow] = useState(Date.now());

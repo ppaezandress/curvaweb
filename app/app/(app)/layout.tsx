@@ -16,6 +16,7 @@ import { MusicProbe } from "@/components/MusicProbe";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { MeetingWatcher } from "@/components/MeetingWatcher";
 import { AISync } from "@/components/AISync";
+import { AILiveProvider } from "@/lib/use-ai-live";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const hasDock = openTasks.length > 0;
 
   return (
+    <AILiveProvider>
     <div className="min-h-screen">
       <TopNav />
       <main
@@ -58,5 +60,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MeetingWatcher />
       <AISync />
     </div>
+    </AILiveProvider>
   );
 }

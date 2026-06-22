@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { useApp } from "@/lib/app-context";
-import { useData } from "@/lib/data-context";
 import { useAILive } from "@/lib/use-ai-live";
 
 const ACT_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "wheel"] as const;
@@ -13,10 +12,8 @@ const ACT_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll",
 //  3. Cuando vuelves a moverte (mouse/teclado) → reanuda el conteo a mano.
 // También limpia marcas de IA huérfanas (sin sesión viva).
 export function AISync() {
-  const { currentUserId, active, aiActive, startAI, stopAI, switchTo } = useApp();
-  const { memberById } = useData();
-  const me = currentUserId ? memberById[currentUserId] : undefined;
-  const live = useAILive(me?.email);
+  const { active, aiActive, startAI, stopAI, switchTo } = useApp();
+  const live = useAILive();
 
   const activeRef = useRef(active);
   useEffect(() => { activeRef.current = active; }, [active]);
