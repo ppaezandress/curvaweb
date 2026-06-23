@@ -2,3 +2,7 @@ node_modules/
 dist/
 .astro/
 .DS_Store
+
+# Backups/zips locales — NO commitear (gotcha app.zip 2.6GB)
+*.zip
+app.zip
