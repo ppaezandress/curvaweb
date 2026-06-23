@@ -1,7 +1,35 @@
 # CURVA Tiempos — HANDOFF (estado completo)
 
 > App de **medición de tiempo + gestión de tareas + capa social** para el equipo de CURVA, conectada a Notion. Meta: producto interno hoy, **SaaS** después.
-> Última actualización: 2026-06-21. Repo: **`ppaezandress/curvaweb`**, carpeta **`/app`** (la landing Astro vive en `/landing`).
+> Última actualización: 2026-06-22. Repo: **`ppaezandress/curvaweb`**, carpeta **`/app`** (la landing Astro vive en `/landing`).
+
+## 🆕 Sesión 2026-06-22 (lo más reciente — leer primero)
+Hay **9 commits locales en `main` SIN PUSHEAR** (el clasificador bloquea push directo a main; el usuario debe autorizar `git push origin main`). Build limpio. Lo construido:
+- **Navegación a 4 destinos**: Hoy · Tareas · Mensajes · **Análisis**. Route groups `(analytics)` (Insights/Reportes/Rachas/Recap) y `(work)` (Tareas/Semana) con sub-tabs (`components/SegmentedNav.tsx`). Sin botón "Más".
+- **Insights + "CURVA Wrapped"** (`(analytics)/insights`): KPIs con delta, tendencia, ritmo, concentración de clientes, superlativos del equipo, **perfil personal anti-vigilancia** (lente "Yo"), y **desglose Manual vs IA + Aprovechamiento**.
+- **Cronómetro paralelo Manual + IA** (`lib/app-context.tsx`): `aiActive[]` (N relojes IA en paralelo al manual), flag `silent` (IA del conector no duplica registro), auto-resume. Dock rediseñado (`TaskSwitcher`: zonas "A mano / IA en paralelo / En pausa"). Botón ✨IA en `TaskCard`.
+- **Modal "Registrar tiempo"** (`ManualEntryModal`): horario **de hora a hora** con **timeline interactiva arrastrable** (no "duración").
+- **Campos nuevos en Notion** (ya creados): `Modo` (Select Manual/IA en *Registro de Tiempo*), `Tipo`, `Peso` (Ligera/Media/Pesada), `Interno` (checkbox) en *Tasks Tracker*. Leídos en `fetchers.ts`, escritos en `/api/tasks` y `/api/time-entries`.
+- **Motor de recomendaciones** (`CoachPanel` en Hoy): mentalización del día (`/api/gcal/day`), alertas (vencidas/atrasadas/nuevas), "tengo 1 hora", chips de contexto.
+- **Tareas internas** (cliente opcional, toggle + filtro "Interno").
+- **Espacio de Ajustes** (`/ajustes` desde el avatar/ProfileMenu): Cuenta · Integraciones · Plan (placeholder) · Privacidad. Las tarjetas de conexión se movieron del dashboard aquí.
+- **🌟 Conectores de captura automática de IA (el diferenciador):**
+  - **Claude Code**: hooks en `~/.claude/settings.json` → `/api/timing/{start,stop}`. **USAR `type:"command"` (curl), NO `type:"http"` (no dispara en Claude Code v2.1.185).** Token = correo en header `x-curva-user`. Registra Modo IA en Notion (`lib/notion/time.ts` `logAITime`).
+  - **Claude Desktop**: watcher `app/tools/claude-desktop-watcher.mjs` (vigila `~/Library/Application Support/Claude/local-agent-mode-sessions/`, **solo metadatos**) → `/api/timing/desktop` (dedup). Correr con **ruta absoluta**: `node /Users/andrespaez/Documents/curva/app/tools/claude-desktop-watcher.mjs`. Guard de backfill 2h.
+  - **Tiempo de IA EN VIVO** (push, Supabase Realtime): `lib/realtime.ts` (broadcast desde server) + `lib/use-ai-live.tsx` (`AILiveProvider`, **canal único** "ai-live"). `AITodayCard` (tarjeta "Tiempo con IA") y `AISync` (al usar Claude Code la tarea activa pasa a IA; al terminar queda **en pausa**; al **mover el mouse** reanuda manual). Validado end-to-end.
+
+### Gotchas nuevos
+- Hooks de Claude Code: **`type:"command"`** (curl `--data-binary @-`), no `http`.
+- Watcher de Desktop: **ruta absoluta** (si lo corres desde `~` falla MODULE_NOT_FOUND).
+- El estado del cronómetro/IA vive en **localStorage por dispositivo** (NO sincroniza entre equipos). Solo los **registros terminados** van a Notion.
+- **Un solo canal Realtime** "ai-live" (vía `AILiveProvider`) — varios suscriptores al mismo topic se pisan.
+- Hay un **`app.zip` suelto** en la raíz del repo que NO debe commitearse.
+
+### Pendientes / próximos pasos
+- **Pushear** los 9 commits (`git push origin main`).
+- **Notion (datos)**: asignar `Tipo` a las tareas (0/337 clasificadas) y vincular `Cliente` en los **Proyectos** (solo 9/35) para que Reportes por cliente/tipo se vean.
+- **Fase 2 — app de escritorio (Tauri)**: captura de actividad **manual real** (foco de apps fuera del navegador) para el "manual en vivo" verdadero (estilo Rize/RescueTime).
+- **SaaS**: multi-tenant (datos en Supabase, no en el Notion de CURVA), onboarding self-serve, billing real (hoy placeholder).
 
 ## Cómo correr
 ```bash
