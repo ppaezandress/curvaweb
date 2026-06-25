@@ -261,6 +261,15 @@ body {
   position: absolute;
   transform: translate(-50%, -50%);
 }
+.milestone .lm-chip { transition: opacity .5s var(--ease-curve), border-color .5s var(--ease-curve), box-shadow .5s var(--ease-curve), transform .25s var(--ease-curve); }
+/* Tenue hasta que el trazo lo alcanza; brillante al encenderse. (Sin JS: queda visible) */
+.milestone.pending .lm-chip { opacity: 0.4; }
+.milestone.lit .lm-chip {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--color-ember-300) 55%, transparent);
+  box-shadow: 0 0 24px -4px color-mix(in srgb, var(--color-ember) 75%, transparent);
+}
+.milestone.lit .lm-num { color: var(--color-jade-300); }
 
 .node-pulse { position: relative; }
 .node-pulse::before {

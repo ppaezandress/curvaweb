@@ -178,7 +178,7 @@ export const servicios: Servicio[] = [
     title: 'Automatización e IA',
     tagline: 'Automatización e inteligencia artificial',
     headline: 'Agentes de IA y automatizaciones que trabajan por ti.',
-    description: 'Soluciones en producción —no demos— que atienden clientes, cotizan y ejecutan tareas repetitivas.',
+    description: 'Sistemas en producción —no demos— que atienden clientes, cotizan y se encargan de las tareas repetitivas.',
     tags: ['Agentes con IA', 'Atención 24/7', 'Cotizaciones automáticas', 'Flujos con n8n', 'Integración con WhatsApp'],
     cta: '¿Cuántas horas pierde tu equipo en tareas repetitivas?',
     accent: 'gold',

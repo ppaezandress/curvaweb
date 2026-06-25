@@ -51,11 +51,12 @@ const despues = [
   'Creces con números, no con corazonadas.',
 ];
 
-// Hitos sobre la curva (coordenadas % calculadas sobre la Bézier del viewBox 1280x420).
+// Hitos sobre la curva (coords % sobre la Bézier del viewBox 1280x420).
+// `at` = fracción del recorrido en que se "enciende" (sincroniza con el trazo); `href` = su servicio.
 const hitosCurva = [
-  { n: '01', label: 'Diagnóstico', left: 27.3, top: 79.8 },
-  { n: '02', label: 'Estructura', left: 51.6, top: 59.5 },
-  { n: '03', label: 'Digitalización', left: 75.7, top: 31.9 },
+  { n: '01', label: 'Diagnóstico',    left: 27.3, top: 79.8, at: 0.24, href: '/servicios/diagnostico' },
+  { n: '02', label: 'Estructura',     left: 51.6, top: 59.5, at: 0.50, href: '/servicios/procesos' },
+  { n: '03', label: 'Digitalización', left: 75.7, top: 31.9, at: 0.74, href: '/servicios/digitalizacion' },
 ];
 
 // Mismo viaje como timeline vertical para móvil (la gráfica horizontal se aplana en pantallas chicas).
@@ -68,10 +69,10 @@ const paradas = [
 ];
 
 const proceso = [
-  { num: '01', title: 'Diagnóstico', desc: 'Nos metemos a tu operación y vemos qué está pasando de verdad.' },
-  { num: '02', title: 'Ruta por módulos', desc: 'Atacamos primero lo que duele. Nada de planes de 200 páginas.' },
-  { num: '03', title: 'Implementación', desc: 'Lo armamos contigo: sistemas, procesos y tu equipo entrenado.' },
-  { num: '04', title: 'Acompañamiento', desc: 'No desaparecemos. Nos quedamos hasta que camina solo.' },
+  { num: '01', title: 'Diagnóstico', desc: 'Nos metemos a tu operación y vemos qué está pasando de verdad.', dur: '1–3 semanas' },
+  { num: '02', title: 'Ruta por módulos', desc: 'Atacamos primero lo que duele. Nada de planes de 200 páginas.', dur: 'Contigo, en 1 sesión' },
+  { num: '03', title: 'Implementación', desc: 'Lo armamos contigo: sistemas, procesos y tu equipo entrenado.', dur: 'Según el alcance' },
+  { num: '04', title: 'Acompañamiento', desc: 'No desaparecemos. Nos quedamos hasta que camina solo.', dur: 'Hasta que jala solo' },
 ];
 const marqueeItems = ['Diagnóstico','Procesos','Gobernanza','ERPs','Automatización','Agentes IA','Cultura','Liderazgo'];
 
@@ -96,7 +97,7 @@ const producto = {
 
 <BaseLayout
   title="CURVA. Transformación operativa y digital"
-  description="Ordenamos, digitalizamos y potenciamos la operación de empresas en crecimiento para que sus fundadores recuperen el control y escalen con claridad."
+  description="Ordenamos y digitalizamos la operación de empresas en crecimiento para que el dueño recupere el control y el negocio jale sin él encima."
   jsonLd={jsonLd}
 >
   <Nav overHero calLink={calLink} />
@@ -236,12 +237,13 @@ const producto = {
           <circle class="curve-dot" r="6" fill="#fff" stroke="rgba(255,255,255,0.22)" stroke-width="9"></circle>
         </svg>
 
-        <!-- Hitos: chip flotante anclado por % sobre cada nodo (solo desktop) -->
+        <!-- Hitos: chip flotante clickeable que se "enciende" al pasar el trazo (solo desktop) -->
         {hitosCurva.map((m) => (
-          <div class="milestone hidden sm:block" style={`left:${m.left}%;top:${m.top}%`}>
-            <span class="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink-2/80 backdrop-blur-md border border-white/10 px-3 py-1.5 text-[11px] font-semibold text-sand-200 shadow-xl shadow-black/40">
-              <span class="text-ember-300 tabular-nums">{m.n}</span>{m.label}
-            </span>
+          <div class="milestone hidden sm:block" data-at={m.at} style={`left:${m.left}%;top:${m.top}%`}>
+            <a href={m.href} class="lm-chip group absolute left-1/2 -translate-x-1/2 bottom-full mb-4 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink-2/80 backdrop-blur-md border border-white/10 px-3 py-1.5 text-[11px] font-semibold text-sand-200 shadow-xl shadow-black/40 transition-all hover:border-ember-300/50 hover:-translate-y-0.5">
+              <span class="lm-num text-ember-300 tabular-nums transition-colors">{m.n}</span>{m.label}
+              <svg class="lm-arrow w-3 h-3 opacity-0 -ml-1 transition-all group-hover:opacity-100 group-hover:ml-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+            </a>
           </div>
         ))}
 
@@ -318,6 +320,9 @@ const producto = {
             </div>
             <h3 class="relative display text-2xl font-semibold mb-3 text-ink">{a.title}</h3>
             <p class="relative text-sand-600 text-[15px] leading-relaxed">{a.desc}</p>
+            <div class="relative mt-5 flex flex-wrap gap-2">
+              {a.tags.map((t) => (<span class="text-[11px] font-medium text-sand-600 bg-white border border-sand-200 rounded-full px-2.5 py-1">{t}</span>))}
+            </div>
             <span class={`relative mt-auto pt-7 inline-flex items-center gap-2 text-sm font-semibold ${accentText[a.accent]} group-hover:gap-3 transition-all`}>
               Ver más
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
@@ -345,7 +350,11 @@ const producto = {
               <span class="absolute inset-0 rounded-full border border-white/10"></span>
             </div>
             <h3 class="display font-semibold text-lg mb-2">{s.title}</h3>
-            <p class="text-sand-400 text-[15px] leading-relaxed">{s.desc}</p>
+            <p class="text-sand-400 text-[15px] leading-relaxed mb-3">{s.desc}</p>
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-sand-300 bg-white/5 border border-white/10 rounded-full px-2.5 py-1">
+              <svg class="w-3 h-3 text-ember-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              {s.dur}
+            </span>
           </div>
         ))}
       </div>
