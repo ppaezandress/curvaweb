@@ -3,6 +3,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Curve from '../components/Curve.astro';
+import { Picture } from 'astro:assets';
+import andresImg from '../assets/andres.jpg';
+import ivanaImg from '../assets/ivana.jpg';
 
 const calLink = 'https://cal.com/andres-paez/30min';
 const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
@@ -91,13 +94,13 @@ const jsonLd = {
       </div>
       <div class="grid sm:grid-cols-2 gap-10">
         <div class="reveal">
-          <div class="w-full aspect-[4/5] overflow-hidden rounded-3xl bg-sand-100 mb-5 shadow-lg"><img src="/andres.jpg" alt="Andrés Páez Cortazar" class="w-full h-full object-cover object-top" loading="lazy" /></div>
+          <div class="w-full aspect-[4/5] overflow-hidden rounded-3xl bg-sand-100 mb-5 shadow-lg"><Picture src={andresImg} formats={['avif', 'webp']} alt="Andrés Páez Cortazar" width={640} height={800} class="w-full h-full object-cover object-top" loading="lazy" /></div>
           <h3 class="display font-semibold text-lg text-ink">Andrés Páez Cortazar</h3>
           <p class="text-ember text-sm font-semibold mb-2">Fundador</p>
           <p class="text-sand-600 text-[15px] leading-relaxed">Estrategia y Transformación de Negocios, Tec de Monterrey. IA aplicada a negocios. Ponente en Global Money Week 2025 (OECD).</p>
         </div>
         <div class="reveal reveal-d1">
-          <div class="w-full aspect-[4/5] overflow-hidden rounded-3xl bg-sand-100 mb-5 shadow-lg"><img src="/ivana.jpg" alt="Ivana Garduño Mayo" class="w-full h-full object-cover object-top" loading="lazy" /></div>
+          <div class="w-full aspect-[4/5] overflow-hidden rounded-3xl bg-sand-100 mb-5 shadow-lg"><Picture src={ivanaImg} formats={['avif', 'webp']} alt="Ivana Garduño Mayo" width={640} height={800} class="w-full h-full object-cover object-top" loading="lazy" /></div>
           <h3 class="display font-semibold text-lg text-ink">Ivana Garduño Mayo</h3>
           <p class="text-ember text-sm font-semibold mb-2">Co-Founder</p>
           <p class="text-sand-600 text-[15px] leading-relaxed">Organización y ejecución de proyectos de transformación. Gobernanza y estructura organizacional.</p>
