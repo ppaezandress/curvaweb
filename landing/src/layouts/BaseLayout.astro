@@ -59,6 +59,7 @@ const {
       import { initVideos, initAudioToggle } from '../scripts/media';
       import { initHome } from '../scripts/home';
       import { initTracking } from '../scripts/track';
+      import { initLeadMagnet } from '../scripts/leadmagnet';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -75,6 +76,7 @@ const {
         initVideos();
         initAudioToggle();
         initHome();
+        initLeadMagnet();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))

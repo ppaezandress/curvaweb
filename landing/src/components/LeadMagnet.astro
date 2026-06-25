@@ -1,0 +1,46 @@
+---
+// Lead magnet de baja fricción: checklist descargable a cambio del correo.
+// La lógica de captura/entrega vive en scripts/leadmagnet.ts (re-armado en page-load).
+---
+<section class="py-20 sm:py-28 px-6 sm:px-10 bg-sand-50 border-t border-sand-200">
+  <div class="mx-auto max-w-5xl rounded-3xl border border-sand-200 bg-white overflow-hidden grid md:grid-cols-2 shadow-sm">
+    <!-- Portada del checklist -->
+    <div class="relative bg-ink p-8 sm:p-10 flex items-center justify-center overflow-hidden">
+      <div class="glow-orb" style="width:20rem;height:20rem;top:-4rem;left:-4rem;background:radial-gradient(circle,rgba(124,58,237,0.5),transparent 70%);"></div>
+      <img
+        src="/checklist-preview.png"
+        alt="Vista del checklist: 10 señales de que tu operación necesita estructura"
+        width="794" height="1123"
+        loading="lazy"
+        class="relative z-10 w-44 sm:w-52 rounded-lg shadow-2xl rotate-[-3deg]"
+      />
+    </div>
+
+    <!-- Form -->
+    <div class="p-8 sm:p-10 flex flex-col justify-center">
+      <p class="eyebrow text-ember mb-4">Gratis · 1 minuto</p>
+      <h2 class="display text-2xl sm:text-3xl font-semibold text-ink leading-tight text-balance">¿Todavía no para una llamada? Empieza por aquí.</h2>
+      <p class="mt-4 text-sand-600 leading-relaxed">Descarga el checklist <strong class="text-ink font-semibold">"10 señales de que tu operación necesita estructura"</strong>. Lo marcas en un minuto y sabrás qué tan urgente es tu caso.</p>
+
+      <form id="lm-form" class="mt-7">
+        <div class="lm-fields flex flex-col sm:flex-row gap-3">
+          <input
+            type="email"
+            required
+            placeholder="tu@correo.com"
+            aria-label="Tu correo"
+            class="flex-1 rounded-full border border-sand-300 px-5 py-3.5 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors"
+          />
+          <button
+            type="submit"
+            class="btn-shine inline-flex items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-6 py-3.5 rounded-full hover:bg-ember-600 transition-all whitespace-nowrap"
+          >
+            Descargar checklist
+          </button>
+        </div>
+        <p id="lm-status" class="hidden text-[#0a7a5e] font-semibold mt-1"></p>
+        <p class="text-xs text-sand-400 mt-3">Sin spam. Solo te mandamos cosas que sirvan.</p>
+      </form>
+    </div>
+  </div>
+</section>

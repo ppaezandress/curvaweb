@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Curve from '../components/Curve.astro';
+import LeadMagnet from '../components/LeadMagnet.astro';
 import { areas } from '../data/areas';
 import { casos } from '../data/casos';
 
@@ -57,6 +58,15 @@ const hitosCurva = [
   { n: '03', label: 'Digitalización', left: 75.7, top: 31.9 },
 ];
 
+// Mismo viaje como timeline vertical para móvil (la gráfica horizontal se aplana en pantallas chicas).
+const paradas = [
+  { eyebrow: 'Hoy', label: 'Operación a pulso', accent: 'ember' as const },
+  { eyebrow: '01', label: 'Diagnóstico', accent: 'ember' as const },
+  { eyebrow: '02', label: 'Estructura', accent: 'gold' as const },
+  { eyebrow: '03', label: 'Digitalización', accent: 'jade' as const },
+  { eyebrow: 'Con CURVA', label: 'Operación por sistema', accent: 'jade' as const },
+];
+
 const proceso = [
   { num: '01', title: 'Diagnóstico', desc: 'Nos metemos a tu operación y vemos qué está pasando de verdad.' },
   { num: '02', title: 'Ruta por módulos', desc: 'Atacamos primero lo que duele. Nada de planes de 200 páginas.' },
@@ -67,6 +77,21 @@ const marqueeItems = ['Diagnóstico','Procesos','Gobernanza','ERPs','Automatizac
 
 // Path firma de la sección "La curva" (coincide con offset-path de .curve-dot en global.css).
 const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
+
+// Banda de números globales. ⚠️ VALORES PLACEHOLDER — reemplazar con cifras reales (ver lista de pendientes).
+const numeros = [
+  { value: '15+',    label: 'Empresas atendidas',       accent: 'ember', spark: 'M0,30 C22,28 38,22 58,14 C78,7 90,6 100,4' },
+  { value: '20+',    label: 'Sistemas en producción',   accent: 'gold',  spark: 'M0,31 C20,30 36,24 56,15 C76,8 90,9 100,3' },
+  { value: '500+',   label: 'Horas ahorradas al mes',   accent: 'jade',  spark: 'M0,29 C24,27 40,20 60,12 C80,6 92,7 100,5' },
+  { value: '2,300+', label: 'Operaciones digitalizadas', accent: 'gold', spark: 'M0,30 C25,29 42,23 62,13 C82,6 93,5 100,4' },
+] as const;
+
+// Producto propio = prueba ("no entregamos PDFs, construimos software"). Curva Tiempos.
+const producto = {
+  // PLACEHOLDER: pásame la URL pública de Curva Tiempos y una captura real para /public.
+  link: '#',                 // TODO: URL real de Curva Tiempos
+  shot: '',                  // TODO: ruta a captura en /public (ej. '/tiempos-shot.png'); vacío = mockup placeholder
+};
 ---
 
 <BaseLayout
@@ -150,8 +175,8 @@ const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
         <p class="reveal mt-5 text-lg text-sand-400 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
       </div>
 
-      <!-- Escena: gráfica de transformación con un punto que viaja del esfuerzo al sistema -->
-      <div class="reveal relative mt-12 sm:mt-20">
+      <!-- Escena horizontal (desktop): gráfica con punto viajero -->
+      <div class="reveal relative mt-12 sm:mt-20 hidden sm:block">
         <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
           <defs>
             <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
@@ -229,6 +254,22 @@ const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
           <p class="eyebrow text-jade-300 mb-2">Con CURVA</p>
           <p class="display text-lg sm:text-2xl font-semibold text-jade-300 leading-tight">Operación por sistema</p>
         </div>
+      </div>
+
+      <!-- Escena vertical (móvil): mismo viaje como timeline -->
+      <div class="reveal sm:hidden mt-10 relative pl-9">
+        <span class="absolute left-[13px] top-3 bottom-3 w-px bg-gradient-to-b from-ember via-gold to-jade"></span>
+        <ul class="space-y-8">
+          {paradas.map((p) => (
+            <li class="relative">
+              <span class={`absolute -left-9 top-0.5 w-[26px] h-[26px] rounded-full border-2 ${accentBorder[p.accent]} bg-ink flex items-center justify-center`}>
+                <span class={`w-2 h-2 rounded-full ${accentBar[p.accent]}`}></span>
+              </span>
+              <p class={`eyebrow ${accentText[p.accent]} mb-1`}>{p.eyebrow}</p>
+              <p class="display text-lg font-semibold text-sand-100 leading-tight">{p.label}</p>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <!-- Antes / después en dos columnas -->
@@ -311,43 +352,154 @@ const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
     </div>
   </section>
 
-  <!-- ============================== CASOS ============================== -->
-  <section id="casos" class="py-24 sm:py-36 px-6 sm:px-10 bg-sand-50">
+  <!-- ============================== NÚMEROS (banda de impacto) ============================== -->
+  {/* ⚠ VALORES PLACEHOLDER en `numeros` (frontmatter) — reemplazar con cifras reales antes de publicar. */}
+  <section class="py-16 sm:py-24 px-6 sm:px-10 bg-white border-t border-sand-200">
     <div class="mx-auto max-w-7xl">
-      <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-14 gap-6">
-        <div>
-          <p class="reveal eyebrow text-ember mb-5">Resultados</p>
-          <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink max-w-xl text-balance">Lo que hemos construido.</h2>
-        </div>
-        <div class="flex gap-2">
-          <button id="prev-case" aria-label="Anterior" class="w-12 h-12 rounded-full border border-sand-300 flex items-center justify-center hover:border-ink hover:bg-white transition-colors"><svg class="w-4 h-4 text-sand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg></button>
-          <button id="next-case" aria-label="Siguiente" class="w-12 h-12 rounded-full border border-sand-300 flex items-center justify-center hover:border-ink hover:bg-white transition-colors"><svg class="w-4 h-4 text-sand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg></button>
-        </div>
-      </div>
-
-      <div id="cases-track" class="cases-track pb-4">
-        {casos.map((c) => (
-          <a href={c.href} class="case-card group">
-            <div class="rounded-3xl border border-sand-200 bg-white p-8 h-full flex flex-col hover:shadow-2xl hover:border-sand-300 transition-all">
-              <span class={`self-start px-3 py-1 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} text-[11px] font-semibold uppercase tracking-wide mb-6`}>{c.categoria}</span>
-              <h3 class="display text-xl font-semibold mb-4 text-ink">{c.title}</h3>
-              <p class="text-sand-600 text-[14px] leading-relaxed mb-5">{c.desc}</p>
-              {c.quote && (
-                <p class={`mb-6 pl-3.5 border-l-2 ${accentBorder[c.accent]} text-ink text-[15px] leading-snug font-medium`}>{c.quote}</p>
-              )}
-              <div class="grid grid-cols-2 gap-5 mt-auto pt-6 border-t border-sand-200">
-                {c.metrics.map((m) => (<div><p class="display text-3xl font-semibold text-ink">{m.value}</p><p class="text-xs text-sand-500 mt-1">{m.label}</p></div>))}
-              </div>
-              {/* TODO Tier 1: añadir foto/nombre/empresa real del autor del testimonial */}
-            </div>
-          </a>
+      <p class="reveal eyebrow text-ember mb-12 text-center">CURVA en números</p>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
+        {numeros.map((n, i) => (
+          <div class={`reveal reveal-d${(i % 4) + 1} text-center`}>
+            <svg class="w-28 h-9 mx-auto mb-3" viewBox="0 0 100 32" fill="none" preserveAspectRatio="none" aria-hidden="true">
+              <path d={n.spark} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class={accentText[n.accent]}></path>
+            </svg>
+            <p class="display text-4xl sm:text-5xl font-semibold text-ink tabular-nums">{n.value}</p>
+            <p class="text-sm text-sand-500 mt-2 leading-snug">{n.label}</p>
+          </div>
         ))}
-      </div>
-      <div class="flex justify-center gap-2 mt-8">
-        {casos.map((_, i) => (<button class={`case-dot w-2 h-2 rounded-full bg-sand-300 transition-colors ${i === 0 ? 'dot-active' : ''}`} data-index={i} aria-label={`Caso ${i + 1}`}></button>))}
       </div>
     </div>
   </section>
+
+  <!-- ============================== CASOS ============================== -->
+  <section id="casos" class="py-24 sm:py-36 px-6 sm:px-10 bg-sand-50">
+    <div class="mx-auto max-w-7xl">
+      <div class="mb-14 max-w-2xl">
+        <p class="reveal eyebrow text-ember mb-5">Resultados</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">Lo que hemos construido.</h2>
+        <p class="reveal mt-5 text-lg text-sand-600 leading-relaxed">Casos reales, con números reales. Lo que pasa cuando una operación deja de jalar a pulso.</p>
+      </div>
+
+      <div class="space-y-8">
+        {casos.map((c, i) => (
+          <article class={`reveal reveal-d${i + 1} rounded-3xl border border-sand-200 bg-white overflow-hidden grid lg:grid-cols-[1.5fr_1fr] hover:shadow-xl transition-shadow`}>
+            {/* Historia: reto → qué hicimos → resultado */}
+            <div class="p-8 sm:p-10 lg:border-r border-sand-200">
+              <div class="flex items-center gap-3 mb-6">
+                <span class={`px-3 py-1 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} text-[11px] font-semibold uppercase tracking-wide`}>{c.categoria}</span>
+                {c.logo ? <img src={c.logo} alt="" class="h-6 opacity-80" /> : null}
+              </div>
+              <h3 class="display text-2xl sm:text-3xl font-semibold mb-8 text-ink leading-tight">{c.title}</h3>
+              <dl class="space-y-5">
+                <div class="sm:flex gap-5">
+                  <dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>El reto</dt>
+                  <dd class="text-sand-700 leading-relaxed">{c.reto}</dd>
+                </div>
+                <div class="sm:flex gap-5">
+                  <dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Qué hicimos</dt>
+                  <dd class="text-sand-700 leading-relaxed">{c.hicimos}</dd>
+                </div>
+                <div class="sm:flex gap-5">
+                  <dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Resultado</dt>
+                  <dd class="text-ink font-medium leading-relaxed">{c.resultado}</dd>
+                </div>
+              </dl>
+            </div>
+            {/* Prueba: métricas + testimonial con autor */}
+            <div class="p-8 sm:p-10 bg-sand-50 flex flex-col">
+              <div class="grid grid-cols-2 gap-x-6 gap-y-7">
+                {c.metrics.map((m) => (<div><p class="display text-3xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
+              </div>
+              {c.quote && (
+                <blockquote class="mt-8 pt-7 border-t border-sand-200">
+                  <p class="text-ink text-[15px] leading-snug font-medium mb-4">{c.quote}</p>
+                  {c.autor && (
+                    <figcaption class="flex items-center gap-3">
+                      <span class={`w-9 h-9 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} flex items-center justify-center flex-shrink-0`}>
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0v.75H4.5v-.75z"></path></svg>
+                      </span>
+                      <span class="text-[13px] leading-tight">
+                        <span class="block font-semibold text-ink">{c.autor.nombre === 'PENDIENTE' ? 'Cliente de CURVA' : c.autor.nombre}</span>
+                        <span class="block text-sand-500">{c.autor.cargo}{c.autor.empresa !== 'PENDIENTE' ? ` · ${c.autor.empresa}` : ''}</span>
+                      </span>
+                    </figcaption>
+                  )}
+                </blockquote>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== PRODUCTO (ventaja injusta) ============================== -->
+  <section class="surface-ink grain text-sand-50 py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden">
+    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-6rem;background:radial-gradient(circle,rgba(124,58,237,0.40),transparent 70%);"></div>
+    <div class="mx-auto max-w-7xl relative z-10 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+      <div>
+        <p class="reveal eyebrow text-ember-300 mb-5">Nuestra ventaja</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">No solo asesoramos. <span class="curve-text-live">Construimos.</span></h2>
+        <p class="reveal mt-6 text-lg text-sand-300 leading-relaxed">
+          La mayoría de las consultoras te dejan un PDF y se van. Nosotros construimos software de verdad —
+          tan en serio que tenemos el nuestro: <strong class="text-sand-50 font-semibold">Curva Tiempos</strong>,
+          el sistema con el que medimos cómo trabaja un equipo. Si lo usamos en casa, imagínate en tu operación.
+        </p>
+        <ul class="reveal reveal-d1 mt-8 space-y-3">
+          {['Sistemas que tu equipo sí usa a diario', 'Construido por nosotros, no subcontratado', 'Lo probamos en nuestra propia operación primero'].map((p) => (
+            <li class="flex gap-3 text-sand-200">
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-jade-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+        {producto.link !== '#' && (
+          <a href={producto.link} target="_blank" rel="noopener" class="reveal reveal-d2 mt-8 inline-flex items-center gap-2 text-sm font-semibold text-ember-300 hover:gap-3 transition-all link-underline">
+            Conocer Curva Tiempos
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+          </a>
+        )}
+      </div>
+
+      {/* Captura real (producto.shot) o mockup placeholder de marca */}
+      <div class="reveal reveal-d1">
+        {producto.shot ? (
+          <img src={producto.shot} alt="Curva Tiempos" class="rounded-2xl border border-white/15 shadow-2xl w-full" />
+        ) : (
+          <div class="rounded-2xl border border-white/15 bg-ink-2/70 backdrop-blur overflow-hidden shadow-2xl">
+            <div class="flex items-center gap-1.5 px-4 py-3 border-b border-white/10">
+              <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
+              <span class="ml-3 text-[11px] text-sand-500">curva-tiempos</span>
+            </div>
+            <div class="aspect-[16/10] p-6 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-ember/15 via-transparent to-jade/15">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#pt)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="pt" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#a78bfa"></stop><stop offset="0.5" stop-color="#60a5fa"></stop><stop offset="1" stop-color="#6ee7b7"></stop></linearGradient></defs></svg>
+                <span class="display font-semibold text-sand-100">Curva Tiempos</span>
+              </div>
+              <svg viewBox="0 0 320 90" fill="none" class="w-full" aria-hidden="true">
+                <path d="M0,80 C70,80 90,40 160,38 C230,36 250,60 320,20" stroke="url(#ptc)" stroke-width="2.5" stroke-linecap="round"></path>
+                <defs><linearGradient id="ptc" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#2563eb"></stop><stop offset="1" stop-color="#10b981"></stop></linearGradient></defs>
+              </svg>
+              <div class="grid grid-cols-3 gap-3">
+                {['Horas','Tareas','Equipo'].map((t) => (
+                  <div class="rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+                    <span class="block text-[10px] text-sand-500">{t}</span>
+                    <span class="block h-1.5 mt-1.5 rounded-full bg-gradient-to-r from-ember to-jade opacity-70"></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {!producto.shot && <p class="text-[11px] text-sand-500 mt-3 text-center">Vista de muestra — sustituir por captura real de Curva Tiempos.</p>}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== LEAD MAGNET (baja fricción) ============================== -->
+  <LeadMagnet />
 
   <!-- ============================== CTA ============================== -->
   <section class="surface-ink grain text-sand-50 py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
@@ -355,10 +507,17 @@ const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
     <div class="reveal mx-auto max-w-3xl text-center relative z-10">
       <h2 class="display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.04] text-balance">Cuéntanos de tu empresa.</h2>
       <p class="mt-6 text-lg text-sand-300 max-w-md mx-auto leading-relaxed">30 minutos. Nos cuentas cómo está la operación y te decimos derecho si te podemos ayudar o no.</p>
-      <a href={calLink} target="_blank" rel="noopener" class="btn-shine group mt-9 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-9 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
-        Agendar llamada de exploración
-        <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
-      </a>
+      <div class="mt-9 flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <a href={calLink} target="_blank" rel="noopener" class="btn-shine group inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-9 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
+          Agendar llamada de exploración
+          <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        </a>
+        <a href={waLink} target="_blank" rel="noopener" class="group inline-flex items-center gap-2.5 text-base font-semibold text-sand-100 border border-white/20 px-8 py-4 rounded-full hover:bg-white/5 hover:border-white/40 transition-all">
+          <svg class="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path></svg>
+          Escríbenos por WhatsApp
+        </a>
+      </div>
+      <p class="mt-6 text-sm text-sand-400">¿Todavía no para la llamada? Un WhatsApp también jala.</p>
     </div>
   </section>
 
