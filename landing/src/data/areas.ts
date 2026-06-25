@@ -18,7 +18,7 @@ export interface Area {
 export const areas: Area[] = [
   {
     title: 'Consultoría y estructura',
-    desc: 'Diagnóstico, procesos, gobernanza, cultura, liderazgo y roles. Todo lo que necesitas para que tu empresa funcione por sistema, no por esfuerzo.',
+    desc: 'Diagnóstico, procesos, gobernanza, cultura y roles. Le ponemos orden a cómo funciona tu empresa por dentro.',
     href: '/servicios/diagnostico',
     accent: 'ember',
     icon: 'compass',
@@ -33,7 +33,7 @@ export const areas: Area[] = [
   },
   {
     title: 'Digitalización y automatización',
-    desc: 'ERPs, sistemas, agentes con IA, automatización de flujos. Herramientas que realmente se usan y transforman tu operación.',
+    desc: 'ERPs, automatización y agentes con IA. Tecnología que tu equipo sí usa, no que junta polvo.',
     href: '/servicios/digitalizacion',
     accent: 'gold',
     icon: 'bolt',
@@ -45,23 +45,8 @@ export const areas: Area[] = [
     menuLabel: 'Digitalización y automatización',
     menuDesc: 'ERPs, agentes IA, integraciones',
   },
-  {
-    title: 'Marketing y contenido',
-    desc: 'Estrategia de marca, videos, redes sociales, marca personal. Contenido que conecta y posiciona, no que llena espacio.',
-    href: '/servicios/marketing',
-    accent: 'jade',
-    icon: 'spark',
-    tags: ['Redes sociales', 'Video', 'Marca personal', 'Estrategia'],
-    videos: [
-      '/marketing-demo.mp4',
-      '/greenearth-1.mp4',
-      '/evento-1.mp4',
-      '/meraki-1.mp4',
-      '/bts-1.mp4',
-      '/natsu-2.mp4',
-      '/bts-evento.mp4',
-    ],
-    menuLabel: 'Marketing y contenido',
-    menuDesc: 'Redes, video, marca personal',
-  },
+  // Nota: "Marketing y contenido" se ocultó de la home y del menú (jun 2026)
+  // mientras el equipo no pueda sostener la calidad deseada. La página
+  // /servicios/marketing sigue viva en data/servicios.ts; para reactivarlo
+  // basta con volver a agregar aquí el área (accent 'jade', icon 'spark').
 ];

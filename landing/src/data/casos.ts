@@ -38,28 +38,7 @@ export const casos: Caso[] = [
     quote: '"Respuesta inmediata y cotización sin esperar a nadie."',
     href: '/servicios/digitalizacion',
   },
-  {
-    categoria: 'Marketing y contenido',
-    accent: 'jade',
-    title: 'Green Earth: videos de marca personal',
-    desc: 'Estrategia de contenido y producción de videos. Posicionamiento del fundador como referente en su industria.',
-    metrics: [
-      { value: 'Video', label: 'Producción de contenido' },
-      { value: 'Marca', label: 'Personal del fundador' },
-    ],
-    quote: '"Narrativa auténtica que conecta con la audiencia."',
-    href: '/servicios/marketing',
-  },
-  {
-    categoria: 'Marketing y contenido',
-    accent: 'jade',
-    title: 'Natsu Life Bambú: manejo de redes',
-    desc: 'Grabación, edición y gestión completa de redes sociales. Contenido constante que refleja la identidad de la marca.',
-    metrics: [
-      { value: 'Full', label: 'Grabación y edición' },
-      { value: 'Integral', label: 'Gestión de redes' },
-    ],
-    quote: '"Contenido real, constante. Redes que se sienten como la marca."',
-    href: '/servicios/marketing',
-  },
+  // Casos de "Marketing y contenido" (Green Earth, Natsu Life Bambú) ocultos
+  // de la home junto con el eje de marketing (jun 2026). Siguen disponibles
+  // dentro de la página /servicios/marketing.
 ];

@@ -159,6 +159,134 @@ body {
 .reveal-d3 { transition-delay: 210ms; }
 .reveal-d4 { transition-delay: 280ms; }
 
+/* ----------------------------- Atmósfera ----------------------------- */
+
+/* Grano sutil: rompe los degradados planos, da textura de "papel digital". */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+/* Halos de luz que flotan lento detrás del contenido oscuro. */
+.glow-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  pointer-events: none;
+  opacity: 0.5;
+  will-change: transform;
+  animation: float-orb 18s ease-in-out infinite;
+}
+@keyframes float-orb {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(2.5rem, -2rem, 0) scale(1.12); }
+}
+
+/* ----------------------------- Page-load orquestado ----------------------------- */
+
+[data-load] { opacity: 0; }
+.is-loaded [data-load] {
+  animation: rise var(--dur-4) var(--ease-curve) both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(26px); filter: blur(6px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.is-loaded [data-load="1"] { animation-delay: 0.05s; }
+.is-loaded [data-load="2"] { animation-delay: 0.16s; }
+.is-loaded [data-load="3"] { animation-delay: 0.28s; }
+.is-loaded [data-load="4"] { animation-delay: 0.40s; }
+.is-loaded [data-load="5"] { animation-delay: 0.54s; }
+
+/* Texto con gradiente animado (el degradado "respira"). */
+.curve-text-live {
+  background: linear-gradient(110deg, #a78bfa, #60a5fa, #6ee7b7, #a78bfa);
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: pan-grad 9s linear infinite;
+}
+@keyframes pan-grad { to { background-position: 280% 0; } }
+
+/* ----------------------------- Botón firma ----------------------------- */
+
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -120%;
+  width: 60%; height: 100%;
+  background: linear-gradient(110deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.6s var(--ease-curve);
+}
+.btn-shine:hover::after { left: 140%; }
+
+/* ----------------------------- Escena de la curva ----------------------------- */
+/* "Hoy estás aquí → contigo llegas acá": un punto recorre la curva al hacer scroll. */
+.curve-dot {
+  offset-path: path("M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70");
+  offset-rotate: 0deg;
+  offset-distance: 0%;
+}
+@supports (animation-timeline: view()) {
+  .curve-dot {
+    animation: travel linear both;
+    animation-timeline: view();
+    animation-range: cover 12% cover 78%;
+  }
+  @keyframes travel { to { offset-distance: 100%; } }
+}
+@supports not (animation-timeline: view()) {
+  .curve-dot { offset-distance: 50%; }
+}
+
+/* Partículas / puntos de dato que parpadean sobre la escena */
+.twinkle { animation: twinkle 4s ease-in-out infinite; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.7; }
+}
+
+/* Hito sobre la curva: etiqueta posicionada por % sobre un punto del viewBox */
+/* Ancla puntual sobre el nodo; la etiqueta-chip flota por encima vía bottom-full. */
+.milestone {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.node-pulse { position: relative; }
+.node-pulse::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: ping 2.6s var(--ease-curve) infinite;
+}
+@keyframes ping {
+  0%   { opacity: 0.6; transform: scale(0.7); }
+  70%, 100% { opacity: 0; transform: scale(1.9); }
+}
+
+/* Underline animado para enlaces de texto */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1.5px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.4s var(--ease-curve);
+}
+.link-underline:hover { background-size: 100% 1.5px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -167,5 +295,8 @@ body {
     scroll-behavior: auto !important;
   }
   .reveal { opacity: 1; transform: none; }
-  .cursor-glow { display: none; }
+  .cursor-glow, .glow-orb { display: none; }
+  [data-load] { opacity: 1; }
+  .grain::after { display: none; }
+  .curve-dot { offset-distance: 60%; }
 }

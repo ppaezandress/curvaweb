@@ -12,6 +12,7 @@ const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber
 const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-jade' } as const;
 const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-jade' } as const;
 const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/15', jade: 'bg-jade/12' } as const;
+const accentBorder = { ember: 'border-ember', gold: 'border-gold', jade: 'border-jade' } as const;
 
 const icons: Record<string, string> = {
   compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zm3.5-12.5l-2 5.5-5.5 2 2-5.5 5.5-2z',
@@ -26,23 +27,46 @@ const jsonLd = {
   description: 'Consultoría de transformación operativa y digital para empresas en crecimiento.',
   areaServed: 'México',
   address: { '@type': 'PostalAddress', addressLocality: 'Ciudad de México', addressCountry: 'MX' },
-  serviceType: ['Consultoría empresarial', 'Digitalización', 'Marketing'],
+  serviceType: ['Consultoría empresarial', 'Digitalización', 'Automatización con IA'],
   founder: { '@type': 'Person', name: 'Andrés Páez Cortazar' },
 };
 
 const problema = [
-  'El fundador carga todo y el negocio no funciona sin él.',
-  'Los procesos viven en la cabeza de ciertas personas.',
-  'Se vende más, pero el desorden crece igual.',
-  'Hay voluntad de crecer, pero falta estructura.',
+  'El negocio depende de pocas personas para no detenerse.',
+  'Los procesos viven en la cabeza, no en un sistema.',
+  'Cada venta nueva trae más trabajo y desorden, no más claridad.',
+  'Hay con qué crecer, pero falta la estructura para lograrlo.',
 ];
+
+// La curva: el "antes" y el "después" que recorre el cliente con nosotros.
+const hoy = [
+  'Si tú paras, todo para.',
+  'El día se te va apagando incendios.',
+  'Vendes más y el caos crece igual.',
+];
+const despues = [
+  'El negocio corre sin ti encima.',
+  'Cada quien sabe qué hacer, sin preguntarte.',
+  'Creces con números, no con corazonadas.',
+];
+
+// Hitos sobre la curva (coordenadas % calculadas sobre la Bézier del viewBox 1280x420).
+const hitosCurva = [
+  { n: '01', label: 'Diagnóstico', left: 27.3, top: 79.8 },
+  { n: '02', label: 'Estructura', left: 51.6, top: 59.5 },
+  { n: '03', label: 'Digitalización', left: 75.7, top: 31.9 },
+];
+
 const proceso = [
-  { num: '01', title: 'Diagnóstico', desc: 'Entendemos la verdad del negocio.' },
-  { num: '02', title: 'Ruta por módulos', desc: 'Primero lo urgente, luego lo estructural.' },
-  { num: '03', title: 'Implementación', desc: 'Configuramos, diseñamos, capacitamos.' },
-  { num: '04', title: 'Acompañamiento', desc: 'Hasta que el cambio se sostenga solo.' },
+  { num: '01', title: 'Diagnóstico', desc: 'Nos metemos a tu operación y vemos qué está pasando de verdad.' },
+  { num: '02', title: 'Ruta por módulos', desc: 'Atacamos primero lo que duele. Nada de planes de 200 páginas.' },
+  { num: '03', title: 'Implementación', desc: 'Lo armamos contigo: sistemas, procesos y tu equipo entrenado.' },
+  { num: '04', title: 'Acompañamiento', desc: 'No desaparecemos. Nos quedamos hasta que camina solo.' },
 ];
-const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobernanza','Cultura','Liderazgo','Automatización'];
+const marqueeItems = ['Diagnóstico','Procesos','Gobernanza','ERPs','Automatización','Agentes IA','Cultura','Liderazgo'];
+
+// Path firma de la sección "La curva" (coincide con offset-path de .curve-dot en global.css).
+const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
 ---
 
 <BaseLayout
@@ -55,25 +79,37 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
   <a href="#problema" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
 
   <!-- ============================== HERO ============================== -->
-  <section class="surface-ink text-sand-50 relative min-h-[92vh] flex flex-col justify-center overflow-hidden">
-    <Curve variant="hero" draw="auto" stroke={1.6} class="pointer-events-none absolute inset-x-0 bottom-0 w-full h-[26vh] opacity-40" />
+  <section class="surface-ink grain text-sand-50 relative min-h-[94vh] flex flex-col justify-center overflow-hidden">
+    <div class="glow-orb" style="width:34rem;height:34rem;top:-8rem;left:-6rem;background:radial-gradient(circle,rgba(124,58,237,0.55),transparent 70%);"></div>
+    <div class="glow-orb" style="width:30rem;height:30rem;bottom:-10rem;right:-4rem;background:radial-gradient(circle,rgba(16,185,129,0.42),transparent 70%);animation-delay:-7s;"></div>
+
+    <Curve variant="hero" draw="auto" stroke={1.6} class="pointer-events-none absolute inset-x-0 bottom-0 w-full h-[30vh] opacity-40 z-[2]" />
+
     <div class="mx-auto max-w-6xl w-full px-6 sm:px-10 relative z-10 pt-24">
-      <p class="eyebrow text-ember-300 mb-7">Transformación operativa y digital</p>
-      <h1 class="display text-[2.6rem] leading-[1.06] sm:text-5xl lg:text-[3.6rem] font-semibold max-w-3xl tracking-tight">
-        Que tu empresa funcione por <span class="curve-text">estructura</span>, no por esfuerzo.
-      </h1>
-      <p class="mt-7 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-xl">
-        Ordenamos, digitalizamos y potenciamos tu operación para que recuperes el control y escales con claridad.
+      <p data-load="1" class="eyebrow text-ember-300 mb-7 inline-flex items-center gap-2.5">
+        <span class="inline-block w-7 h-px bg-ember-300/60"></span>
+        Transformación operativa y digital
       </p>
-      <div class="mt-9 flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-4">
-        <a href={calLink} target="_blank" rel="noopener" class="group inline-flex w-fit items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
-          Agendar diagnóstico gratuito
+      <h1 data-load="2" class="display text-[2.7rem] leading-[1.04] sm:text-5xl lg:text-[4rem] font-semibold max-w-4xl tracking-tight text-balance">
+        Que tu empresa funcione por <span class="curve-text-live">estructura</span>, no por esfuerzo.
+      </h1>
+      <p data-load="3" class="mt-7 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-xl">
+        Ponemos orden, lo conectamos con tecnología y lo dejamos funcionando. Para que dejes de cargar la empresa en la espalda.
+      </p>
+      <div data-load="4" class="mt-10 flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-4">
+        <a href={calLink} target="_blank" rel="noopener" class="btn-shine group inline-flex w-fit items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
+          Agendar llamada de exploración
           <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
         </a>
-        <a href="#servicios" class="text-base font-medium text-sand-300 hover:text-sand-50 transition-colors">Ver qué hacemos →</a>
+        <a href="#la-curva" class="text-base font-medium text-sand-300 hover:text-sand-50 transition-colors link-underline">Ver cómo funciona →</a>
+      </div>
+      <div data-load="5" class="mt-14 flex flex-wrap items-center gap-x-8 gap-y-3 text-sand-400 text-[13px]">
+        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-ember"></span> Consultoría y estructura</span>
+        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-gold"></span> Digitalización y automatización</span>
+        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-jade"></span> Agentes con IA</span>
       </div>
     </div>
-    <a href="#problema" aria-label="Bajar" class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce"><svg class="w-6 h-6 text-sand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"></path></svg></a>
+    <a href="#problema" aria-label="Bajar" class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10"><svg class="w-6 h-6 text-sand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"></path></svg></a>
   </section>
 
   <!-- ============================== MARQUEE ============================== -->
@@ -89,17 +125,137 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
   <section id="problema" class="py-24 sm:py-36 px-6 sm:px-10 bg-sand-50">
     <div class="mx-auto max-w-7xl grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-12 lg:gap-24">
       <div class="lg:sticky lg:top-28 self-start">
-        <p class="eyebrow text-ember mb-5">Para quién es esto</p>
-        <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.08] tracking-tight text-ink">Ya operas y vendes. Pero la estructura no aguanta.</h2>
+        <p class="reveal eyebrow text-ember mb-5">Para quién es esto</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.08] tracking-tight text-ink text-balance">Ya operas y vendes. Pero la estructura no aguanta.</h2>
+        <p class="reveal mt-6 text-lg text-sand-600 leading-relaxed max-w-md">Si te suena, el problema no es falta de esfuerzo. Es falta de sistema.</p>
       </div>
       <ul class="border-t border-sand-200 self-center">
         {problema.map((item, i) => (
-          <li class="flex gap-6 items-baseline py-7 border-b border-sand-200">
-            <span class={`display text-base font-semibold tabular-nums ${accentText[areas[i % 3].accent]}`}>0{i + 1}</span>
-            <p class="text-xl sm:text-2xl text-ink leading-snug">{item}</p>
+          <li class="reveal flex gap-6 items-baseline py-7 border-b border-sand-200 group">
+            <span class={`display text-base font-semibold tabular-nums ${accentText[areas[i % areas.length].accent]}`}>0{i + 1}</span>
+            <p class="text-xl sm:text-2xl text-ink leading-snug group-hover:translate-x-1 transition-transform">{item}</p>
           </li>
         ))}
       </ul>
+    </div>
+  </section>
+
+  <!-- ============================== LA CURVA (transformación) ============================== -->
+  <section id="la-curva" class="surface-ink grain text-sand-50 py-24 sm:py-36 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
+    <div class="glow-orb" style="width:28rem;height:28rem;top:18%;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(37,99,235,0.32),transparent 70%);"></div>
+    <div class="mx-auto max-w-6xl relative z-10">
+      <div class="max-w-2xl mb-4">
+        <p class="reveal eyebrow text-ember-300 mb-5">La curva</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">Hoy estás <span class="text-ember-300">aquí</span>. Te llevamos <span class="curve-text-live">acá</span>.</h2>
+        <p class="reveal mt-5 text-lg text-sand-400 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
+      </div>
+
+      <!-- Escena: gráfica de transformación con un punto que viaja del esfuerzo al sistema -->
+      <div class="reveal relative mt-12 sm:mt-20">
+        <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
+          <defs>
+            <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#7c3aed"></stop>
+              <stop offset="0.5" stop-color="#2563eb"></stop>
+              <stop offset="1" stop-color="#10b981"></stop>
+            </linearGradient>
+            <linearGradient id="curve-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2563eb" stop-opacity="0.22"></stop>
+              <stop offset="1" stop-color="#2563eb" stop-opacity="0"></stop>
+            </linearGradient>
+            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M48 0 H0 V48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"></path>
+            </pattern>
+            <radialGradient id="grid-fade" cx="42%" cy="40%" r="70%">
+              <stop offset="0" stop-color="#fff"></stop>
+              <stop offset="100%" stop-color="#000"></stop>
+            </radialGradient>
+            <mask id="grid-mask"><rect width="1280" height="420" fill="url(#grid-fade)"></rect></mask>
+            <filter id="curve-glow" x="-20%" y="-60%" width="140%" height="220%">
+              <feGaussianBlur stdDeviation="7" result="b"></feGaussianBlur>
+              <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+            </filter>
+          </defs>
+
+          <!-- Plano técnico de fondo -->
+          <rect width="1280" height="420" fill="url(#grid)" mask="url(#grid-mask)"></rect>
+          <!-- Eje base -->
+          <line x1="40" y1="392" x2="1240" y2="392" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
+
+          <!-- Partículas / puntos de dato -->
+          <circle cx="180" cy="300" r="2.5" fill="#a78bfa" class="twinkle"></circle>
+          <circle cx="520" cy="190" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-1.2s"></circle>
+          <circle cx="760" cy="320" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-2.1s"></circle>
+          <circle cx="1080" cy="150" r="2.5" fill="#6ee7b7" class="twinkle" style="animation-delay:-0.6s"></circle>
+          <circle cx="340" cy="120" r="1.8" fill="#a78bfa" class="twinkle" style="animation-delay:-3s"></circle>
+          <circle cx="980" cy="300" r="1.8" fill="#6ee7b7" class="twinkle" style="animation-delay:-1.8s"></circle>
+
+          <!-- Área de crecimiento bajo la curva -->
+          <path d={`${curvePath} L1240,392 L40,392 Z`} fill="url(#curve-area)"></path>
+          <!-- Riel tenue -->
+          <path d={curvePath} stroke="rgba(255,255,255,0.10)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10"></path>
+          <!-- Trazo firma ligado al scroll -->
+          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-draw="scroll" style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
+
+          <!-- Hitos sobre la curva -->
+          <circle cx="350" cy="335" r="5" fill="#0b0a14" stroke="#8b5cf6" stroke-width="2.5"></circle>
+          <circle cx="660" cy="250" r="5" fill="#0b0a14" stroke="#3b82f6" stroke-width="2.5"></circle>
+          <circle cx="969" cy="134" r="5" fill="#0b0a14" stroke="#22c79a" stroke-width="2.5"></circle>
+
+          <!-- Nodo inicio (hoy) -->
+          <circle cx="40" cy="360" r="9" fill="#0b0a14" stroke="#a78bfa" stroke-width="3"></circle>
+          <!-- Nodo fin (con CURVA) -->
+          <circle cx="1240" cy="70" r="11" fill="#10b981" stroke="#6ee7b7" stroke-width="3"></circle>
+
+          <!-- Punto viajero (con halo) -->
+          <circle class="curve-dot" r="6" fill="#fff" stroke="rgba(255,255,255,0.22)" stroke-width="9"></circle>
+        </svg>
+
+        <!-- Hitos: chip flotante anclado por % sobre cada nodo (solo desktop) -->
+        {hitosCurva.map((m) => (
+          <div class="milestone hidden sm:block" style={`left:${m.left}%;top:${m.top}%`}>
+            <span class="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink-2/80 backdrop-blur-md border border-white/10 px-3 py-1.5 text-[11px] font-semibold text-sand-200 shadow-xl shadow-black/40">
+              <span class="text-ember-300 tabular-nums">{m.n}</span>{m.label}
+            </span>
+          </div>
+        ))}
+
+        <!-- Extremos -->
+        <div class="absolute left-0 -bottom-2 sm:bottom-0 max-w-[46%]">
+          <p class="eyebrow text-ember-300 mb-2">Hoy</p>
+          <p class="display text-lg sm:text-2xl font-semibold text-sand-200 leading-tight">Operación a pulso</p>
+        </div>
+        <div class="absolute right-0 top-0 max-w-[46%] text-right">
+          <p class="eyebrow text-jade-300 mb-2">Con CURVA</p>
+          <p class="display text-lg sm:text-2xl font-semibold text-jade-300 leading-tight">Operación por sistema</p>
+        </div>
+      </div>
+
+      <!-- Antes / después en dos columnas -->
+      <div class="grid sm:grid-cols-2 gap-5 sm:gap-8 mt-14 sm:mt-20">
+        <div class="reveal rounded-3xl border border-white/10 bg-white/[0.03] p-7 sm:p-9 backdrop-blur-sm">
+          <p class="eyebrow text-ember-300 mb-6">Dónde estás hoy</p>
+          <ul class="space-y-4">
+            {hoy.map((h) => (
+              <li class="flex gap-3 text-sand-300 leading-relaxed">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-ember-300/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <span>{h}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div class="reveal reveal-d1 rounded-3xl border border-jade/25 bg-jade/[0.06] p-7 sm:p-9 backdrop-blur-sm">
+          <p class="eyebrow text-jade-300 mb-6">A dónde llegas</p>
+          <ul class="space-y-4">
+            {despues.map((d) => (
+              <li class="flex gap-3 text-sand-200 leading-relaxed">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-jade-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -108,19 +264,20 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
     <div class="mx-auto max-w-7xl">
       <div class="max-w-2xl mb-16">
         <p class="reveal eyebrow text-ember mb-5">Qué hacemos</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink">Estrategia, tecnología y personas. A tu medida.</h2>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">Estrategia, tecnología y personas. Lo que tu operación pida.</h2>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl">
         {areas.map((a, i) => (
-          <a href={a.href} data-tilt="3" class={`reveal reveal-d${i + 1} group relative rounded-3xl bg-sand-50 border border-sand-200 p-9 flex flex-col min-h-[280px] overflow-hidden hover:shadow-2xl hover:border-sand-300 transition-all`}>
+          <a href={a.href} data-tilt="3" class={`reveal reveal-d${i + 1} group relative rounded-3xl bg-sand-50 border border-sand-200 p-9 flex flex-col min-h-[300px] overflow-hidden hover:shadow-2xl hover:border-sand-300 transition-all`}>
             <span class={`absolute inset-x-0 top-0 h-1 ${accentBar[a.accent]}`}></span>
-            <div class={`w-14 h-14 rounded-2xl ${accentSoft[a.accent]} flex items-center justify-center mb-7`}>
+            <span class={`absolute -right-10 -top-10 w-40 h-40 rounded-full ${accentSoft[a.accent]} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity`}></span>
+            <div class={`relative w-14 h-14 rounded-2xl ${accentSoft[a.accent]} flex items-center justify-center mb-7`}>
               <svg class={`w-7 h-7 ${accentText[a.accent]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d={icons[a.icon]}></path></svg>
             </div>
-            <h3 class="display text-2xl font-semibold mb-3 text-ink">{a.title}</h3>
-            <p class="text-sand-600 text-[15px] leading-relaxed">{a.desc}</p>
-            <span class={`mt-auto pt-7 inline-flex items-center gap-2 text-sm font-semibold ${accentText[a.accent]} group-hover:gap-3 transition-all`}>
+            <h3 class="relative display text-2xl font-semibold mb-3 text-ink">{a.title}</h3>
+            <p class="relative text-sand-600 text-[15px] leading-relaxed">{a.desc}</p>
+            <span class={`relative mt-auto pt-7 inline-flex items-center gap-2 text-sm font-semibold ${accentText[a.accent]} group-hover:gap-3 transition-all`}>
               Ver más
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
             </span>
@@ -131,17 +288,23 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
   </section>
 
   <!-- ============================== CÓMO TRABAJAMOS ============================== -->
-  <section class="surface-ink text-sand-50 py-24 sm:py-36 px-6 sm:px-10">
+  <section class="surface-ink-soft text-sand-50 py-24 sm:py-36 px-6 sm:px-10">
     <div class="mx-auto max-w-7xl">
-      <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] mb-16 max-w-2xl">No entregamos reportes. <span class="text-sand-500">Construimos el cambio.</span></h2>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+      <div class="max-w-2xl mb-16">
+        <p class="reveal eyebrow text-ember-300 mb-5">Cómo trabajamos</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">No te dejamos un PDF. <span class="text-sand-500">Nos quedamos hasta que funcione.</span></h2>
+      </div>
+      <div class="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-14">
+        <!-- Línea-recorrido que conecta los nodos (desktop) -->
+        <div class="hidden lg:block absolute top-7 left-[11%] right-[11%] h-px bg-gradient-to-r from-ember via-gold to-jade opacity-50"></div>
         {proceso.map((s, i) => (
-          <div class={`reveal reveal-d${i + 1}`}>
-            <p class="display curve-text text-5xl font-semibold mb-5">{s.num}</p>
-            <div class="border-t border-white/15 pt-5">
-              <h3 class="display font-semibold text-lg mb-2">{s.title}</h3>
-              <p class="text-sand-400 text-[15px] leading-relaxed">{s.desc}</p>
+          <div class={`reveal reveal-d${i + 1} relative`}>
+            <div class="relative z-10 w-14 h-14 rounded-full flex items-center justify-center mb-6 bg-ink-2 border border-white/15 shadow-[0_0_30px_-6px_rgba(124,58,237,0.5)]">
+              <span class="display font-semibold text-lg curve-text">{s.num}</span>
+              <span class="absolute inset-0 rounded-full border border-white/10"></span>
             </div>
+            <h3 class="display font-semibold text-lg mb-2">{s.title}</h3>
+            <p class="text-sand-400 text-[15px] leading-relaxed">{s.desc}</p>
           </div>
         ))}
       </div>
@@ -152,7 +315,10 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
   <section id="casos" class="py-24 sm:py-36 px-6 sm:px-10 bg-sand-50">
     <div class="mx-auto max-w-7xl">
       <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-14 gap-6">
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink max-w-xl">Proyectos que hablan por sí solos.</h2>
+        <div>
+          <p class="reveal eyebrow text-ember mb-5">Resultados</p>
+          <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink max-w-xl text-balance">Lo que hemos construido.</h2>
+        </div>
         <div class="flex gap-2">
           <button id="prev-case" aria-label="Anterior" class="w-12 h-12 rounded-full border border-sand-300 flex items-center justify-center hover:border-ink hover:bg-white transition-colors"><svg class="w-4 h-4 text-sand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg></button>
           <button id="next-case" aria-label="Siguiente" class="w-12 h-12 rounded-full border border-sand-300 flex items-center justify-center hover:border-ink hover:bg-white transition-colors"><svg class="w-4 h-4 text-sand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg></button>
@@ -164,10 +330,15 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
           <a href={c.href} class="case-card group">
             <div class="rounded-3xl border border-sand-200 bg-white p-8 h-full flex flex-col hover:shadow-2xl hover:border-sand-300 transition-all">
               <span class={`self-start px-3 py-1 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} text-[11px] font-semibold uppercase tracking-wide mb-6`}>{c.categoria}</span>
-              <h3 class="display text-xl font-semibold mb-6 text-ink">{c.title}</h3>
-              <div class="grid grid-cols-2 gap-5 mt-auto">
+              <h3 class="display text-xl font-semibold mb-4 text-ink">{c.title}</h3>
+              <p class="text-sand-600 text-[14px] leading-relaxed mb-5">{c.desc}</p>
+              {c.quote && (
+                <p class={`mb-6 pl-3.5 border-l-2 ${accentBorder[c.accent]} text-ink text-[15px] leading-snug font-medium`}>{c.quote}</p>
+              )}
+              <div class="grid grid-cols-2 gap-5 mt-auto pt-6 border-t border-sand-200">
                 {c.metrics.map((m) => (<div><p class="display text-3xl font-semibold text-ink">{m.value}</p><p class="text-xs text-sand-500 mt-1">{m.label}</p></div>))}
               </div>
+              {/* TODO Tier 1: añadir foto/nombre/empresa real del autor del testimonial */}
             </div>
           </a>
         ))}
@@ -179,12 +350,13 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
   </section>
 
   <!-- ============================== CTA ============================== -->
-  <section class="surface-ink text-sand-50 py-28 sm:py-36 px-6 sm:px-10">
-    <div class="reveal mx-auto max-w-3xl text-center">
-      <h2 class="display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.04]">Hablemos de tu empresa.</h2>
-      <p class="mt-6 text-lg text-sand-300 max-w-md mx-auto leading-relaxed">30 minutos. Sin compromiso. Te decimos con honestidad si podemos ayudarte.</p>
-      <a href={calLink} target="_blank" rel="noopener" class="group mt-9 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-9 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
-        Agendar conversación
+  <section class="surface-ink grain text-sand-50 py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
+    <Curve variant="band" draw="scroll" stroke={1.4} class="pointer-events-none absolute inset-x-0 top-0 w-full h-[18vh] opacity-30" />
+    <div class="reveal mx-auto max-w-3xl text-center relative z-10">
+      <h2 class="display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.04] text-balance">Cuéntanos de tu empresa.</h2>
+      <p class="mt-6 text-lg text-sand-300 max-w-md mx-auto leading-relaxed">30 minutos. Nos cuentas cómo está la operación y te decimos derecho si te podemos ayudar o no.</p>
+      <a href={calLink} target="_blank" rel="noopener" class="btn-shine group mt-9 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-9 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
+        Agendar llamada de exploración
         <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
     </div>
@@ -207,4 +379,5 @@ const marqueeItems = ['Diagnóstico','Digitalización','ERPs','Procesos','Gobern
   @media (min-width: 1024px) { .case-card { flex: 0 0 31.5%; } }
   .dot-active { background-color: var(--color-ember); }
   @media (max-width: 640px) { .marquee-track { animation-duration: 24s; } }
+  .text-balance { text-wrap: balance; }
 </style>

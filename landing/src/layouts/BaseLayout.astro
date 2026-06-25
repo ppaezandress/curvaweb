@@ -7,6 +7,8 @@ import '@fontsource-variable/inter';
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import Seo from '../components/Seo.astro';
+import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 
 interface Props {
   title: string;
@@ -44,6 +46,9 @@ const {
 
     <slot />
 
+    <Analytics />
+    <SpeedInsights />
+
     <script>
       import { initReveal } from '../scripts/reveal';
       import { initCursorGlow } from '../scripts/cursor-glow';
@@ -53,10 +58,12 @@ const {
       import { initNav } from '../scripts/nav';
       import { initVideos, initAudioToggle } from '../scripts/media';
       import { initHome } from '../scripts/home';
+      import { initTracking } from '../scripts/track';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
       initCursorGlow();
+      initTracking();
 
       // Efímeros: re-armar en cada carga y tras cada navegación con View Transitions.
       document.addEventListener('astro:page-load', () => {
@@ -68,6 +75,10 @@ const {
         initVideos();
         initAudioToggle();
         initHome();
+        // Dispara el page-load orquestado (data-load) en el primer pintado.
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => document.body.classList.add('is-loaded'))
+        );
       });
 
       // Sincronizar Lenis tras el swap del router.

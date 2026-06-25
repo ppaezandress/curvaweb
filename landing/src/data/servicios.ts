@@ -84,7 +84,7 @@ export const servicios: Servicio[] = [
     cta: '¿Listo para que tu operación funcione en automático?',
     accent: 'gold',
     herramientas: {
-      title: 'Herramientas que dominamos',
+      title: 'Herramientas que hemos utilizado',
       items: [
         { name: 'Odoo', desc: 'ERP completo' },
         { name: 'n8n', desc: 'Automatización de flujos' },
