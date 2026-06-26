@@ -73,12 +73,18 @@ export default function LoginPage() {
       return;
     }
     try {
-      await fetch("/api/auth/register", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailVal, password }),
-      });
-      const { error } = await sb.auth.signInWithPassword({ email: emailVal, password });
-      if (error) { setErr("Correo o contraseña incorrectos"); return; }
+      // Entra directo si la cuenta ya existe (el caso de cada día) → así NO pegamos a
+      // register/createUser en cada login (eso disparaba el rate-limit de Supabase).
+      let { error } = await sb.auth.signInWithPassword({ email: emailVal, password });
+      if (error) {
+        // Primer ingreso (o cuenta aún inexistente): crea la cuenta y reintenta una vez.
+        await fetch("/api/auth/register", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: emailVal, password, name: member.name, notionUserId: member.id }),
+        });
+        ({ error } = await sb.auth.signInWithPassword({ email: emailVal, password }));
+        if (error) { setErr("Correo o contraseña incorrectos"); return; }
+      }
       const { data: u } = await sb.auth.getUser();
       if (!u.user) { setErr("No se pudo iniciar sesión"); return; }
       const { data: prof } = await sb.from("profiles").select("notion_user_id").eq("id", u.user.id).maybeSingle();

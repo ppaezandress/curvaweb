@@ -52,3 +52,38 @@ test("dark mode: el tema oscuro aplica .dark", async ({ page }) => {
   const isDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
   expect(isDark).toBe(true);
 });
+
+// 4) CAMINOS DEL PILOTO — abre los modales/vistas que el equipo va a machacar y verifica
+// que no brickean. NO enviamos formularios → cero escrituras a producción.
+test("caminos del piloto: modales y vistas clave sin brick", async ({ page }) => {
+  const crashes: string[] = [];
+  page.on("pageerror", (e) => crashes.push(e.message));
+  await login(page);
+
+  // a) Crear tarea (guiado) abre y renderiza el panel
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  await page.getByText("Nueva tarea").first().click();
+  await expect(page.locator(".modal-panel")).toBeVisible({ timeout: 8000 });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
+
+  // b) Tareas: re-agrupar (Urgencia/Estado/Cliente) sin crash
+  await page.goto("/tareas", { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1800);
+  for (const g of ["Urgencia", "Estado", "Cliente"]) {
+    await page.getByRole("button", { name: g }).first().click().catch(() => {});
+    await page.waitForTimeout(500);
+  }
+
+  // c) Soporte: el botón Reportar abre su modal
+  await page.getByRole("button", { name: /Reportar un problema/i }).click();
+  await expect(page.locator(".modal-panel")).toBeVisible({ timeout: 6000 });
+  await page.keyboard.press("Escape");
+
+  // d) Mensajes: el composer (textarea) está disponible
+  await page.goto("/mensajes", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("textarea", { timeout: 12000 });
+
+  expect(crashes, `Excepciones no atrapadas:\n${crashes.join("\n")}`).toHaveLength(0);
+});
