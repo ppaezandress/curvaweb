@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     if (responsableId) properties["Responsable"] = { people: [{ id: responsableId }] };
     if (Array.isArray(auxiliarIds) && auxiliarIds.length)
       properties["Auxiliar"] = { people: auxiliarIds.map((id: string) => ({ id })) };
-    if (clientId) properties["CRM - Curva"] = { relation: [{ id: clientId }] };
+    if (clientId) properties["Cliente"] = { relation: [{ id: clientId }] };
     if (projectId) properties["Planeación"] = { relation: [{ id: projectId }] };
     if (weight) properties["Peso"] = { select: { name: weight } };
     if (priority) properties["Prioridad"] = { select: { name: priority } };
@@ -83,7 +83,7 @@ export async function PATCH(req: Request) {
     if (priority) properties["Prioridad"] = { select: { name: priority } };
     if (dueDate !== undefined) properties["Due date"] = dueDate ? { date: { start: dueDate } } : { date: null };
     if (typeof internal === "boolean") properties["Interno"] = { checkbox: internal };
-    if (clientId !== undefined) properties["CRM - Curva"] = { relation: clientId ? [{ id: clientId }] : [] };
+    if (clientId !== undefined) properties["Cliente"] = { relation: clientId ? [{ id: clientId }] : [] };
     if (projectId !== undefined) properties["Planeación"] = { relation: projectId ? [{ id: projectId }] : [] };
     if (Array.isArray(responsableIds)) properties["Responsable"] = { people: responsableIds.map((id: string) => ({ id })) };
     if (Array.isArray(auxiliarIds)) properties["Auxiliar"] = { people: auxiliarIds.map((id: string) => ({ id })) };
