@@ -68,29 +68,29 @@ export function ProfileMenu() {
 
   return (
     <div className="relative" ref={boxRef}>
-      <button onClick={() => setOpen((o) => !o)} className="rounded-full ring-curva-purple/40 transition hover:ring-2 focus-ring" aria-label="Tu perfil">
+      <button onClick={() => setOpen((o) => !o)} className="rounded-full ring-accent/40 transition hover:ring-2 focus-ring" aria-label="Tu perfil">
         <Avatar member={me} src={photoUrl} size={38} />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-line bg-white shadow-float">
+        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-line bg-surface shadow-float">
           <div className="flex items-center gap-3 border-b border-line p-4">
             <Avatar member={me} src={photoUrl} size={48} />
             <div className="min-w-0">
-              <p className="truncate font-semibold text-ink">{me.name}</p>
-              <p className="truncate text-xs text-zinc-400">{me.email || me.role}</p>
+              <p className="truncate font-semibold text-fg">{me.name}</p>
+              <p className="truncate text-xs text-muted">{me.email || me.role}</p>
             </div>
           </div>
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading || !supabaseConfigured()}
-            className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-40"
+            className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-muted transition hover:bg-surface-2 disabled:opacity-40"
           >
             {uploading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
             {uploading ? "Subiendo…" : "Cambiar foto de perfil"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
-          <Link href="/ajustes" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50">
+          <Link href="/ajustes" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
             <Settings size={16} /> Ajustes
           </Link>
           <button onClick={logout} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-rose-500 transition hover:bg-rose-50">

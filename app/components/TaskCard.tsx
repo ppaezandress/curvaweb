@@ -1,24 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles } from "lucide-react";
+import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { statusToneClass, type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
 import { useCelebrate } from "@/lib/celebrate-context";
 import { formatClock, formatDuration } from "@/lib/format";
 import { isDone as isDoneStatus } from "@/lib/task-status";
+import { openInNotion } from "@/lib/notion-url";
 import { Avatar } from "@/components/Avatar";
 import { TypeIcon } from "@/components/TypeIcon";
 import { TaskPhotos } from "@/components/TaskPhotos";
+import { TaskDetailDrawer } from "@/components/TaskDetailDrawer";
 
 export function TaskCard({ task }: { task: Task }) {
-  const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask, toggleAI, isAI, autoResumed } = useApp();
+  const { active, switchTo, pause, openTask, openTasks, sessionSecondsForTask, toggleAI, isAI, autoResumed, aiEnabled } = useApp();
   const elapsed = useLiveElapsed(task.id);
   const { memberById, taskTypeById, reload } = useData();
   const { celebrate } = useCelebrate();
   const [marking, setMarking] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const isRunning = active?.taskId === task.id;
   const onAI = isAI(task.id); // la IA está resolviendo esta tarea (en paralelo)
   const isOpen = openTasks.includes(task.id);
@@ -57,8 +60,12 @@ export function TaskCard({ task }: { task: Task }) {
   };
 
   const type = taskTypeById[task.typeId];
-  const responsable = memberById[task.responsableId];
-  const auxiliar = task.auxiliarId ? memberById[task.auxiliarId] : undefined;
+  // TODOS los asignados (responsables + auxiliares), no solo el primero.
+  const assigneeIds = [...new Set([
+    ...(task.responsableIds?.length ? task.responsableIds : task.responsableId ? [task.responsableId] : []),
+    ...(task.auxiliarIds?.length ? task.auxiliarIds : task.auxiliarId ? [task.auxiliarId] : []),
+  ])];
+  const assignees = assigneeIds.map((id) => memberById[id]).filter(Boolean);
 
   const total =
     task.baselineSeconds +
@@ -67,9 +74,9 @@ export function TaskCard({ task }: { task: Task }) {
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-2xl border bg-white p-4 transition ${
+      className={`flex items-center gap-4 rounded-2xl border bg-surface p-4 transition ${
         isRunning
-          ? "border-curva-purple shadow-lg shadow-curva-purple/10"
+          ? "border-accent shadow-lg shadow-accent/10"
           : onAI
             ? "border-curva-indigo shadow-lg shadow-curva-indigo/10"
             : "border-line hover:border-zinc-300"
@@ -86,7 +93,7 @@ export function TaskCard({ task }: { task: Task }) {
       {/* Contenido */}
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-zinc-500">{type?.label}</span>
+          <span className="text-xs font-semibold text-muted">{type?.label}</span>
           <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusToneClass(task.status)}`}>
             {task.status}
           </span>
@@ -94,23 +101,23 @@ export function TaskCard({ task }: { task: Task }) {
             <span className="rounded-full bg-curva-teal/10 px-2 py-0.5 text-[11px] font-semibold text-curva-teal">Interno</span>
           )}
           {task.weight && (
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-500">{task.weight}</span>
+            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">{task.weight}</span>
           )}
         </div>
-        <h3 className="truncate font-display font-semibold text-ink">{task.name}</h3>
+        <button onClick={() => setShowDetail(true)} className="block max-w-full truncate text-left font-display font-semibold text-fg transition hover:text-accent focus-ring rounded" title="Ver detalle e historial">{task.name}</button>
         <div className="mt-1.5 flex items-center gap-2">
-          <span className="flex -space-x-1.5">
-            {responsable && <Avatar member={responsable} size={20} />}
-            {auxiliar && <Avatar member={auxiliar} size={20} />}
+          <span className="flex items-center -space-x-1.5">
+            {assignees.slice(0, 4).map((m) => <Avatar key={m!.id} member={m!} size={20} />)}
+            {assignees.length > 4 && <span className="ml-2.5 text-xs font-medium text-muted">+{assignees.length - 4}</span>}
           </span>
-          <span className="tabular text-sm text-zinc-500">{formatDuration(total)}</span>
+          <span className="tabular text-sm text-muted">{formatDuration(total)}</span>
           {onAI ? (
             <span className="ai-shimmer inline-flex items-center gap-1 rounded-full bg-curva-indigo/10 px-2 py-0.5 text-[11px] font-semibold text-curva-indigo">
               <Sparkles size={11} className="curva-live-dot" /> IA · {formatClock(elapsed)}
             </span>
           ) : (
             isOpen && !isRunning && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-curva-purple/10 px-2 py-0.5 text-[11px] font-medium text-curva-purple">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
                 <Layers size={11} /> en pausa
               </span>
             )
@@ -120,10 +127,19 @@ export function TaskCard({ task }: { task: Task }) {
 
       {/* Acción */}
       <div className="flex shrink-0 items-center gap-1.5">
+        {/* Abrir en Notion (app de escritorio si la tienes, si no web) */}
+        <button
+          onClick={() => openInNotion(task.id)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent focus-ring"
+          aria-label="Abrir en Notion"
+          title="Abrir en Notion (app o web)"
+        >
+          <ExternalLink size={15} />
+        </button>
         {/* Fotos de la tarea (en cualquier momento) */}
         <button
           onClick={() => setShowPhotos(true)}
-          className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple focus-ring sm:inline-flex"
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent focus-ring sm:inline-flex"
           aria-label="Fotos de la tarea"
           title="Fotos de la tarea"
         >
@@ -134,7 +150,7 @@ export function TaskCard({ task }: { task: Task }) {
           <button
             onClick={markDone}
             disabled={marking}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
             aria-label="Marcar como completada"
             title="Marcar Done"
           >
@@ -150,7 +166,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!isOpen && !done && (
           <button
             onClick={() => openTask(task.id)}
-            className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple sm:inline-flex focus-ring"
+            className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent sm:inline-flex focus-ring"
             aria-label="Agregar a pestañas"
             title="Agregar a pestañas (sin arrancar)"
           >
@@ -158,13 +174,13 @@ export function TaskCard({ task }: { task: Task }) {
           </button>
         )}
         {/* La IA está trabajando (corre en paralelo a tu reloj manual de otra tarea) */}
-        {!done && (
+        {!done && aiEnabled && (
           <button
             onClick={() => toggleAI(task.id)}
             className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition focus-ring ${
               onAI
                 ? "border-curva-indigo bg-curva-indigo text-white shadow-sm shadow-curva-indigo/20"
-                : "border-line bg-white text-zinc-400 hover:border-curva-indigo hover:text-curva-indigo"
+                : "border-line bg-surface text-muted hover:border-curva-indigo hover:text-curva-indigo"
             }`}
             aria-label={onAI ? "Detener IA" : "Pasar a la IA"}
             title={onAI ? "La IA está trabajando — toca para detener" : "Pásala a la IA y sigue a mano con la siguiente"}
@@ -176,7 +192,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!done && isRunning && (
           <button
             onClick={pause}
-            className="inline-flex items-center gap-2 rounded-full bg-curva-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-ring"
+            className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-ring"
           >
             <span className="tabular tracking-tight">{formatClock(elapsed)}</span>
             <Pause size={14} fill="currentColor" />
@@ -185,7 +201,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!done && !isRunning && (
           <button
             onClick={start}
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-curva-purple hover:text-curva-purple focus-ring"
+            className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring"
             aria-label={`Iniciar ${task.name}`}
           >
             <Play size={14} fill="currentColor" /> {isOpen ? "Reanudar" : "Iniciar"}
@@ -194,6 +210,7 @@ export function TaskCard({ task }: { task: Task }) {
       </div>
 
       <TaskPhotos taskId={task.id} taskName={task.name} open={showPhotos} onClose={() => setShowPhotos(false)} />
+      <TaskDetailDrawer taskId={task.id} open={showDetail} onClose={() => setShowDetail(false)} />
     </div>
   );
 }

@@ -45,30 +45,30 @@ const PLANS: Plan[] = [
 export function PlanSettings() {
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-500">El control de tiempo para la era de la IA. Mide a tu equipo y a la IA que trabaja por ellos.</p>
+      <p className="text-sm text-muted">El control de tiempo para la era de la IA. Mide a tu equipo y a la IA que trabaja por ellos.</p>
       <div className="grid gap-4 lg:grid-cols-3">
         {PLANS.map((p) => (
           <div
             key={p.name}
-            className={`relative flex flex-col rounded-2xl border p-5 shadow-soft ${p.featured ? "border-curva-purple bg-curva-purple/[0.03] ring-1 ring-curva-purple/30" : "border-line bg-white"}`}
+            className={`relative flex flex-col rounded-2xl border p-5 shadow-soft ${p.featured ? "border-accent bg-accent/[0.03] ring-1 ring-accent/30" : "border-line bg-surface"}`}
           >
             {p.featured && (
-              <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-curva-purple px-2.5 py-0.5 text-[11px] font-bold text-white">
+              <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-bold text-white">
                 <Sparkles size={11} /> Más popular
               </span>
             )}
             <div className="mb-3">
-              <p className="font-display text-lg font-bold text-ink">{p.name}</p>
-              <p className="text-xs text-zinc-500">{p.tagline}</p>
+              <p className="font-display text-lg font-bold text-fg">{p.name}</p>
+              <p className="text-xs text-muted">{p.tagline}</p>
             </div>
             <div className="mb-4 flex items-baseline gap-1">
-              <span className="font-display text-3xl font-bold text-ink">{p.price}</span>
-              <span className="text-xs text-zinc-400">{p.period}</span>
+              <span className="font-display text-3xl font-bold text-fg">{p.price}</span>
+              <span className="text-xs text-muted">{p.period}</span>
             </div>
             <ul className="mb-5 flex-1 space-y-2">
               {p.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm text-zinc-600">
-                  <Check size={15} className={`mt-0.5 shrink-0 ${p.featured ? "text-curva-purple" : "text-curva-teal"}`} /> {f}
+                <li key={f} className="flex items-start gap-2 text-sm text-muted">
+                  <Check size={15} className={`mt-0.5 shrink-0 ${p.featured ? "text-accent" : "text-curva-teal"}`} /> {f}
                 </li>
               ))}
             </ul>
@@ -76,10 +76,10 @@ export function PlanSettings() {
               disabled={p.current}
               className={`w-full rounded-full px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
                 p.current
-                  ? "cursor-default border border-line bg-zinc-50 text-zinc-400"
+                  ? "cursor-default border border-line bg-surface-2 text-muted"
                   : p.featured
-                    ? "bg-curva-purple text-white hover:opacity-90"
-                    : "border border-line bg-white text-ink hover:border-curva-purple hover:text-curva-purple"
+                    ? "bg-accent text-white hover:opacity-90"
+                    : "border border-line bg-surface text-fg hover:border-accent hover:text-accent"
               }`}
             >
               {p.current && <Check size={14} className="mr-1 inline" />}{p.cta}
@@ -87,7 +87,7 @@ export function PlanSettings() {
           </div>
         ))}
       </div>
-      <p className="text-center text-[11px] text-zinc-400">Precios de referencia · facturación próximamente</p>
+      <p className="text-center text-[11px] text-muted">Precios de referencia · facturación próximamente</p>
     </div>
   );
 }

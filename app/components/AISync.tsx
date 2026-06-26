@@ -12,7 +12,7 @@ const ACT_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll",
 //  3. Cuando vuelves a moverte (mouse/teclado) → reanuda el conteo a mano.
 // También limpia marcas de IA huérfanas (sin sesión viva).
 export function AISync() {
-  const { active, aiActive, startAI, stopAI, switchTo } = useApp();
+  const { active, aiActive, startAI, stopAI, switchTo, aiEnabled } = useApp();
   const live = useAILive();
 
   const activeRef = useRef(active);
@@ -28,6 +28,7 @@ export function AISync() {
 
   // Reacciona al estado de IA en vivo (instantáneo por push).
   useEffect(() => {
+    if (!aiEnabled) { wasLive.current = live.live; return; } // Tiempo con IA apagado: no sincronizar.
     if (live.live && !wasLive.current) {
       const t = activeRef.current?.taskId ?? pendingResume.current;
       if (t) { autoTask.current = t; pendingResume.current = null; fns.current.startAI(t, { autoResume: null, silent: true }); }
@@ -43,7 +44,7 @@ export function AISync() {
         .forEach((a) => fns.current.stopAI(a.taskId));
     }
     wasLive.current = live.live;
-  }, [live.live]);
+  }, [live.live, aiEnabled]);
 
   // Al volver a haber actividad tuya, reanuda el conteo a mano de la tarea pendiente.
   useEffect(() => {

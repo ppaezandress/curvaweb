@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
+import { Outfit, Fraunces } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/lib/app-context";
 import { DataProvider } from "@/lib/data-context";
@@ -12,11 +12,23 @@ const outfit = Outfit({
   display: "swap",
 });
 
+// Fuente de marca: serif óptico con carácter (warmth, distinción). Solo momentos grandes.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "CURVA · Tiempos",
   description:
     "Medición de tiempos del equipo de CURVA — registra cuánto toma cada tarea, por persona y por proyecto.",
 };
+
+// Aplica el tema ANTES del primer paint (evita flash de tema claro al recargar
+// en oscuro). Lee la preferencia del dispositivo: "dark" | "light" | "system".
+const themeScript = `(function(){try{var t=localStorage.getItem("curva.theme")||"system";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -24,7 +36,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${outfit.variable} h-full antialiased`}>
+    <html lang="es" className={`${outfit.variable} ${fraunces.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full">
         <HostGuard />
         <DataProvider>

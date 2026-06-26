@@ -55,6 +55,7 @@ export type Task = {
   // Tiempo histórico ya acumulado (segundos) — del rollup de Notion (o mock).
   baselineSeconds: number;
   weight?: "Ligera" | "Media" | "Pesada"; // carga mental / esfuerzo (para recomendaciones)
+  priority?: "Baja" | "Media" | "Alta"; // urgencia/importancia (select "Prioridad" en Notion)
   internal?: boolean; // trabajo interno de CURVA (sin cliente)
   dueDate?: string; // ISO — fecha de entrega (para detectar vencidas)
   createdAt?: string; // ISO — para detectar tareas recién asignadas

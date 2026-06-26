@@ -18,10 +18,10 @@ export function NowHero({
 
   const focusStyle =
     focusApp?.tone === "work"
-      ? "bg-white/20 text-white"
+      ? "bg-surface/20 text-white"
       : focusApp?.tone === "distraction"
         ? "bg-curva-pink/90 text-white"
-        : "bg-white/10 text-white/80";
+        : "bg-surface/10 text-white/80";
 
   if (active) {
     const task = taskById[active.taskId];
@@ -30,7 +30,7 @@ export function NowHero({
     return (
       <div className="curva-gradient overflow-hidden rounded-3xl p-6 text-white sm:p-8">
         <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-          <span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-white" />
+          <span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" />
           Cronómetro corriendo
         </div>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
@@ -51,7 +51,7 @@ export function NowHero({
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
             onClick={stop}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink transition hover:bg-white/90"
+            className="inline-flex items-center gap-2 rounded-full bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90"
           >
             <Pause size={16} fill="currentColor" /> Detener y guardar
           </button>
@@ -67,18 +67,18 @@ export function NowHero({
   }
 
   return (
-    <div className="rounded-3xl border border-line bg-white p-6 sm:p-8">
+    <div className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-curva-purple/10 text-curva-purple">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent">
             <Play size={20} fill="currentColor" />
           </span>
           <div>
-            <p className="font-display text-lg font-bold text-ink">
+            <p className="font-display text-lg font-bold text-fg">
               No tienes nada corriendo
             </p>
-            <p className="text-sm text-zinc-500">
-              Elige una tarea abajo y dale <span className="font-semibold text-ink">Iniciar</span>.
+            <p className="text-sm text-muted">
+              Elige una tarea abajo y dale <span className="font-semibold text-fg">Iniciar</span>.
             </p>
           </div>
         </div>
@@ -103,11 +103,11 @@ function Metric({
 }) {
   return (
     <div>
-      <p className="flex items-center gap-1 text-xs uppercase tracking-wide text-zinc-400">
+      <p className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted">
         {icon}
         {label}
       </p>
-      <p className="tabular font-display text-2xl font-bold text-ink">{value}</p>
+      <p className="tabular font-display text-2xl font-bold text-fg">{value}</p>
     </div>
   );
 }

@@ -68,7 +68,7 @@ export default function RachasPage() {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-white py-16 text-sm text-zinc-400">
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-16 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" /> Calculando rachas…
         </div>
       ) : (
@@ -102,8 +102,8 @@ export default function RachasPage() {
                     <span>Siguiente: {next.emoji} {next.label}</span>
                     <span>{mine.current}/{next.days} días</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/20">
-                    <div className="h-full rounded-full bg-white" style={{ width: `${Math.max(4, pct)}%` }} />
+                  <div className="h-2 overflow-hidden rounded-full bg-surface/20">
+                    <div className="h-full rounded-full bg-surface" style={{ width: `${Math.max(4, pct)}%` }} />
                   </div>
                 </div>
               );
@@ -111,61 +111,61 @@ export default function RachasPage() {
           </section>
 
           {/* Racha de equipo */}
-          <section className="flex items-center gap-4 rounded-2xl border border-line bg-white p-5 shadow-soft">
+          <section className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-soft">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-curva-teal/10 text-curva-teal"><Users size={22} /></span>
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-400">Racha de equipo</p>
-              <p className="tabular font-display text-2xl font-bold text-ink">{teamStreak} días</p>
+              <p className="text-xs uppercase tracking-wide text-muted">Racha de equipo</p>
+              <p className="tabular font-display text-2xl font-bold text-fg">{teamStreak} días</p>
             </div>
-            <p className="ml-auto max-w-[40%] text-right text-xs text-zinc-400">Días seguidos donde todo el equipo registró tiempo.</p>
+            <p className="ml-auto max-w-[40%] text-right text-xs text-muted">Días seguidos donde todo el equipo registró tiempo.</p>
           </section>
 
           {/* Leaderboard */}
-          <section className="rounded-2xl border border-line bg-white p-6 shadow-soft">
-            <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-ink"><Trophy size={20} className="text-amber-500" /> Tabla de líderes</h2>
+          <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+            <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-fg"><Trophy size={20} className="text-amber-500" /> Tabla de líderes</h2>
             <div className="space-y-1.5">
               {board.map((b, i) => {
                 const badge = badgeFor(b.current);
                 const isMe = me && b.person === me.name;
                 return (
-                  <div key={b.person} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isMe ? "bg-curva-purple/5 ring-1 ring-curva-purple/30" : i % 2 ? "bg-zinc-50/60" : ""}`}>
-                    <span className={`w-6 text-center font-display text-sm font-bold ${i === 0 ? "text-amber-500" : "text-zinc-400"}`}>
+                  <div key={b.person} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isMe ? "bg-accent/5 ring-1 ring-accent/30" : i % 2 ? "bg-surface-2/60" : ""}`}>
+                    <span className={`w-6 text-center font-display text-sm font-bold ${i === 0 ? "text-amber-500" : "text-muted"}`}>
                       {i === 0 ? <Crown size={16} className="mx-auto" /> : i + 1}
                     </span>
                     {b.member ? <Avatar member={b.member} size={32} /> : <span className="h-8 w-8 rounded-full bg-zinc-200" />}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">{b.person}{isMe ? " (tú)" : ""}</p>
-                      <p className="text-xs text-zinc-400">Récord {b.longest}d · {b.activeDays} días activos</p>
+                      <p className="truncate text-sm font-semibold text-fg">{b.person}{isMe ? " (tú)" : ""}</p>
+                      <p className="text-xs text-muted">Récord {b.longest}d · {b.activeDays} días activos</p>
                     </div>
                     {badge && <span className="text-lg" title={badge.label}>{badge.emoji}</span>}
-                    <span className="tabular flex items-center gap-1 font-display text-lg font-bold text-ink">
+                    <span className="tabular flex items-center gap-1 font-display text-lg font-bold text-fg">
                       <Flame size={15} className="text-orange-500" /> {b.current}
                     </span>
                   </div>
                 );
               })}
               {board.length === 0 && (
-                <p className="py-8 text-center text-sm text-zinc-400">Aún no hay rachas. Empieza a medir tu tiempo. 🔥</p>
+                <p className="py-8 text-center text-sm text-muted">Aún no hay rachas. Empieza a medir tu tiempo. 🔥</p>
               )}
             </div>
           </section>
 
           {/* Medallas */}
-          <section className="rounded-2xl border border-line bg-white p-6 shadow-soft">
-            <h2 className="mb-4 font-display text-xl font-bold text-ink">Medallas</h2>
+          <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+            <h2 className="mb-4 font-display text-xl font-bold text-fg">Medallas</h2>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
               {STREAK_BADGES.map((bdg) => {
                 const got = (mine?.current ?? 0) >= bdg.days || (mine?.longest ?? 0) >= bdg.days;
                 return (
-                  <div key={bdg.days} className={`rounded-2xl border p-3 text-center ${got ? "border-curva-purple/30 bg-curva-purple/5" : "border-line opacity-50"}`}>
+                  <div key={bdg.days} className={`rounded-2xl border p-3 text-center ${got ? "border-accent/30 bg-accent/5" : "border-line opacity-50"}`}>
                     <div className="text-3xl">{got ? bdg.emoji : "🔒"}</div>
-                    <p className="mt-1 text-xs font-semibold text-ink">{bdg.label}</p>
-                    <p className="text-[10px] text-zinc-400">{bdg.days} días</p>
+                    <p className="mt-1 text-xs font-semibold text-fg">{bdg.label}</p>
+                    <p className="text-[10px] text-muted">{bdg.days} días</p>
                   </div>
                 );
               })}
             </div>
-            <p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-400"><Shield size={13} /> Los escudos evitan que faltar un día rompa tu racha (2 al mes).</p>
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-muted"><Shield size={13} /> Los escudos evitan que faltar un día rompa tu racha (2 al mes).</p>
           </section>
         </>
       )}

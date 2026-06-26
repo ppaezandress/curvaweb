@@ -97,10 +97,10 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
 
   return (
     <Modal open={open} onClose={onClose} title="Foto de la tarea">
-      <p className="-mt-1 mb-4 truncate text-sm text-zinc-500">{taskName}</p>
+      <p className="-mt-1 mb-4 truncate text-sm text-muted">{taskName}</p>
 
       {!supabaseConfigured() ? (
-        <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-zinc-400">Conecta el backend para subir fotos.</p>
+        <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">Conecta el backend para subir fotos.</p>
       ) : view === "preview" && shot ? (
         // Preview + comentario + emojis → Enviar
         <div>
@@ -112,22 +112,22 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
             onKeyDown={(e) => { if (e.key === "Enter") send(); }}
             placeholder="Agrega un comentario (opcional)…"
             autoFocus
-            className="mt-3 w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-curva-purple"
+            className="mt-3 w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
           />
           <div className="mt-2 flex flex-wrap gap-1">
             {EMOJIS.map((e) => (
-              <button key={e} onClick={() => setCaption((c) => c + e)} className="rounded-lg px-1.5 py-1 text-lg transition hover:bg-zinc-100 focus-ring" aria-label={`Agregar ${e}`}>{e}</button>
+              <button key={e} onClick={() => setCaption((c) => c + e)} className="rounded-lg px-1.5 py-1 text-lg transition hover:bg-surface-2 focus-ring" aria-label={`Agregar ${e}`}>{e}</button>
             ))}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <button onClick={() => { clearShot(); startCam(facing); }} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-zinc-500 transition hover:bg-zinc-100 focus-ring"><RotateCcw size={15} /> Repetir</button>
+            <button onClick={() => { clearShot(); startCam(facing); }} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-muted transition hover:bg-surface-2 focus-ring"><RotateCcw size={15} /> Repetir</button>
             <Button onClick={send} disabled={sending}>{sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Enviar</Button>
           </div>
         </div>
       ) : view === "denied" ? (
         // Sin cámara → subir archivo
         <div className="rounded-2xl border-2 border-dashed border-line p-6 text-center">
-          <p className="text-sm text-zinc-500">No pude abrir la cámara. Puedes subir un archivo o dar permiso e intentar de nuevo.</p>
+          <p className="text-sm text-muted">No pude abrir la cámara. Puedes subir un archivo o dar permiso e intentar de nuevo.</p>
           <div className="mt-3 flex justify-center gap-2">
             <Button variant="secondary" onClick={() => startCam("environment")}>Reintentar cámara</Button>
             <Button onClick={() => fileRef.current?.click()}><ImageIcon size={15} /> Subir archivo</Button>
@@ -141,7 +141,7 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
           <button onClick={() => startCam(facing === "user" ? "environment" : "user")} aria-label="Voltear cámara" className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/60 focus-ring"><SwitchCamera size={18} /></button>
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-5 pb-4">
             <button onClick={() => fileRef.current?.click()} aria-label="Subir archivo" className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/60 focus-ring"><ImageIcon size={20} /></button>
-            <button onClick={capture} aria-label="Capturar" className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/30 backdrop-blur transition active:scale-95 focus-ring"><span className="h-12 w-12 rounded-full bg-white shadow" /></button>
+            <button onClick={capture} aria-label="Capturar" className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-surface/30 backdrop-blur transition active:scale-95 focus-ring"><span className="h-12 w-12 rounded-full bg-surface shadow" /></button>
             <span className="h-11 w-11" aria-hidden /> {/* balance visual */}
           </div>
         </div>

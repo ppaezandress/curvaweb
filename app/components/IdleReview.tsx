@@ -17,12 +17,12 @@ export function IdleReview() {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-float sm:rounded-3xl">
-        <p className="text-sm font-medium text-curva-purple">Revisión de tiempo</p>
-        <h2 className="mt-1 font-display text-2xl font-bold text-ink">
+      <div className="w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-3xl">
+        <p className="text-sm font-medium text-accent">Revisión de tiempo</p>
+        <h2 className="mt-1 font-display text-2xl font-bold text-fg">
           Detectamos {formatDuration(pr.inactiveSec)} sin actividad
         </h2>
-        <p className="mt-1 truncate text-sm text-zinc-500">
+        <p className="mt-1 truncate text-sm text-muted">
           {task?.name || "Tarea"} · {hhmm(pr.startedAt)}–{hhmm(pr.endedAt)}
         </p>
 
@@ -47,7 +47,7 @@ export function IdleReview() {
               );
             })}
           </div>
-          <div className="mt-1.5 flex justify-between text-[11px] text-zinc-400">
+          <div className="mt-1.5 flex justify-between text-[11px] text-muted">
             <span>{hhmm(pr.startedAt)}</span>
             <span className="flex items-center gap-3">
               <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-curva-teal" /> Activo {formatDuration(pr.activeSec)}</span>
@@ -61,7 +61,7 @@ export function IdleReview() {
         {pr.segments.length > 0 && (
           <ul className="mt-4 max-h-28 space-y-1 overflow-y-auto text-sm">
             {pr.segments.map((s, i) => (
-              <li key={i} className="flex justify-between rounded-lg bg-zinc-50 px-3 py-1.5 text-zinc-600">
+              <li key={i} className="flex justify-between rounded-lg bg-surface-2 px-3 py-1.5 text-muted">
                 <span>Sin actividad</span>
                 <span className="tabular">{hhmm(s.start)}–{hhmm(s.end)} · {formatDuration(round(s.end - s.start))}</span>
               </li>
@@ -78,12 +78,12 @@ export function IdleReview() {
           </button>
           <button
             onClick={() => resolveReview(false)}
-            className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm font-semibold text-zinc-600 transition hover:border-curva-purple hover:text-curva-purple"
+            className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent"
           >
             Mantener todo (marcado como {formatDuration(pr.inactiveSec)} sin actividad)
           </button>
         </div>
-        <p className="mt-3 text-center text-xs text-zinc-400">
+        <p className="mt-3 text-center text-xs text-muted">
           Tu tiempo, tu decisión. Sin vigilancia — solo para que el dato sea real.
         </p>
       </div>

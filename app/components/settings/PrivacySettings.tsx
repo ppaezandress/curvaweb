@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShieldCheck, Download, Trash2, Eye, MonitorSmartphone } from "lucide-react";
+import { ShieldCheck, Download, Trash2, Eye, MonitorSmartphone, Check, EyeOff } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { toCSV, downloadCSV } from "@/lib/export";
+import { Toggle } from "@/components/ui/Toggle";
 
 type Prefs = { shareProfile: boolean; appFocus: boolean };
 const DEFAULTS: Prefs = { shareProfile: false, appFocus: false };
@@ -41,12 +42,39 @@ export function PrivacySettings() {
       <div className="flex items-start gap-3 rounded-2xl border border-curva-teal/30 bg-curva-teal/5 p-4">
         <ShieldCheck size={20} className="mt-0.5 shrink-0 text-curva-teal" />
         <div>
-          <p className="font-semibold text-ink">Esto es para ti, no para vigilarte.</p>
-          <p className="mt-0.5 text-sm text-zinc-600">Tu detalle (horarios, tareas, tiempos) <b>solo lo ves tú</b>. El equipo solo ve datos <b>agregados</b>. Nada personal se comparte sin que tú lo actives.</p>
+          <p className="font-semibold text-fg">Esto es para ti, no para vigilarte.</p>
+          <p className="mt-0.5 text-sm text-muted">Tu detalle (horarios, tareas, tiempos) <b>solo lo ves tú</b>. El equipo solo ve datos <b>agregados</b>. Nada personal se comparte sin que tú lo actives.</p>
         </div>
       </div>
 
-      <div className="divide-y divide-line rounded-2xl border border-line bg-white shadow-soft">
+      {/* Qué ve tu equipo de ti — el muro, en claro. La confianza se enseña, no se promete. */}
+      <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+        <p className="font-display font-bold text-fg">Qué ve tu equipo de ti</p>
+        <p className="mb-4 mt-0.5 text-sm text-muted">Sin letras chiquitas. Esto es exactamente lo que se expone — y lo que no.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-curva-teal"><Check size={13} /> Tu equipo ve</p>
+            <ul className="space-y-1.5 text-sm text-fg">
+              <WallItem ok>Horas <b>agregadas</b> por cliente y proyecto</WallItem>
+              <WallItem ok>Tendencias del equipo (totales, no tu detalle)</WallItem>
+              <WallItem ok>Si estás activo o <b>“en junta”</b> (sin el título)</WallItem>
+              <WallItem ok>Reconocimientos y rachas que tú decides compartir</WallItem>
+            </ul>
+          </div>
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted"><EyeOff size={13} /> Tu equipo NO ve</p>
+            <ul className="space-y-1.5 text-sm text-fg">
+              <WallItem>En qué tarea estás <b>ahora mismo</b></WallItem>
+              <WallItem>Tus <b>sesiones individuales</b> (cada bloque de tiempo)</WallItem>
+              <WallItem>Tu detalle hora por hora, ni tu ritmo personal</WallItem>
+              <WallItem>Tu música ni los títulos de tus juntas</WallItem>
+            </ul>
+          </div>
+        </div>
+        <p className="mt-4 text-[11px] text-muted">No es una promesa de copy: tu data cruda es <b>dueño-solo</b> por diseño (RLS). Ni el equipo ni un manager pueden leerla, aunque lo intenten por la API.</p>
+      </div>
+
+      <div className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-soft">
         <Toggle
           icon={<Eye size={16} />}
           label="Compartir mi perfil detallado con el equipo"
@@ -64,40 +92,28 @@ export function PrivacySettings() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button onClick={exportMine} disabled={busy || !me} className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-curva-purple disabled:opacity-40 focus-ring">
+        <button onClick={exportMine} disabled={busy || !me} className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-fg transition hover:border-accent disabled:opacity-40 focus-ring">
           <Download size={15} /> Exportar mis datos (CSV)
         </button>
         <button
           onClick={() => alert("Para borrar tus registros, escríbenos y lo procesamos. (Borrado self-service: próximamente.)")}
-          className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-rose-500 transition hover:border-rose-300 focus-ring"
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-rose-500 transition hover:border-rose-300 focus-ring"
         >
           <Trash2 size={15} /> Borrar mis registros
         </button>
       </div>
-      <p className="text-[11px] text-zinc-400">Tus preferencias se guardan en este dispositivo (MVP). Con cuentas de empresa pasarán a tu perfil en la nube.</p>
+      <p className="text-[11px] text-muted">Tus preferencias se guardan en este dispositivo (MVP). Con cuentas de empresa pasarán a tu perfil en la nube.</p>
     </div>
   );
 }
 
-function Toggle({ icon, label, hint, on, onChange }: { icon: React.ReactNode; label: string; hint: string; on: boolean; onChange: (v: boolean) => void }) {
+function WallItem({ children, ok }: { children: React.ReactNode; ok?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-5 py-4">
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 text-zinc-400">{icon}</span>
-        <div>
-          <p className="text-sm font-medium text-ink">{label}</p>
-          <p className="text-xs text-zinc-500">{hint}</p>
-        </div>
-      </div>
-      <button
-        onClick={() => onChange(!on)}
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition focus-ring ${on ? "bg-curva-purple" : "bg-zinc-200"}`}
-      >
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
-      </button>
-    </div>
+    <li className="flex items-start gap-2">
+      <span className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${ok ? "bg-curva-teal/15 text-curva-teal" : "bg-surface-2 text-muted"}`}>
+        {ok ? <Check size={11} /> : <EyeOff size={10} />}
+      </span>
+      <span className="text-muted">{children}</span>
+    </li>
   );
 }

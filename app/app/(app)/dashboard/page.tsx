@@ -3,21 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause, Loader2,
+  Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause,
 } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { formatClock, formatDuration } from "@/lib/format";
+import { formatClock } from "@/lib/format";
 import { dayKey, computeStreak } from "@/lib/culture";
 import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
+import { statusToneClass } from "@/lib/mock-data";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
-import { CoachPanel } from "@/components/CoachPanel";
+import { CurviPanel } from "@/components/curvi/CurviPanel";
 import { AITodayCard } from "@/components/AITodayCard";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
-import { WeekProgress } from "@/components/WeekProgress";
+import { MomentumDashboard } from "@/components/MomentumDashboard";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
-import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 function greeting() {
@@ -35,7 +35,6 @@ export default function HomePage() {
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
   const [showManual, setShowManual] = useState(false);
-  const [creating, setCreating] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // "/" enfoca la barra
@@ -55,17 +54,33 @@ export default function HomePage() {
     () => tasks.filter((t) => isAssignedTo(t, currentUserId)),
     [tasks, currentUserId],
   );
-  const focusList = useMemo(
-    () => mine.filter((t) => !isDone(t.status) && (active?.taskId === t.id || isActionable(t.status))).slice(0, 5),
-    [mine, active],
-  );
-  const projectCount = new Set(mine.map((t) => t.projectId)).size;
+  // "Para hoy": foco del día, ordenado por urgencia (vencidas/hoy/prioridad/en curso).
+  const focusList = useMemo(() => {
+    const today0 = new Date().setHours(0, 0, 0, 0);
+    const urg = (t: typeof mine[number]) => {
+      let s = 0;
+      if (active?.taskId === t.id) s += 200;
+      if (t.dueDate) { const due = new Date(t.dueDate).getTime(); if (due < today0) s += 100; else if (due < today0 + 86_400_000) s += 50; }
+      if (t.priority === "Alta") s += 40; else if (t.priority === "Media") s += 15;
+      if (/curso|progress|haciendo/i.test(t.status)) s += 10;
+      return s;
+    };
+    return mine
+      .filter((t) => !isDone(t.status) && (active?.taskId === t.id || isActionable(t.status)))
+      .sort((a, b) => urg(b) - urg(a))
+      .slice(0, 5);
+  }, [mine, active]);
 
-  // Búsqueda de tareas existentes (para la command bar)
+  // Búsqueda para la command bar: SOLO tareas accionables (pendiente/en curso/sin empezar),
+  // nunca las Done. Las mías primero.
   const matches = useMemo(() => {
     if (!q.trim()) return [];
-    return tasks.filter((t) => t.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6);
-  }, [q, tasks]);
+    const ql = q.toLowerCase();
+    return tasks
+      .filter((t) => !isDone(t.status) && t.name.toLowerCase().includes(ql))
+      .sort((a, b) => Number(isAssignedTo(b, currentUserId)) - Number(isAssignedTo(a, currentUserId)))
+      .slice(0, 6);
+  }, [q, tasks, currentUserId]);
 
   // Racha de días con registro (derivada del cronómetro local + hoy).
   const localStreak = useMemo(() => {
@@ -81,19 +96,14 @@ export default function HomePage() {
     } catch { return 0; }
   }, [currentUserId, loggedSecondsToday]);
 
-  const createFromBar = async () => {
-    if (!q.trim() || creating) return;
-    setCreating(true);
-    try {
-      const res = await fetch("/api/tasks", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: q.trim(), responsableId: currentUserId }),
-      });
-      if (!res.ok) throw new Error("create-failed");
-      const d = await res.json();
-      if (d.ok && d.id) { switchTo(d.id); setQ(""); }
-    } catch { /* la tarea no se creó; el usuario puede reintentar */ }
-    finally { setCreating(false); }
+  // Crear desde la barra = abrir el flujo GUIADO (nunca "pelona"): el modal pide
+  // prioridad, esfuerzo, fecha y cliente, ya prellenados por Curvi a partir del texto.
+  const openGuidedCreate = () => {
+    const v = q.trim();
+    if (!v) return;
+    setNewName(v);
+    setShowNew(true);
+    setQ("");
   };
 
   const activeTask = active ? taskById[active.taskId] : undefined;
@@ -103,8 +113,8 @@ export default function HomePage() {
     <div className="space-y-7">
       {/* Saludo + núcleo del producto */}
       <header className="rise">
-        <p className="text-sm text-zinc-400">{greeting()}</p>
-        <h1 className="mt-0.5 font-display text-3xl font-bold tracking-tight text-ink">
+        <p className="text-sm text-muted">{greeting()}</p>
+        <h1 className="mt-0.5 font-brand text-3xl font-semibold tracking-tight text-fg">
           {me?.name?.split(" ")[0] || "👋"}
           {localStreak > 1 && (
             <span className="ml-3 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 align-middle text-sm font-semibold text-orange-600">
@@ -112,37 +122,41 @@ export default function HomePage() {
             </span>
           )}
         </h1>
-        <p className="mt-1 text-sm text-zinc-500">Mide el tiempo de tus tareas. Empieza escribiendo abajo. 👇</p>
+        <p className="mt-1 text-sm text-muted">Mide el tiempo de tus tareas. Empieza escribiendo abajo. 👇</p>
       </header>
 
       {/* Command bar — z alto para que el dropdown quede SOBRE las demás secciones */}
       <div className="rise rise-1 relative z-40">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
         <input
           ref={searchRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && matches.length === 0 && q.trim()) createFromBar(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && matches.length === 0 && q.trim()) openGuidedCreate(); }}
           placeholder="¿En qué trabajas? Busca o escribe una tarea nueva…  ( / )"
-          className="w-full rounded-2xl border border-line bg-white py-4 pl-12 pr-4 text-base shadow-soft outline-none transition focus:border-curva-purple"
+          className="w-full rounded-2xl border border-line bg-surface py-4 pl-12 pr-4 text-base shadow-soft outline-none transition focus:border-accent"
         />
         {q.trim() && (
-          <div className="absolute z-50 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-2xl border border-line bg-white shadow-float">
+          <div className="absolute z-50 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-2xl border border-line bg-surface shadow-float">
             {matches.map((t) => {
               const c = clientById[t.clientId];
               return (
-                <button key={t.id} onClick={() => { switchTo(t.id); setQ(""); }} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-zinc-50">
-                  <Play size={14} className="shrink-0 text-curva-purple" fill="currentColor" />
+                <button key={t.id} onClick={() => { switchTo(t.id); setQ(""); }} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-2">
+                  <Play size={14} className="shrink-0 text-accent" fill="currentColor" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink">{t.name}</span>
-                    {c && <span className="block truncate text-xs text-zinc-400">{c.name}</span>}
+                    <span className="block truncate text-sm font-medium text-fg">{t.name}</span>
+                    {c && <span className="block truncate text-xs text-muted">{c.name}</span>}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {t.priority && <PriorityDot priority={t.priority} />}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusToneClass(t.status)}`}>{t.status}</span>
                   </span>
                 </button>
               );
             })}
-            <button onClick={createFromBar} disabled={creating} className="flex w-full items-center gap-3 border-t border-line bg-curva-purple/5 px-4 py-3 text-left text-curva-purple transition hover:bg-curva-purple/10">
-              {creating ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-              <span className="text-sm font-semibold">Crear «{q.trim()}» y empezar a medir</span>
+            <button onClick={openGuidedCreate} className="flex w-full items-center gap-3 border-t border-line bg-accent/5 px-4 py-3 text-left text-accent transition hover:bg-accent/10">
+              <Plus size={15} />
+              <span className="text-sm font-semibold">Crear «{q.trim()}» — Curvi te ayuda a completarla</span>
             </button>
           </div>
         )}
@@ -153,11 +167,11 @@ export default function HomePage() {
         <section className="rise rise-2 curva-gradient overflow-hidden rounded-3xl p-6 text-white shadow-float">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-sm text-white/80"><span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-white" /> Corriendo</p>
+              <p className="flex items-center gap-2 text-sm text-white/80"><span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" /> Corriendo</p>
               <p className="tabular mt-2 font-display text-4xl font-bold sm:text-5xl">{formatClock(elapsed)}</p>
               <p className="mt-1 truncate text-sm text-white/80">{activeTask.name}{activeClient ? ` · ${activeClient.name}` : ""}</p>
             </div>
-            <button onClick={stop} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink transition hover:bg-white/90">
+            <button onClick={stop} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90">
               <Pause size={15} fill="currentColor" /> Detener
             </button>
           </div>
@@ -166,13 +180,13 @@ export default function HomePage() {
 
       {/* Acciones primarias (sin duplicar el nav) */}
       <section className="rise rise-2 grid grid-cols-2 gap-3">
-        <button onClick={() => { setNewName(""); setShowNew(true); }} className="flex items-center gap-3 rounded-2xl border border-curva-purple bg-curva-purple p-4 text-left text-white shadow-soft transition focus-ring hover:opacity-95 active:scale-[0.99]">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20"><Plus size={20} /></span>
+        <button onClick={() => { setNewName(""); setShowNew(true); }} className="flex items-center gap-3 rounded-2xl border border-accent bg-accent p-4 text-left text-white shadow-soft transition focus-ring hover:opacity-95 active:scale-[0.99]">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface/20"><Plus size={20} /></span>
           <span className="min-w-0"><span className="block font-semibold">Nueva tarea</span><span className="block truncate text-xs text-white/80">Créala y empieza a medir</span></span>
         </button>
-        <button onClick={() => setShowManual(true)} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 text-left text-ink shadow-soft transition focus-ring hover:border-curva-purple active:scale-[0.99]">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100"><PencilLine size={20} /></span>
-          <span className="min-w-0"><span className="block font-semibold">Registrar tiempo</span><span className="block truncate text-xs text-zinc-500">¿Ya trabajaste? Anótalo</span></span>
+        <button onClick={() => setShowManual(true)} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 text-left text-fg shadow-soft transition focus-ring hover:border-accent active:scale-[0.99]">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2"><PencilLine size={20} /></span>
+          <span className="min-w-0"><span className="block font-semibold">Registrar tiempo</span><span className="block truncate text-xs text-muted">¿Ya trabajaste? Anótalo</span></span>
         </button>
       </section>
 
@@ -181,19 +195,14 @@ export default function HomePage() {
         <AITodayCard />
       </div>
 
-      {/* Motor de recomendaciones: cómo viene el día + qué hacer */}
+      {/* Curvi: mentaliza el día + plan concreto con el porqué + Q&A */}
       <div className="rise rise-3">
-        <CoachPanel />
+        <CurviPanel />
       </div>
 
-      {/* Stats + progreso semanal */}
-      <section className="rise rise-3 grid gap-3 sm:gap-4 lg:grid-cols-2">
-        <div className="grid grid-cols-3 gap-3 sm:gap-4">
-          <StatCard label="Hoy" value={formatDuration(loggedSecondsToday)} />
-          <StatCard label="En curso" value={mine.filter((t) => isActionable(t.status)).length} accent />
-          <StatCard label="Proyectos" value={projectCount} />
-        </div>
-        <WeekProgress />
+      {/* Momentum (estilo WHOOP): tu día vs tu día típico + semana interactiva */}
+      <section className="rise rise-3">
+        <MomentumDashboard />
       </section>
 
       {/* Muro de logros (cultura) */}
@@ -203,9 +212,12 @@ export default function HomePage() {
 
       {/* Mi día */}
       <section className="rise rise-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-ink">Para hoy</h2>
-          <Link href="/tareas" className="inline-flex items-center gap-1 text-sm font-medium text-curva-purple focus-ring rounded-full">Ver todas <ArrowRight size={14} /></Link>
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <h2 className="font-display text-lg font-bold text-fg">Para hoy</h2>
+            <p className="text-xs text-muted">{focusList.length > 0 ? "Ordenado por urgencia" : "Tu foco del día"}</p>
+          </div>
+          <Link href="/tareas" className="inline-flex items-center gap-1 text-sm font-medium text-accent focus-ring rounded-full">Ver todas <ArrowRight size={14} /></Link>
         </div>
         {focusList.length === 0 ? (
           <EmptyState
@@ -222,4 +234,10 @@ export default function HomePage() {
       <ManualEntryModal open={showManual} onClose={() => setShowManual(false)} />
     </div>
   );
+}
+
+// Punto de color por prioridad (Alta/Media/Baja) para los resultados del buscador.
+function PriorityDot({ priority }: { priority: "Baja" | "Media" | "Alta" }) {
+  const tone = priority === "Alta" ? "bg-rose-500" : priority === "Media" ? "bg-amber-500" : "bg-zinc-400";
+  return <span className={`h-2 w-2 rounded-full ${tone}`} title={`Prioridad ${priority}`} />;
 }

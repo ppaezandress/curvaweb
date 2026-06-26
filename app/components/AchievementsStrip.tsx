@@ -22,12 +22,12 @@ export function AchievementsStrip() {
   if (reactions.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft">
+    <section className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
+        <h2 className="flex items-center gap-2 font-display text-lg font-bold text-fg">
           <Trophy size={18} className="text-amber-500" /> Logros recientes
         </h2>
-        <Link href="/recap" className="inline-flex items-center gap-1 text-sm font-medium text-curva-purple">
+        <Link href="/recap" className="inline-flex items-center gap-1 text-sm font-medium text-accent">
           Ver muro <ArrowRight size={14} />
         </Link>
       </div>
@@ -38,11 +38,11 @@ export function AchievementsStrip() {
               {url ? (
                 <img src={url} alt="logro" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center bg-zinc-50 text-4xl">{r.emoji}</div>
+                <div className="flex h-full w-full items-center justify-center bg-surface-2 text-4xl">{r.emoji}</div>
               )}
               {url && <span className="absolute bottom-1 right-1 text-2xl drop-shadow">{r.emoji}</span>}
             </div>
-            <p className="mt-1 truncate text-xs text-zinc-500">{r.taskName}</p>
+            <p className="mt-1 truncate text-xs text-muted">{r.taskName}</p>
           </div>
         ))}
       </div>

@@ -12,7 +12,7 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center text-zinc-400">
+    <div className="flex min-h-screen items-center justify-center text-muted">
       Cargando…
     </div>
   );

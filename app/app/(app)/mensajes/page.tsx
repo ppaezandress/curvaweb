@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Hash, Plus, Lock, MessageSquarePlus, Users } from "lucide-react";
+import { Plus, MessageSquarePlus } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
-import { TeamPresence } from "@/components/TeamPresence";
 import { Avatar } from "@/components/Avatar";
 import { Composer } from "@/components/chat/Composer";
 import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg } from "@/components/chat/MessageItem";
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
+import { SpaceAvatar } from "@/components/chat/SpaceAvatar";
+import { CultureRail } from "@/components/chat/CultureRail";
 import { cn } from "@/lib/cn";
 
 type Channel = { id: number; name: string; kind: string; created_by: string | null };
@@ -152,14 +153,25 @@ export default function MensajesPage() {
     setActiveId(ch.id);
   };
 
-  // Etiqueta de un canal (DM → nombre del otro)
+  // Etiqueta de un espacio (Equipo / DM → nombre del otro)
   const channelLabel = useCallback((c: Channel): string => {
+    if (c.kind === "team") return "Equipo";
     if (c.kind === "dm") {
       const other = memberships.find((m) => m.channel_id === c.id && m.user_id !== myUid);
       return other ? (profiles[other.user_id]?.name || "Directo") : "Directo";
     }
     return c.name;
   }, [memberships, myUid, profiles]);
+
+  // Ícono de identidad de un espacio (orbe Equipo · cuadro de color · avatar en DM).
+  const renderChannelIcon = (c: Channel, size = 26) => {
+    if (c.kind === "dm") {
+      const other = memberships.find((m) => m.channel_id === c.id && m.user_id !== myUid);
+      const p = other ? profiles[other.user_id] : undefined;
+      return <Avatar name={p?.name || "Directo"} src={p?.avatar_url || null} size={size} />;
+    }
+    return <SpaceAvatar name={channelLabel(c)} kind={c.kind} size={size} />;
+  };
 
   // Reacciones agregadas por mensaje
   const reactionsFor = useCallback((messageId: number): ReactionAgg[] => {
@@ -174,10 +186,10 @@ export default function MensajesPage() {
   }, [reactions, myUid]);
 
   if (authed === false) {
-    return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-zinc-400">Tu sesión expiró. Vuelve a iniciar sesión para ver los mensajes.</div>;
+    return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Tu sesión expiró. Vuelve a iniciar sesión para ver los mensajes.</div>;
   }
   if (authed === null) {
-    return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-zinc-400">Cargando mensajes…</div>;
+    return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Cargando mensajes…</div>;
   }
 
   const teamCh = channels.filter((c) => c.kind === "team");
@@ -187,20 +199,20 @@ export default function MensajesPage() {
 
   return (
     <div className="flex gap-6">
-      {/* Sidebar de canales */}
+      {/* Sidebar de espacios */}
       <aside className="hidden w-56 shrink-0 lg:block">
-        <ChannelList label="Canales" items={[...teamCh, ...customCh]} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel}
-          action={<button onClick={() => setShowNewChannel(true)} className="rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-curva-purple focus-ring" aria-label="Nuevo canal"><Plus size={15} /></button>} />
+        <ChannelList label="Espacios" items={[...teamCh, ...customCh]} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin espacios"
+          action={<button onClick={() => setShowNewChannel(true)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo espacio"><Plus size={15} /></button>} />
 
         <div className="relative mt-5">
-          <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} dm
-            action={<button onClick={() => setDmPickerOpen((o) => !o)} className="rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-curva-purple focus-ring" aria-label="Nuevo directo"><MessageSquarePlus size={15} /></button>} />
+          <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin directos aún"
+            action={<button onClick={() => setDmPickerOpen((o) => !o)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo directo"><MessageSquarePlus size={15} /></button>} />
           {dmPickerOpen && (
-            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-2xl border border-line bg-white shadow-float">
-              {teammatesWithAccount.length === 0 && <p className="px-3 py-3 text-xs text-zinc-400">Nadie más tiene cuenta aún.</p>}
+            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-2xl border border-line bg-surface shadow-float">
+              {teammatesWithAccount.length === 0 && <p className="px-3 py-3 text-xs text-muted">Nadie más tiene cuenta aún.</p>}
               {teammatesWithAccount.map((m) => (
-                <button key={m.id} onClick={() => startDM(notionToProfile[m.id].id)} className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-zinc-50 focus-ring">
-                  <Avatar member={m} size={26} /> <span className="truncate text-sm text-ink">{m.name}</span>
+                <button key={m.id} onClick={() => startDM(notionToProfile[m.id].id)} className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-surface-2 focus-ring">
+                  <Avatar member={m} size={26} /> <span className="truncate text-sm text-fg">{m.name}</span>
                 </button>
               ))}
             </div>
@@ -210,25 +222,23 @@ export default function MensajesPage() {
 
       {/* Chat */}
       <div className="flex h-[calc(100vh-200px)] min-w-0 flex-1 flex-col">
-        {/* Selector móvil de canales */}
+        {/* Selector móvil de espacios */}
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
           {channels.map((c) => (
-            <button key={c.id} onClick={() => setActiveId(c.id)} className={cn("inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-sm", c.id === activeId ? "border-curva-purple bg-curva-purple/10 text-curva-purple" : "border-line bg-white text-zinc-500")}>
-              {c.kind === "dm" ? <span className="font-medium">{channelLabel(c)}</span> : <><Hash size={13} /> {channelLabel(c)}</>}
+            <button key={c.id} onClick={() => setActiveId(c.id)} className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-sm", c.id === activeId ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-fg")}>
+              {renderChannelIcon(c, 18)} <span className="font-medium">{channelLabel(c)}</span>
             </button>
           ))}
         </div>
 
-        <div className="mb-3 flex items-center gap-2 border-b border-line pb-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-ink/5 text-ink">
-            {activeChannel?.kind === "dm" ? <Lock size={15} /> : <Hash size={16} />}
-          </span>
+        <div className="mb-3 flex items-center gap-2.5 border-b border-line pb-3">
+          {activeChannel && renderChannelIcon(activeChannel, 34)}
           <div className="min-w-0">
-            <h1 className="truncate font-display font-bold text-ink">{activeChannel ? channelLabel(activeChannel) : "—"}</h1>
-            <p className="text-xs text-zinc-400">
+            <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}</h1>
+            <p className="text-xs text-muted">
               {activeChannel?.kind === "team" ? "Todo el equipo · tiempo real"
                 : activeChannel?.kind === "dm" ? "Mensaje directo · privado"
-                : "Canal privado · tiempo real"}
+                : "Espacio privado · tiempo real"}
             </p>
           </div>
         </div>
@@ -238,15 +248,15 @@ export default function MensajesPage() {
             <MessageItem key={m.id} msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
               reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} />
           ))}
-          {messages.length === 0 && <p className="py-10 text-center text-sm text-zinc-400">Sé el primero en escribir. 👋</p>}
+          {messages.length === 0 && <p className="py-10 text-center text-sm text-muted">Sé el primero en escribir. 👋</p>}
           <div ref={endRef} />
         </div>
 
         <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} />
       </div>
 
-      {/* Presencia del equipo */}
-      <aside className="hidden w-64 shrink-0 xl:block"><TeamPresence /></aside>
+      {/* Cultura: buena onda recibida + presencia del equipo */}
+      <aside className="hidden w-64 shrink-0 xl:block"><CultureRail /></aside>
 
       <CreateChannelModal open={showNewChannel} onClose={() => setShowNewChannel(false)} members={teammatesWithAccount} onCreate={createChannel} />
     </div>
@@ -254,30 +264,31 @@ export default function MensajesPage() {
 }
 
 function ChannelList({
-  label, items, activeId, onSelect, labelOf, action, dm = false,
+  label, items, activeId, onSelect, labelOf, renderIcon, action, emptyText,
 }: {
   label: string;
   items: Channel[];
   activeId: number | null;
   onSelect: (id: number) => void;
   labelOf: (c: Channel) => string;
+  renderIcon: (c: Channel) => React.ReactNode;
   action?: React.ReactNode;
-  dm?: boolean;
+  emptyText: string;
 }) {
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between px-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">{label}</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
         {action}
       </div>
       <div className="space-y-0.5">
         {items.map((c) => (
-          <button key={c.id} onClick={() => onSelect(c.id)} className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition focus-ring", c.id === activeId ? "bg-curva-purple/10 font-semibold text-curva-purple" : "text-zinc-600 hover:bg-zinc-100")}>
-            {dm ? <Users size={14} className="shrink-0 opacity-70" /> : <Hash size={14} className="shrink-0 opacity-70" />}
+          <button key={c.id} onClick={() => onSelect(c.id)} className={cn("flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm transition focus-ring", c.id === activeId ? "bg-accent/10 font-semibold text-accent" : "text-fg hover:bg-surface-2")}>
+            <span className="shrink-0">{renderIcon(c)}</span>
             <span className="truncate">{labelOf(c)}</span>
           </button>
         ))}
-        {items.length === 0 && <p className="px-2 py-1 text-xs text-zinc-400">{dm ? "Sin directos aún" : "Sin canales"}</p>}
+        {items.length === 0 && <p className="px-2 py-1 text-xs text-muted">{emptyText}</p>}
       </div>
     </div>
   );

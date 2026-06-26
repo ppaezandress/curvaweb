@@ -117,28 +117,28 @@ export default function LoginPage() {
       {/* Login */}
       <section className="flex flex-col justify-center px-6 py-12 sm:px-12">
         <div className="rise mx-auto w-full max-w-sm">
-          <div className="mb-8 lg:hidden"><Logo className="text-3xl text-ink" /></div>
+          <div className="mb-8 lg:hidden"><Logo className="text-3xl text-fg" /></div>
 
           {noBackend ? (
             <Picker title="¿Quién eres?" subtitle="Entra con tu usuario." list={members} onPick={(m) => enterLegacy(m.id)} />
           ) : welcomeMode && remembered && rememberedMember ? (
             // ----- Bienvenido de nuevo: solo contraseña -----
             <>
-              <h2 className="font-display text-2xl font-bold text-ink">Hola de nuevo 👋</h2>
-              <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-white p-3 shadow-soft">
+              <h2 className="font-display text-2xl font-bold text-fg">Hola de nuevo 👋</h2>
+              <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-soft">
                 <Avatar member={rememberedMember} size={44} />
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-ink">{rememberedMember.name}</p>
-                  <p className="truncate text-xs text-zinc-400">{remembered.email}</p>
+                  <p className="truncate font-semibold text-fg">{rememberedMember.name}</p>
+                  <p className="truncate text-xs text-muted">{remembered.email}</p>
                 </div>
               </div>
               <div className="mt-4 space-y-3">
                 <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
                 {err && <p className="text-sm text-rose-500">{err}</p>}
-                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-curva-purple px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Entrar
                 </button>
-                <button onClick={() => { setWelcomeMode(false); setRemembered(null); setPassword(""); setErr(""); }} className="w-full text-center text-xs text-zinc-400 transition hover:text-curva-pink">
+                <button onClick={() => { setWelcomeMode(false); setRemembered(null); setPassword(""); setErr(""); }} className="w-full text-center text-xs text-muted transition hover:text-curva-pink">
                   No soy {rememberedMember.name.split(" ")[0]} · usar otra cuenta
                 </button>
               </div>
@@ -146,17 +146,17 @@ export default function LoginPage() {
           ) : (
             // ----- Login completo -----
             <>
-              <h2 className="font-display text-2xl font-bold text-ink">Inicia sesión</h2>
-              <p className="mt-1 text-sm text-zinc-500">Con el código de tu equipo y tu cuenta.</p>
+              <h2 className="font-display text-2xl font-bold text-fg">Inicia sesión</h2>
+              <p className="mt-1 text-sm text-muted">Con el código de tu equipo y tu cuenta.</p>
               <div className="mt-6 space-y-3">
                 <Input icon={<KeyRound size={16} />} value={team} onChange={(v) => setTeam(v)} placeholder="Código de equipo (ej. CURVA)" />
                 <Input icon={<AtSign size={16} />} value={email} onChange={setEmail} placeholder="Tu correo" type="email" />
                 <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
                 {err && <p className="text-sm text-rose-500">{err}</p>}
-                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-curva-purple px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Entrar
                 </button>
-                <p className="text-center text-[11px] text-zinc-400">Primera vez con tu correo → se crea tu cuenta automáticamente.</p>
+                <p className="text-center text-[11px] text-muted">Primera vez con tu correo → se crea tu cuenta automáticamente.</p>
               </div>
             </>
           )}
@@ -169,38 +169,38 @@ export default function LoginPage() {
 function Picker({ title, subtitle, list, onPick }: { title: string; subtitle: string; list: { id: string; name: string; role?: string; color: string; short: string }[]; onPick: (m: { id: string; name: string; role?: string; color: string; short: string }) => void }) {
   return (
     <>
-      <h2 className="font-display text-2xl font-bold text-ink">{title}</h2>
-      <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
+      <h2 className="font-display text-2xl font-bold text-fg">{title}</h2>
+      <p className="mt-1 text-sm text-muted">{subtitle}</p>
       <div className="mt-6 space-y-2">{list.map((m) => <PickRow key={m.id} m={m} onClick={() => onPick(m)} />)}</div>
     </>
   );
 }
 function PickRow({ m, onClick }: { m: { name: string; role?: string; color: string; short: string }; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-white p-3 text-left transition hover:border-curva-purple hover:shadow-sm">
+    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface p-3 text-left transition hover:border-accent hover:shadow-sm">
       {/* @ts-expect-error member shape compatible */}
       <Avatar member={m} size={42} />
-      <span className="min-w-0"><span className="block font-semibold text-ink">{m.name}</span>{m.role && <span className="block truncate text-xs text-zinc-500">{m.role}</span>}</span>
+      <span className="min-w-0"><span className="block font-semibold text-fg">{m.name}</span>{m.role && <span className="block truncate text-xs text-muted">{m.role}</span>}</span>
     </button>
   );
 }
 function Input({ icon, value, onChange, placeholder, type = "text" }: { icon: React.ReactNode; value: string; onChange: (v: string) => void; placeholder: string; type?: string }) {
   return (
     <div className="relative">
-      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400">{icon}</span>
+      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{icon}</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} type={type}
-        className="w-full rounded-2xl border border-line bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-curva-purple" />
+        className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent" />
     </div>
   );
 }
 function PasswordInput({ value, onChange, show, toggle, onEnter }: { value: string; onChange: (v: string) => void; show: boolean; toggle: () => void; onEnter: () => void }) {
   return (
     <div className="relative">
-      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"><Lock size={16} /></span>
+      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"><Lock size={16} /></span>
       <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
         type={show ? "text" : "password"} placeholder="Contraseña" autoFocus
-        className="w-full rounded-2xl border border-line bg-white py-3 pl-10 pr-11 text-sm outline-none transition focus:border-curva-purple" />
-      <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-zinc-600">
+        className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none transition focus:border-accent" />
+      <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-muted">
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>

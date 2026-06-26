@@ -5,6 +5,23 @@ export function notionTaskUrl(taskId: string): string {
   return `https://www.notion.so/${clean}`;
 }
 
+// Abre la tarea en la APP de escritorio de Notion si está instalada (deep link
+// `notion://`); si no abre en ~700ms (no instalada), cae a la versión web.
+export function openInNotion(taskId: string) {
+  const clean = (taskId || "").replace(/-/g, "");
+  if (!clean || typeof window === "undefined") return;
+  const app = `notion://www.notion.so/${clean}`;
+  const web = `https://www.notion.so/${clean}`;
+  let opened = false;
+  const onHide = () => { opened = true; }; // la app tomó el foco → esta pestaña se ocultó
+  document.addEventListener("visibilitychange", onHide, { once: true });
+  setTimeout(() => {
+    document.removeEventListener("visibilitychange", onHide);
+    if (!opened && !document.hidden) window.open(web, "_blank", "noopener,noreferrer");
+  }, 700);
+  window.location.href = app;
+}
+
 // --- Menciones embebidas en el cuerpo del mensaje ---
 // Tokens: ⟦task:<id>|<nombre>⟧ (tarea, enlaza a Notion) y ⟦user:<id>|<nombre>⟧ (persona)
 const TOKEN = /⟦(task|user):([^|]+)\|([^⟧]+)⟧/g;

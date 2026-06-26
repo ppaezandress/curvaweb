@@ -18,7 +18,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 safe-bottom backdrop-blur sm:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 safe-bottom backdrop-blur sm:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around">
         {tabs.map((l) => {
           const active = l.match(pathname);
@@ -29,7 +29,7 @@ export function BottomNav() {
               href={l.href}
               className={cn(
                 "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition active:scale-95",
-                active ? "text-curva-purple" : "text-zinc-400",
+                active ? "text-accent" : "text-muted",
               )}
             >
               <Icon size={20} strokeWidth={active ? 2.4 : 2} />

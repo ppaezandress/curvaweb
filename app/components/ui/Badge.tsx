@@ -27,8 +27,8 @@ export function Badge({
   className?: string;
 }) {
   const tones = {
-    neutral: "bg-zinc-100 text-zinc-600",
-    accent: "bg-curva-purple/10 text-curva-purple",
+    neutral: "bg-surface-2 text-muted",
+    accent: "bg-accent/10 text-accent",
   };
   return (
     <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", tones[tone], className)}>

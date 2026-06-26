@@ -29,12 +29,12 @@ export function TopNav() {
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   return (
-    <header className="sticky top-0 z-[45] border-b border-line bg-white/80 backdrop-blur">
+    <header className="sticky top-0 z-[45] border-b border-line bg-surface/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-xl text-ink">
+          <Link href="/dashboard" className="text-xl text-fg">
             <Logo />
-            <span className="ml-2 align-middle text-xs font-medium text-zinc-400">
+            <span className="ml-2 align-middle text-xs font-medium text-muted">
               tiempos
             </span>
           </Link>
@@ -49,7 +49,7 @@ export function TopNav() {
                   className={`focus-ring inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
                     activeLink
                       ? "bg-ink text-white"
-                      : "text-zinc-600 hover:bg-zinc-100"
+                      : "text-muted hover:bg-surface-2"
                   }`}
                 >
                   <Icon size={15} /> {l.label}
@@ -61,7 +61,7 @@ export function TopNav() {
 
         {me && (
           <div className="flex items-center gap-3">
-            <p className="hidden text-sm font-semibold leading-tight text-ink sm:block">{me.name}</p>
+            <p className="hidden text-sm font-semibold leading-tight text-fg sm:block">{me.name}</p>
             <ProfileMenu />
           </div>
         )}

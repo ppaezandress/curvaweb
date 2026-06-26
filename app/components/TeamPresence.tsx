@@ -53,8 +53,8 @@ export function TeamPresence() {
   const sorted = [...rows].sort((a, b) => Number(onlineRecently(b.updated_at)) - Number(onlineRecently(a.updated_at)));
 
   return (
-    <div className="rounded-2xl border border-line bg-white p-4 shadow-soft">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Equipo</h3>
+    <div className="rounded-2xl border border-line bg-surface p-4 shadow-soft">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Equipo</h3>
       <div className="space-y-3">
         {sorted.map((r) => {
           const prof = profiles[r.user_id];
@@ -66,8 +66,8 @@ export function TeamPresence() {
                 <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${r.in_meeting ? "bg-rose-500" : r.is_active ? "bg-curva-teal" : online ? "bg-amber-400" : "bg-zinc-300"}`} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">{prof?.name || "—"}</p>
-                <p className={`truncate text-xs ${r.in_meeting ? "font-medium text-rose-500" : "text-zinc-500"}`}>
+                <p className="truncate text-sm font-semibold text-fg">{prof?.name || "—"}</p>
+                <p className={`truncate text-xs ${r.in_meeting ? "font-medium text-rose-500" : "text-muted"}`}>
                   {r.in_meeting ? "📅 En junta"
                     : r.is_active ? (r.current_task ? `⏱ ${r.current_task}` : "trabajando")
                     : online ? "en línea" : "desconectado"}
@@ -78,13 +78,13 @@ export function TeamPresence() {
                   </p>
                 )}
                 {r.app_focus && !r.track && (
-                  <p className="mt-0.5 truncate text-xs text-zinc-400">{r.app_focus}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted">{r.app_focus}</p>
                 )}
               </div>
             </div>
           );
         })}
-        {sorted.length === 0 && <p className="text-xs text-zinc-400">Nadie en línea aún.</p>}
+        {sorted.length === 0 && <p className="text-xs text-muted">Nadie en línea aún.</p>}
       </div>
     </div>
   );

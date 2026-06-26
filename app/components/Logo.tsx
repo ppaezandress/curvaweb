@@ -6,7 +6,7 @@ export function Logo({
   withDot?: boolean;
 }) {
   return (
-    <span className={`font-display font-extrabold tracking-tight lowercase ${className}`}>
+    <span className={`font-brand font-bold tracking-tight lowercase ${className}`}>
       curva
       {withDot && <span className="curva-gradient-text">.</span>}
     </span>

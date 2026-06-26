@@ -17,6 +17,7 @@ import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { MeetingWatcher } from "@/components/MeetingWatcher";
 import { AISync } from "@/components/AISync";
 import { AILiveProvider } from "@/lib/use-ai-live";
+import { CoworkingProvider } from "@/lib/use-coworking";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!ready || !dataReady || !currentUserId) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-zinc-400">
+      <div className="flex min-h-screen items-center justify-center text-muted">
         Cargando…
       </div>
     );
@@ -40,6 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AILiveProvider>
+    <CoworkingProvider>
     <div className="min-h-screen">
       <TopNav />
       <main
@@ -60,6 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MeetingWatcher />
       <AISync />
     </div>
+    </CoworkingProvider>
     </AILiveProvider>
   );
 }

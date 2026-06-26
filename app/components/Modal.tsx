@@ -43,12 +43,12 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-float sm:rounded-3xl"
+        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
-          <button onClick={onClose} className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600">
+          <h2 className="font-display text-lg font-bold text-fg">{title}</h2>
+          <button onClick={onClose} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-muted">
             <X size={18} />
           </button>
         </div>
@@ -63,11 +63,11 @@ export function Modal({
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="mb-4 block">
-      <span className="mb-1.5 block text-sm font-semibold text-zinc-600">{label}</span>
+      <span className="mb-1.5 block text-sm font-semibold text-muted">{label}</span>
       {children}
     </label>
   );
 }
 
 export const inputCls =
-  "w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none transition focus:border-curva-purple";
+  "w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-accent";

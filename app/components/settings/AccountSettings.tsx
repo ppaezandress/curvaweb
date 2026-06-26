@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Loader2, Mail, Briefcase, Users } from "lucide-react";
+import { Camera, Loader2, Mail, Briefcase, Users, Sun, Moon, Monitor } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { useTheme, type Theme } from "@/lib/use-theme";
 import { Avatar } from "@/components/Avatar";
 
 export function AccountSettings() {
@@ -47,17 +48,17 @@ export function AccountSettings() {
     }
   };
 
-  if (!me) return <p className="text-sm text-zinc-400">Inicia sesión para ver tu cuenta.</p>;
+  if (!me) return <p className="text-sm text-muted">Inicia sesión para ver tu cuenta.</p>;
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-4 rounded-2xl border border-line bg-white p-5 shadow-soft">
+      <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-soft">
         <div className="relative">
           <Avatar member={me} src={photoUrl} size={64} />
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading || !supabaseConfigured()}
-            className="absolute -bottom-1 -right-1 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-curva-purple text-white transition hover:opacity-90 disabled:opacity-40 focus-ring"
+            className="absolute -bottom-1 -right-1 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-accent text-white transition hover:opacity-90 disabled:opacity-40 focus-ring"
             aria-label="Cambiar foto"
           >
             {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
@@ -65,18 +66,56 @@ export function AccountSettings() {
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-xl font-bold text-ink">{me.name}</p>
-          <p className="truncate text-sm text-zinc-500">{me.role || "Equipo CURVA"}</p>
+          <p className="truncate font-display text-xl font-bold text-fg">{me.name}</p>
+          <p className="truncate text-sm text-muted">{me.role || "Equipo CURVA"}</p>
         </div>
       </div>
 
-      <div className="divide-y divide-line rounded-2xl border border-line bg-white shadow-soft">
+      <div className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-soft">
         <Row icon={<Mail size={16} />} label="Correo" value={me.email || "—"} />
         <Row icon={<Briefcase size={16} />} label="Rol" value={me.role || "—"} />
         <Row icon={<Users size={16} />} label="Equipo" value="CURVA" />
       </div>
 
-      <p className="text-xs text-zinc-400">Tu nombre, correo y rol se sincronizan desde Notion (Team Tracker). Para cambiarlos, edítalos ahí.</p>
+      <ThemeSelector />
+
+      <p className="text-xs text-muted">Tu nombre, correo y rol se sincronizan desde Notion (Team Tracker). Para cambiarlos, edítalos ahí.</p>
+    </div>
+  );
+}
+
+const THEME_OPTIONS: { id: Theme; label: string; icon: React.ReactNode }[] = [
+  { id: "light", label: "Claro", icon: <Sun size={15} /> },
+  { id: "dark", label: "Oscuro", icon: <Moon size={15} /> },
+  { id: "system", label: "Sistema", icon: <Monitor size={15} /> },
+];
+
+function ThemeSelector() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <p className="text-sm font-medium text-fg">Apariencia</p>
+      <p className="mt-0.5 text-xs text-muted">El tema se guarda en este dispositivo.</p>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {THEME_OPTIONS.map((o) => {
+          const on = theme === o.id;
+          return (
+            <button
+              key={o.id}
+              onClick={() => setTheme(o.id)}
+              role="radio"
+              aria-checked={on}
+              className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition focus-ring ${
+                on
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-line bg-surface text-muted hover:border-accent/40 hover:text-fg"
+              }`}
+            >
+              {o.icon} {o.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -84,8 +123,8 @@ export function AccountSettings() {
 function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 px-5 py-3.5">
-      <span className="flex items-center gap-2.5 text-sm text-zinc-500">{icon}{label}</span>
-      <span className="truncate text-sm font-medium text-ink">{value}</span>
+      <span className="flex items-center gap-2.5 text-sm text-muted">{icon}{label}</span>
+      <span className="truncate text-sm font-medium text-fg">{value}</span>
     </div>
   );
 }

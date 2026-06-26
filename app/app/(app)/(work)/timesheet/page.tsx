@@ -113,11 +113,11 @@ export default function TimesheetPage() {
         title="Semana"
         subtitle="Tu semana en horas, por tarea y día."
         action={
-          <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
-            <button onClick={() => setScope("me")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "me" ? "bg-ink text-white" : "text-zinc-500"}`}>
+          <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
+            <button onClick={() => setScope("me")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "me" ? "bg-ink text-white" : "text-muted"}`}>
               <User size={15} /> Yo
             </button>
-            <button onClick={() => setScope("team")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "team" ? "bg-ink text-white" : "text-zinc-500"}`}>
+            <button onClick={() => setScope("team")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "team" ? "bg-ink text-white" : "text-muted"}`}>
               <Users size={15} /> Equipo
             </button>
           </div>
@@ -125,59 +125,59 @@ export default function TimesheetPage() {
       />
 
       {/* Navegación de semana */}
-      <div className="mb-4 flex items-center justify-between rounded-2xl border border-line bg-white px-4 py-3 shadow-soft">
-        <button onClick={() => setWeekStart(new Date(weekStart.getTime() - 7 * DAY_MS))} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100">
+      <div className="mb-4 flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3 shadow-soft">
+        <button onClick={() => setWeekStart(new Date(weekStart.getTime() - 7 * DAY_MS))} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-surface-2">
           <ChevronLeft size={18} />
         </button>
-        <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <CalendarDays size={16} className="text-zinc-400" />
+        <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+          <CalendarDays size={16} className="text-muted" />
           {label}
-          <button onClick={() => setWeekStart(mondayOf(new Date()))} className="ml-2 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-200">
+          <button onClick={() => setWeekStart(mondayOf(new Date()))} className="ml-2 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition hover:bg-zinc-200">
             Esta semana
           </button>
         </div>
-        <button onClick={() => setWeekStart(new Date(weekStart.getTime() + 7 * DAY_MS))} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-100">
+        <button onClick={() => setWeekStart(new Date(weekStart.getTime() + 7 * DAY_MS))} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-surface-2">
           <ChevronRight size={18} />
         </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-white py-16 text-sm text-zinc-400">
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-16 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" /> Cargando registros…
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-soft">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-soft">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-line">
-                <th className="sticky left-0 z-10 bg-white px-4 py-3 text-left font-semibold text-zinc-500">Tarea</th>
+                <th className="sticky left-0 z-10 bg-surface px-4 py-3 text-left font-semibold text-muted">Tarea</th>
                 {days.map((d, i) => (
-                  <th key={i} className={`px-2 py-3 text-center font-semibold ${i === todayIdx ? "text-curva-purple" : "text-zinc-500"}`}>
+                  <th key={i} className={`px-2 py-3 text-center font-semibold ${i === todayIdx ? "text-accent" : "text-muted"}`}>
                     <div>{DOW[i]}</div>
-                    <div className="text-xs font-normal text-zinc-400">{d.getDate()}</div>
+                    <div className="text-xs font-normal text-muted">{d.getDate()}</div>
                   </th>
                 ))}
-                <th className="px-4 py-3 text-right font-semibold text-ink">Total</th>
+                <th className="px-4 py-3 text-right font-semibold text-fg">Total</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.taskId} className="border-b border-line/60 last:border-0 hover:bg-zinc-50/60">
-                  <td className="sticky left-0 z-10 max-w-[280px] bg-white px-4 py-3">
-                    <div className="truncate font-medium text-ink">{r.name}</div>
-                    {r.client && <div className="truncate text-xs text-zinc-400">{r.client}</div>}
+                <tr key={r.taskId} className="border-b border-line/60 last:border-0 hover:bg-surface-2/60">
+                  <td className="sticky left-0 z-10 max-w-[280px] bg-surface px-4 py-3">
+                    <div className="truncate font-medium text-fg">{r.name}</div>
+                    {r.client && <div className="truncate text-xs text-muted">{r.client}</div>}
                   </td>
                   {r.cells.map((c, i) => (
-                    <td key={i} className={`px-2 py-3 text-center tabular ${c ? "font-semibold text-ink" : "text-zinc-300"} ${i === todayIdx ? "bg-curva-purple/5" : ""}`}>
+                    <td key={i} className={`px-2 py-3 text-center tabular ${c ? "font-semibold text-fg" : "text-zinc-300"} ${i === todayIdx ? "bg-accent/5" : ""}`}>
                       {fmtH(c)}
                     </td>
                   ))}
-                  <td className="tabular px-4 py-3 text-right font-bold text-ink">{fmtH(r.total)}</td>
+                  <td className="tabular px-4 py-3 text-right font-bold text-fg">{fmtH(r.total)}</td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-zinc-400">
+                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-muted">
                     No hay registros esta semana. Dale play a una tarea para empezar.
                   </td>
                 </tr>
@@ -185,12 +185,12 @@ export default function TimesheetPage() {
             </tbody>
             {rows.length > 0 && (
               <tfoot>
-                <tr className="border-t-2 border-line bg-zinc-50/60">
-                  <td className="sticky left-0 z-10 bg-zinc-50 px-4 py-3 font-bold text-ink">Total del día</td>
+                <tr className="border-t-2 border-line bg-surface-2/60">
+                  <td className="sticky left-0 z-10 bg-surface-2 px-4 py-3 font-bold text-fg">Total del día</td>
                   {dayTotals.map((c, i) => (
-                    <td key={i} className={`tabular px-2 py-3 text-center font-semibold ${i === todayIdx ? "text-curva-purple" : "text-zinc-600"}`}>{fmtH(c)}</td>
+                    <td key={i} className={`tabular px-2 py-3 text-center font-semibold ${i === todayIdx ? "text-accent" : "text-muted"}`}>{fmtH(c)}</td>
                   ))}
-                  <td className="tabular px-4 py-3 text-right font-display text-base font-bold text-ink">{fmtH(weekTotal)}</td>
+                  <td className="tabular px-4 py-3 text-right font-display text-base font-bold text-fg">{fmtH(weekTotal)}</td>
                 </tr>
               </tfoot>
             )}

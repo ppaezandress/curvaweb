@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Loader2, Check, Clock, Minus, Plus, ArrowRight,
   Focus, Phone, MapPin, Users, Search, MoreHorizontal, type LucideIcon,
@@ -78,6 +78,13 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
   }, [taskQuery, tasks, clientId]);
 
   const selectedTask = taskId ? tasks.find((t) => t.id === taskId) : undefined;
+
+  // Completitud: al elegir una tarea, hereda su cliente automáticamente (mata "Sin cliente").
+  useEffect(() => {
+    if (selectedTask && !selectedTask.internal && selectedTask.clientId) setClientId(selectedTask.clientId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTask?.id]);
+
   const AreaIcon = AREAS.find((a) => a.label === area)?.icon ?? Focus;
   const peopleCount = Object.keys(attendees).length;
 
@@ -127,15 +134,15 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
       title="Registrar tiempo"
       footer={
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-            <AreaIcon size={13} className="text-zinc-400" />
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
+            <AreaIcon size={13} className="text-muted" />
             <span className="truncate">{area}</span>
             <span className="text-zinc-300">·</span>
-            <span className={valid ? "tabular font-semibold text-ink" : "text-rose-500"}>{valid ? formatDuration(minutes * 60) : "—"}</span>
+            <span className={valid ? "tabular font-semibold text-fg" : "text-rose-500"}>{valid ? formatDuration(minutes * 60) : "—"}</span>
             <span className="text-zinc-300">·</span>
             <span>{peopleCount} {peopleCount === 1 ? "persona" : "personas"}</span>
           </span>
-          <button onClick={save} disabled={saving || !valid} className="inline-flex items-center gap-2 rounded-full bg-curva-purple px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-curva-purple/20 transition hover:opacity-90 active:scale-95 disabled:opacity-40">
+          <button onClick={save} disabled={saving || !valid} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 active:scale-95 disabled:opacity-40">
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Guardar
           </button>
         </div>
@@ -147,8 +154,8 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           {AREAS.map(({ label, icon: Icon }) => {
             const on = area === label;
             return (
-              <button key={label} onClick={() => setArea(label)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 ${on ? "bg-ink text-white shadow-sm" : "border border-line text-zinc-600 hover:border-zinc-300"}`}>
-                <Icon size={13} className={on ? "text-white" : "text-zinc-400"} /> {label}
+              <button key={label} onClick={() => setArea(label)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 ${on ? "bg-ink text-white shadow-sm" : "border border-line text-muted hover:border-zinc-300"}`}>
+                <Icon size={13} className={on ? "text-white" : "text-muted"} /> {label}
               </button>
             );
           })}
@@ -170,7 +177,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           {/* Duración derivada (con micro-pop) + "Terminó ahora" */}
           <div className="mt-3 flex items-center justify-between gap-2">
             {valid ? (
-              <span key={minutes} className="modal-pop inline-flex items-center gap-1.5 rounded-full bg-curva-purple/10 px-3 py-1.5 text-sm font-bold text-curva-purple">
+              <span key={minutes} className="modal-pop inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1.5 text-sm font-bold text-accent">
                 <Clock size={14} /> {formatDuration(minutes * 60)}
               </span>
             ) : (
@@ -178,18 +185,18 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
                 El fin debe ser después del inicio
               </span>
             )}
-            <button onClick={setEndNow} className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:border-curva-purple hover:text-curva-purple active:scale-95">
+            <button onClick={setEndNow} className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95">
               Terminó ahora
             </button>
           </div>
 
           {/* Atajos: fijan el fin = inicio + X */}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-zinc-400">Duró:</span>
+            <span className="text-[11px] font-medium text-muted">Duró:</span>
             {DUR_PRESETS.map((m) => {
               const on = valid && minutes === m;
               return (
-                <button key={m} onClick={() => applyPreset(m)} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${on ? "bg-curva-purple text-white" : "border border-line bg-white text-zinc-500 hover:border-curva-purple hover:text-curva-purple"}`}>
+                <button key={m} onClick={() => applyPreset(m)} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${on ? "bg-accent text-white" : "border border-line bg-surface text-muted hover:border-accent hover:text-accent"}`}>
                   {m < 60 ? `${m}m` : `${m / 60}h${m % 60 ? " " + (m % 60) + "m" : ""}`}
                 </button>
               );
@@ -208,17 +215,17 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
         </Field>
         <Field label="Tarea (opcional)">
           {selectedTask ? (
-            <button onClick={() => { setTaskId(""); setTaskQuery(""); }} className="flex w-full items-center justify-between rounded-xl border border-curva-purple/40 bg-curva-purple/5 px-3 py-2.5 text-left text-sm">
-              <span className="truncate text-ink">{selectedTask.name}</span>
-              <span className="ml-2 shrink-0 text-xs text-curva-purple">cambiar</span>
+            <button onClick={() => { setTaskId(""); setTaskQuery(""); }} className="flex w-full items-center justify-between rounded-xl border border-accent/40 bg-accent/5 px-3 py-2.5 text-left text-sm">
+              <span className="truncate text-fg">{selectedTask.name}</span>
+              <span className="ml-2 shrink-0 text-xs text-accent">cambiar</span>
             </button>
           ) : (
             <div className="relative">
               <input value={taskQuery} onChange={(e) => setTaskQuery(e.target.value)} placeholder="Buscar tarea…" className={inputCls} />
               {taskMatches.length > 0 && (
-                <div className="absolute z-10 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-line bg-white shadow-float">
+                <div className="absolute z-10 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-line bg-surface shadow-float">
                   {taskMatches.map((t) => (
-                    <button key={t.id} onClick={() => { setTaskId(t.id); setTaskQuery(""); }} className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-zinc-50">{t.name}</button>
+                    <button key={t.id} onClick={() => { setTaskId(t.id); setTaskQuery(""); }} className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-surface-2">{t.name}</button>
                   ))}
                 </div>
               )}
@@ -237,7 +244,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           {members.filter((m) => m.name && m.name !== "—").map((m) => {
             const on = m.name in attendees;
             return (
-              <button key={m.id} onClick={() => toggleAttendee(m.name)} className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-medium transition active:scale-95 ${on ? "bg-curva-purple/10 text-curva-purple ring-1 ring-curva-purple/40" : "border border-line text-zinc-600 hover:border-zinc-300"}`}>
+              <button key={m.id} onClick={() => toggleAttendee(m.name)} className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-medium transition active:scale-95 ${on ? "bg-accent/10 text-accent ring-1 ring-accent/40" : "border border-line text-muted hover:border-zinc-300"}`}>
                 <Avatar member={m} size={20} /> {m.name.split(" ")[0]}
               </button>
             );
@@ -250,15 +257,15 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
               const early = earlyFor.has(name);
               return (
                 <div key={name} className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-zinc-500">{name}</span>
+                  <span className="text-muted">{name}</span>
                   {early ? (
                     <span className="inline-flex items-center gap-1">
-                      <input type="number" min={1} max={valid ? minutes : undefined} value={attendees[name] ?? (valid ? minutes : 0)} onChange={(e) => setAttendees((p) => ({ ...p, [name]: Number(e.target.value) }))} className="w-16 rounded-lg border border-line px-2 py-0.5 text-right tabular outline-none focus:border-curva-purple" />
-                      <span className="text-zinc-400">min</span>
-                      <button onClick={() => setEarlyFor((p) => { const n = new Set(p); n.delete(name); return n; })} className="text-zinc-400 hover:text-zinc-600">↺</button>
+                      <input type="number" min={1} max={valid ? minutes : undefined} value={attendees[name] ?? (valid ? minutes : 0)} onChange={(e) => setAttendees((p) => ({ ...p, [name]: Number(e.target.value) }))} className="w-16 rounded-lg border border-line px-2 py-0.5 text-right tabular outline-none focus:border-accent" />
+                      <span className="text-muted">min</span>
+                      <button onClick={() => setEarlyFor((p) => { const n = new Set(p); n.delete(name); return n; })} className="text-muted hover:text-muted">↺</button>
                     </span>
                   ) : (
-                    <button onClick={() => setEarlyFor((p) => new Set(p).add(name))} className="text-zinc-400 underline-offset-2 hover:text-curva-purple hover:underline">se fue antes</button>
+                    <button onClick={() => setEarlyFor((p) => new Set(p).add(name))} className="text-muted underline-offset-2 hover:text-accent hover:underline">se fue antes</button>
                   )}
                 </div>
               );
@@ -286,11 +293,11 @@ function TimePart({
 }) {
   return (
     <div className="min-w-0 flex-1">
-      <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
-      <div className="flex items-center gap-1 rounded-xl border border-line bg-white p-1 transition focus-within:border-curva-purple/50">
+      <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <div className="flex items-center gap-1 rounded-xl border border-line bg-surface p-1 transition focus-within:border-accent/50">
         <button
           onClick={() => onBump(-15)}
-          className="inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 hover:text-ink active:scale-90 focus-ring"
+          className="inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-fg active:scale-90 focus-ring"
           aria-label={`${label}: 15 minutos menos`}
         >
           <Minus size={16} />
@@ -300,11 +307,11 @@ function TimePart({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label={`Hora de ${label.toLowerCase()}`}
-          className={`tabular w-full min-w-0 bg-transparent text-center font-display text-lg font-bold outline-none ${accent ? "text-curva-purple" : "text-ink"}`}
+          className={`tabular w-full min-w-0 bg-transparent text-center font-display text-lg font-bold outline-none ${accent ? "text-accent" : "text-fg"}`}
         />
         <button
           onClick={() => onBump(15)}
-          className="inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 hover:text-ink active:scale-90 focus-ring"
+          className="inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-fg active:scale-90 focus-ring"
           aria-label={`${label}: 15 minutos más`}
         >
           <Plus size={16} />
@@ -359,8 +366,8 @@ function Timeline({
     <div className="mt-4 select-none">
       {/* etiquetas de hora sobre los extremos */}
       <div className="relative mb-1 h-4 text-[10px] font-bold tabular">
-        <span className="absolute -translate-x-1/2 whitespace-nowrap text-ink" style={{ left: `${left}%` }}>{labelHourMin(startMin)}</span>
-        <span className="absolute -translate-x-1/2 whitespace-nowrap text-curva-purple" style={{ left: `${right}%` }}>{labelHourMin(endMin)}</span>
+        <span className="absolute -translate-x-1/2 whitespace-nowrap text-fg" style={{ left: `${left}%` }}>{labelHourMin(startMin)}</span>
+        <span className="absolute -translate-x-1/2 whitespace-nowrap text-accent" style={{ left: `${right}%` }}>{labelHourMin(endMin)}</span>
       </div>
       {/* pista */}
       <div
@@ -368,7 +375,7 @@ function Timeline({
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
-        className="relative h-10 overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-inset ring-line"
+        className="relative h-10 overflow-hidden rounded-xl bg-surface-2 ring-1 ring-inset ring-line"
         style={{ touchAction: "none" }}
       >
         {/* franjas del día */}
@@ -384,22 +391,22 @@ function Timeline({
         {/* bloque arrastrable + handles */}
         {valid && (
           <div data-h="move" className="curva-gradient absolute inset-y-1.5 z-20 cursor-grab rounded-lg shadow-md active:cursor-grabbing" style={{ left: `${left}%`, width: `${width}%` }}>
-            <span data-h="start" className="absolute -left-1.5 top-1/2 flex h-7 w-3.5 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full bg-white shadow-md">
-              <span className="h-3.5 w-0.5 rounded-full bg-curva-purple/60" />
+            <span data-h="start" className="absolute -left-1.5 top-1/2 flex h-7 w-3.5 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full bg-surface shadow-md">
+              <span className="h-3.5 w-0.5 rounded-full bg-accent/60" />
             </span>
-            <span data-h="end" className="absolute -right-1.5 top-1/2 flex h-7 w-3.5 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full bg-white shadow-md">
-              <span className="h-3.5 w-0.5 rounded-full bg-curva-purple/60" />
+            <span data-h="end" className="absolute -right-1.5 top-1/2 flex h-7 w-3.5 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full bg-surface shadow-md">
+              <span className="h-3.5 w-0.5 rounded-full bg-accent/60" />
             </span>
           </div>
         )}
       </div>
       {/* ticks de hora */}
-      <div className="relative mt-1 h-3 text-[10px] tabular text-zinc-400">
+      <div className="relative mt-1 h-3 text-[10px] tabular text-muted">
         {TICKS.map((t) => (
           <span key={t} className="absolute -translate-x-1/2" style={{ left: `${pct(t)}%` }}>{labelHour(t)}</span>
         ))}
       </div>
-      <p className="mt-1.5 text-center text-[10px] text-zinc-400">Arrastra los extremos o desliza el bloque</p>
+      <p className="mt-1.5 text-center text-[10px] text-muted">Arrastra los extremos o desliza el bloque</p>
     </div>
   );
 }

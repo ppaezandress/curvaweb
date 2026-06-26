@@ -1,251 +1,190 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  ListTodo,
-  Users,
-  Building2,
-  Search,
-  ChevronDown,
-  ChevronRight,
-  Inbox,
-  Folder,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { ListTodo, Users, Building2, Search, Inbox, Check, Building, CalendarClock, CircleDot } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/format";
 import { TaskCard } from "@/components/TaskCard";
+import { CurviPanel } from "@/components/curvi/CurviPanel";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { isAssignedTo } from "@/lib/task-status";
+import { isAssignedTo, isDone } from "@/lib/task-status";
 
 type View = "mine" | "all";
+type Group = "cliente" | "urgencia" | "estado";
 const NO_CLIENT = "__sin_cliente__";
-const NO_PROJECT = "__sin_proyecto__";
 const INTERNAL = "__interno__";
+const DAY = 86_400_000;
+
+const URGENCY = [
+  { key: "vencidas", label: "Vencidas", bar: "bg-rose-500" },
+  { key: "hoy", label: "Para hoy", bar: "bg-accent" },
+  { key: "semana", label: "Próximos 7 días", bar: "bg-curva-indigo" },
+  { key: "despues", label: "Más adelante", bar: "bg-curva-teal" },
+  { key: "nofecha", label: "Sin fecha", bar: "bg-zinc-400" },
+] as const;
+const STATUS_ORDER = ["DEMORADA", "EN CURSO", "SIN EMPEZAR", "POR VALIDAR", "EN ESPERA", "DONE"];
+const GROUPS: { key: Group; label: string; icon: React.ReactNode }[] = [
+  { key: "cliente", label: "Cliente", icon: <Building size={15} /> },
+  { key: "urgencia", label: "Urgencia", icon: <CalendarClock size={15} /> },
+  { key: "estado", label: "Estado", icon: <CircleDot size={15} /> },
+];
+
+const prioRank = (t: Task) => (t.priority === "Alta" ? 3 : t.priority === "Media" ? 2 : t.priority === "Baja" ? 1 : 0) + (/curso|progress|haciendo/i.test(t.status) ? 0.5 : 0);
 
 export default function TareasPage() {
   const { currentUserId, sessionSecondsForTask } = useApp();
   const { tasks, projectById, clientById } = useData();
 
   const [view, setView] = useState<View>("mine");
-  const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const [group, setGroup] = useState<Group>("cliente");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [openClients, setOpenClients] = useState<Set<string>>(new Set());
-  const [openProjects, setOpenProjects] = useState<Set<string>>(new Set());
+  const [showDone, setShowDone] = useState(false);
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
 
-  const isMine = (t: Task) => isAssignedTo(t, currentUserId);
+  const clientOf = (t: Task) => (t.internal ? INTERNAL : t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT);
+  const clientName = (id: string) => (id === INTERNAL ? "Interno (CURVA)" : id === NO_CLIENT ? "Sin cliente" : clientById[id]?.name || "Cliente");
+  const secsOf = (items: Task[]) => items.reduce((a, t) => a + t.baselineSeconds + sessionSecondsForTask(t.id), 0);
 
-  // Cliente de una tarea: directo, o heredado de su proyecto.
-  const clientOf = (t: Task) =>
-    t.internal ? INTERNAL : t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT;
-  const clientName = (id: string) =>
-    id === INTERNAL ? "Interno (CURVA)" : id === NO_CLIENT ? "Sin cliente" : clientById[id]?.name || "Cliente";
-  const projectName = (id: string) =>
-    id === NO_PROJECT || !id ? "Sin proyecto" : projectById[id]?.name || "Proyecto";
+  const base = useMemo(() => (view === "all" ? tasks : tasks.filter((t) => isAssignedTo(t, currentUserId))), [tasks, view, currentUserId]);
+  const visible = useMemo(() => base.filter((t) => showDone || !isDone(t.status)), [base, showDone]);
 
-  const base = useMemo(
-    () => (view === "all" ? tasks : tasks.filter(isMine)),
-    [tasks, view, currentUserId],
-  );
-
-  // Sidebar: clientes con conteo
+  // Sidebar de clientes (siempre visible) — cuenta sobre lo visible.
   const clientsWithCounts = useMemo(() => {
     const m = new Map<string, number>();
-    base.forEach((t) => {
-      const c = clientOf(t);
-      m.set(c, (m.get(c) || 0) + 1);
-    });
-    return [...m.entries()]
-      .map(([id, count]) => ({ id, name: clientName(id), count }))
-      .sort((a, b) => b.count - a.count);
-  }, [base, projectById, clientById]);
+    visible.forEach((t) => { const c = clientOf(t); m.set(c, (m.get(c) || 0) + 1); });
+    return [...m.entries()].map(([id, count]) => ({ id, name: clientName(id), count })).sort((a, b) => b.count - a.count);
+  }, [visible, projectById, clientById]);
 
-  const statuses = useMemo(() => {
-    const s = new Set<string>();
-    base.forEach((t) => s.add(t.status));
-    return [...s];
-  }, [base]);
+  // Filtro por cliente (del sidebar) aplica a todas las agrupaciones.
+  const scoped = useMemo(() => (clientFilter ? visible.filter((t) => clientOf(t) === clientFilter) : visible), [visible, clientFilter]);
 
-  const filtered = useMemo(() => {
-    let r = base;
-    if (clientFilter) r = r.filter((t) => clientOf(t) === clientFilter);
-    if (statusFilter) r = r.filter((t) => t.status === statusFilter);
-    if (search.trim())
-      r = r.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()));
-    return r;
-  }, [base, clientFilter, statusFilter, search]);
+  // Búsqueda: encuentra TODO (incluye Done).
+  const searchResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return null;
+    return base.filter((t) => t.name.toLowerCase().includes(q)).sort((a, b) => Number(isDone(a.status)) - Number(isDone(b.status)) || prioRank(b) - prioRank(a));
+  }, [base, search]);
 
-  // Jerarquía: Cliente → Proyecto → Tareas
-  const tree = useMemo(() => {
-    const byClient = new Map<string, Map<string, Task[]>>();
-    filtered.forEach((t) => {
-      const c = clientOf(t);
-      const p = t.projectId || NO_PROJECT;
-      if (!byClient.has(c)) byClient.set(c, new Map());
-      const projMap = byClient.get(c)!;
-      if (!projMap.has(p)) projMap.set(p, []);
-      projMap.get(p)!.push(t);
-    });
-    return [...byClient.entries()]
-      .map(([cId, projMap]) => {
-        const projects = [...projMap.entries()]
-          .map(([pId, items]) => ({ id: pId, name: projectName(pId), items }))
-          .sort((a, b) => b.items.length - a.items.length);
-        const count = projects.reduce((a, p) => a + p.items.length, 0);
-        return { id: cId, name: clientName(cId), projects, count };
-      })
-      .sort((a, b) => b.count - a.count);
-  }, [filtered, projectById, clientById]);
+  // Agrupaciones (listas planas, sin acordeones).
+  const horizon = (t: Task): string => {
+    if (!t.dueDate) return "nofecha";
+    const today0 = new Date().setHours(0, 0, 0, 0);
+    const due = new Date(t.dueDate).getTime();
+    if (due < today0) return "vencidas";
+    if (due < today0 + DAY) return "hoy";
+    if (due < today0 + 7 * DAY) return "semana";
+    return "despues";
+  };
 
-  // Abrir todos los clientes por defecto (proyectos colapsados → drill-down).
-  useEffect(() => {
-    setOpenClients(new Set(tree.map((c) => c.id)));
-    setOpenProjects(new Set());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]);
-
-  const drillOpen = !!search.trim() || !!statusFilter;
-
-  const toggleClient = (id: string) =>
-    setOpenClients((s) => {
-      const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  const toggleProject = (key: string) =>
-    setOpenProjects((s) => {
-      const n = new Set(s);
-      n.has(key) ? n.delete(key) : n.add(key);
-      return n;
-    });
-
-  const secsOf = (items: Task[]) =>
-    items.reduce((a, t) => a + t.baselineSeconds + sessionSecondsForTask(t.id), 0);
+  const groups = useMemo(() => {
+    const byUrg = (a: Task, b: Task) => Number(isDone(a.status)) - Number(isDone(b.status)) || prioRank(b) - prioRank(a);
+    if (group === "cliente") {
+      const m = new Map<string, Task[]>();
+      scoped.forEach((t) => { const c = clientOf(t); (m.get(c) || m.set(c, []).get(c)!).push(t); });
+      return [...m.entries()].map(([id, items]) => ({ key: id, label: clientName(id), bar: "bg-accent", items: [...items].sort(byUrg) })).sort((a, b) => b.items.length - a.items.length);
+    }
+    if (group === "estado") {
+      const m = new Map<string, Task[]>();
+      scoped.forEach((t) => { const s = (t.status || "—").toUpperCase(); (m.get(s) || m.set(s, []).get(s)!).push(t); });
+      return [...m.entries()].map(([s, items]) => ({ key: s, label: s, bar: isDone(s) ? "bg-emerald-500" : "bg-curva-indigo", items: [...items].sort(byUrg) }))
+        .sort((a, b) => { const ia = STATUS_ORDER.indexOf(a.key), ib = STATUS_ORDER.indexOf(b.key); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+    }
+    // urgencia
+    const open = scoped.filter((t) => !isDone(t.status));
+    const out: { key: string; label: string; bar: string; items: Task[] }[] = URGENCY
+      .map((s) => ({ key: s.key as string, label: s.label as string, bar: s.bar as string, items: open.filter((t) => horizon(t) === s.key).sort((a, b) => prioRank(b) - prioRank(a)) }))
+      .filter((s) => s.items.length > 0);
+    if (showDone) { const done = scoped.filter((t) => isDone(t.status)); if (done.length) out.push({ key: "hechas", label: "Hechas", bar: "bg-emerald-500", items: done }); }
+    return out;
+  }, [group, scoped, showDone, projectById, clientById]);
 
   return (
-    <div>
+    <div className="space-y-5">
       <SectionHeader
         title="Tareas"
-        subtitle="Tus pendientes por cliente y proyecto — mide el tiempo de cada uno."
+        subtitle="Mira tus pendientes por cliente, urgencia o estado — con claridad."
         action={
-          <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
-            <button onClick={() => { setView("mine"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "mine" ? "bg-ink text-white" : "text-zinc-500"}`}>
-              <ListTodo size={15} /> Mías
-            </button>
-            <button onClick={() => { setView("all"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "all" ? "bg-ink text-white" : "text-zinc-500"}`}>
-              <Users size={15} /> Equipo
-            </button>
+          <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
+            <button onClick={() => { setView("mine"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "mine" ? "bg-ink text-white" : "text-muted"}`}><ListTodo size={15} /> Mías</button>
+            <button onClick={() => { setView("all"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "all" ? "bg-ink text-white" : "text-muted"}`}><Users size={15} /> Equipo</button>
           </div>
         }
       />
 
-      <div className="flex gap-6">
-        {/* Sidebar: CLIENTES */}
-        <aside className="hidden w-56 shrink-0 lg:block">
-          <div className="sticky top-20 space-y-1">
-            <SidebarItem icon={<Inbox size={15} />} label="Todos los clientes" count={base.length} active={!clientFilter} onClick={() => setClientFilter(null)} />
-            <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-zinc-400">Clientes</p>
-            <div className="max-h-[62vh] space-y-0.5 overflow-y-auto pr-1">
-              {clientsWithCounts.map((c) => (
-                <SidebarItem key={c.id} icon={<Building2 size={15} />} label={c.name} count={c.count} active={clientFilter === c.id} onClick={() => setClientFilter(c.id)} />
-              ))}
-            </div>
-          </div>
-        </aside>
+      {/* Curvi en tira compacta (no roba espacio) */}
+      <CurviPanel compact />
 
-        {/* Main */}
-        <div className="min-w-0 flex-1">
-          <div className="mb-4 space-y-3">
-            <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar tarea..." className="w-full rounded-2xl border border-line bg-white py-3 pl-11 pr-4 text-sm shadow-soft outline-none transition focus:border-curva-purple" />
-            </div>
-            <div className="lg:hidden">
-              <select value={clientFilter || ""} onChange={(e) => setClientFilter(e.target.value || null)} className="w-full rounded-2xl border border-line bg-white px-4 py-2.5 text-sm">
-                <option value="">Todos los clientes ({base.length})</option>
-                {clientsWithCounts.map((c) => (<option key={c.id} value={c.id}>{c.name} ({c.count})</option>))}
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <Chip active={!statusFilter} onClick={() => setStatusFilter(null)}>Todos</Chip>
-              {statuses.map((s) => (<Chip key={s} active={statusFilter === s} onClick={() => setStatusFilter(statusFilter === s ? null : s)}>{s}</Chip>))}
-            </div>
-          </div>
+      {/* Una sola barra de controles: buscar · agrupar · Done */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[200px] flex-1">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cualquier tarea (incluye Done)…" className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-11 pr-4 text-sm shadow-soft outline-none transition focus:border-accent" />
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1 text-xs text-muted shadow-soft">
+          <span className="font-semibold uppercase tracking-wide">Agrupar</span>
+          {GROUPS.map((g) => (
+            <button key={g.key} onClick={() => setGroup(g.key)} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition focus-ring ${group === g.key ? "bg-ink text-white" : "text-muted hover:text-fg"}`}>{g.icon} {g.label}</button>
+          ))}
+        </div>
+        <button onClick={() => setShowDone((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus-ring ${showDone ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-line bg-surface text-muted hover:border-zinc-300"}`}><Check size={15} /> Done</button>
+      </div>
 
-          {/* Árbol Cliente → Proyecto → Tareas */}
-          <div className="space-y-3">
-            {tree.map((client) => {
-              const clientOpen = drillOpen || openClients.has(client.id);
-              return (
-                <div key={client.id} className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft">
-                  <button onClick={() => toggleClient(client.id)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-zinc-50">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      {clientOpen ? <ChevronDown size={18} className="text-zinc-400" /> : <ChevronRight size={18} className="text-zinc-400" />}
-                      <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-ink/5 text-ink"><Building2 size={15} /></span>
-                      <span className="truncate font-display text-base font-bold text-ink">{client.name}</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-3 text-xs text-zinc-500">
-                      {secsOf(client.projects.flatMap((p) => p.items)) > 0 && (
-                        <span className="tabular">{formatDuration(secsOf(client.projects.flatMap((p) => p.items)))}</span>
-                      )}
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-semibold text-zinc-600">{client.count}</span>
-                    </span>
-                  </button>
+      {searchResults ? (
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted">{searchResults.length} resultado{searchResults.length === 1 ? "" : "s"}</p>
+          {searchResults.map((t) => <TaskCard key={t.id} task={t} />)}
+          {searchResults.length === 0 && <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Nada coincide con «{search.trim()}».</div>}
+        </div>
+      ) : (
+        <div className="flex gap-6">
+          {/* Sidebar de clientes — SIEMPRE visible (es como navegas por cliente) */}
+          <aside className="hidden w-52 shrink-0 lg:block">
+            <div className="sticky top-20 space-y-0.5">
+              <SidebarItem icon={<Inbox size={15} />} label="Todos" count={visible.length} active={!clientFilter} onClick={() => setClientFilter(null)} />
+              <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted">Clientes</p>
+              <div className="max-h-[60vh] space-y-0.5 overflow-y-auto pr-1">
+                {clientsWithCounts.map((c) => <SidebarItem key={c.id} icon={<Building2 size={15} />} label={c.name} count={c.count} active={clientFilter === c.id} onClick={() => setClientFilter(c.id)} />)}
+              </div>
+            </div>
+          </aside>
 
-                  {clientOpen && (
-                    <div className="space-y-1.5 border-t border-line bg-zinc-50/60 p-3">
-                      {client.projects.map((proj) => {
-                        const key = `${client.id}:${proj.id}`;
-                        const projOpen = drillOpen || openProjects.has(key);
-                        return (
-                          <div key={key} className="overflow-hidden rounded-xl border border-line bg-white">
-                            <button onClick={() => toggleProject(key)} className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-zinc-50">
-                              <span className="flex min-w-0 items-center gap-2">
-                                {projOpen ? <ChevronDown size={15} className="text-zinc-400" /> : <ChevronRight size={15} className="text-zinc-400" />}
-                                <Folder size={14} className="shrink-0 text-zinc-400" />
-                                <span className="truncate text-sm font-semibold text-zinc-700">{proj.name}</span>
-                              </span>
-                              <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-500">{proj.items.length}</span>
-                            </button>
-                            {projOpen && (
-                              <div className="space-y-2 border-t border-line p-2.5">
-                                {proj.items.map((t) => (<TaskCard key={t.id} task={t} />))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+          <div className="min-w-0 flex-1 space-y-6">
+            {/* Selector de cliente en móvil */}
+            <select value={clientFilter || ""} onChange={(e) => setClientFilter(e.target.value || null)} className="w-full rounded-2xl border border-line bg-surface px-4 py-2.5 text-sm lg:hidden">
+              <option value="">Todos los clientes ({visible.length})</option>
+              {clientsWithCounts.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.count})</option>)}
+            </select>
+
+            {groups.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">{showDone ? "No hay tareas aquí." : "Sin pendientes accionables 🎉 — muestra las Done o crea una desde la Home."}</div>
+            ) : (
+              groups.map((g) => (
+                <div key={g.key}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className={`h-4 w-1.5 rounded-full ${g.bar}`} />
+                    <h2 className="font-display text-base font-bold text-fg">{g.label}</h2>
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted">{g.items.length}</span>
+                    {secsOf(g.items) > 0 && <span className="tabular text-xs text-muted">· {formatDuration(secsOf(g.items))}</span>}
+                  </div>
+                  <div className="space-y-2">{g.items.slice(0, 80).map((t) => <TaskCard key={t.id} task={t} />)}</div>
                 </div>
-              );
-            })}
-            {tree.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-zinc-400">No hay tareas que coincidan.</div>
+              ))
             )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 function SidebarItem({ icon, label, count, active, onClick }: { icon: React.ReactNode; label: string; count: number; active: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition ${active ? "bg-curva-purple/10 text-curva-purple" : "text-zinc-600 hover:bg-zinc-100"}`}>
-      <span className="shrink-0">{icon}</span>
+    <button onClick={onClick} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition ${active ? "bg-accent/10 text-accent" : "text-fg hover:bg-surface-2"}`}>
+      <span className="shrink-0 opacity-80">{icon}</span>
       <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
-      <span className={`shrink-0 rounded-full px-1.5 text-xs font-semibold ${active ? "bg-curva-purple/15" : "bg-zinc-100 text-zinc-500"}`}>{count}</span>
-    </button>
-  );
-}
-
-function Chip({ children, active, onClick }: { children: React.ReactNode; active: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className={`rounded-full px-3 py-1 text-xs font-medium transition ${active ? "bg-ink text-white" : "border border-line bg-white text-zinc-600 hover:border-zinc-300"}`}>
-      {children}
+      <span className={`shrink-0 rounded-full px-1.5 text-xs font-semibold ${active ? "bg-accent/15" : "bg-surface-2 text-muted"}`}>{count}</span>
     </button>
   );
 }

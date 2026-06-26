@@ -12,7 +12,6 @@ import {
   Printer,
   Loader2,
   Settings2,
-  Sparkles,
 } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { formatHours } from "@/lib/format";
@@ -86,9 +85,6 @@ export default function ReportesPage() {
 
   const totalMin = rows.reduce((a, r) => a + r.minutes, 0);
   const totalCost = rows.reduce((a, r) => a + r.cost, 0);
-  const aiMin = rows.filter((r) => r.mode === "ai").reduce((a, r) => a + r.minutes, 0);
-  const manualMin = totalMin - aiMin;
-  const aiShare = totalMin > 0 ? Math.round((aiMin / totalMin) * 100) : 0;
 
   type Agg = { key: string; label: string; minutes: number; cost: number; color?: string };
   const groupBy = (fn: (r: (typeof rows)[number]) => { key: string; label: string; color?: string }) => {
@@ -132,17 +128,17 @@ export default function ReportesPage() {
           subtitle="A dónde se va el tiempo — la base para cobrar bien."
           action={
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm shadow-soft">
+              <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
                 {(["week", "month", "all"] as Range[]).map((r) => (
-                  <button key={r} onClick={() => setRange(r)} className={`rounded-full px-3 py-1.5 font-medium transition focus-ring ${range === r ? "bg-ink text-white" : "text-zinc-500"}`}>
+                  <button key={r} onClick={() => setRange(r)} className={`rounded-full px-3 py-1.5 font-medium transition focus-ring ${range === r ? "bg-ink text-white" : "text-muted"}`}>
                     {r === "week" ? "Semana" : r === "month" ? "Mes" : "Todo"}
                   </button>
                 ))}
               </div>
-              <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-soft transition focus-ring hover:border-zinc-300">
+              <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-zinc-300">
                 <Settings2 size={15} /> Tarifas
               </button>
-              <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-zinc-600 shadow-soft transition focus-ring hover:border-zinc-300">
+              <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-zinc-300">
                 <Download size={15} /> CSV
               </button>
               <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white transition focus-ring hover:bg-ink-soft">
@@ -155,18 +151,18 @@ export default function ReportesPage() {
 
       {/* Editor de tarifas */}
       {showRates && (
-        <div className="rounded-2xl border border-line bg-white p-5 shadow-soft print:hidden">
-          <h3 className="mb-1 font-display font-bold text-ink">Tarifas por hora (MXN)</h3>
-          <p className="mb-4 text-sm text-zinc-500">Para estimar el costo del tiempo. Se guardan en este dispositivo.</p>
+        <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft print:hidden">
+          <h3 className="mb-1 font-display font-bold text-fg">Tarifas por hora (MXN)</h3>
+          <p className="mb-4 text-sm text-muted">Para estimar el costo del tiempo. Se guardan en este dispositivo.</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
-              <span className="font-medium text-zinc-600">Default</span>
-              <input type="number" min={0} value={rates.default || ""} onChange={(e) => setDefault(Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-curva-purple" placeholder="0" />
+              <span className="font-medium text-muted">Default</span>
+              <input type="number" min={0} value={rates.default || ""} onChange={(e) => setDefault(Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-accent" placeholder="0" />
             </label>
             {members.filter((m) => m.name && m.name !== "—").map((m) => (
               <label key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
-                <span className="truncate font-medium text-zinc-600">{m.name}</span>
-                <input type="number" min={0} value={rates.byPerson[m.name] || ""} onChange={(e) => setPerson(m.name, Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-curva-purple" placeholder={String(rates.default || 0)} />
+                <span className="truncate font-medium text-muted">{m.name}</span>
+                <input type="number" min={0} value={rates.byPerson[m.name] || ""} onChange={(e) => setPerson(m.name, Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-accent" placeholder={String(rates.default || 0)} />
               </label>
             ))}
           </div>
@@ -174,11 +170,11 @@ export default function ReportesPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-white py-16 text-sm text-zinc-400">
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-16 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" /> Cargando registros…
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line p-12 text-center text-sm text-zinc-400">
+        <div className="rounded-2xl border border-dashed border-line p-12 text-center text-sm text-muted">
           No hay registros en este rango. Dale play a una tarea para empezar a medir.
         </div>
       ) : (
@@ -189,28 +185,6 @@ export default function ReportesPage() {
             <Kpi icon={<Building2 size={18} />} label="Cliente más demandante" value={topClient ? formatHours(topClient.minutes * 60) : "—"} sub={topClient?.label} />
             <Kpi icon={<Wallet size={18} />} label="Costo del tiempo" value={showCost ? money(totalCost) : "Setea tarifas"} sub={showCost ? undefined : "para ver costo"} />
           </div>
-
-          {/* Manual vs IA */}
-          {aiMin > 0 && (
-            <Section icon={<Sparkles size={20} />} title="Manual vs IA" desc="Cuánto del tiempo lo trabajaste a mano y cuánto lo resolvió la IA.">
-              <div className="flex h-3.5 w-full overflow-hidden rounded-full bg-zinc-100">
-                <div className="h-full bg-ink" style={{ width: `${100 - aiShare}%` }} title={`Manual ${100 - aiShare}%`} />
-                <div className="h-full bg-curva-indigo" style={{ width: `${aiShare}%` }} title={`IA ${aiShare}%`} />
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-ink" />
-                  <span className="font-semibold text-ink">Manual</span>
-                  <span className="tabular text-zinc-500">{formatHours(manualMin * 60)} · {100 - aiShare}%</span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-curva-indigo" />
-                  <span className="font-semibold text-curva-indigo">IA (espera)</span>
-                  <span className="tabular text-zinc-500">{formatHours(aiMin * 60)} · {aiShare}%</span>
-                </span>
-              </div>
-            </Section>
-          )}
 
           {/* Por tipo de entregable */}
           <Section icon={<TrendingUp size={20} />} title="Por tipo de entregable" desc="Tu tabulador: cuántas horas cuesta cada tipo de trabajo.">
@@ -237,19 +211,19 @@ export default function ReportesPage() {
 
 function Kpi({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-5 shadow-soft">
-      <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-400">{icon}{label}</p>
-      <p className="tabular mt-1 font-display text-2xl font-bold text-ink">{value}</p>
-      {sub && <p className="mt-0.5 truncate text-sm text-zinc-500">{sub}</p>}
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted">{icon}{label}</p>
+      <p className="tabular mt-1 font-display text-2xl font-bold text-fg">{value}</p>
+      {sub && <p className="mt-0.5 truncate text-sm text-muted">{sub}</p>}
     </div>
   );
 }
 
 function Section({ icon, title, desc, children }: { icon: React.ReactNode; title: string; desc: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-white p-6 shadow-soft">
-      <h2 className="flex items-center gap-2 font-display text-xl font-bold text-ink">{icon}{title}</h2>
-      <p className="mb-5 text-sm text-zinc-500">{desc}</p>
+    <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+      <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">{icon}{title}</h2>
+      <p className="mb-5 text-sm text-muted">{desc}</p>
       {children}
     </section>
   );
@@ -262,7 +236,7 @@ function Bars({ items, totalMin, showCost, icon, gradient }: { items: { key: str
       {items.map((r) => (
         <div key={r.key}>
           <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-            <span className="flex min-w-0 items-center gap-2 font-semibold text-ink">
+            <span className="flex min-w-0 items-center gap-2 font-semibold text-fg">
               {icon && (
                 <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-white" style={{ background: r.color }}>
                   <TypeIcon typeId={r.key} size={12} />
@@ -270,13 +244,13 @@ function Bars({ items, totalMin, showCost, icon, gradient }: { items: { key: str
               )}
               <span className="truncate">{r.label}</span>
             </span>
-            <span className="shrink-0 text-zinc-500">
-              <span className="tabular font-semibold text-ink">{formatHours(r.minutes * 60)}</span>
+            <span className="shrink-0 text-muted">
+              <span className="tabular font-semibold text-fg">{formatHours(r.minutes * 60)}</span>
               {showCost && <span className="tabular ml-2 text-curva-teal">{money(r.cost)}</span>}
             </span>
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100">
-            <div className={`h-full rounded-full ${gradient ? "curva-gradient" : ""}`} style={{ width: `${(r.minutes / max) * 100}%`, background: gradient ? undefined : r.color || "var(--color-curva-purple)" }} />
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+            <div className={`h-full rounded-full ${gradient ? "curva-gradient" : ""}`} style={{ width: `${(r.minutes / max) * 100}%`, background: gradient ? undefined : r.color || "var(--color-accent)" }} />
           </div>
         </div>
       ))}

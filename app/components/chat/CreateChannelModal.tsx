@@ -36,7 +36,7 @@ export function CreateChannelModal({
       footer={<div className="flex justify-end"><Button onClick={submit} disabled={!name.trim() || busy}>{busy ? "Creando…" : "Crear canal"}</Button></div>}>
       <Field label="Nombre del canal">
         <div className="relative">
-          <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <Hash size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input value={name} onChange={(e) => setName(e.target.value.replace(/\s+/g, "-").toLowerCase())} placeholder="diseño" className={cn(inputCls, "pl-9")} autoFocus />
         </div>
       </Field>
@@ -45,14 +45,14 @@ export function CreateChannelModal({
           {members.map((m) => {
             const on = picked.has(m.id);
             return (
-              <button key={m.id} onClick={() => toggle(m.id)} className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-curva-purple bg-curva-purple/5" : "border-line hover:border-zinc-300")}>
+              <button key={m.id} onClick={() => toggle(m.id)} className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-accent bg-accent/5" : "border-line hover:border-zinc-300")}>
                 <Avatar member={m} size={32} />
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-ink">{m.name}</span></span>
-                {on && <Check size={16} className="text-curva-purple" />}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-fg">{m.name}</span></span>
+                {on && <Check size={16} className="text-accent" />}
               </button>
             );
           })}
-          {members.length === 0 && <p className="py-4 text-center text-sm text-zinc-400">Aún no hay compañeros con cuenta. Pueden unirse después.</p>}
+          {members.length === 0 && <p className="py-4 text-center text-sm text-muted">Aún no hay compañeros con cuenta. Pueden unirse después.</p>}
         </div>
       </Field>
     </Modal>

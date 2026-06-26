@@ -96,14 +96,14 @@ export function DoneCelebration() {
         ))}
       </div>
 
-      <div className="relative w-full max-w-md rounded-t-3xl bg-white p-6 shadow-float sm:rounded-3xl">
-        <button onClick={dismiss} className="absolute right-4 top-4 rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-100">
+      <div className="relative w-full max-w-md rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-3xl">
+        <button onClick={dismiss} className="absolute right-4 top-4 rounded-full p-1.5 text-muted transition hover:bg-surface-2">
           <X size={18} />
         </button>
 
-        <p className="text-sm font-medium text-curva-purple">Tarea completada</p>
-        <h2 className="mt-1 font-display text-2xl font-bold text-ink">{phrase.current}</h2>
-        <p className="mt-1 truncate text-sm text-zinc-500">{celebrating.taskName}</p>
+        <p className="text-sm font-medium text-accent">Tarea completada</p>
+        <h2 className="mt-1 font-display text-2xl font-bold text-fg">{phrase.current}</h2>
+        <p className="mt-1 truncate text-sm text-muted">{celebrating.taskName}</p>
 
         {/* Selfie */}
         <div className="mt-5">
@@ -122,25 +122,25 @@ export function DoneCelebration() {
               </button>
             </div>
           ) : (
-            <button onClick={startCam} className="mx-auto flex h-20 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line text-sm font-medium text-zinc-400 transition hover:border-curva-purple hover:text-curva-purple">
+            <button onClick={startCam} className="mx-auto flex h-20 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line text-sm font-medium text-muted transition hover:border-accent hover:text-accent">
               <Camera size={18} /> Tómate una selfie de tu reacción (opcional)
             </button>
           )}
         </div>
 
         {/* Emoji */}
-        <p className="mt-5 mb-2 text-sm font-semibold text-zinc-600">¿Cómo te sentiste?</p>
+        <p className="mt-5 mb-2 text-sm font-semibold text-muted">¿Cómo te sentiste?</p>
         <div className="flex flex-wrap gap-1.5">
           {EMOJIS.map((e) => (
-            <button key={e} onClick={() => setEmoji(e)} className={`rounded-xl px-3 py-2 text-xl transition ${emoji === e ? "bg-curva-purple/10 ring-2 ring-curva-purple" : "hover:bg-zinc-100"}`}>
+            <button key={e} onClick={() => setEmoji(e)} className={`rounded-xl px-3 py-2 text-xl transition ${emoji === e ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-surface-2"}`}>
               {e}
             </button>
           ))}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={dismiss} className="rounded-full px-4 py-2 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100">Saltar</button>
-          <button onClick={save} className="inline-flex items-center gap-2 rounded-full bg-curva-purple px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90">
+          <button onClick={dismiss} className="rounded-full px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface-2">Saltar</button>
+          <button onClick={save} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90">
             <Check size={15} /> Guardar al muro
           </button>
         </div>

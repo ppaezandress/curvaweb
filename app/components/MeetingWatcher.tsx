@@ -111,7 +111,7 @@ export function MeetingWatcher() {
     <Modal open onClose={dismiss} title="¿Registramos esta junta?"
       footer={
         <div className="flex items-center justify-between gap-2">
-          <button onClick={dismiss} className="text-sm text-zinc-400 hover:text-zinc-600 focus-ring rounded-full px-2 py-1">Descartar</button>
+          <button onClick={dismiss} className="text-sm text-muted hover:text-muted focus-ring rounded-full px-2 py-1">Descartar</button>
           <Button onClick={confirm} disabled={busy || picked.size === 0}>{busy ? "Registrando…" : `Registrar ${minutes} min`}</Button>
         </div>
       }>
@@ -120,36 +120,36 @@ export function MeetingWatcher() {
           {pending.hangoutLink ? <Video size={18} /> : <CalendarClock size={18} />}
         </span>
         <div className="min-w-0">
-          <p className="truncate font-semibold text-ink">{pending.title}</p>
-          <p className="text-xs text-zinc-500">{minutes} min{pending.hangoutLink ? " · videollamada" : ""}</p>
+          <p className="truncate font-semibold text-fg">{pending.title}</p>
+          <p className="text-xs text-muted">{minutes} min{pending.hangoutLink ? " · videollamada" : ""}</p>
         </div>
       </div>
 
-      <label className="mb-1.5 block text-sm font-semibold text-zinc-600">Proyecto</label>
+      <label className="mb-1.5 block text-sm font-semibold text-muted">Proyecto</label>
       <select value={projectId} onChange={(e) => setProjectId(e.target.value)}
-        className="mb-1 w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-curva-purple">
+        className="mb-1 w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent">
         <option value="">— Sin proyecto (solo cliente/área) —</option>
         {projects.map((p) => (
           <option key={p.id} value={p.id}>{clientById[p.clientId]?.name ? `${clientById[p.clientId].name} · ` : ""}{p.name}</option>
         ))}
       </select>
-      {suggestion?.label && <p className="mb-4 text-xs text-curva-purple">Sugerido por el título: {suggestion.label}</p>}
+      {suggestion?.label && <p className="mb-4 text-xs text-accent">Sugerido por el título: {suggestion.label}</p>}
 
-      <label className="mb-1.5 mt-3 block text-sm font-semibold text-zinc-600">¿Para quién lo registramos?</label>
+      <label className="mb-1.5 mt-3 block text-sm font-semibold text-muted">¿Para quién lo registramos?</label>
       <div className="space-y-1">
         {teammates.map((m) => {
           const on = picked.has(m.id);
           return (
             <button key={m.id} onClick={() => setPicked((s) => { const n = new Set(s); n.has(m.id) ? n.delete(m.id) : n.add(m.id); return n; })}
-              className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-curva-purple bg-curva-purple/5" : "border-line")}>
+              className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-accent bg-accent/5" : "border-line")}>
               <Avatar member={m} size={28} />
-              <span className="flex-1 text-sm text-ink">{m.name}{m.id === currentUserId ? " (tú)" : ""}</span>
-              {on && <Check size={15} className="text-curva-purple" />}
+              <span className="flex-1 text-sm text-fg">{m.name}{m.id === currentUserId ? " (tú)" : ""}</span>
+              {on && <Check size={15} className="text-accent" />}
             </button>
           );
         })}
       </div>
-      <p className="mt-3 text-[11px] text-zinc-400">Solo tú ves esto. El equipo nunca ve el título de tus juntas.</p>
+      <p className="mt-3 text-[11px] text-muted">Solo tú ves esto. El equipo nunca ve el título de tus juntas.</p>
     </Modal>
   );
 }

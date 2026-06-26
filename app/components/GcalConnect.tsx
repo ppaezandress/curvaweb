@@ -28,16 +28,16 @@ export function GcalConnect() {
 
   if (state.connected) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-soft">
+      <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 shadow-soft">
         <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-curva-blue/10 text-curva-blue">
           <CalendarClock size={20} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink">Calendario conectado</p>
-          <p className="text-xs text-zinc-500">{state.busy ? "Ahora: en junta 📅" : "Ahora: libre"}</p>
+          <p className="text-sm font-semibold text-fg">Calendario conectado</p>
+          <p className="text-xs text-muted">{state.busy ? "Ahora: en junta 📅" : "Ahora: libre"}</p>
           <div className="mt-1 flex gap-3 text-[11px]">
             <a href="/api/gcal/login" className="font-medium text-curva-blue hover:underline">Reconectar</a>
-            <a href="/api/gcal/logout" className="text-zinc-400 hover:text-rose-500 hover:underline">Desconectar</a>
+            <a href="/api/gcal/logout" className="text-muted hover:text-rose-500 hover:underline">Desconectar</a>
           </div>
         </div>
         <span className={`inline-block h-2 w-2 rounded-full ${state.busy ? "bg-rose-500" : "bg-curva-teal"}`} />
@@ -48,14 +48,14 @@ export function GcalConnect() {
   return (
     <a
       href="/api/gcal/login"
-      className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-soft transition focus-ring hover:border-curva-blue"
+      className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 shadow-soft transition focus-ring hover:border-curva-blue"
     >
       <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-curva-blue text-white">
         <CalendarClock size={20} />
       </span>
       <div className="flex-1">
-        <p className="text-sm font-semibold text-ink">Conectar Google Calendar</p>
-        <p className="text-xs text-zinc-500">El equipo verá si estás en junta (solo ocupado/libre, sin títulos).</p>
+        <p className="text-sm font-semibold text-fg">Conectar Google Calendar</p>
+        <p className="text-xs text-muted">El equipo verá si estás en junta (solo ocupado/libre, sin títulos).</p>
       </div>
       <span className="rounded-full bg-curva-blue px-3 py-1.5 text-xs font-semibold text-white">Conectar</span>
     </a>

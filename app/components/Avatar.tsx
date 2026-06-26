@@ -21,7 +21,7 @@ export function Avatar({
   size?: number;
 }) {
   const label = member?.name ?? name ?? "?";
-  const bg = member?.color ?? color ?? "var(--color-curva-purple)";
+  const bg = member?.color ?? color ?? "var(--color-accent)";
   const short = member?.short ?? toInitials(label);
 
   if (src) {

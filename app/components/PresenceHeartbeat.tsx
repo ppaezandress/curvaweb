@@ -55,6 +55,7 @@ export function PresenceHeartbeat() {
         user_id: uid,
         is_active: !!a,
         current_task: task ?? null,
+        current_task_id: a?.taskId ?? null, // para detectar co-working (misma tarea exacta)
         app_focus: focusRef.current?.label ?? null,
         focus_tone: focusRef.current?.tone ?? null,
         in_meeting: inMeeting,

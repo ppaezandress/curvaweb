@@ -10,7 +10,7 @@ import { formatClock, formatHours } from "@/lib/format";
 // Hace VISIBLE el conector de IA: reloj en vivo (push, instantáneo) cuando Claude Code/Desktop
 // trabaja, y el acumulado de hoy registrado como Modo IA.
 export function AITodayCard() {
-  const { currentUserId } = useApp();
+  const { currentUserId, aiEnabled } = useApp();
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
   const live = useAILive();
@@ -42,18 +42,18 @@ export function AITodayCard() {
     return () => clearInterval(id);
   }, [live.live]);
 
-  if (!me) return null;
+  if (!me || !aiEnabled) return null;
   const elapsed = live.live && live.startedAt ? Math.max(0, Math.round((now - live.startedAt) / 1000)) : 0;
 
   return (
-    <section className="flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-curva-indigo/30 bg-white p-4 shadow-soft">
+    <section className="flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-curva-indigo/30 bg-surface p-4 shadow-soft">
       <div className="flex min-w-0 items-center gap-3">
         <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${live.live ? "ai-shimmer bg-curva-indigo text-white" : "bg-curva-indigo/10 text-curva-indigo"}`}>
           <Sparkles size={18} className={live.live ? "curva-live-dot" : ""} />
         </span>
         <div className="min-w-0">
-          <p className="font-semibold text-ink">{live.live ? "La IA está trabajando ✨" : "Tiempo con IA"}</p>
-          <p className="truncate text-xs text-zinc-500">
+          <p className="font-semibold text-fg">{live.live ? "La IA está trabajando ✨" : "Tiempo con IA"}</p>
+          <p className="truncate text-xs text-muted">
             {live.live ? (live.project || "Claude Code") : "Aparece solo cuando usas Claude Code"}
           </p>
         </div>
@@ -62,9 +62,9 @@ export function AITodayCard() {
         {live.live ? (
           <p className="tabular font-display text-2xl font-bold text-curva-indigo">{formatClock(elapsed)}</p>
         ) : (
-          <p className="tabular font-display text-xl font-bold text-ink">{formatHours(todayMin * 60)}</p>
+          <p className="tabular font-display text-xl font-bold text-fg">{formatHours(todayMin * 60)}</p>
         )}
-        <p className="text-[11px] text-zinc-400">{live.live ? "en vivo" : "hoy con IA"}</p>
+        <p className="text-[11px] text-muted">{live.live ? "en vivo" : "hoy con IA"}</p>
       </div>
     </section>
   );
