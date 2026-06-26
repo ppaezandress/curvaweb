@@ -10,12 +10,12 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 
 const TEAM_CODE = (process.env.NEXT_PUBLIC_TEAM_CODE || "CURVA").toUpperCase();
-const LS = { team: "curva.login.team", email: "curva.login.email", member: "curva.login.member" };
+const LS = { team: "curva.login.team", email: "curva.login.email", member: "curva.login.member", name: "curva.login.name" };
 
 export default function LoginPage() {
   const router = useRouter();
   const { setCurrentUser } = useApp();
-  const { members, memberById } = useData();
+  const { members } = useData();
 
   const [team, setTeam] = useState("");
   const [email, setEmail] = useState("");
@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   // "Bienvenido de nuevo": recordamos quién entró en este dispositivo
-  const [remembered, setRemembered] = useState<{ email: string; memberId: string } | null>(null);
+  const [remembered, setRemembered] = useState<{ email: string; memberId: string; name: string } | null>(null);
   const [welcomeMode, setWelcomeMode] = useState(true);
 
   const noBackend = !supabaseConfigured();
@@ -34,18 +34,20 @@ export default function LoginPage() {
       const t = localStorage.getItem(LS.team);
       const e = localStorage.getItem(LS.email);
       const m = localStorage.getItem(LS.member);
+      const n = localStorage.getItem(LS.name) || "";
       if (t) setTeam(t);
       if (e) setEmail(e);
-      if (e && m) setRemembered({ email: e, memberId: m });
+      if (e && m) setRemembered({ email: e, memberId: m, name: n });
       else setWelcomeMode(false);
     } catch { setWelcomeMode(false); }
   }, []);
 
-  const persist = (memberId: string) => {
+  const persist = (memberId: string, name?: string) => {
     try {
       localStorage.setItem(LS.team, team || TEAM_CODE);
       localStorage.setItem(LS.email, email);
       localStorage.setItem(LS.member, memberId);
+      if (name) localStorage.setItem(LS.name, name);
     } catch { /* */ }
   };
 
@@ -54,59 +56,50 @@ export default function LoginPage() {
   const signIn = async () => {
     setErr("");
     const teamVal = (welcomeMode && remembered ? (team || TEAM_CODE) : team).trim().toUpperCase();
-    const emailVal = (welcomeMode && remembered ? remembered.email : email).trim();
+    const emailVal = (welcomeMode && remembered ? remembered.email : email).trim().toLowerCase();
     if (teamVal !== TEAM_CODE) { setErr("Código de equipo incorrecto"); return; }
     if (!emailVal || password.length < 6) { setErr("Escribe tu contraseña (6+)"); return; }
     const sb = getSupabase();
     if (!sb) { setErr("Backend no configurado"); return; }
     setBusy(true);
-    // El correo DEBE estar dado de alta en el equipo (en Notion). Si la lista
-    // aún no cargó, la consultamos en el momento (evita rechazar a alguien válido).
-    let roster = members;
-    if (!roster.length) {
-      try { roster = (await fetch("/api/data").then((r) => r.json())).members || []; } catch { /* */ }
-    }
-    const member = roster.find((m) => m.email && m.email.toLowerCase() === emailVal.toLowerCase());
-    if (!member) {
-      setErr("Tu correo no está dado de alta en el equipo (debe ser el que está en Notion).");
-      setBusy(false);
-      return;
-    }
+    // La AUTORIZACIÓN (código + correo en roster + mapeo) la hace el SERVIDOR en
+    // /api/auth/register. El cliente ya no valida nada (era saltable).
+    const callRegister = () =>
+      fetch("/api/auth/register", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailVal, password, teamCode: teamVal }),
+      }).then((r) => r.json()).catch(() => ({ ok: false, error: "Sin conexión" }));
     try {
-      // Entra directo si la cuenta ya existe (el caso de cada día) → así NO pegamos a
-      // register/createUser en cada login (eso disparaba el rate-limit de Supabase).
+      // 1) Intenta entrar directo (caso de cada día) — no pega a register.
       let { error } = await sb.auth.signInWithPassword({ email: emailVal, password });
+      let mappedId: string | undefined;
+      let mappedName: string | undefined;
       if (error) {
-        // Primer ingreso (o cuenta aún inexistente): crea la cuenta y reintenta una vez.
-        await fetch("/api/auth/register", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: emailVal, password, name: member.name, notionUserId: member.id }),
-        });
+        // 2) Primer ingreso: el servidor valida y crea/mapea.
+        const reg = await callRegister();
+        if (!reg.ok) { setErr(reg.error || "No autorizado"); return; }
+        mappedId = reg.notionUserId; mappedName = reg.name;
         ({ error } = await sb.auth.signInWithPassword({ email: emailVal, password }));
         if (error) { setErr("Correo o contraseña incorrectos"); return; }
       }
       const { data: u } = await sb.auth.getUser();
       if (!u.user) { setErr("No se pudo iniciar sesión"); return; }
-      const { data: prof } = await sb.from("profiles").select("notion_user_id").eq("id", u.user.id).maybeSingle();
-
-      // Ya mapeado → entra directo
-      if (prof?.notion_user_id) {
-        persist(prof.notion_user_id as string);
-        setCurrentUser(prof.notion_user_id as string);
-        router.push("/dashboard");
-        return;
+      // 3) ¿Ya está mapeado el perfil?
+      if (!mappedId) {
+        const { data: prof } = await sb.from("profiles").select("notion_user_id").eq("id", u.user.id).maybeSingle();
+        mappedId = (prof?.notion_user_id as string) || undefined;
       }
-
-      // Auto-asignar por correo (member ya validado arriba)
-      const { error: upErr } = await sb.from("profiles").upsert({ id: u.user.id, name: member.name, notion_user_id: member.id, email: emailVal });
-      if (upErr) { setErr("Esa persona ya tiene una cuenta. Contacta a tu admin."); await sb.auth.signOut(); return; }
-      persist(member.id);
-      setCurrentUser(member.id);
+      // 4) Si aún no, que el servidor lo mapee (valida roster).
+      if (!mappedId) {
+        const reg = await callRegister();
+        if (reg.ok && reg.notionUserId) { mappedId = reg.notionUserId; mappedName = reg.name; }
+      }
+      if (!mappedId) { setErr("No pudimos mapear tu cuenta. Contacta a tu admin."); return; }
+      persist(mappedId, mappedName || remembered?.name);
+      setCurrentUser(mappedId);
       router.push("/dashboard");
     } finally { setBusy(false); }
   };
-
-  const rememberedMember = remembered ? memberById[remembered.memberId] : undefined;
 
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
@@ -127,14 +120,14 @@ export default function LoginPage() {
 
           {noBackend ? (
             <Picker title="¿Quién eres?" subtitle="Entra con tu usuario." list={members} onPick={(m) => enterLegacy(m.id)} />
-          ) : welcomeMode && remembered && rememberedMember ? (
+          ) : welcomeMode && remembered ? (
             // ----- Bienvenido de nuevo: solo contraseña -----
             <>
               <h2 className="font-display text-2xl font-bold text-fg">Hola de nuevo 👋</h2>
               <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-soft">
-                <Avatar member={rememberedMember} size={44} />
+                <Avatar name={remembered.name || remembered.email} size={44} />
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-fg">{rememberedMember.name}</p>
+                  <p className="truncate font-semibold text-fg">{remembered.name || remembered.email}</p>
                   <p className="truncate text-xs text-muted">{remembered.email}</p>
                 </div>
               </div>
@@ -145,7 +138,7 @@ export default function LoginPage() {
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Entrar
                 </button>
                 <button onClick={() => { setWelcomeMode(false); setRemembered(null); setPassword(""); setErr(""); }} className="w-full text-center text-xs text-muted transition hover:text-curva-pink">
-                  No soy {rememberedMember.name.split(" ")[0]} · usar otra cuenta
+                  No soy {(remembered.name || remembered.email).split(/[\s@]/)[0]} · usar otra cuenta
                 </button>
               </div>
             </>

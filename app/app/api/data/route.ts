@@ -11,6 +11,12 @@ function mockPayload() {
   return { members, clients, projects, tasks, taskTypes };
 }
 
+// No exponemos los correos del equipo en la respuesta (privacidad). La validación que
+// los necesita (registro) lee el roster server-side directo de Notion, no de aquí.
+function publicSafe(d: { members: { email?: string }[] } & Record<string, unknown>) {
+  return { ...d, members: (d.members || []).map((m) => ({ ...m, email: "" })) };
+}
+
 export async function GET(req: Request) {
   // Override por query (?source=postgres) para validar sin flipear el flag global.
   const override = new URL(req.url).searchParams.get("source");
@@ -20,18 +26,18 @@ export async function GET(req: Request) {
   if (source === "postgres") {
     try {
       const data = await getCurvaDataFromPostgres();
-      if (data && data.tasks.length) return NextResponse.json({ source: "postgres", ...data });
+      if (data && data.tasks.length) return NextResponse.json({ source: "postgres", ...publicSafe(data) });
     } catch { /* degradación con gracia → Notion */ }
   }
 
   if (!notionConfigured()) {
-    return NextResponse.json({ source: "mock", ...mockPayload() });
+    return NextResponse.json({ source: "mock", ...publicSafe(mockPayload()) });
   }
   try {
     const data = await getCurvaData();
-    return NextResponse.json({ source: "notion", ...data });
-  } catch (e) {
+    return NextResponse.json({ source: "notion", ...publicSafe(data) });
+  } catch {
     // Resiliencia: si Notion falla, la app sigue con datos de prueba.
-    return NextResponse.json({ source: "mock", error: String(e), ...mockPayload() });
+    return NextResponse.json({ source: "mock", ...publicSafe(mockPayload()) });
   }
 }

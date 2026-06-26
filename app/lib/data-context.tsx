@@ -51,7 +51,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [source, setSource] = useState("");
 
   const load = () => {
-    fetch("/api/data")
+    // Timeout: si /api/data se cuelga (red lenta, Notion sin responder), no dejamos
+    // la app en "Cargando…" para siempre — caemos a respaldo local y seguimos.
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 9000);
+    fetch("/api/data", { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d) => {
         setData({
@@ -65,7 +69,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setReady(true);
       })
       .catch(() => {
-        // Respaldo local si ni la API responde.
+        // Respaldo local si la API no responde o se agota el tiempo.
         setData({
           members: mockMembers,
           clients: mockClients,
@@ -75,7 +79,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
         setSource("mock-local");
         setReady(true);
-      });
+      })
+      .finally(() => clearTimeout(to));
   };
 
   useEffect(() => {
