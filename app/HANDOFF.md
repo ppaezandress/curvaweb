@@ -1,7 +1,18 @@
 # CURVA Tiempos — HANDOFF (estado completo)
 
 > App de **medición de tiempo + gestión de tareas + capa social** para el equipo de CURVA, conectada a Notion. Meta: producto interno hoy, **SaaS** después.
-> Última actualización: 2026-06-22. Repo: **`ppaezandress/curvaweb`**, carpeta **`/app`** (la landing Astro vive en `/landing`).
+> Última actualización: 2026-06-24. Repo: **`ppaezandress/curvaweb`**, carpeta **`/app`** (la landing Astro vive en `/landing`).
+
+## 🆕 Sesión 2026-06-24 (4 mejoras post-demo — leer primero)
+Build limpio. Plan: `~/.claude/plans/crea-un-plan-mode-sorted-cosmos.md`. Cuatro hitos del feedback de la junta donde se mostró la app:
+1. **Toggle "Tiempo con IA"** (sesión previa, ya pusheado): opt-in en Ajustes→Integraciones (`aiEnabled` en `lib/app-context.tsx`, clave `curva.aiEnabled.{userId}`, default OFF). Apaga toda la UI de IA + `AISync`.
+2. **Modo oscuro**: tokens semánticos en `app/globals.css` — `@theme inline` con `--color-fg/muted/surface/surface-2/line` que apuntan a vars de runtime que cambian bajo `.dark`; `ink/ink-soft/cloud` quedan FIJOS (píldoras/scrims). Sweep mecánico `bg-white→bg-surface`, `text-ink→text-fg`, `text-zinc-*→text-muted`, `bg-zinc-50/100→bg-surface-2` en ~34 archivos. Script anti-FOUC inline en `app/layout.tsx`. Hook `lib/use-theme.ts` (device-level, `curva.theme` = light/dark/system). Selector en `components/settings/AccountSettings.tsx`. Validado en login (claro+oscuro) con Playwright.
+3. **Mes a mes en Insights**: segmentado Semanas|Meses en la tarjeta Tendencia (`insights/page.tsx`, `trendMonthsData` = últimos 6 meses). Helpers `firstDayOfMonth`/`monthShort` en `lib/date.ts`.
+4. **Co-working en vivo**: `lib/use-coworking.tsx` (provider montado en `(app)/layout`) detecta por `presence.current_task_id` quién trabaja la misma tarea AHORA; al terminar el solape registra `coworking_sessions` (dedup: solo el uuid menor escribe). Badge "👥 con X" en el dock (`TaskSwitcher` ManualRow). Tarjeta "Trabajo en equipo" en Insights. **Total compartido vive en Supabase, NO se suma a Notion** (sin doble conteo).
+5. **Kudos** (depende de co-working): `components/KudosCard.tsx` en Recap — tras ≥30 min juntos en la semana, mándale buena onda a un compañero (`peer_feedback`); abajo "Te mandaron buena onda". RLS: lees solo lo que recibiste/enviaste, nunca de terceros. Solo positivo.
+
+### ⚠️ PENDIENTE BLOQUEANTE: aplicar migraciones
+`0008_coworking.sql` (col `presence.current_task_id` + tabla `coworking_sessions`) y `0009_peer_kudos.sql` (`peer_feedback`) **NO están aplicadas** (el clasificador bloqueó psql a prod). Sin ellas, co-working y kudos no funcionan. Aplicar con el método de "Esquema Supabase" de abajo o el SQL editor del dashboard. Tampoco se ha pusheado nada de esta sesión.
 
 ## 🆕 Sesión 2026-06-22 (lo más reciente — leer primero)
 Hay **9 commits locales en `main` SIN PUSHEAR** (el clasificador bloquea push directo a main; el usuario debe autorizar `git push origin main`). Build limpio. Lo construido:

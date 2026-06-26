@@ -6,3 +6,7 @@ dist/
 # Backups/zips locales — NO commitear (gotcha app.zip 2.6GB)
 *.zip
 app.zip
+
+# Playwright (artefactos de tests e2e)
+test-results/
+playwright-report/

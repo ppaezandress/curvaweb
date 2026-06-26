@@ -93,12 +93,22 @@ type AppState = {
 
   sessionSecondsForTask: (taskId: string) => number;
   loggedSecondsToday: number;
+
+  // Tiempo con IA (captura automática): apagado por defecto, opt-in en Ajustes.
+  // Cuando está off, se oculta toda la UI de IA y AISync no reacciona al conector.
+  aiEnabled: boolean;
+  setAiEnabled: (v: boolean) => void;
 };
 
 const AppContext = createContext<AppState | null>(null);
 
 const SESSION_KEY = "curva.session.user";
 const dataKey = (userId: string) => `curva.timer.${userId}`;
+const aiEnabledKey = (userId: string) => `curva.aiEnabled.${userId}`;
+// Opt-in: solo está "on" si el usuario lo activó explícitamente en este dispositivo.
+function readAiEnabled(userId: string): boolean {
+  try { return localStorage.getItem(aiEnabledKey(userId)) === "1"; } catch { return false; }
+}
 
 // Gracia de inactividad: 5 min. Override demo vía localStorage["curva.graceSeconds"].
 const DEFAULT_GRACE_SECONDS = 300;
@@ -129,8 +139,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [pendingReview, setPendingReview] = useState<PendingReview>(null);
   const [focusApp, setFocusApp] = useState<FocusApp>(null);
   const [autoResumed, setAutoResumed] = useState<string | null>(null);
+  const [aiEnabled, setAiEnabledState] = useState(false);
+  const [authUid, setAuthUid] = useState<string | null>(null); // id de Supabase (para timer_sessions cross-device)
 
   const counter = useRef(0);
+  // Última sesión que sincronizamos/adoptamos (evita eco entre upsert ↔ realtime).
+  const syncedRef = useRef<{ taskId: string; startedAt: number } | null>(null);
   const lastActivity = useRef(0);
   const segments = useRef<Segment[]>([]); // segmentos inactivos de la corrida actual
   const activeRef = useRef<ActiveTimer>(null);
@@ -223,6 +237,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const sb = getSupabase();
         try {
           const { data } = await sb!.auth.getUser();
+          if (data.user) setAuthUid(data.user.id);
           if (!data.user) {
             userId = null;
           } else if (!userId) {
@@ -236,6 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       if (userId) {
         setCurrentUserId(userId);
+        setAiEnabledState(readAiEnabled(userId));
         try {
           const raw = localStorage.getItem(dataKey(userId));
           if (raw) {
@@ -263,6 +279,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(dataKey(currentUserId), JSON.stringify({ active, aiActive, entries, openTasks }));
   }, [ready, currentUserId, active, aiActive, entries, openTasks]);
 
+  // ── Reloj cross-device (solo la sesión ACTIVA) vía Supabase Realtime ──
+  // Adopta una sesión remota SIN registrar entry (es estado en vivo, no una corrida que cierra).
+  const adoptActive = (taskId: string, startedAt: number, remoteOpen: string[]) => {
+    syncedRef.current = { taskId, startedAt };
+    setActive({ taskId, startedAt });
+    setOpenTasks((p) => Array.from(new Set([...p, ...remoteOpen, taskId])));
+    resetRun(startedAt);
+  };
+  const adoptClear = () => {
+    syncedRef.current = null;
+    setActive(null);
+    resetRun(Date.now());
+  };
+
+  // Empuja MI sesión activa al server para que otros dispositivos la vean (best-effort).
+  useEffect(() => {
+    if (!ready || !currentUserId || !authUid || !supabaseConfigured()) return;
+    const cur = active ? { taskId: active.taskId, startedAt: active.startedAt } : null;
+    const prev = syncedRef.current;
+    const same = (!cur && !prev) || (!!cur && !!prev && cur.taskId === prev.taskId && cur.startedAt === prev.startedAt);
+    if (same) return; // sin cambio real → no eco
+    syncedRef.current = cur;
+    const sb = getSupabase();
+    if (!sb) return;
+    if (cur) {
+      sb.from("timer_sessions").upsert({
+        user_id: authUid, task_id: cur.taskId,
+        started_at: new Date(cur.startedAt).toISOString(),
+        open_tasks: openTasksRef.current, updated_at: new Date().toISOString(),
+      }).then(() => {});
+    } else {
+      sb.from("timer_sessions").delete().eq("user_id", authUid).then(() => {});
+    }
+  }, [ready, currentUserId, authUid, active]);
+
+  // Escucha MI fila: si otro dispositivo arranca/cambia/detiene, lo adopto aquí.
+  useEffect(() => {
+    if (!ready || !authUid || !supabaseConfigured()) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    const ch = sb
+      .channel(`timer-${authUid}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "timer_sessions", filter: `user_id=eq.${authUid}` },
+        (payload: { eventType: string; new: { task_id?: string | null; started_at?: string | null; open_tasks?: string[] | null } | null }) => {
+          if (payload.eventType === "DELETE") { if (activeRef.current) adoptClear(); return; }
+          const row = payload.new;
+          if (!row?.task_id || !row.started_at) { if (activeRef.current) adoptClear(); return; }
+          const startedAt = new Date(row.started_at).getTime();
+          const cur = activeRef.current;
+          if (!cur) adoptActive(row.task_id, startedAt, row.open_tasks || []);
+          else if (cur.taskId === row.task_id && cur.startedAt !== startedAt) adoptActive(row.task_id, startedAt, row.open_tasks || []);
+          // distinto task corriendo localmente → ignora (gana lo local; mi upsert reconcilia)
+        })
+      .subscribe();
+    return () => { sb.removeChannel(ch); };
+  }, [ready, authUid]);
+
   // Escuchar actividad del usuario (web) mientras corre el cronómetro.
   useEffect(() => {
     if (!active) return;
@@ -276,6 +349,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem(SESSION_KEY);
     setCurrentUserId(id);
     setPendingReview(null);
+    setAiEnabledState(id ? readAiEnabled(id) : false);
     resetRun(Date.now());
     if (id) {
       try {
@@ -301,6 +375,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const markActivity = () => markRef.current();
   const setFocus = (f: FocusApp) => setFocusApp(f);
+
+  const setAiEnabled = (v: boolean) => {
+    setAiEnabledState(v);
+    const uid = userRef.current;
+    if (uid) { try { localStorage.setItem(aiEnabledKey(uid), v ? "1" : "0"); } catch { /* */ } }
+    // Al apagar, cierra los relojes de IA en curso (registra los ✨IA a mano, descarta los del conector).
+    if (!v) aiActiveRef.current.forEach((a) => closeAI(a.taskId, Date.now()));
+  };
 
   // Cierra el reloj de IA de una tarea (registra el tramo) y lo quita de la lista.
   const closeAI = (taskId: string, endedAt: number) => {
@@ -428,6 +510,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pendingReview, resolveReview,
     markActivity, focusApp, setFocus,
     sessionSecondsForTask, loggedSecondsToday,
+    aiEnabled, setAiEnabled,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

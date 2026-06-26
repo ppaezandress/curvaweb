@@ -1,9 +1,35 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
 
 export const dynamic = "force-dynamic";
 
 const TASKS = (process.env.NOTION_DB_TASKS || "").trim();
+
+// Validación de boundary (Zod): rechaza payloads malformados con un 400 claro.
+const CreateTaskSchema = z.object({
+  name: z.string().trim().min(1),
+  responsableId: z.string().optional(),
+  auxiliarIds: z.array(z.string()).optional(),
+  clientId: z.string().optional(),
+  projectId: z.string().optional(),
+  weight: z.string().optional(),
+  priority: z.string().optional(),
+  dueDate: z.string().optional(),
+  internal: z.boolean().optional(),
+});
+const PatchTaskSchema = z.object({
+  taskId: z.string().min(1),
+  status: z.string().optional(),
+  weight: z.string().optional(),
+  priority: z.string().optional(),
+  dueDate: z.string().nullable().optional(),
+  internal: z.boolean().optional(),
+  clientId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
+  responsableIds: z.array(z.string()).optional(),
+  auxiliarIds: z.array(z.string()).optional(),
+});
 
 // Crear una tarea nueva en el Tasks Tracker.
 export async function POST(req: Request) {
@@ -11,10 +37,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "Notion no configurado" }, { status: 400 });
   }
   try {
-    const { name, responsableId, auxiliarIds, clientId, projectId, weight, internal } = await req.json();
-    if (!name?.trim()) {
-      return NextResponse.json({ ok: false, error: "Falta el nombre" }, { status: 400 });
+    const parsed = CreateTaskSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ ok: false, error: "Datos inválidos", issues: parsed.error.issues }, { status: 400 });
     }
+    const { name, responsableId, auxiliarIds, clientId, projectId, weight, priority, dueDate, internal } = parsed.data;
     const properties: Record<string, unknown> = {
       "Task name": { title: [{ text: { content: name.trim() } }] },
       Status: { status: { name: "SIN EMPEZAR" } },
@@ -25,6 +52,8 @@ export async function POST(req: Request) {
     if (clientId) properties["CRM - Curva"] = { relation: [{ id: clientId }] };
     if (projectId) properties["Planeación"] = { relation: [{ id: projectId }] };
     if (weight) properties["Peso"] = { select: { name: weight } };
+    if (priority) properties["Prioridad"] = { select: { name: priority } };
+    if (dueDate) properties["Due date"] = { date: { start: dueDate } };
     if (internal) properties["Interno"] = { checkbox: true };
 
     const page = await notionFetch<{ id: string }>("/pages", {
@@ -43,14 +72,21 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: false, error: "Notion no configurado" }, { status: 400 });
   }
   try {
-    const { taskId, status, weight, internal } = await req.json();
-    if (!taskId) {
-      return NextResponse.json({ ok: false, error: "Falta taskId" }, { status: 400 });
+    const parsed = PatchTaskSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ ok: false, error: "Datos inválidos", issues: parsed.error.issues }, { status: 400 });
     }
+    const { taskId, status, weight, priority, dueDate, internal, clientId, projectId, responsableIds, auxiliarIds } = parsed.data;
     const properties: Record<string, unknown> = {};
     if (status) properties["Status"] = { status: { name: status } };
     if (weight) properties["Peso"] = { select: { name: weight } };
+    if (priority) properties["Prioridad"] = { select: { name: priority } };
+    if (dueDate !== undefined) properties["Due date"] = dueDate ? { date: { start: dueDate } } : { date: null };
     if (typeof internal === "boolean") properties["Interno"] = { checkbox: internal };
+    if (clientId !== undefined) properties["CRM - Curva"] = { relation: clientId ? [{ id: clientId }] : [] };
+    if (projectId !== undefined) properties["Planeación"] = { relation: projectId ? [{ id: projectId }] : [] };
+    if (Array.isArray(responsableIds)) properties["Responsable"] = { people: responsableIds.map((id: string) => ({ id })) };
+    if (Array.isArray(auxiliarIds)) properties["Auxiliar"] = { people: auxiliarIds.map((id: string) => ({ id })) };
     if (Object.keys(properties).length === 0) {
       return NextResponse.json({ ok: false, error: "Nada que actualizar" }, { status: 400 });
     }

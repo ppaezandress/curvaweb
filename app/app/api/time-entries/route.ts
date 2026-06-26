@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
 import { getTimeRecords } from "@/lib/notion/fetchers";
 
 export const dynamic = "force-dynamic";
 
 const DB = (process.env.NOTION_DB_TIME || "").trim();
+
+// Validación de boundary: el registro siempre necesita un rango (start/end) numérico.
+const TimeEntrySchema = z.object({
+  taskId: z.string().optional(),
+  clientId: z.string().optional(),
+  taskName: z.string().optional(),
+  area: z.string().optional(),
+  userName: z.string().optional(),
+  startedAt: z.number(),
+  endedAt: z.number(),
+  seconds: z.number().optional(),
+  inactiveSeconds: z.number().optional(),
+  mode: z.enum(["manual", "ai"]).optional(),
+  attendees: z.array(z.object({ name: z.string(), minutes: z.number() })).optional(),
+});
 
 // Historial real de registros (para timesheet y reportes).
 export async function GET() {
@@ -75,7 +91,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, skipped: true });
   }
   try {
-    const b = await req.json();
+    const valid = TimeEntrySchema.safeParse(await req.json());
+    if (!valid.success) {
+      return NextResponse.json({ ok: false, error: "Datos inválidos", issues: valid.error.issues }, { status: 400 });
+    }
+    const b = valid.data;
     const { taskId, clientId, taskName, area, startedAt, endedAt } = b;
 
     // Modo manual con asistentes
