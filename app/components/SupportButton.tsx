@@ -2,19 +2,33 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { LifeBuoy, ImagePlus, X, Check, Loader2 } from "lucide-react";
+import { MessageSquarePlus, Bug, Lightbulb, MessageSquare, ImagePlus, X, Check, Loader2 } from "lucide-react";
 import { Modal, Field, inputCls } from "@/components/Modal";
+import { useApp } from "@/lib/app-context";
+import { useData } from "@/lib/data-context";
 
-// Soporte del piloto: cualquiera reporta una falla con descripción + screenshot opcional.
-// Aterriza en support_reports (privada). Pensado para cachar bricks durante la semana.
+type FbType = "problema" | "idea" | "comentario";
+const TYPES: { key: FbType; label: string; icon: typeof Bug; hint: string }[] = [
+  { key: "problema", label: "Problema", icon: Bug, hint: "Algo falló o no funcionó." },
+  { key: "idea", label: "Idea", icon: Lightbulb, hint: "Algo que te gustaría que hiciera." },
+  { key: "comentario", label: "Comentario", icon: MessageSquare, hint: "Lo que sea — nos sirve todo." },
+];
+
+// Feedback desde CUALQUIER pantalla: problema / idea / comentario + captura opcional.
+// Aterriza en Notion (DB "Feedback del equipo") + respaldo en Supabase.
 export function SupportButton() {
   const pathname = usePathname();
+  const { currentUserId } = useApp();
+  const { memberById } = useData();
+  const me = currentUserId ? memberById[currentUserId] : undefined;
+
   const [open, setOpen] = useState(false);
+  const [type, setType] = useState<FbType>("comentario");
   const [desc, setDesc] = useState("");
   const [shot, setShot] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
 
-  const reset = () => { setDesc(""); setShot(null); setState("idle"); };
+  const reset = () => { setDesc(""); setShot(null); setState("idle"); setType("comentario"); };
 
   const onFile = (file?: File) => {
     if (!file) return;
@@ -25,20 +39,20 @@ export function SupportButton() {
       const c = document.createElement("canvas");
       c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
       c.getContext("2d")?.drawImage(img, 0, 0, c.width, c.height);
-      try { setShot(c.toDataURL("image/jpeg", 0.7)); } catch { /* imagen rara → sin screenshot */ }
+      try { setShot(c.toDataURL("image/jpeg", 0.7)); } catch { /* imagen rara */ }
       URL.revokeObjectURL(url);
     };
     img.src = url;
   };
 
   const submit = async () => {
-    if (desc.trim().length < 3 || state === "busy") return;
+    if (desc.trim().length < 2 || state === "busy") return;
     setState("busy");
     try {
       const r = await fetch("/api/support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: desc.trim(), page: pathname, screenshot: shot, userAgent: navigator.userAgent }),
+        body: JSON.stringify({ type, description: desc.trim(), page: pathname, screenshot: shot, userAgent: navigator.userAgent, userName: me?.name }),
       });
       const d = await r.json();
       setState(d.ok ? "done" : "error");
@@ -51,21 +65,21 @@ export function SupportButton() {
       <button
         onClick={() => setOpen(true)}
         className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3.5 py-2 text-sm font-semibold text-fg shadow-float backdrop-blur transition hover:border-accent focus-ring sm:bottom-5"
-        aria-label="Reportar un problema"
+        aria-label="Dar feedback"
       >
-        <LifeBuoy size={15} className="text-accent" /> <span className="hidden sm:inline">Reportar</span>
+        <MessageSquarePlus size={15} className="text-accent" /> <span className="hidden sm:inline">Feedback</span>
       </button>
 
       <Modal
         open={open}
         onClose={() => { setOpen(false); reset(); }}
-        title="Reportar un problema"
+        title="Tu feedback"
         footer={
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted">{state === "error" ? "No se pudo enviar — intenta de nuevo." : "Lo revisamos durante el piloto."}</p>
+            <p className="text-xs text-muted">{state === "error" ? "No se pudo enviar — intenta de nuevo." : "Le llega al equipo al instante."}</p>
             <button
               onClick={submit}
-              disabled={desc.trim().length < 3 || state === "busy" || state === "done"}
+              disabled={desc.trim().length < 2 || state === "busy" || state === "done"}
               className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition focus-ring active:scale-95 disabled:opacity-40"
             >
               {state === "busy" ? <Loader2 size={15} className="animate-spin" /> : state === "done" ? <Check size={15} /> : null}
@@ -74,12 +88,29 @@ export function SupportButton() {
           </div>
         }
       >
-        <Field label="¿Qué pasó?">
+        {/* Tipo */}
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          {TYPES.map((t) => {
+            const Icon = t.icon;
+            const on = type === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setType(t.key)}
+                className={`flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-xs font-semibold transition focus-ring ${on ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-accent/40"}`}
+              >
+                <Icon size={18} /> {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <Field label="Cuéntanos">
           <textarea
             value={desc}
             onChange={(e) => setDesc(e.target.value)}
             rows={4}
-            placeholder="Cuéntanos qué falló o qué esperabas que pasara…"
+            placeholder={TYPES.find((t) => t.key === type)?.hint}
             className={`${inputCls} resize-none`}
             autoFocus
           />
@@ -100,7 +131,7 @@ export function SupportButton() {
           )}
         </Field>
 
-        <p className="text-[11px] text-muted">Adjuntamos automáticamente la pantalla en la que estás y tu navegador, para ubicar la falla.</p>
+        <p className="text-[11px] text-muted">Adjuntamos la pantalla en la que estás para ubicar mejor tu feedback.</p>
       </Modal>
     </>
   );

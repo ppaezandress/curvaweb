@@ -76,8 +76,8 @@ test("caminos del piloto: modales y vistas clave sin brick", async ({ page }) =>
     await page.waitForTimeout(500);
   }
 
-  // c) Soporte: el botón Reportar abre su modal
-  await page.getByRole("button", { name: /Reportar un problema/i }).click();
+  // c) Feedback: el botón abre su modal
+  await page.getByRole("button", { name: /Dar feedback/i }).click();
   await expect(page.locator(".modal-panel")).toBeVisible({ timeout: 6000 });
   await page.keyboard.press("Escape");
 

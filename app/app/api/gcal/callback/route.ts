@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     jar.set("gc_refresh", tok.refresh_token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // http loopback (127.0.0.1)
+      secure: process.env.NODE_ENV === "production", // https en prod; loopback http en dev
       path: "/",
       maxAge: 60 * 60 * 24 * 180,
     });
