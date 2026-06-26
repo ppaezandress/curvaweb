@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { PILOT } from "@/lib/pilot-flags";
 
 // Naturaleza de una sesión de tiempo:
 //  - "manual": tú trabajando con tus manos (máximo una a la vez).
@@ -510,7 +511,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pendingReview, resolveReview,
     markActivity, focusApp, setFocus,
     sessionSecondsForTask, loggedSecondsToday,
-    aiEnabled, setAiEnabled,
+    // Piloto: el encuadre de IA está gateado off. Apaga AITodayCard, ✨IA, dock IA, AISync.
+    aiEnabled: PILOT.aiTime && aiEnabled, setAiEnabled,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

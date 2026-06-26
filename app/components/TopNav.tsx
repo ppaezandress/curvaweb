@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Home, ListTodo, MessageCircle, LineChart, type LucideIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
+import { PILOT } from "@/lib/pilot-flags";
 import { Logo } from "@/components/Logo";
 import { ProfileMenu } from "@/components/ProfileMenu";
 
@@ -39,7 +40,7 @@ export function TopNav() {
             </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {links.map((l) => {
+            {links.filter((l) => PILOT.messages || l.href !== "/mensajes").map((l) => {
               const activeLink = l.match(pathname);
               const Icon = l.icon;
               return (

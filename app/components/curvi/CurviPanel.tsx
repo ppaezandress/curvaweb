@@ -7,6 +7,7 @@ import { useData } from "@/lib/data-context";
 import { isActionable, isDone, isAssignedTo } from "@/lib/task-status";
 import { dayKey, computeStreak } from "@/lib/culture";
 import { suggest, answer, type CurviContext, type CurviRec } from "@/lib/curvi/engine";
+import { PILOT } from "@/lib/pilot-flags";
 
 type Meeting = { connected: boolean; count: number; hours: number };
 
@@ -130,22 +131,25 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
           ready && <p className="rounded-2xl border border-dashed border-line py-6 text-center text-sm text-muted">Sin pendientes accionables. Crea una tarea arriba o toma un respiro 🌿</p>
         )}
 
-        <div className="rounded-2xl bg-surface-2 p-3">
-          {reply && (
-            <div className="mb-2 flex gap-2 rounded-xl bg-surface p-3 text-sm text-fg shadow-soft">
-              <Sparkles size={15} className="mt-0.5 shrink-0 text-curva-indigo" /><p>{reply}</p>
+        {/* Q&A con Curvi — gateado off en el piloto (probamos si el equipo lo pide). */}
+        {PILOT.curviChat && (
+          <div className="rounded-2xl bg-surface-2 p-3">
+            {reply && (
+              <div className="mb-2 flex gap-2 rounded-xl bg-surface p-3 text-sm text-fg shadow-soft">
+                <Sparkles size={15} className="mt-0.5 shrink-0 text-curva-indigo" /><p>{reply}</p>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <input value={ask} onChange={(e) => setAsk(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onAsk(); }} placeholder="Pregúntale a Curvi…" className="min-w-0 flex-1 rounded-full border border-line bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-muted focus-ring" />
+              <button onClick={() => onAsk()} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white transition hover:bg-accent focus-ring" aria-label="Preguntar"><Send size={15} /></button>
             </div>
-          )}
-          <div className="flex items-center gap-2">
-            <input value={ask} onChange={(e) => setAsk(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onAsk(); }} placeholder="Pregúntale a Curvi…" className="min-w-0 flex-1 rounded-full border border-line bg-surface px-3.5 py-2 text-sm text-fg placeholder:text-muted focus-ring" />
-            <button onClick={() => onAsk()} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white transition hover:bg-accent focus-ring" aria-label="Preguntar"><Send size={15} /></button>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {["¿Con qué empiezo?", "¿Mi mejor hora?", "¿Cómo mejoro mi enfoque?"].map((c) => (
+                <button key={c} onClick={() => onAsk(c)} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-muted transition hover:border-accent/40 hover:text-fg">{c}</button>
+              ))}
+            </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {["¿Con qué empiezo?", "¿Mi mejor hora?", "¿Cómo mejoro mi enfoque?"].map((c) => (
-              <button key={c} onClick={() => onAsk(c)} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-muted transition hover:border-accent/40 hover:text-fg">{c}</button>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </section>
   );

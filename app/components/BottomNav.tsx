@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, ListTodo, MessageCircle, LineChart, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { PILOT } from "@/lib/pilot-flags";
 
 // 4 destinos directos — sin menú "Más". Cada uno agrupa sus sub-vistas vía `match`.
 const tabs: { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
@@ -20,7 +21,7 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 safe-bottom backdrop-blur sm:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around">
-        {tabs.map((l) => {
+        {tabs.filter((l) => PILOT.messages || l.href !== "/mensajes").map((l) => {
           const active = l.match(pathname);
           const Icon = l.icon;
           return (

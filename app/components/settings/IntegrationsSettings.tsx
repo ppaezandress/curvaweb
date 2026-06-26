@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Database, RefreshCw, Loader2, Check } from "lucide-react";
 import { useApp } from "@/lib/app-context";
+import { PILOT } from "@/lib/pilot-flags";
 import { Toggle } from "@/components/ui/Toggle";
 import { ClaudeCodeConnect } from "@/components/ClaudeCodeConnect";
 import { ClaudeDesktopConnect } from "@/components/ClaudeDesktopConnect";
@@ -14,7 +15,8 @@ export function IntegrationsSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Tiempo con IA — interruptor maestro (opt-in) */}
+      {/* Tiempo con IA — gateado off en el piloto (no insinuamos "mides con IA o no"). */}
+      {PILOT.aiTime && (
       <div>
         <h3 className="flex items-center gap-2 font-display font-bold text-fg">
           <Sparkles size={16} className="text-curva-indigo" /> Tiempo con IA
@@ -33,9 +35,10 @@ export function IntegrationsSettings() {
           />
         </div>
       </div>
+      )}
 
       {/* Conectores de captura automática (solo si el tiempo con IA está activo) */}
-      {aiEnabled && (
+      {PILOT.aiTime && aiEnabled && (
         <div>
           <h3 className="font-display font-bold text-fg">Captura automática de IA</h3>
           <p className="mb-3 mt-0.5 text-sm text-muted">Conecta Claude para que el tiempo de IA se registre solo.</p>
@@ -56,7 +59,8 @@ export function IntegrationsSettings() {
         </div>
       </div>
 
-      {/* Datos (beta) — backfill Notion → Postgres tras aplicar el esquema 0011 */}
+      {/* Datos (beta) — herramienta de dev; oculta para usuarios del piloto */}
+      {PILOT.devTools && (
       <div>
         <h3 className="flex items-center gap-2 font-display font-bold text-fg">
           <Database size={16} className="text-accent" /> Datos <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">beta</span>
@@ -64,6 +68,7 @@ export function IntegrationsSettings() {
         <p className="mb-3 mt-0.5 text-sm text-muted">Sincroniza tus clientes, proyectos y tareas de Notion a la base propia (para analítica rápida y futuro SaaS). Aditivo: no cambia nada de tu Notion.</p>
         <SyncButton />
       </div>
+      )}
     </div>
   );
 }
