@@ -10,7 +10,7 @@ export const PILOT = {
   aiTime: process.env.NEXT_PUBLIC_AI_TIME === "1",
   // Herramientas de dev/admin (ej. botón "Sincronizar a Postgres"). Off para usuarios del piloto.
   devTools: process.env.NEXT_PUBLIC_DEV_TOOLS === "1",
-  // Chat in-app (Mensajes). Off en el piloto: el feedback va por WhatsApp, no es el canal.
-  // Gateado y reversible; la ruta y los datos siguen intactos.
-  messages: process.env.NEXT_PUBLIC_MESSAGES === "1",
+  // Chat in-app (Mensajes). VISIBLE por defecto (lo queremos en el piloto, mejorado).
+  // Reversible: NEXT_PUBLIC_HIDE_MESSAGES=1 lo esconde si algún día estorba.
+  messages: process.env.NEXT_PUBLIC_HIDE_MESSAGES !== "1",
 };

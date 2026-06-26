@@ -16,6 +16,13 @@ import { cn } from "@/lib/cn";
 type Channel = { id: number; name: string; kind: string; created_by: string | null };
 type ReactionRow = { id: number; message_id: number; user_id: string; emoji: string };
 
+function daySepLabel(iso: string): string {
+  const d = new Date(iso), now = new Date(), y = new Date(); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return "Hoy";
+  if (d.toDateString() === y.toDateString()) return "Ayer";
+  return d.toLocaleDateString("es-MX", { day: "numeric", month: "long" });
+}
+
 export default function MensajesPage() {
   const { currentUserId } = useApp();
   const { members, tasks } = useData();
@@ -33,6 +40,9 @@ export default function MensajesPage() {
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const profilesRef = useRef(profiles); profilesRef.current = profiles;
+  // "Está escribiendo…" en vivo (broadcast, sin tocar la BD).
+  const chatChanRef = useRef<ReturnType<NonNullable<typeof sb>["channel"]> | null>(null);
+  const [typing, setTyping] = useState<Record<string, { name: string; ts: number }>>({});
 
   // notion_user_id (member.id) → profile (cuenta). Para crear DMs / canales.
   const notionToProfile = useMemo(() => {
@@ -96,12 +106,14 @@ export default function MensajesPage() {
       } else setReactions([]);
     })();
 
+    setTyping({}); // limpia al cambiar de espacio
     const sub = sb.channel(`chat-${activeId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `channel_id=eq.${activeId}` },
         (payload: { new: ChatMsg }) => {
           const m = payload.new;
           if (m.user_id && !profilesRef.current[m.user_id]) loadProfiles();
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          if (m.user_id) setTyping((t) => { if (!t[m.user_id!]) return t; const n = { ...t }; delete n[m.user_id!]; return n; }); // dejó de escribir
         })
       .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions" },
         async () => {
@@ -109,9 +121,31 @@ export default function MensajesPage() {
           const ids = (msgs || []).map((m: { id: number }) => m.id);
           if (ids.length) { const { data: rx } = await sb.from("message_reactions").select("id,message_id,user_id,emoji").in("message_id", ids); setReactions((rx as ReactionRow[]) || []); }
         })
+      .on("broadcast", { event: "typing" }, ({ payload }: { payload?: { userId?: string; name?: string } }) => {
+        if (!payload?.userId || payload.userId === myUid) return;
+        setTyping((t) => ({ ...t, [payload.userId!]: { name: payload.name || "Alguien", ts: Date.now() } }));
+      })
       .subscribe();
-    return () => { active = false; sb.removeChannel(sub); };
-  }, [sb, activeId, loadProfiles]);
+    chatChanRef.current = sub;
+    return () => { active = false; sb.removeChannel(sub); chatChanRef.current = null; };
+  }, [sb, activeId, loadProfiles, myUid]);
+
+  // Expira a quien dejó de escribir (>3.5s sin señal).
+  useEffect(() => {
+    const id = setInterval(() => setTyping((t) => {
+      let changed = false; const n = { ...t };
+      for (const k in n) if (Date.now() - n[k].ts > 3500) { delete n[k]; changed = true; }
+      return changed ? n : t;
+    }), 1500);
+    return () => clearInterval(id);
+  }, []);
+
+  // Avisa que estoy escribiendo (throttle interno en el composer).
+  const broadcastTyping = useCallback(() => {
+    const ch = chatChanRef.current;
+    if (!ch || !myUid) return;
+    ch.send({ type: "broadcast", event: "typing", payload: { userId: myUid, name: profilesRef.current[myUid]?.name || "Alguien" } });
+  }, [myUid]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -243,16 +277,41 @@ export default function MensajesPage() {
           </div>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-          {messages.map((m) => (
-            <MessageItem key={m.id} msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
-              reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} />
-          ))}
+        <div className="flex-1 space-y-1.5 overflow-y-auto pr-1">
+          {messages.map((m, i) => {
+            const prev = i > 0 ? messages[i - 1] : null;
+            const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
+            return (
+              <div key={m.id} className="space-y-1.5">
+                {newDay && (
+                  <div className="my-3 flex items-center gap-3">
+                    <span className="h-px flex-1 bg-line" />
+                    <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-semibold text-muted">{daySepLabel(m.created_at)}</span>
+                    <span className="h-px flex-1 bg-line" />
+                  </div>
+                )}
+                <MessageItem msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
+                  reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} />
+              </div>
+            );
+          })}
           {messages.length === 0 && <p className="py-10 text-center text-sm text-muted">Sé el primero en escribir. 👋</p>}
           <div ref={endRef} />
         </div>
 
-        <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} />
+        {/* Está escribiendo… (en vivo) */}
+        {Object.keys(typing).length > 0 && (
+          <p className="flex items-center gap-1.5 px-2 pt-1.5 text-xs italic text-muted">
+            <span className="inline-flex gap-0.5">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-200ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-100ms]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" />
+            </span>
+            {Object.values(typing).map((v) => v.name.split(" ")[0]).join(", ")} {Object.keys(typing).length === 1 ? "está" : "están"} escribiendo…
+          </p>
+        )}
+
+        <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} />
       </div>
 
       {/* Cultura: buena onda recibida + presencia del equipo */}

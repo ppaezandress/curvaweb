@@ -10,12 +10,13 @@ import { cn } from "@/lib/cn";
 type Trigger = { kind: "user" | "task"; query: string } | null;
 
 // Composer estilo Slack: "@" menciona personas, "/" menciona tareas (→ Notion).
-export function Composer({ tasks, members, onSend }: { tasks: Task[]; members: Member[]; onSend: (body: string) => void }) {
+export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; members: Member[]; onSend: (body: string) => void; onTyping?: () => void }) {
   const [text, setText] = useState("");
   const [trigger, setTrigger] = useState<Trigger>(null);
   const [people, setPeople] = useState<Member[]>([]);
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const lastTyping = useRef(0);
 
   const matches = useMemo(() => {
     if (!trigger) return [] as (Member | Task)[];
@@ -26,6 +27,9 @@ export function Composer({ tasks, members, onSend }: { tasks: Task[]; members: M
 
   const onChange = (v: string) => {
     setText(v);
+    // Avisa "escribiendo" como mucho cada 1.5s.
+    const now = Date.now();
+    if (onTyping && v.trim() && now - lastTyping.current > 1500) { lastTyping.current = now; onTyping(); }
     const at = v.match(/@([^@/\s][^@/]*|)$/); // "@..." al final
     const slash = v.match(/\/([^/@\s][^/@]*|)$/); // "/..." al final
     if (at) setTrigger({ kind: "user", query: at[1] });
@@ -100,17 +104,18 @@ export function Composer({ tasks, members, onSend }: { tasks: Task[]; members: M
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <input
+      <div className="flex items-end gap-2">
+        <textarea
           ref={inputRef}
           value={text}
           onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-          placeholder="Escribe un mensaje…  (@ persona · / tarea)"
-          className="flex-1 rounded-full border border-line px-4 py-2.5 text-sm outline-none transition focus:border-accent"
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+          rows={1}
+          placeholder="Escribe un mensaje…  (@ persona · / tarea · Enter envía)"
+          className="max-h-32 flex-1 resize-none rounded-2xl border border-line px-4 py-2.5 text-sm outline-none transition [field-sizing:content] focus:border-accent"
         />
         <button onClick={submit} disabled={!text.trim() && people.length === 0 && pendingTasks.length === 0}
-          className={cn("inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}
+          className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}
           aria-label="Enviar">
           <Send size={16} />
         </button>

@@ -11,7 +11,7 @@ export type ChatMsg = { id: number; user_id: string | null; body: string; kind: 
 export type ChatProfile = { id: string; name: string; avatar_url: string | null };
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
-const EMOJIS = ["👍", "❤️", "🎉", "🔥", "😂", "👀"];
+const EMOJIS = ["👍", "❤️", "🎉", "🔥", "😂", "👀", "🙌", "💯", "🚀", "🤝", "🙏", "✅", "💪", "⚡", "😮", "🫶"];
 
 export function MessageItem({
   msg, prof, mine, reactions, onToggleReaction,
@@ -90,13 +90,16 @@ export function MessageItem({
               <SmilePlus size={14} />
             </button>
             {pickerOpen && (
-              <div className={cn("absolute z-10 mt-1 flex gap-0.5 rounded-full border border-line bg-surface p-1 shadow-float", mine ? "right-0" : "left-0")}>
-                {EMOJIS.map((e) => (
-                  <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-full px-1.5 py-0.5 text-base transition hover:bg-surface-2">
-                    {e}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
+                <div className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-2xl border border-line bg-surface p-1.5 shadow-float", mine ? "right-0" : "left-0")}>
+                  {EMOJIS.map((e) => (
+                    <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
