@@ -40,8 +40,9 @@ export function initCurveDraw(): void {
 
   const update = () => {
     const vh = window.innerHeight;
-    const start = vh * 0.92;
-    const end = vh * 0.35;
+    // Arranca antes y completa hacia la mitad del scroll (feedback de Pau).
+    const start = vh * 1.08;
+    const end = vh * 0.52;
     scrollPaths.forEach((p) => {
       const r = p.getBoundingClientRect();
       let prog = (start - r.top) / (start - end);

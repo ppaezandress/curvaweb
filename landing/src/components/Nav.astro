@@ -1,50 +1,98 @@
 ---
-import { areas } from '../data/areas';
-
 interface Props {
   overHero?: boolean;
   calLink: string;
 }
 const { overHero = false, calLink } = Astro.props;
 
-const dotColor: Record<string, string> = {
-  ember: '#7c3aed',
-  gold: '#2563eb',
-  jade: '#10b981',
-};
+// FLAG: Curva Tiempos aún en piloto interno → NO exponer en el menú público hasta validar.
+const SHOW_TIEMPOS = false;
+
+// Mega-menú de Servicios: 3 pilares con sus servicios.
+const pilares = [
+  {
+    label: 'Consultoría y estructura',
+    desc: 'Que la empresa funcione por sistema.',
+    items: [
+      { label: 'Diagnóstico', href: '/servicios/diagnostico' },
+      { label: 'Procesos y estructura', href: '/servicios/procesos' },
+      { label: 'Gobernanza', href: '/servicios/gobernanza' },
+    ],
+  },
+  {
+    label: 'Digitalización y automatización',
+    desc: 'Tecnología que tu equipo sí usa.',
+    items: [
+      { label: 'Digitalización', href: '/servicios/digitalizacion' },
+      { label: 'Automatización e IA', href: '/servicios/automatizacion' },
+    ],
+  },
+  {
+    label: 'Cultura y liderazgo',
+    desc: 'El cambio pasa por las personas.',
+    items: [
+      { label: 'Cultura y liderazgo', href: '/servicios/cultura' },
+    ],
+  },
+];
+
+const productos = [
+  { label: 'Clases de Claude', desc: 'Aprende a usar IA en tu negocio', href: '#', flagged: false },
+  { label: 'Curva Tiempos', desc: 'Mide cómo trabaja tu equipo', href: '#', flagged: true },
+].filter((p) => !p.flagged || SHOW_TIEMPOS);
 ---
 
 <div id="site-nav" class="nav-bar fixed top-0 inset-x-0 z-50 px-3 sm:px-4 pt-3" data-over-hero={overHero ? '' : undefined}>
   <nav class="nav-inner mx-auto max-w-6xl flex items-center justify-between rounded-2xl pl-5 pr-2.5 py-2.5" aria-label="Principal">
     <a href="/" class="nav-logo display text-xl font-semibold tracking-tight flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#2563eb"></stop><stop offset="1" stop-color="#10b981"></stop></linearGradient></defs></svg>
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#4f46e5"></stop><stop offset="1" stop-color="#2563eb"></stop></linearGradient></defs></svg>
       curva
     </a>
 
     <div class="flex items-center gap-1">
-      <!-- Dropdown servicios -->
-      <div class="hidden md:block relative">
-        <button data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-controls="nav-servicios-menu" class="nav-link inline-flex items-center gap-1.5">
+      <!-- Mega-menú Servicios (horizontal) -->
+      <div data-dropdown class="hidden md:block">
+        <button data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" class="nav-link inline-flex items-center gap-1.5">
           Servicios
           <svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
         </button>
-        <div id="nav-servicios-menu" data-dropdown-menu role="menu" class="nav-menu absolute right-0 top-full mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-sand-200 p-2">
-          {areas.map((a) => (
-            <a href={a.href} role="menuitem" class="menu-item flex items-start gap-3 p-3 rounded-xl">
-              <span class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={`background:${dotColor[a.accent]}1a`}>
-                <span class="w-2.5 h-2.5 rounded-full" style={`background:${dotColor[a.accent]}`}></span>
-              </span>
-              <span>
-                <span class="text-sm font-semibold block text-ink">{a.menuLabel}</span>
-                <span class="text-xs text-sand-500 leading-snug block mt-0.5">{a.menuDesc}</span>
-              </span>
-            </a>
-          ))}
-          <a href="/#servicios" class="block text-center text-xs font-semibold text-ember px-3 py-2.5 mt-1 hover:bg-sand-50 rounded-xl transition-colors">Ver todos los servicios →</a>
+        <div data-dropdown-menu role="menu" class="nav-mega fixed left-0 right-0 mx-auto top-[4.6rem] w-[min(94vw,56rem)] bg-white rounded-2xl shadow-2xl border border-sand-200 p-6">
+          <div class="grid grid-cols-3 gap-5">
+            {pilares.map((pil) => (
+              <div>
+                <p class="text-[13px] font-semibold text-ink mb-1">{pil.label}</p>
+                <p class="text-xs text-sand-500 mb-3 leading-snug">{pil.desc}</p>
+                <ul class="space-y-0.5">
+                  {pil.items.map((it) => (
+                    <li><a href={it.href} role="menuitem" class="menu-item block text-sm text-sand-700 px-3 py-2 rounded-lg hover:text-ink">{it.label}</a></li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <a href="/#casos" class="nav-link hidden md:inline-flex">Resultados</a>
+      <!-- Productos digitales -->
+      <div data-dropdown class="hidden md:block">
+        <button data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" class="nav-link inline-flex items-center gap-1.5">
+          Productos digitales
+          <svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
+        </button>
+        <div data-dropdown-menu role="menu" class="nav-menu absolute right-0 top-full mt-3 w-72 bg-white rounded-2xl shadow-2xl border border-sand-200 p-2">
+          {productos.map((p) => (
+            <a href={p.href} role="menuitem" class="menu-item flex items-start gap-3 p-3 rounded-xl">
+              <span class="w-9 h-9 rounded-lg bg-ember/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="w-2.5 h-2.5 rounded-full bg-ember"></span></span>
+              <span>
+                <span class="text-sm font-semibold block text-ink">{p.label}</span>
+                <span class="text-xs text-sand-500 leading-snug block mt-0.5">{p.desc}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <a href="/#casos" class="nav-link hidden md:inline-flex">Casos de éxito</a>
       <a href="/nosotros" class="nav-link hidden md:inline-flex">Nosotros</a>
       <a href={calLink} target="_blank" rel="noopener" class="nav-cta hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors ml-1">
         Conversemos
@@ -62,18 +110,27 @@ const dotColor: Record<string, string> = {
 
 <!-- Menú móvil -->
 <div id="mobile-menu" class="mobile-menu md:hidden">
-  <div class="flex flex-col h-full pt-24 px-7 pb-8 bg-sand-50">
+  <div class="flex flex-col h-full pt-24 px-7 pb-8 bg-sand-50 overflow-y-auto">
     <p class="eyebrow text-sand-400 mb-3">Servicios</p>
     <nav class="flex flex-col" aria-label="Móvil">
-      {areas.map((a) => (
-        <a href={a.href} class="flex items-center gap-3 py-3.5 border-b border-sand-200 text-ink">
-          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style={`background:${dotColor[a.accent]}`}></span>
-          <span class="text-lg font-semibold">{a.menuLabel}</span>
+      {pilares.flatMap((pil) => pil.items).map((it) => (
+        <a href={it.href} class="flex items-center gap-3 py-3 border-b border-sand-200 text-ink">
+          <span class="w-2 h-2 rounded-full flex-shrink-0 bg-ember"></span>
+          <span class="text-base font-semibold">{it.label}</span>
+        </a>
+      ))}
+    </nav>
+    <p class="eyebrow text-sand-400 mb-3 mt-7">Productos digitales</p>
+    <nav class="flex flex-col">
+      {productos.map((p) => (
+        <a href={p.href} class="flex items-center gap-3 py-3 border-b border-sand-200 text-ink">
+          <span class="w-2 h-2 rounded-full flex-shrink-0 bg-gold"></span>
+          <span class="text-base font-semibold">{p.label}</span>
         </a>
       ))}
     </nav>
     <div class="flex flex-col mt-6">
-      <a href="/#casos" class="py-3.5 border-b border-sand-200 text-lg font-semibold text-sand-700">Resultados</a>
+      <a href="/#casos" class="py-3.5 border-b border-sand-200 text-lg font-semibold text-sand-700">Casos de éxito</a>
       <a href="/nosotros" class="py-3.5 border-b border-sand-200 text-lg font-semibold text-sand-700">Nosotros</a>
     </div>
     <div class="mt-auto pt-8">
@@ -115,9 +172,9 @@ const dotColor: Record<string, string> = {
   .burger.active .burger-line:nth-child(2) { opacity: 0; }
   .burger.active .burger-line:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
 
-  .nav-menu { opacity: 0; transform: translateY(-8px) scale(.97); pointer-events: none; transition: opacity .25s ease, transform .25s ease; transform-origin: top right; }
-  .nav-menu.open { opacity: 1; transform: none; pointer-events: auto; }
-  .menu-item { transition: background-color .15s ease; }
+  .nav-menu, .nav-mega { opacity: 0; transform: translateY(-8px) scale(.98); pointer-events: none; transition: opacity .25s ease, transform .25s ease; transform-origin: top; }
+  .nav-menu.open, .nav-mega.open { opacity: 1; transform: none; pointer-events: auto; }
+  .menu-item { transition: background-color .15s ease, color .15s ease; }
   .menu-item:hover { background-color: var(--color-sand-50); }
 
   .mobile-menu { position: fixed; inset: 0; z-index: 40; transform: translateX(100%); transition: transform .35s var(--ease-curve); }

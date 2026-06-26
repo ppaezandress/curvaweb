@@ -26,8 +26,8 @@ export function initCurveScene(): void {
 
   const update = () => {
     const vh = window.innerHeight;
-    const start = vh * 0.92;
-    const end = vh * 0.35;
+    const start = vh * 1.08;
+    const end = vh * 0.52;
     const r = path.getBoundingClientRect();
     let prog = (start - r.top) / (start - end);
     prog = Math.max(0, Math.min(1, prog));

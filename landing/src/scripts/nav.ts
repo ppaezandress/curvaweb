@@ -19,17 +19,27 @@ export function initNav(): void {
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 
-  // Dropdown de servicios
-  const trigger = nav.querySelector<HTMLElement>('[data-dropdown-trigger]');
-  const menu = nav.querySelector<HTMLElement>('[data-dropdown-menu]');
+  // Dropdowns (Servicios mega-menú + Productos digitales)
+  const dropdowns = Array.from(nav.querySelectorAll<HTMLElement>('[data-dropdown]'));
   const closeMenu = () => {
-    menu?.classList.remove('open');
-    trigger?.setAttribute('aria-expanded', 'false');
+    dropdowns.forEach((d) => {
+      d.querySelector('[data-dropdown-menu]')?.classList.remove('open');
+      d.querySelector('[data-dropdown-trigger]')?.setAttribute('aria-expanded', 'false');
+    });
   };
-  trigger?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = menu?.classList.toggle('open') ?? false;
-    trigger.setAttribute('aria-expanded', String(open));
+  dropdowns.forEach((d) => {
+    const t = d.querySelector<HTMLElement>('[data-dropdown-trigger]');
+    const m = d.querySelector<HTMLElement>('[data-dropdown-menu]');
+    t?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = !m?.classList.contains('open');
+      closeMenu();
+      if (willOpen) {
+        m?.classList.add('open');
+        t.setAttribute('aria-expanded', 'true');
+      }
+    });
+    m?.addEventListener('click', (e) => e.stopPropagation());
   });
 
   // Menú móvil

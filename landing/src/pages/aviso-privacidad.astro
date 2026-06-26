@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+const calLink = 'https://cal.com/andres-paez/30min';
+const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
+
+// ⚠️ ANDAMIAJE LEGAL — revisar/ajustar con el texto definitivo de CURVA (datos del responsable,
+// finalidades exactas, derechos ARCO, contacto). Esto cumple la estructura de la LFPDPPP.
+---
+<BaseLayout title="Aviso de privacidad — CURVA" description="Aviso de privacidad de CURVA, conforme a la LFPDPPP.">
+  <Nav calLink={calLink} />
+  <section class="pt-36 pb-24 sm:pt-44 px-6 sm:px-10 bg-sand-50 min-h-screen">
+    <div class="mx-auto max-w-3xl">
+      <p class="eyebrow text-ember mb-5">Legal</p>
+      <h1 class="display text-4xl sm:text-5xl font-semibold tracking-tight text-ink mb-3">Aviso de privacidad</h1>
+      <p class="text-sand-500 text-sm mb-12">Última actualización: junio 2026.</p>
+
+      <div class="prose-curva space-y-8 text-sand-700 leading-relaxed">
+        <div>
+          <h2 class="display text-xl font-semibold text-ink mb-2">Responsable</h2>
+          <p>CURVA, con domicilio en Ciudad de México, es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).</p>
+        </div>
+        <div>
+          <h2 class="display text-xl font-semibold text-ink mb-2">Qué datos recabamos</h2>
+          <p>Datos de contacto que tú nos proporcionas (nombre, correo, teléfono) al agendar una llamada, escribirnos por WhatsApp o descargar materiales. No recabamos datos sensibles.</p>
+        </div>
+        <div>
+          <h2 class="display text-xl font-semibold text-ink mb-2">Para qué los usamos</h2>
+          <p>Para contactarte, atender tu solicitud, agendar una llamada de exploración y, si nos lo autorizas, enviarte contenido que te pueda servir. No vendemos ni compartimos tus datos con terceros con fines comerciales.</p>
+        </div>
+        <div>
+          <h2 class="display text-xl font-semibold text-ink mb-2">Tus derechos (ARCO)</h2>
+          <p>Puedes acceder, rectificar, cancelar u oponerte al tratamiento de tus datos, así como revocar tu consentimiento, escribiéndonos a <a href="mailto:hola@curva.mx" class="text-ember underline underline-offset-2">hola@curva.mx</a>. <span class="text-sand-400">(⚠️ confirmar correo real de contacto)</span></p>
+        </div>
+        <div>
+          <h2 class="display text-xl font-semibold text-ink mb-2">Cambios a este aviso</h2>
+          <p>Podemos actualizar este aviso. La versión vigente siempre estará disponible en esta página.</p>
+        </div>
+      </div>
+
+      <a href="/" class="inline-flex items-center gap-2 mt-14 text-sm font-semibold text-ember hover:gap-3 transition-all">← Volver al inicio</a>
+    </div>
+  </section>
+  <Footer calLink={calLink} waLink={waLink} />
+</BaseLayout>

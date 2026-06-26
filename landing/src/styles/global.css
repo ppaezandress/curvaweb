@@ -51,8 +51,9 @@
 
 /* Tokens que no son del theme de Tailwind */
 :root {
-  --gradient-curve: linear-gradient(110deg, #7c3aed 0%, #2563eb 50%, #10b981 100%);
-  --gradient-curve-soft: linear-gradient(110deg, #a78bfa 0%, #60a5fa 50%, #6ee7b7 100%);
+  /* Gradiente firma: morado → azul (paleta v2 de Pau, sin esmeralda) */
+  --gradient-curve: linear-gradient(110deg, #7c3aed 0%, #4f46e5 48%, #2563eb 100%);
+  --gradient-curve-soft: linear-gradient(110deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
   --dur-1: 160ms; --dur-2: 320ms; --dur-3: 600ms; --dur-4: 900ms;
 }
 
@@ -86,21 +87,21 @@
 
 /* ----------------------------- Superficies ----------------------------- */
 
-/* Mesh oscuro frío: morado / magenta / azul / verde */
+/* Mesh oscuro frío: morado / índigo / azul (sin verde ni magenta — paleta v2) */
 .surface-ink {
   background-color: var(--color-ink);
   background-image:
-    radial-gradient(62% 80% at 6% -5%, rgba(124, 58, 237, 0.30) 0%, transparent 55%),
-    radial-gradient(50% 60% at 102% 6%, rgba(240, 53, 106, 0.20) 0%, transparent 55%),
-    radial-gradient(72% 80% at 12% 105%, rgba(37, 99, 235, 0.26) 0%, transparent 58%),
-    radial-gradient(60% 70% at 96% 100%, rgba(16, 185, 129, 0.20) 0%, transparent 58%);
+    radial-gradient(62% 80% at 6% -5%, rgba(124, 58, 237, 0.32) 0%, transparent 55%),
+    radial-gradient(54% 62% at 102% 6%, rgba(79, 70, 229, 0.24) 0%, transparent 56%),
+    radial-gradient(72% 80% at 12% 105%, rgba(37, 99, 235, 0.28) 0%, transparent 58%),
+    radial-gradient(60% 70% at 96% 100%, rgba(99, 102, 241, 0.20) 0%, transparent 58%);
 }
 .surface-ink-soft {
   background-color: var(--color-ink-2);
   background-image:
     radial-gradient(80% 90% at 50% -10%, rgba(124, 58, 237, 0.22) 0%, transparent 60%),
-    radial-gradient(64% 70% at 100% 100%, rgba(16, 185, 129, 0.16) 0%, transparent 60%),
-    radial-gradient(64% 70% at 0% 100%, rgba(37, 99, 235, 0.18) 0%, transparent 60%);
+    radial-gradient(64% 70% at 100% 100%, rgba(37, 99, 235, 0.18) 0%, transparent 60%),
+    radial-gradient(64% 70% at 0% 100%, rgba(99, 102, 241, 0.16) 0%, transparent 60%);
 }
 
 /* En móvil los radiales grandes son caros de pintar: los simplificamos */
@@ -206,7 +207,7 @@ body {
 
 /* Texto con gradiente animado (el degradado "respira"). */
 .curve-text-live {
-  background: linear-gradient(110deg, #a78bfa, #60a5fa, #6ee7b7, #a78bfa);
+  background: linear-gradient(110deg, #a78bfa, #818cf8, #60a5fa, #a78bfa);
   background-size: 280% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -269,7 +270,7 @@ body {
   border-color: color-mix(in srgb, var(--color-ember-300) 55%, transparent);
   box-shadow: 0 0 24px -4px color-mix(in srgb, var(--color-ember) 75%, transparent);
 }
-.milestone.lit .lm-num { color: var(--color-jade-300); }
+.milestone.lit .lm-num { color: #60a5fa; }
 
 .node-pulse { position: relative; }
 .node-pulse::before {
