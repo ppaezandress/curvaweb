@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 
 const ReportSchema = z.object({
   description: z.string().trim().min(3).max(4000),
-  page: z.string().max(300).optional(),
-  screenshot: z.string().max(8_000_000).optional(), // data URL base64 (cap ~8MB)
-  userAgent: z.string().max(500).optional(),
+  page: z.string().max(300).nullish(),
+  screenshot: z.string().max(8_000_000).nullish(), // data URL base64 (cap ~8MB); nullish: acepta null/ausente
+  userAgent: z.string().max(500).nullish(),
 });
 
 // Recibe un reporte de problema del piloto → tabla support_reports (privada).
