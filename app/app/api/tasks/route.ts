@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       properties["Auxiliar"] = { people: auxiliarIds.map((id: string) => ({ id })) };
     if (clientId) properties["Cliente"] = { relation: [{ id: clientId }] };
     if (projectId) properties["Planeación"] = { relation: [{ id: projectId }] };
-    if (weight) properties["Peso"] = { select: { name: weight } };
+    if (weight) properties["Esfuerzo"] = { status: { name: weight } };
     if (priority) properties["Prioridad"] = { select: { name: priority } };
     if (dueDate) properties["Due date"] = { date: { start: dueDate } };
     if (internal) properties["Interno"] = { checkbox: true };
@@ -79,7 +79,7 @@ export async function PATCH(req: Request) {
     const { taskId, status, weight, priority, dueDate, internal, clientId, projectId, responsableIds, auxiliarIds } = parsed.data;
     const properties: Record<string, unknown> = {};
     if (status) properties["Status"] = { status: { name: status } };
-    if (weight) properties["Peso"] = { select: { name: weight } };
+    if (weight) properties["Esfuerzo"] = { status: { name: weight } };
     if (priority) properties["Prioridad"] = { select: { name: priority } };
     if (dueDate !== undefined) properties["Due date"] = dueDate ? { date: { start: dueDate } } : { date: null };
     if (typeof internal === "boolean") properties["Interno"] = { checkbox: internal };

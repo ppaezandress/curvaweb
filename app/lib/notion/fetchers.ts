@@ -141,7 +141,7 @@ export async function getCurvaData(): Promise<CurvaData> {
       typeId,
       status: statusName(pg, "Status") || "Sin empezar",
       baselineSeconds: mins ? Math.round(mins * 60) : 0,
-      weight: (selName(pg, "Peso") || undefined) as Task["weight"],
+      weight: (statusName(pg, "Esfuerzo") || undefined) as Task["weight"],
       priority: (selName(pg, "Prioridad") || undefined) as Task["priority"],
       internal: P(pg, "Interno")?.checkbox ?? false,
       dueDate: P(pg, "Due date")?.date?.start || undefined,
