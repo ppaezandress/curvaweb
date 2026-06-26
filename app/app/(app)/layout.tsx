@@ -16,6 +16,7 @@ import { MusicProbe } from "@/components/MusicProbe";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { MeetingWatcher } from "@/components/MeetingWatcher";
 import { AISync } from "@/components/AISync";
+import { SupportButton } from "@/components/SupportButton";
 import { AILiveProvider } from "@/lib/use-ai-live";
 import { CoworkingProvider } from "@/lib/use-coworking";
 
@@ -61,6 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PresenceHeartbeat />
       <MeetingWatcher />
       <AISync />
+      <SupportButton />
     </div>
     </CoworkingProvider>
     </AILiveProvider>
