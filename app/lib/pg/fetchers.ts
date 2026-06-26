@@ -20,7 +20,7 @@ type TRow = {
   client_id: string | null; project_id: string | null; due_date: string | null; internal: boolean | null;
   baseline_seconds: number | null; created_at: string | null;
 };
-type ORow = { notion_user_id: string | null; profiles: { name: string | null; email: string | null } | null };
+type ORow = { notion_user_id: string | null; name: string | null; email: string | null };
 
 export async function getCurvaDataFromPostgres(): Promise<{ members: Member[]; clients: Client[]; projects: Project[]; tasks: Task[]; taskTypes: TaskType[] } | null> {
   const sb = await getServerSupabase();
@@ -30,7 +30,7 @@ export async function getCurvaDataFromPostgres(): Promise<{ members: Member[]; c
     sb.from("clients").select("id,notion_page_id,name"),
     sb.from("projects").select("id,notion_page_id,name,client_id"),
     sb.from("tasks").select("notion_page_id,name,status,type,weight,priority,responsable_id,auxiliar_ids,client_id,project_id,due_date,internal,baseline_seconds,created_at"),
-    sb.from("org_members").select("notion_user_id, profiles(name,email)"),
+    sb.from("org_people").select("notion_user_id,name,email"),
   ]);
   if (!tRows) return null;
 
@@ -56,10 +56,10 @@ export async function getCurvaDataFromPostgres(): Promise<{ members: Member[]; c
     };
   });
 
-  // Miembros: del equipo de la org (los que tienen cuenta). id = notion_user_id (matchea responsableId).
+  // Miembros: roster COMPLETO (todos los asignados, tengan cuenta o no). id = notion_user_id (matchea responsableId).
   const members: Member[] = (oRows as ORow[] | null || []).filter((o) => o.notion_user_id).map((o, i) => ({
-    id: o.notion_user_id!, name: o.profiles?.name || "—", short: initials(o.profiles?.name || ""),
-    role: o.profiles?.email || "Equipo CURVA", email: o.profiles?.email || "", color: MEMBER_COLORS[i % MEMBER_COLORS.length],
+    id: o.notion_user_id!, name: o.name || "—", short: initials(o.name || ""),
+    role: o.email || "Equipo CURVA", email: o.email || "", color: MEMBER_COLORS[i % MEMBER_COLORS.length],
   }));
 
   const taskTypes: TaskType[] = [

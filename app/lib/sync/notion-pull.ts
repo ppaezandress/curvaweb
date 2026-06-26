@@ -51,12 +51,20 @@ export async function pullNotionToPostgres(orgId: string) {
       );
     }
 
+    // 4) Roster COMPLETO de personas (todos los asignados, tengan cuenta o no)
+    if (data.members.length) {
+      await sb.from("org_people").upsert(
+        data.members.map((m) => ({ org_id: orgId, notion_user_id: m.id, name: m.name, email: m.email || null, synced_at: now })),
+        { onConflict: "org_id,notion_user_id" },
+      );
+    }
+
     await sb.from("sync_state").upsert(
       { org_id: orgId, resource: "tasks", last_synced_at: now, status: "ok" },
       { onConflict: "org_id,resource" },
     );
 
-    return { ok: true as const, clients: data.clients.length, projects: data.projects.length, tasks: data.tasks.length };
+    return { ok: true as const, clients: data.clients.length, projects: data.projects.length, tasks: data.tasks.length, people: data.members.length };
   } catch (e) {
     return { ok: false as const, reason: String(e) };
   }
