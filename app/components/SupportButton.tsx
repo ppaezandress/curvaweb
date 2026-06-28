@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquarePlus, Bug, Lightbulb, MessageSquare, ImagePlus, X, Check, Loader2 } from "lucide-react";
+import { MessageSquarePlus, Bug, Lightbulb, MessageSquare, ImagePlus, Camera, X, Check, Loader2 } from "lucide-react";
 import { Modal, Field, inputCls } from "@/components/Modal";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -26,9 +26,30 @@ export function SupportButton() {
   const [type, setType] = useState<FbType>("comentario");
   const [desc, setDesc] = useState("");
   const [shot, setShot] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
   const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
 
   const reset = () => { setDesc(""); setShot(null); setState("idle"); setType("comentario"); };
+
+  // Captura la pantalla actual (la app), excluyendo este modal y el botón flotante.
+  const captureScreen = async () => {
+    if (capturing) return;
+    setCapturing(true);
+    try {
+      const { toJpeg } = await import("html-to-image");
+      const dataUrl = await toJpeg(document.body, {
+        quality: 0.7, pixelRatio: 0.7, cacheBust: true,
+        filter: (node) => {
+          const el = node as HTMLElement;
+          if (el?.classList?.contains?.("modal-backdrop")) return false;
+          if (el?.dataset?.noCapture === "1") return false;
+          return true;
+        },
+      });
+      setShot(dataUrl);
+    } catch { /* no se pudo capturar → pueden subir imagen */ }
+    setCapturing(false);
+  };
 
   const onFile = (file?: File) => {
     if (!file) return;
@@ -64,6 +85,7 @@ export function SupportButton() {
     <>
       <button
         onClick={() => setOpen(true)}
+        data-no-capture="1"
         className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-3.5 py-2 text-sm font-semibold text-fg shadow-float backdrop-blur transition hover:border-accent focus-ring sm:bottom-5"
         aria-label="Dar feedback"
       >
@@ -124,14 +146,24 @@ export function SupportButton() {
               <button onClick={() => setShot(null)} className="absolute -right-2 -top-2 rounded-full bg-ink p-1 text-white shadow-soft focus-ring" aria-label="Quitar captura"><X size={13} /></button>
             </div>
           ) : (
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-line bg-surface-2 px-4 py-3 text-sm text-muted transition hover:border-accent">
-              <ImagePlus size={16} /> Adjuntar una imagen
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={captureScreen}
+                disabled={capturing}
+                className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm font-semibold text-fg transition hover:border-accent focus-ring disabled:opacity-50"
+              >
+                {capturing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} className="text-accent" />}
+                {capturing ? "Capturando…" : "Capturar esta pantalla"}
+              </button>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-line bg-surface-2 px-4 py-3 text-sm text-muted transition hover:border-accent">
+                <ImagePlus size={16} /> Subir imagen
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+              </label>
+            </div>
           )}
         </Field>
 
-        <p className="text-[11px] text-muted">Adjuntamos la pantalla en la que estás para ubicar mejor tu feedback.</p>
+        <p className="text-[11px] text-muted">📸 "Capturar esta pantalla" toma una foto de lo que ves ahora (sin el recuadro de feedback). También adjuntamos en qué pantalla estás.</p>
       </Modal>
     </>
   );
