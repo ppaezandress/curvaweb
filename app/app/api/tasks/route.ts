@@ -61,8 +61,8 @@ export async function POST(req: Request) {
       body: JSON.stringify({ parent: { database_id: TASKS }, properties }),
     });
     return NextResponse.json({ ok: true, id: page.id });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ ok: false, error: "No se pudo procesar la tarea" }, { status: 500 });
   }
 }
 
@@ -95,7 +95,7 @@ export async function PATCH(req: Request) {
       body: JSON.stringify({ properties }),
     });
     return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ ok: false, error: "No se pudo procesar la tarea" }, { status: 500 });
   }
 }

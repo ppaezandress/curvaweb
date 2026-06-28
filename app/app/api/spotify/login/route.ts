@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { authorizeUrl, spotifyConfigured } from "@/lib/spotify";
 
 export const dynamic = "force-dynamic";
@@ -7,5 +8,11 @@ export async function GET() {
   if (!spotifyConfigured()) {
     return NextResponse.json({ ok: false, error: "Spotify no configurado" }, { status: 400 });
   }
-  return NextResponse.redirect(authorizeUrl("curva"));
+  // state aleatorio anti-CSRF: se guarda en cookie (store, confiable en Next 16) y se valida en el callback.
+  const state = crypto.randomUUID();
+  const jar = await cookies();
+  jar.set("sp_state", state, {
+    httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 600,
+  });
+  return NextResponse.redirect(authorizeUrl(state));
 }

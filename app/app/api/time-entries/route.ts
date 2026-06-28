@@ -28,8 +28,8 @@ export async function GET() {
   try {
     const records = await getTimeRecords();
     return NextResponse.json({ records });
-  } catch (e) {
-    return NextResponse.json({ records: [], error: String(e) });
+  } catch {
+    return NextResponse.json({ records: [] });
   }
 }
 
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
       mode: b.mode === "ai" ? "ai" : "manual",
     });
     return NextResponse.json({ ok: true, id });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e) });
+  } catch {
+    return NextResponse.json({ ok: false, error: "No se pudo registrar el tiempo" });
   }
 }

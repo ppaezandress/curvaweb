@@ -9,10 +9,17 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   if (!code) return NextResponse.redirect(new URL("/dashboard?spotify=error", req.url));
 
+  // Validar el state contra la cookie (anti-CSRF de vinculación de cuenta).
+  const jar = await cookies();
+  const expected = jar.get("sp_state")?.value;
+  if (!expected || url.searchParams.get("state") !== expected) {
+    return NextResponse.redirect(new URL("/dashboard?spotify=error", req.url));
+  }
+  jar.delete("sp_state");
+
   const tok = await exchangeCode(code);
   if (tok.refresh_token) {
     // Set vía el store de cookies (más confiable en Next 16 que en el redirect).
-    const jar = await cookies();
     jar.set("sp_refresh", tok.refresh_token, {
       httpOnly: true,
       sameSite: "lax",
