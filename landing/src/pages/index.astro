@@ -111,7 +111,9 @@ const producto = {
     <div class="glow-orb" style="width:34rem;height:34rem;top:-8rem;left:-6rem;background:radial-gradient(circle,rgba(124,58,237,0.55),transparent 70%);"></div>
     <div class="glow-orb" style="width:30rem;height:30rem;bottom:-10rem;right:-4rem;background:radial-gradient(circle,rgba(37,99,235,0.45),transparent 70%);animation-delay:-7s;"></div>
 
-    <Curve variant="hero" draw="auto" stroke={1.6} class="pointer-events-none absolute inset-x-0 bottom-0 w-full h-[30vh] opacity-40 z-[2]" />
+    <div class="parallax pointer-events-none absolute inset-x-0 bottom-0 z-[2]" data-parallax="22">
+      <Curve variant="hero" draw="auto" stroke={1.6} class="w-full h-[30vh] opacity-40" />
+    </div>
 
     <div class="mx-auto max-w-6xl w-full px-6 sm:px-10 relative z-10 pt-24">
       <p data-load="1" class="eyebrow text-ember-300 mb-7 inline-flex items-center gap-2.5">
@@ -125,7 +127,7 @@ const producto = {
         Ponemos orden, lo conectamos con tecnología y lo dejamos funcionando. Para que dejes de cargar la empresa en la espalda.
       </p>
       <div data-load="4" class="mt-10">
-        <a href={calLink} target="_blank" rel="noopener" class="btn-shine group inline-flex w-fit items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
+        <a href={calLink} target="_blank" rel="noopener" class="btn-shine btn-pop group inline-flex w-fit items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
           Agendar llamada de exploración
           <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
         </a>
@@ -167,7 +169,7 @@ const producto = {
       </div>
       <ul class="border-t border-sand-200 self-center">
         {problema.map((item, i) => (
-          <li class="reveal flex gap-6 items-baseline py-7 border-b border-sand-200 group">
+          <li class={`reveal reveal-d${i + 1} flex gap-6 items-baseline py-7 border-b border-sand-200 group`}>
             <span class={`display text-base font-semibold tabular-nums ${accentText[areas[i % areas.length].accent]}`}>0{i + 1}</span>
             <p class="text-xl sm:text-2xl text-ink leading-snug group-hover:translate-x-1 transition-transform">{item}</p>
           </li>
@@ -187,7 +189,7 @@ const producto = {
       </div>
 
       <!-- Escena horizontal (desktop): gráfica con punto viajero -->
-      <div class="reveal relative mt-12 sm:mt-20 hidden sm:block">
+      <div class="reveal reveal-scale relative mt-12 sm:mt-20 hidden sm:block">
         <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
           <defs>
             <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
@@ -407,7 +409,7 @@ const producto = {
 
       <div class="space-y-8">
         {casos.map((c, i) => (
-          <article class={`reveal reveal-d${i + 1} rounded-3xl border border-sand-200 bg-white overflow-hidden grid lg:grid-cols-[1.5fr_1fr] hover:shadow-xl transition-shadow`}>
+          <article class={`reveal reveal-d${i + 1} lift rounded-3xl border border-sand-200 bg-white overflow-hidden grid lg:grid-cols-[1.5fr_1fr]`}>
             {/* Historia: reto → qué hicimos → resultado */}
             <div class="p-8 sm:p-10 lg:border-r border-sand-200">
               <div class="flex items-center gap-3 mb-6">
@@ -487,7 +489,7 @@ const producto = {
       </div>
 
       {/* Captura real (producto.shot) o mockup placeholder de marca */}
-      <div class="reveal reveal-d1">
+      <div class="reveal reveal-scale reveal-d1">
         {producto.shot ? (
           <img src={producto.shot} alt="Curva Tiempos" class="rounded-2xl border border-white/15 shadow-2xl w-full" />
         ) : (
@@ -535,7 +537,7 @@ const producto = {
           { t: 'Manos a la obra', d: 'No solo decimos qué hacer. Lo hacemos contigo, hombro con hombro.' },
           { t: 'Hasta que jala', d: 'No nos vamos cuando entregamos. Nos quedamos hasta que funciona solo.' },
         ].map((c, i) => (
-          <div class={`reveal reveal-d${i + 1} rounded-2xl border border-sand-200 bg-sand-50 p-6`}>
+          <div class={`reveal reveal-d${i + 1} lift rounded-2xl border border-sand-200 bg-white p-6`}>
             <p class="display font-semibold text-ink mb-2">{c.t}</p>
             <p class="text-sand-600 text-[15px] leading-relaxed">{c.d}</p>
           </div>

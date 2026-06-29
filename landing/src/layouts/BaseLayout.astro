@@ -63,6 +63,7 @@ const {
       import { initLeadMagnet } from '../scripts/leadmagnet';
       import { initCount } from '../scripts/count';
       import { initWordFade } from '../scripts/wordfade';
+      import { initParallax } from '../scripts/parallax';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -83,6 +84,7 @@ const {
         initLeadMagnet();
         initCount();
         initWordFade();
+        initParallax();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))

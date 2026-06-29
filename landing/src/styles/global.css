@@ -313,3 +313,26 @@ body {
   .grain::after { display: none; }
   .curve-dot { offset-distance: 60%; }
 }
+
+/* ----------------------------- Micro-interacciones (estilo Pitch) ----------------------------- */
+
+/* Reveal con scale fuerte para visuales grandes (escena de la curva, mockups) */
+.reveal.reveal-scale { transform: translateY(34px) scale(0.93); }
+
+/* Hover-lift suave y consistente para tarjetas */
+.lift { transition: transform .45s var(--ease-pitch), box-shadow .45s var(--ease-pitch); }
+.lift:hover { transform: translateY(-6px); box-shadow: 0 28px 56px -28px rgba(11, 10, 20, 0.35); }
+
+/* "Pop" sutil en botones */
+.btn-pop { transition: transform .28s var(--ease-pitch), background-color .2s ease; }
+.btn-pop:hover { transform: translateY(-2px) scale(1.02); }
+.btn-pop:active { transform: scale(0.97); }
+
+/* Capa de parallax (la mueve scripts/parallax.ts con el cursor) */
+.parallax { will-change: transform; transition: transform .25s cubic-bezier(0.22, 1, 0.36, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal.reveal-scale { transform: none; }
+  .lift:hover, .btn-pop:hover, .btn-pop:active { transform: none; }
+  .parallax { transform: none !important; }
+}
