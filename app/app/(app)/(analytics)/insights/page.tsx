@@ -5,15 +5,10 @@ import {
   Clock,
   CheckSquare,
   Users,
-  Play,
   TrendingUp,
   CalendarRange,
   Building2,
   Sparkles,
-  Trophy,
-  Sunrise,
-  Moon,
-  Flame,
   Target,
   CalendarCheck,
   Loader2,
@@ -24,13 +19,10 @@ import {
 } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { useApp } from "@/lib/app-context";
-import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { formatHours } from "@/lib/format";
-import { computeStreak, dayKey } from "@/lib/streaks";
+import { dayKey } from "@/lib/streaks";
 import { mondayOf, firstDayOfMonth, monthShort, DIAS_CORTOS } from "@/lib/date";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { Avatar } from "@/components/Avatar";
-import type { Member } from "@/lib/mock-data";
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
 type Range = "week" | "month" | "all";
@@ -130,7 +122,7 @@ export default function InsightsPage() {
 }
 
 function InsightsView() {
-  const { taskById, projectById, clientById, members, memberById } = useData();
+  const { taskById, projectById, clientById, memberById } = useData();
   const { currentUserId, isAdmin } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
@@ -149,16 +141,13 @@ function InsightsView() {
       .finally(() => setLoading(false));
   }, []);
 
-  const memberByName = useMemo<Record<string, Member>>(
-    () => Object.fromEntries(members.map((m) => [m.name, m])),
-    [members],
-  );
 
   // Muro individuo/equipo: un NO-admin SIEMPRE ve solo su data (aunque no haya resuelto
   // `me`, devolvemos vacío, nunca la de otros). Admin: "Equipo" = todo, "Yo" = self.
   const mine = useMemo(() => {
     if (isAdmin && lens === "team") return records;
-    return me ? records.filter((r) => r.person === me.name) : (isAdmin ? records : []);
+    // En lente "Yo" (o cualquier no-admin): solo TUS registros. Si `me` no resolvió, vacío.
+    return me ? records.filter((r) => r.person === me.name) : [];
   }, [records, lens, me, isAdmin]);
 
   const from = rangeStart(range);
@@ -180,7 +169,6 @@ function InsightsView() {
   const totalMin = inRange.reduce((a, r) => a + r.minutes, 0);
   const distinctTasks = new Set(inRange.map((r) => r.taskId)).size;
   const distinctPeople = new Set(inRange.map((r) => r.person)).size;
-  const sessions = inRange.length;
 
   // ---- Trabajo con IA: tiempo de espera y aprovechamiento ----
   const ai = useMemo(() => {
@@ -205,7 +193,6 @@ function InsightsView() {
 
   const prevTotalMin = prevRows?.reduce((a, r) => a + r.minutes, 0) ?? null;
   const prevTasks = prevRows ? new Set(prevRows.map((r) => r.taskId)).size : null;
-  const prevSessions = prevRows?.length ?? null;
   const prevDays = prevRows ? new Set(prevRows.map((r) => dayKey(new Date(r.start).getTime()))).size : null;
   const activeDays = new Set(inRange.map((r) => dayKey(new Date(r.start).getTime()))).size;
 
@@ -318,55 +305,6 @@ function InsightsView() {
   const weekendPct = totalMin > 0 ? Math.round((weekendMin / totalMin) * 100) : 0;
   const topWeekdayIdx = byWeekday.reduce((best, m, i, arr) => (m > arr[best] ? i : best), 0);
   const topSlotProfile = [...bySlot].sort((a, b) => b.minutes - a.minutes)[0];
-
-  // ---- Superlativos / Wrapped (por persona, en rango) ----
-  type Stat = {
-    name: string;
-    minutes: number;
-    tasks: number;
-    days: number;
-    avgStart: number; // hora promedio de inicio
-    longest: number; // racha histórica
-  };
-  const perPerson = useMemo<Stat[]>(() => {
-    const acc = new Map<
-      string,
-      { minutes: number; tasks: Set<string>; days: Set<string>; hSum: number; n: number }
-    >();
-    inRange.forEach((r) => {
-      if (!acc.has(r.person))
-        acc.set(r.person, { minutes: 0, tasks: new Set(), days: new Set(), hSum: 0, n: 0 });
-      const a = acc.get(r.person)!;
-      const d = new Date(r.start);
-      a.minutes += r.minutes;
-      a.tasks.add(r.taskId);
-      a.days.add(dayKey(d.getTime()));
-      a.hSum += d.getHours() + d.getMinutes() / 60;
-      a.n += 1;
-    });
-    return [...acc.entries()].map(([name, a]) => {
-      // Racha histórica: días de actividad de la persona en TODO el historial.
-      const daySet = new Set<string>();
-      records
-        .filter((r) => r.person === name)
-        .forEach((r) => daySet.add(dayKey(new Date(r.start).getTime())));
-      return {
-        name,
-        minutes: a.minutes,
-        tasks: a.tasks.size,
-        days: a.days.size,
-        avgStart: a.n ? a.hSum / a.n : 0,
-        longest: computeStreak(daySet).longest,
-      };
-    });
-  }, [inRange, records]);
-
-  const winner = (pick: (s: Stat) => number, dir: "max" | "min" = "max") => {
-    if (perPerson.length === 0) return null;
-    const sorted = [...perPerson].sort((a, b) => (dir === "max" ? pick(b) - pick(a) : pick(a) - pick(b)));
-    const top = sorted[0];
-    return pick(top) > 0 || dir === "min" ? top : null;
-  };
 
   const empty = !loading && inRange.length === 0;
 
@@ -718,44 +656,6 @@ function KpiDelta({
   );
 }
 
-type Stat = { name: string; minutes: number; tasks: number; days: number; avgStart: number; longest: number };
-
-function Superlative({
-  icon,
-  title,
-  stat,
-  member,
-  value,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  stat: Stat | null;
-  member: Record<string, Member>;
-  value: (s: Stat) => string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4">
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">{title}</p>
-        {stat ? (
-          <div className="mt-0.5 flex items-center gap-2">
-            <Avatar member={member[stat.name]} name={stat.name} size={22} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-fg">{stat.name}</span>
-            </span>
-            <span className="shrink-0 text-xs font-semibold text-accent">{value(stat)}</span>
-          </div>
-        ) : (
-          <p className="mt-0.5 text-sm text-muted">—</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function Trait({ emoji, children }: { emoji: string; children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2.5">
@@ -765,11 +665,3 @@ function Trait({ emoji, children }: { emoji: string; children: React.ReactNode }
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-line bg-surface-2/50 p-4 text-center">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className="tabular mt-1 font-display text-xl font-bold text-fg">{value}</p>
-    </div>
-  );
-}

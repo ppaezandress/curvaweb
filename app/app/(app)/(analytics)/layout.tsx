@@ -22,10 +22,12 @@ const MEMBER_TABS: SegTab[] = [
 ];
 
 export default function AnalyticsLayout({ children }: { children: React.ReactNode }) {
-  const { isAdmin } = useApp();
+  const { isAdmin, adminResolved } = useApp();
+  // Hasta resolver el rol mostramos las tabs de miembro (nunca exponen Reportes) → sin flicker
+  // de admin viendo tabs equivocadas ni miembro viendo tabs de admin.
   return (
     <div className="space-y-6">
-      <SegmentedNav tabs={isAdmin ? ADMIN_TABS : MEMBER_TABS} />
+      <SegmentedNav tabs={adminResolved && isAdmin ? ADMIN_TABS : MEMBER_TABS} />
       {children}
     </div>
   );

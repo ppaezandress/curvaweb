@@ -23,7 +23,7 @@ function dayLabel(iso: string) {
 // Es el "genera data por tarea y aprende de eso" — abre desde cualquier TaskCard.
 export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) {
   const { taskById, clientById, projectById, memberById } = useData();
-  const { currentUserId, sessionSecondsForTask: liveSecs } = useApp();
+  const { currentUserId, isAdmin, sessionSecondsForTask: liveSecs } = useApp();
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -43,11 +43,15 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
   const task = taskById[taskId];
 
   const stats = useMemo(() => {
-    const mine = records.filter((r) => r.taskId === taskId).sort((a, b) => (b.start || "").localeCompare(a.start || ""));
+    const myName = currentUserId ? memberById[currentUserId]?.name : undefined;
+    // Muro individuo/equipo: un NO-admin solo ve SUS propias sesiones de la tarea
+    // (nunca el detalle nominal de compañeros). Admin ve todas.
+    const taskRecs = records.filter((r) => r.taskId === taskId);
+    const visible = isAdmin ? taskRecs : taskRecs.filter((r) => r.person === myName);
+    const mine = visible.sort((a, b) => (b.start || "").localeCompare(a.start || ""));
     const totalMin = mine.reduce((a, r) => a + (r.minutes || 0), 0);
     const people = [...new Set(mine.map((r) => r.person).filter(Boolean))];
     // Benchmark personal por esfuerzo: promedio de minutos POR TAREA de ese peso.
-    const myName = currentUserId ? memberById[currentUserId]?.name : undefined;
     const perTask = new Map<string, number>();
     records.forEach((r) => { if (myName && r.person === myName) perTask.set(r.taskId, (perTask.get(r.taskId) || 0) + r.minutes); });
     const weight = task?.weight;
@@ -57,7 +61,7 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
       bench = samples.length >= 2 ? Math.round(samples.reduce((a, b) => a + b, 0) / samples.length) : (DEFAULT_EST[weight] || 60);
     }
     return { mine, totalMin, sessions: mine.length, people, bench };
-  }, [records, taskId, task, taskById, memberById, currentUserId]);
+  }, [records, taskId, task, taskById, memberById, currentUserId, isAdmin]);
 
   if (!open || !mounted || !task) return null;
 
