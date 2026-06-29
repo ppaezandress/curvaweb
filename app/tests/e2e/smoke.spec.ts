@@ -5,7 +5,9 @@ const TEAM = process.env.E2E_TEAM || "CURVA";
 const EMAIL = process.env.E2E_EMAIL || "";
 const PASSWORD = process.env.E2E_PASSWORD || "";
 
-const ROUTES = ["/dashboard", "/tareas", "/mensajes", "/insights", "/reportes", "/rachas", "/recap"];
+// /reportes es admin-only (redirige a miembros); el e2e corre con cuenta de miembro, así que
+// no se incluye aquí (un goto directo a una ruta que redirige aborta en Chromium).
+const ROUTES = ["/dashboard", "/tareas", "/mensajes", "/insights", "/momentos", "/rachas", "/recap"];
 
 async function login(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
@@ -35,9 +37,10 @@ test("render: las 7 rutas cargan sin crash", async ({ page }) => {
   page.on("pageerror", (e) => crashes.push(e.message));
   await login(page);
   for (const r of ROUTES) {
-    await page.goto(r, { waitUntil: "domcontentloaded" });
+    // .catch: un redirect por rol (ej. miembro en /reportes → /momentos) aborta el goto; es esperado.
+    await page.goto(r, { waitUntil: "domcontentloaded" }).catch(() => {});
     await page.waitForTimeout(1800);
-    expect(page.url(), `redirigió fuera de ${r}`).not.toContain("/login");
+    expect(page.url(), `redirigió a login desde ${r}`).not.toContain("/login");
     await expect(page.getByText("tiempos").first()).toBeVisible({ timeout: 8000 });
   }
   expect(crashes, `Excepciones no atrapadas:\n${crashes.join("\n")}`).toHaveLength(0);

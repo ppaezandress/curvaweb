@@ -1,6 +1,5 @@
 "use client";
 
-import { AdminOnly } from "@/components/AdminOnly";
 import { useEffect, useMemo, useState } from "react";
 import {
   Clock,
@@ -127,18 +126,18 @@ function smoothCurve(vals: number[], max: number) {
 }
 
 export default function InsightsPage() {
-  return <AdminOnly><InsightsView /></AdminOnly>;
+  return <InsightsView />;
 }
 
 function InsightsView() {
   const { taskById, projectById, clientById, members, memberById } = useData();
-  const { currentUserId } = useApp();
+  const { currentUserId, isAdmin } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>("month");
-  const [lens, setLens] = useState<Lens>("team");
+  const [lens, setLens] = useState<Lens>("me"); // default: tu data; admin puede ver "Equipo"
   const [trendMode, setTrendMode] = useState<"weeks" | "months">("weeks");
   const [selClient, setSelClient] = useState<string | null>(null);
   const [cowork, setCowork] = useState<{ uid: string; name: string; avatarUrl: string | null; minutes: number; sessions: number }[]>([]);
@@ -186,11 +185,12 @@ function InsightsView() {
     [members],
   );
 
-  // Lente: en "yo" filtramos a los registros de la persona logueada.
+  // Muro individuo/equipo: un NO-admin SIEMPRE ve solo su data (aunque no haya resuelto
+  // `me`, devolvemos vacío, nunca la de otros). Admin: "Equipo" = todo, "Yo" = self.
   const mine = useMemo(() => {
-    if (lens === "me" && me) return records.filter((r) => r.person === me.name);
-    return records;
-  }, [records, lens, me]);
+    if (isAdmin && lens === "team") return records;
+    return me ? records.filter((r) => r.person === me.name) : (isAdmin ? records : []);
+  }, [records, lens, me, isAdmin]);
 
   const from = rangeStart(range);
   const inRange = useMemo(
@@ -405,24 +405,26 @@ function InsightsView() {
     <div className="space-y-7">
       <SectionHeader
         title="Insights"
-        subtitle="Cómo trabaja CURVA: tendencias, ritmo y los logros del equipo."
+        subtitle={isAdmin ? "Cómo trabaja CURVA: tendencias, ritmo y los logros del equipo." : "Tu tiempo: tus tendencias, tu ritmo y tus logros."}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {/* Lente: equipo / yo */}
-            <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
-              {(["team", "me"] as Lens[]).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLens(l)}
-                  disabled={l === "me" && !me}
-                  className={`rounded-full px-3 py-1.5 font-medium transition focus-ring disabled:opacity-40 ${
-                    lens === l ? "bg-accent text-white" : "text-muted"
-                  }`}
-                >
-                  {l === "team" ? "Equipo" : "Yo"}
-                </button>
-              ))}
-            </div>
+            {/* Lente: equipo / yo — el toggle solo para admins; los demás ven su data */}
+            {isAdmin && (
+              <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
+                {(["team", "me"] as Lens[]).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLens(l)}
+                    disabled={l === "me" && !me}
+                    className={`rounded-full px-3 py-1.5 font-medium transition focus-ring disabled:opacity-40 ${
+                      lens === l ? "bg-accent text-white" : "text-muted"
+                    }`}
+                  >
+                    {l === "team" ? "Equipo" : "Yo"}
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Periodo */}
             <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
               {(["week", "month", "all"] as Range[]).map((r) => (

@@ -10,10 +10,10 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 
 export function TopNav() {
   const pathname = usePathname();
-  const { currentUserId, isAdmin } = useApp();
+  const { currentUserId } = useApp();
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
-  const links = navLinks(isAdmin);
+  const links = navLinks();
 
   return (
     <header className="sticky top-0 z-[45] border-b border-line bg-surface/80 backdrop-blur">

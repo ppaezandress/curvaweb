@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { useApp } from "@/lib/app-context";
 import { navLinks } from "@/lib/nav";
 
-// Navegación inferior — solo en móvil. Por rol (admin: Análisis · demás: Momentos).
+// Navegación inferior — solo en móvil. Hoy · Tareas · Mensajes · Análisis.
 export function BottomNav() {
   const pathname = usePathname();
-  const { isAdmin } = useApp();
-  const tabs = navLinks(isAdmin);
+  const tabs = navLinks();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 safe-bottom backdrop-blur sm:hidden">
