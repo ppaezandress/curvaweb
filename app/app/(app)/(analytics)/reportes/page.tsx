@@ -91,17 +91,20 @@ function ReportesView() {
   const totalMin = rows.reduce((a, r) => a + r.minutes, 0);
   const totalCost = rows.reduce((a, r) => a + r.cost, 0);
 
-  type Agg = { key: string; label: string; minutes: number; cost: number; color?: string };
+  type Agg = { key: string; label: string; minutes: number; cost: number; count: number; color?: string };
   const groupBy = (fn: (r: (typeof rows)[number]) => { key: string; label: string; color?: string }) => {
-    const m = new Map<string, Agg>();
+    const m = new Map<string, Agg & { _t: Set<string> }>();
     rows.forEach((r) => {
       const { key, label, color } = fn(r);
-      if (!m.has(key)) m.set(key, { key, label, minutes: 0, cost: 0, color });
+      if (!m.has(key)) m.set(key, { key, label, minutes: 0, cost: 0, count: 0, color, _t: new Set() });
       const g = m.get(key)!;
       g.minutes += r.minutes;
       g.cost += r.cost;
+      if (r.taskId) g._t.add(r.taskId);
     });
-    return [...m.values()].sort((a, b) => b.minutes - a.minutes);
+    return [...m.values()]
+      .map(({ _t, ...g }) => ({ ...g, count: _t.size }))
+      .sort((a, b) => b.minutes - a.minutes);
   };
 
   const byClient = useMemo(() => groupBy((r) => ({ key: r.clientId, label: r.clientName })), [rows]);
@@ -192,8 +195,8 @@ function ReportesView() {
           </div>
 
           {/* Por tipo de entregable */}
-          <Section icon={<TrendingUp size={20} />} title="Por tipo de entregable" desc="Tu tabulador: cuántas horas cuesta cada tipo de trabajo.">
-            <Bars items={byType} totalMin={totalMin} showCost={showCost} icon />
+          <Section icon={<TrendingUp size={20} />} title="Por tipo de entregable" desc="Tu tabulador para cotizar: cuánto cuesta CADA entregable en promedio.">
+            <Bars items={byType} totalMin={totalMin} showCost={showCost} icon showAvg />
           </Section>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -234,7 +237,7 @@ function Section({ icon, title, desc, children }: { icon: React.ReactNode; title
   );
 }
 
-function Bars({ items, totalMin, showCost, icon, gradient }: { items: { key: string; label: string; minutes: number; cost: number; color?: string }[]; totalMin: number; showCost: boolean; icon?: boolean; gradient?: boolean }) {
+function Bars({ items, totalMin, showCost, icon, gradient, showAvg }: { items: { key: string; label: string; minutes: number; cost: number; count?: number; color?: string }[]; totalMin: number; showCost: boolean; icon?: boolean; gradient?: boolean; showAvg?: boolean }) {
   const max = Math.max(...items.map((i) => i.minutes), 1);
   return (
     <div className="space-y-4">
@@ -257,6 +260,13 @@ function Bars({ items, totalMin, showCost, icon, gradient }: { items: { key: str
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
             <div className={`h-full rounded-full ${gradient ? "curva-gradient" : ""}`} style={{ width: `${(r.minutes / max) * 100}%`, background: gradient ? undefined : r.color || "var(--color-accent)" }} />
           </div>
+          {showAvg && (r.count ?? 0) > 0 && (
+            <p className="mt-1 text-[11px] text-muted">
+              ~<span className="font-semibold text-fg">{formatHours((r.minutes / r.count!) * 60)}</span> por entregable
+              {showCost && <> · <span className="text-curva-teal">{money(r.cost / r.count!)}</span></>}
+              <span className="ml-1">({r.count} {r.count === 1 ? "tarea" : "tareas"})</span>
+            </p>
+          )}
         </div>
       ))}
     </div>

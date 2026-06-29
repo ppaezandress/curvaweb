@@ -140,7 +140,6 @@ function InsightsView() {
   const [lens, setLens] = useState<Lens>("me"); // default: tu data; admin puede ver "Equipo"
   const [trendMode, setTrendMode] = useState<"weeks" | "months">("weeks");
   const [selClient, setSelClient] = useState<string | null>(null);
-  const [cowork, setCowork] = useState<{ uid: string; name: string; avatarUrl: string | null; minutes: number; sessions: number }[]>([]);
 
   useEffect(() => {
     fetch("/api/time-entries")
@@ -148,36 +147,6 @@ function InsightsView() {
       .then((d) => setRecords(d.records || []))
       .catch(() => setRecords([]))
       .finally(() => setLoading(false));
-  }, []);
-
-  // Co-working del mes (RLS solo devuelve TUS sesiones); agregado por compañero.
-  useEffect(() => {
-    if (!supabaseConfigured()) return;
-    const sb = getSupabase();
-    if (!sb) return;
-    (async () => {
-      const { data: u } = await sb.auth.getUser();
-      const myUid = u.user?.id;
-      if (!myUid) return;
-      const monthStart = firstDayOfMonth(new Date()).toISOString();
-      const [{ data: sess }, { data: profs }] = await Promise.all([
-        sb.from("coworking_sessions").select("user_a,user_b,minutes,created_at").gte("created_at", monthStart),
-        sb.from("profiles").select("id,name,avatar_url"),
-      ]);
-      const pmap: Record<string, { name: string; avatar_url: string | null }> = {};
-      (profs || []).forEach((p: { id: string; name: string; avatar_url: string | null }) => (pmap[p.id] = p));
-      const agg = new Map<string, { minutes: number; sessions: number }>();
-      (sess || []).forEach((s: { user_a: string; user_b: string; minutes: number }) => {
-        const other = s.user_a === myUid ? s.user_b : s.user_a;
-        const cur = agg.get(other) || { minutes: 0, sessions: 0 };
-        cur.minutes += s.minutes; cur.sessions += 1;
-        agg.set(other, cur);
-      });
-      const list = [...agg.entries()]
-        .map(([uid, v]) => ({ uid, name: pmap[uid]?.name || "Compañero", avatarUrl: pmap[uid]?.avatar_url || null, ...v }))
-        .sort((a, b) => b.minutes - a.minutes);
-      setCowork(list);
-    })();
   }, []);
 
   const memberByName = useMemo<Record<string, Member>>(
@@ -462,7 +431,7 @@ function InsightsView() {
             ) : (
               <KpiDelta icon={<CalendarCheck size={16} />} label="Días activos" value={String(activeDays)} curr={activeDays} prev={prevDays} />
             )}
-            <KpiDelta icon={<Play size={16} />} label="Sesiones" value={String(sessions)} curr={sessions} prev={prevSessions} />
+            <KpiDelta icon={<Clock size={16} />} label="Horas por tarea" value={formatHours((distinctTasks ? totalMin / distinctTasks : 0) * 60)} curr={distinctTasks ? totalMin / distinctTasks : 0} prev={prevTotalMin != null && prevTasks ? prevTotalMin / prevTasks : null} />
           </div>
 
           {/* Trabajo con IA */}
@@ -565,36 +534,6 @@ function InsightsView() {
               );
             })()}
           </section>
-
-          {/* Trabajo en equipo (co-working): horas compartidas por compañero, este mes.
-              Es tu data (RLS); separado de los totales de Notion para no insinuar doble conteo. */}
-          {cowork.length > 0 && (
-            <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
-              <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
-                <Users size={20} /> Trabajo en equipo
-              </h2>
-              <p className="mb-5 text-sm text-muted">Tiempo que trabajaste la misma tarea, a la vez, con cada quién — este mes.</p>
-              <div className="space-y-3">
-                {cowork.map((c) => {
-                  const max = Math.max(...cowork.map((x) => x.minutes), 1);
-                  return (
-                    <div key={c.uid} className="flex items-center gap-3">
-                      <Avatar name={c.name} src={c.avatarUrl} size={28} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-sm font-medium text-fg">{c.name}</span>
-                          <span className="tabular shrink-0 text-xs text-muted">{formatHours(c.minutes * 60)} · {c.sessions} {c.sessions === 1 ? "sesión" : "sesiones"}</span>
-                        </div>
-                        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-surface-2">
-                          <div className="h-full rounded-full bg-curva-teal" style={{ width: `${(c.minutes / max) * 100}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
 
           {/* Ritmo: día de la semana + franja del día */}
           <div className="grid gap-6 md:grid-cols-2">
@@ -706,46 +645,8 @@ function InsightsView() {
             </section>
           )}
 
-          {/* Wrapped / Superlativos */}
-          {lens === "team" ? (
-            <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-soft">
-              <div className="curva-gradient px-6 py-5">
-                <h2 className="flex items-center gap-2 font-display text-xl font-bold text-white">
-                  <Sparkles size={20} /> CURVA Wrapped
-                </h2>
-                <p className="text-sm text-white/80">Los superlativos del equipo en este periodo.</p>
-              </div>
-              <div className="grid gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3">
-                <Superlative icon={<Trophy size={18} />} title="Más horas" stat={winner((s) => s.minutes)} member={memberByName} value={(s) => formatHours(s.minutes * 60)} />
-                <Superlative icon={<Target size={18} />} title="Más tareas" stat={winner((s) => s.tasks)} member={memberByName} value={(s) => `${s.tasks} tareas`} />
-                <Superlative icon={<CalendarCheck size={18} />} title="Más constante" stat={winner((s) => s.days)} member={memberByName} value={(s) => `${s.days} días`} />
-                <Superlative icon={<Flame size={18} />} title="Racha más larga" stat={winner((s) => s.longest)} member={memberByName} value={(s) => `${s.longest} días`} />
-                <Superlative icon={<Sunrise size={18} />} title="Más madrugador" stat={winner((s) => s.avgStart, "min")} member={memberByName} value={(s) => `~${Math.round(s.avgStart)}:00`} />
-                <Superlative icon={<Moon size={18} />} title="Búho nocturno" stat={winner((s) => s.avgStart)} member={memberByName} value={(s) => `~${Math.round(s.avgStart)}:00`} />
-              </div>
-            </section>
-          ) : (
-            me && (
-              <>
-                <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-soft">
-                  <div className="curva-gradient px-6 py-5">
-                    <h2 className="flex items-center gap-2 font-display text-xl font-bold text-white">
-                      <Sparkles size={20} /> Tu Wrapped
-                    </h2>
-                    <p className="text-sm text-white/80">Tus números en este periodo.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 p-6 sm:grid-cols-4">
-                    <MiniStat label="Horas" value={formatHours(totalMin * 60)} />
-                    <MiniStat label="Tareas" value={String(distinctTasks)} />
-                    <MiniStat label="Días activos" value={String(activeDays)} />
-                    <MiniStat
-                      label="Tu franja"
-                      value={topSlotProfile && topSlotProfile.minutes > 0 ? `${topSlotProfile.emoji} ${topSlotProfile.label}` : "—"}
-                    />
-                  </div>
-                </section>
-
-                {/* Perfil del trabajador — solo lo ve la persona (anti-vigilancia) */}
+          {/* Perfil del trabajador — solo en lente "me", solo lo ve la persona (anti-vigilancia) */}
+          {lens === "me" && me && (
                 <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
@@ -773,8 +674,6 @@ function InsightsView() {
                     </ul>
                   )}
                 </section>
-              </>
-            )
           )}
         </>
       )}
