@@ -99,6 +99,11 @@ type AppState = {
   // Cuando está off, se oculta toda la UI de IA y AISync no reacciona al conector.
   aiEnabled: boolean;
   setAiEnabled: (v: boolean) => void;
+
+  // Rol: admin (Andrés/Balmori) ve la data de todos + dashboard del equipo.
+  // Los demás solo su propia data + la capa social. Muro individuo/equipo.
+  isAdmin: boolean;
+  adminResolved: boolean; // true cuando ya sabemos el rol (evita rebotar admins al cargar)
 };
 
 const AppContext = createContext<AppState | null>(null);
@@ -142,6 +147,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [autoResumed, setAutoResumed] = useState<string | null>(null);
   const [aiEnabled, setAiEnabledState] = useState(false);
   const [authUid, setAuthUid] = useState<string | null>(null); // id de Supabase (para timer_sessions cross-device)
+  const [isAdmin, setIsAdmin] = useState(false); // rol (profiles.is_admin)
+  const [adminResolved, setAdminResolved] = useState(false);
 
   const counter = useRef(0);
   // Última sesión que sincronizamos/adoptamos (evita eco entre upsert ↔ realtime).
@@ -503,8 +510,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     entries.filter((e) => e.taskId === taskId).reduce((a, e) => a + e.seconds, 0);
   const loggedSecondsToday = entries.reduce((a, e) => a + e.seconds, 0);
 
+  // Rol: refresca is_admin cuando cambia el usuario (hidratación o tras login).
+  useEffect(() => {
+    if (!supabaseConfigured() || !currentUserId) { setIsAdmin(false); setAdminResolved(true); return; }
+    const sb = getSupabase();
+    if (!sb) { setAdminResolved(true); return; }
+    let cancelled = false;
+    setAdminResolved(false);
+    (async () => {
+      try {
+        const { data: u } = await sb.auth.getUser();
+        if (cancelled) return;
+        if (u.user) {
+          const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", u.user.id).maybeSingle();
+          if (!cancelled) setIsAdmin(!!prof?.is_admin);
+        }
+      } catch { /* sin rol → no admin */ }
+      finally { if (!cancelled) setAdminResolved(true); }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUserId]);
+
   const value: AppState = {
-    ready, currentUserId, setCurrentUser, logout,
+    ready, currentUserId, setCurrentUser, logout, isAdmin, adminResolved,
     active, entries, start, stop,
     aiActive, startAI, stopAI, toggleAI, isAI, autoResumed,
     openTasks, openTask, switchTo, pause, closeTask,

@@ -2,26 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, MessageCircle, LineChart, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { PILOT } from "@/lib/pilot-flags";
+import { useApp } from "@/lib/app-context";
+import { navLinks } from "@/lib/nav";
 
-// 4 destinos directos — sin menú "Más". Cada uno agrupa sus sub-vistas vía `match`.
-const tabs: { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
-  { href: "/dashboard", label: "Hoy", icon: Home, match: (p) => p === "/dashboard" },
-  { href: "/tareas", label: "Tareas", icon: ListTodo, match: (p) => p === "/tareas" || p === "/timesheet" },
-  { href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" },
-  { href: "/insights", label: "Análisis", icon: LineChart, match: (p) => ["/insights", "/reportes", "/rachas", "/recap"].includes(p) },
-];
-
-// Navegación inferior — solo en móvil.
+// Navegación inferior — solo en móvil. Por rol (admin: Análisis · demás: Momentos).
 export function BottomNav() {
   const pathname = usePathname();
+  const { isAdmin } = useApp();
+  const tabs = navLinks(isAdmin);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 safe-bottom backdrop-blur sm:hidden">
       <div className="mx-auto flex max-w-md items-stretch justify-around">
-        {tabs.filter((l) => PILOT.messages || l.href !== "/mensajes").map((l) => {
+        {tabs.map((l) => {
           const active = l.match(pathname);
           const Icon = l.icon;
           return (

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Clock, Flame, Music } from "lucide-react";
 import { useData } from "@/lib/data-context";
+import { useApp } from "@/lib/app-context";
 import { listReactions, type Reaction } from "@/lib/reactions";
 import { readMusicLog, type MusicEntry } from "@/lib/music-log";
 import { formatHours, hhmmFromISO } from "@/lib/format";
@@ -33,7 +34,9 @@ function timeOfDay(iso: string): { emoji: string; label: string } {
 }
 
 export default function RecapPage() {
-  const { tasks, taskById } = useData();
+  const { tasks, taskById, memberById } = useData();
+  const { currentUserId, isAdmin } = useApp();
+  const myName = ((currentUserId ? memberById[currentUserId]?.name : "") || "").trim().toLowerCase();
   const [records, setRecords] = useState<Rec[]>([]);
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [music, setMusic] = useState<MusicEntry[]>([]);
@@ -48,7 +51,9 @@ export default function RecapPage() {
   const monthEnd = useMemo(() => { const d = new Date(month); d.setMonth(d.getMonth() + 1); return d; }, [month]);
   const inMonth = (ms: number) => ms >= month.getTime() && ms < monthEnd.getTime();
 
-  const recsM = records.filter((r) => r.start && inMonth(new Date(r.start).getTime()));
+  // Muro: un no-admin ve SOLO sus propias horas (su recap). Admin ve todo.
+  const scopedRecords = isAdmin ? records : records.filter((r) => (r.person || "").trim().toLowerCase() === myName);
+  const recsM = scopedRecords.filter((r) => r.start && inMonth(new Date(r.start).getTime()));
   const reactsM = reactions.filter((r) => inMonth(r.at));
   const musicM = music.filter((m) => inMonth(m.at));
 

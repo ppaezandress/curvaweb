@@ -5,6 +5,8 @@ import { getCurvaData } from "@/lib/notion/fetchers";
 export const dynamic = "force-dynamic";
 
 const TEAM_CODE = (process.env.NEXT_PUBLIC_TEAM_CODE || "CURVA").toUpperCase();
+// Admins (ven la data de todos + dashboard del equipo). El resto solo su propia data.
+const ADMIN_EMAILS = ["ppaezandress@gmail.com", "osbalmar2004@gmail.com"];
 
 // Alta de cuenta del piloto. La AUTORIZACIÓN vive aquí, en el servidor (no en el cliente):
 //  1) código de equipo correcto, 2) el correo DEBE estar en el roster de Notion,
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
     if (userId) {
       const { error: upErr } = await admin.from("profiles").upsert({
         id: userId, name: member.name, notion_user_id: member.id, email,
+        is_admin: ADMIN_EMAILS.includes(email),
       });
       if (upErr) {
         return NextResponse.json({ ok: false, error: "Esa persona ya tiene una cuenta. Contacta a tu admin." }, { status: 409 });

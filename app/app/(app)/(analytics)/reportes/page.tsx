@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminOnly } from "@/components/AdminOnly";
 import { useEffect, useMemo, useState } from "react";
 import {
   Clock,
@@ -39,6 +40,10 @@ function rangeStart(range: Range): number {
 }
 
 export default function ReportesPage() {
+  return <AdminOnly><ReportesView /></AdminOnly>;
+}
+
+function ReportesView() {
   const { tasks, taskById, projectById, clientById, taskTypeById, members } = useData();
   const { rateFor, setPerson, setDefault, rates } = useRates();
 

@@ -2,32 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, MessageCircle, LineChart, type LucideIcon } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { PILOT } from "@/lib/pilot-flags";
+import { navLinks } from "@/lib/nav";
 import { Logo } from "@/components/Logo";
 import { ProfileMenu } from "@/components/ProfileMenu";
 
-// 4 destinos: Hacer · Organizar · Hablar · Entender.
-// `match` decide el estado activo agrupando las sub-rutas de cada destino.
-const links: { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean }[] = [
-  { href: "/dashboard", label: "Hoy", icon: Home, match: (p) => p === "/dashboard" },
-  { href: "/tareas", label: "Tareas", icon: ListTodo, match: (p) => p === "/tareas" || p === "/timesheet" },
-  { href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" },
-  {
-    href: "/insights",
-    label: "Análisis",
-    icon: LineChart,
-    match: (p) => ["/insights", "/reportes", "/rachas", "/recap"].includes(p),
-  },
-];
-
 export function TopNav() {
   const pathname = usePathname();
-  const { currentUserId } = useApp();
+  const { currentUserId, isAdmin } = useApp();
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
+  const links = navLinks(isAdmin);
 
   return (
     <header className="sticky top-0 z-[45] border-b border-line bg-surface/80 backdrop-blur">
@@ -40,7 +26,7 @@ export function TopNav() {
             </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {links.filter((l) => PILOT.messages || l.href !== "/mensajes").map((l) => {
+            {links.map((l) => {
               const activeLink = l.match(pathname);
               const Icon = l.icon;
               return (

@@ -22,7 +22,9 @@ const TimeEntrySchema = z.object({
   attendees: z.array(z.object({ name: z.string(), minutes: z.number() })).optional(),
 });
 
-// Historial real de registros (para timesheet y reportes).
+// Historial real de registros. El muro individuo/equipo (no ver las HORAS de otros) se
+// aplica en las vistas por rol: timesheet/recap se filtran a "self" para no-admins, e
+// insights/reportes son admin-only. Las rachas (días activos, NO horas) usan todo, para todos.
 export async function GET() {
   if (!notionConfigured() || !DB) return NextResponse.json({ records: [] });
   try {

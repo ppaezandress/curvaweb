@@ -1,20 +1,28 @@
 "use client";
 
-import { LineChart, BarChart3, Flame, Sparkles } from "lucide-react";
+import { LineChart, BarChart3, Flame, Sparkles, Camera } from "lucide-react";
 import { SegmentedNav, type SegTab } from "@/components/SegmentedNav";
+import { useApp } from "@/lib/app-context";
 
-// Hub "Análisis": Insights · Reportes · Rachas · Recap (las URLs se conservan).
-const tabs: SegTab[] = [
+// Sub-nav por rol. Admin: Insights · Reportes · Rachas · Recap (métricas de equipo).
+// Miembro: Momentos · Recap · Rachas (su data + lo divertido; nada de equipo).
+const ADMIN_TABS: SegTab[] = [
   { href: "/insights", label: "Insights", icon: LineChart },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/rachas", label: "Rachas", icon: Flame },
   { href: "/recap", label: "Recap", icon: Sparkles },
 ];
+const MEMBER_TABS: SegTab[] = [
+  { href: "/momentos", label: "Momentos", icon: Camera },
+  { href: "/recap", label: "Recap", icon: Sparkles },
+  { href: "/rachas", label: "Rachas", icon: Flame },
+];
 
 export default function AnalyticsLayout({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useApp();
   return (
     <div className="space-y-6">
-      <SegmentedNav tabs={tabs} />
+      <SegmentedNav tabs={isAdmin ? ADMIN_TABS : MEMBER_TABS} />
       {children}
     </div>
   );

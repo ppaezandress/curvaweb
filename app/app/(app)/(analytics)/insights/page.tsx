@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminOnly } from "@/components/AdminOnly";
 import { useEffect, useMemo, useState } from "react";
 import {
   Clock,
@@ -126,6 +127,10 @@ function smoothCurve(vals: number[], max: number) {
 }
 
 export default function InsightsPage() {
+  return <AdminOnly><InsightsView /></AdminOnly>;
+}
+
+function InsightsView() {
   const { taskById, projectById, clientById, members, memberById } = useData();
   const { currentUserId } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;

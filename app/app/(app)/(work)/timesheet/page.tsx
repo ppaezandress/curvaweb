@@ -32,7 +32,7 @@ function fmtH(mins: number) {
 const DOW = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
 export default function TimesheetPage() {
-  const { currentUserId } = useApp();
+  const { currentUserId, isAdmin } = useApp();
   const { tasks, taskById, projectById, clientById, memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
@@ -117,9 +117,11 @@ export default function TimesheetPage() {
             <button onClick={() => setScope("me")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "me" ? "bg-ink text-white" : "text-muted"}`}>
               <User size={15} /> Yo
             </button>
-            <button onClick={() => setScope("team")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "team" ? "bg-ink text-white" : "text-muted"}`}>
-              <Users size={15} /> Equipo
-            </button>
+            {isAdmin && (
+              <button onClick={() => setScope("team")} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${scope === "team" ? "bg-ink text-white" : "text-muted"}`}>
+                <Users size={15} /> Equipo
+              </button>
+            )}
           </div>
         }
       />

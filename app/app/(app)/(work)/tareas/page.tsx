@@ -34,7 +34,7 @@ const GROUPS: { key: Group; label: string; icon: React.ReactNode }[] = [
 const prioRank = (t: Task) => (t.priority === "Alta" ? 3 : t.priority === "Media" ? 2 : t.priority === "Baja" ? 1 : 0) + (/curso|progress|haciendo/i.test(t.status) ? 0.5 : 0);
 
 export default function TareasPage() {
-  const { currentUserId, sessionSecondsForTask } = useApp();
+  const { currentUserId, sessionSecondsForTask, isAdmin } = useApp();
   const { tasks, projectById, clientById } = useData();
 
   const [view, setView] = useState<View>("mine");
@@ -107,8 +107,8 @@ export default function TareasPage() {
         subtitle="Mira tus pendientes por cliente, urgencia o estado — con claridad."
         action={
           <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
-            <button onClick={() => { setView("mine"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "mine" ? "bg-ink text-white" : "text-muted"}`}><ListTodo size={15} /> Mías</button>
-            <button onClick={() => { setView("all"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "all" ? "bg-ink text-white" : "text-muted"}`}><Users size={15} /> Equipo</button>
+            <button onClick={() => { setView("mine"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "mine" ? "bg-ink text-white" : "text-muted"}`}><ListTodo size={15} /> {isAdmin ? "Mías" : "Mis tareas"}</button>
+            {isAdmin && <button onClick={() => { setView("all"); setClientFilter(null); }} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition focus-ring ${view === "all" ? "bg-ink text-white" : "text-muted"}`}><Users size={15} /> Equipo</button>}
           </div>
         }
       />
