@@ -1,12 +1,13 @@
 "use client";
 
-import { LineChart, BarChart3, Flame, Sparkles, Camera } from "lucide-react";
+import { LineChart, BarChart3, Flame, Sparkles, Camera, Users } from "lucide-react";
 import { SegmentedNav, type SegTab } from "@/components/SegmentedNav";
 import { useApp } from "@/lib/app-context";
 
-// Sub-nav por rol. Admin: Insights · Reportes · Rachas · Recap (métricas de equipo).
-// Miembro: Momentos · Recap · Rachas (su data + lo divertido; nada de equipo).
+// Sub-nav por rol. Admin: Equipo · Insights · Reportes · Rachas · Recap (métricas de equipo).
+// Miembro: Insights (su data) · Recap · Rachas · Momentos (su data + lo divertido; nada de equipo).
 const ADMIN_TABS: SegTab[] = [
+  { href: "/equipo", label: "Equipo", icon: Users },
   { href: "/insights", label: "Insights", icon: LineChart },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/rachas", label: "Rachas", icon: Flame },
