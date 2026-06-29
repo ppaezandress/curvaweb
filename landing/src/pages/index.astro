@@ -183,7 +183,7 @@ const producto = {
       <div class="max-w-2xl mb-4">
         <p class="reveal eyebrow text-ember-300 mb-5">La curva</p>
         <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">Hoy estás <span class="text-ember-300">aquí</span>. Te llevamos <span class="curve-text-live">acá</span>.</h2>
-        <p class="reveal mt-5 text-lg text-sand-400 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
+        <p data-wordfade class="mt-5 text-lg sm:text-xl text-sand-200 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
       </div>
 
       <!-- Escena horizontal (desktop): gráfica con punto viajero -->
@@ -388,7 +388,7 @@ const producto = {
             <svg class="w-28 h-9 mx-auto mb-3 opacity-80" viewBox="0 0 100 32" fill="none" preserveAspectRatio="none" aria-hidden="true">
               <path d={n.spark} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class={n.accent === 'ember' ? 'text-ember-300' : 'text-blue-300'}></path>
             </svg>
-            <p class={`display font-semibold tabular-nums leading-none ${i % 2 === 0 ? 'text-6xl sm:text-7xl curve-text-live' : 'text-5xl sm:text-6xl text-sand-50'}`}>{n.value}</p>
+            <p data-count={n.value} class={`display font-semibold tabular-nums leading-none ${i % 2 === 0 ? 'text-6xl sm:text-7xl curve-text-live' : 'text-5xl sm:text-6xl text-sand-50'}`}>{n.value}</p>
             <p class="text-sm text-sand-400 mt-3 leading-snug">{n.label}</p>
           </div>
         ))}
@@ -433,7 +433,7 @@ const producto = {
             {/* Prueba: métricas + testimonial con autor */}
             <div class="p-8 sm:p-10 bg-sand-50 flex flex-col">
               <div class="grid grid-cols-2 gap-x-6 gap-y-7">
-                {c.metrics.map((m) => (<div><p class="display text-3xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
+                {c.metrics.map((m) => (<div><p data-count={m.value} class="display text-3xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
               </div>
               {c.quote && (
                 <blockquote class="mt-8 pt-7 border-t border-sand-200">

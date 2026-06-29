@@ -47,6 +47,7 @@
   /* Movimiento */
   --ease-curve: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-draw:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-pitch: cubic-bezier(0.6, 0, 0.05, 1); /* "snap" tipo Framer/Pitch */
 }
 
 /* Tokens que no son del theme de Tailwind */
@@ -148,17 +149,19 @@ body {
   will-change: transform;
 }
 
-/* Scroll reveal */
+/* Scroll reveal (estilo Pitch: blur + leve scale + snap) */
 .reveal {
   opacity: 0;
-  transform: translateY(22px);
-  transition: opacity var(--dur-3) var(--ease-curve), transform var(--dur-3) var(--ease-curve);
+  transform: translateY(26px) scale(0.985);
+  filter: blur(4px);
+  transition: opacity 0.7s var(--ease-pitch), transform 0.7s var(--ease-pitch), filter 0.7s var(--ease-pitch);
+  will-change: transform, opacity, filter;
 }
-.reveal.is-visible { opacity: 1; transform: none; }
-.reveal-d1 { transition-delay: 70ms; }
-.reveal-d2 { transition-delay: 140ms; }
-.reveal-d3 { transition-delay: 210ms; }
-.reveal-d4 { transition-delay: 280ms; }
+.reveal.is-visible { opacity: 1; transform: none; filter: none; }
+.reveal-d1 { transition-delay: 80ms; }
+.reveal-d2 { transition-delay: 160ms; }
+.reveal-d3 { transition-delay: 240ms; }
+.reveal-d4 { transition-delay: 320ms; }
 
 /* ----------------------------- Atmósfera ----------------------------- */
 
@@ -304,7 +307,7 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .reveal { opacity: 1; transform: none; }
+  .reveal { opacity: 1; transform: none; filter: none; }
   .cursor-glow, .glow-orb { display: none; }
   [data-load] { opacity: 1; }
   .grain::after { display: none; }
