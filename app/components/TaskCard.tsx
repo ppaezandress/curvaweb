@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
-import { statusToneClass, type Task } from "@/lib/mock-data";
+import { type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
 import { useCelebrate } from "@/lib/celebrate-context";
 import { formatClock, formatDuration } from "@/lib/format";
 import { isDone as isDoneStatus } from "@/lib/task-status";
 import { openInNotion } from "@/lib/notion-url";
 import { Avatar } from "@/components/Avatar";
+import { StatusPicker } from "@/components/StatusPicker";
 import { TypeIcon } from "@/components/TypeIcon";
 import { TaskPhotos } from "@/components/TaskPhotos";
 import { TaskDetailDrawer } from "@/components/TaskDetailDrawer";
@@ -110,9 +111,7 @@ export function TaskCard({ task }: { task: Task }) {
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-muted">{type?.label}</span>
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusToneClass(task.status)}`}>
-            {task.status}
-          </span>
+          <StatusPicker taskId={task.id} status={task.status} onChanged={reload} />
           {task.internal && (
             <span className="rounded-full bg-curva-teal/10 px-2 py-0.5 text-[11px] font-semibold text-curva-teal">Interno</span>
           )}

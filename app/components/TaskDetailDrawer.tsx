@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, ExternalLink } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { statusToneClass } from "@/lib/mock-data";
+import { StatusPicker } from "@/components/StatusPicker";
 import { formatDuration, hhmmFromISO } from "@/lib/format";
 import { openInNotion } from "@/lib/notion-url";
 import { Avatar } from "@/components/Avatar";
@@ -22,7 +22,7 @@ function dayLabel(iso: string) {
 // Detalle por tarea: su historial real de sesiones + cómo se compara con tu benchmark.
 // Es el "genera data por tarea y aprende de eso" — abre desde cualquier TaskCard.
 export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) {
-  const { taskById, clientById, projectById, memberById } = useData();
+  const { taskById, clientById, projectById, memberById, reload } = useData();
   const { currentUserId, isAdmin, sessionSecondsForTask: liveSecs } = useApp();
 
   const [records, setRecords] = useState<Rec[]>([]);
@@ -86,7 +86,7 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-2">
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusToneClass(task.status)}`}>{task.status}</span>
+              <StatusPicker taskId={task.id} status={task.status} onChanged={reload} />
               {task.priority && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted"><Flag size={11} /> {task.priority}</span>}
             </div>
             <h2 className="font-display text-lg font-bold leading-tight text-fg">{task.name}</h2>
