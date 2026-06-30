@@ -594,12 +594,6 @@ const producto = {
   .marquee-track { animation: marquee 36s linear infinite; }
   .marquee-track.marquee-rev { animation-duration: 30s; animation-direction: reverse; }
   @keyframes marquee { to { transform: translateX(-50%); } }
-  .cases-track { display: flex; gap: 1.5rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
-  .cases-track::-webkit-scrollbar { display: none; }
-  .case-card { scroll-snap-align: start; flex: 0 0 88%; max-width: 540px; }
-  @media (min-width: 640px) { .case-card { flex: 0 0 48%; } }
-  @media (min-width: 1024px) { .case-card { flex: 0 0 31.5%; } }
-  .dot-active { background-color: var(--color-ember); }
   @media (max-width: 640px) { .marquee-track { animation-duration: 24s; } .marquee-track.marquee-rev { animation-duration: 20s; } }
   @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
   .text-balance { text-wrap: balance; }

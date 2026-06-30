@@ -499,7 +499,7 @@ body {
   .curve-pin-sticky { position: sticky; top: 0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
 }
 /* Caption de etapa activa (cross-fade durante el pin) */
-.pin-cap { position: relative; min-height: 4.5rem; }
+.pin-cap { position: relative; min-height: 5.5rem; }
 .pin-cap > span {
   position: absolute; left: 0; right: 0; top: 0; text-align: center;
   opacity: 0; transform: translateY(10px);
@@ -516,4 +516,5 @@ body {
   .curve-pin { height: auto !important; }
   .curve-pin-sticky { position: static; min-height: 0; }
   .pin-cap > span { transition: none; }
+  .twinkle { animation: none; opacity: 0.4; }
 }

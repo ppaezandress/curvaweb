@@ -1,3 +1,8 @@
+// ⏸️ PARQUEADO (no se importa desde v10x). Lo reemplazó curve-pin.ts para #la-curva.
+// Se conserva como patrón reusable: "encender hitos por scroll" en una escena NO fijada
+// (ver docs/animaciones-backlog.md). Para reactivarlo: re-importar en BaseLayout y apuntar
+// el path a un `[data-curve-draw="scroll"]` dentro del contenedor de la escena.
+//
 // Storytelling de la curva: enciende cada hito cuando el trazo lo alcanza.
 // Usa la MISMA fórmula de progreso que curve-draw.ts (basada en el top del path),
 // así el encendido queda sincronizado con el dibujo del trazo.
