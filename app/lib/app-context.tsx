@@ -116,12 +116,21 @@ function readAiEnabled(userId: string): boolean {
   try { return localStorage.getItem(aiEnabledKey(userId)) === "1"; } catch { return false; }
 }
 
-// Gracia de inactividad: 5 min. Override demo vía localStorage["curva.graceSeconds"].
-const DEFAULT_GRACE_SECONDS = 300;
+// Gracia de inactividad. En ESCRITORIO (Tauri) hay idle real del sistema (lee/escribe en
+// cualquier app) → 5 min basta. En el NAVEGADOR no se puede saber si trabajas en otra app
+// (leer un PDF, el cel, una llamada NO generan eventos en la pestaña), así que marcar
+// inactivo ahí da falsos positivos. Por eso en navegador la gracia es enorme: solo flaggea
+// cronómetros claramente OLVIDADOS (ej. dejado toda la noche), nunca trabajo real.
+const DEFAULT_GRACE_SECONDS = 300; // escritorio (Tauri), con idle del sistema
+const BROWSER_GRACE_SECONDS = 6 * 3600; // navegador: prácticamente no marca inactivo
+function isTauri() {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
 function graceMs() {
   if (typeof window === "undefined") return DEFAULT_GRACE_SECONDS * 1000;
   const raw = Number(localStorage.getItem("curva.graceSeconds"));
-  return (raw > 0 ? raw : DEFAULT_GRACE_SECONDS) * 1000;
+  if (raw > 0) return raw * 1000; // override manual (demo/test) siempre gana
+  return (isTauri() ? DEFAULT_GRACE_SECONDS : BROWSER_GRACE_SECONDS) * 1000;
 }
 
 const ACTIVITY_EVENTS = [

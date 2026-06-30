@@ -23,7 +23,7 @@ import { CoworkingProvider } from "@/lib/use-coworking";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { ready, currentUserId, openTasks } = useApp();
-  const { ready: dataReady } = useData();
+  const { ready: dataReady, source } = useData();
 
   useEffect(() => {
     if (ready && !currentUserId) router.replace("/login");
@@ -49,6 +49,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         className="mx-auto max-w-5xl px-4 py-6 sm:py-8"
         style={{ paddingBottom: hasDock ? 140 : 88 }}
       >
+        {(source === "mock" || source === "mock-local") && (
+          <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            ⚠️ Estás viendo <b>datos de prueba</b> — no se pudo conectar a Notion ahorita. Tu tiempo medido sí se guarda; recarga en un rato para ver tu info real.
+          </div>
+        )}
         {children}
       </main>
       <TaskSwitcher />

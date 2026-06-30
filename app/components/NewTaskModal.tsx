@@ -137,7 +137,7 @@ export function NewTaskModal({
 
       {suggested && (
         <p className="-mt-1 flex items-center gap-1.5 text-xs text-curva-indigo">
-          <Sparkles size={13} /> Curvi sugirió prioridad, esfuerzo y fecha — ajústalos si quieres.
+          <Sparkles size={13} /> Te sugerimos prioridad, esfuerzo y fecha — ajústalos si quieres.
         </p>
       )}
 

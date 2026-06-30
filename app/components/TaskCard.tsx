@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink } from "lucide-react";
+import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { statusToneClass, type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
@@ -38,6 +38,22 @@ export function TaskCard({ task }: { task: Task }) {
         body: JSON.stringify({ taskId: task.id, status: "DONE" }),
       });
       celebrate(task.id, task.name);
+      await reload();
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  // Reabrir una tarea terminada por error (Done → En curso). El backend acepta cualquier status.
+  const reopen = async () => {
+    if (marking) return;
+    setMarking(true);
+    try {
+      await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: task.id, status: "EN CURSO" }),
+      });
       await reload();
     } finally {
       setMarking(false);
@@ -145,22 +161,33 @@ export function TaskCard({ task }: { task: Task }) {
         >
           <Camera size={15} />
         </button>
-        {/* Marcar Done (oculto si ya está done) */}
+        {/* Terminar la tarea (marca Done; pausa el reloj internamente) */}
         {!done && (
           <button
             onClick={markDone}
             disabled={marking}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
-            aria-label="Marcar como completada"
-            title="Marcar Done"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-semibold text-muted transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
+            aria-label="Terminar tarea"
+            title="Terminar (marcar como Done)"
           >
-            <CircleCheck size={16} />
+            <CircleCheck size={16} /> <span className="hidden sm:inline">Terminar</span>
           </button>
         )}
         {done && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-            <Check size={12} /> Done
-          </span>
+          <>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+              <Check size={12} /> Done
+            </span>
+            <button
+              onClick={reopen}
+              disabled={marking}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-medium text-muted transition hover:border-accent hover:text-accent disabled:opacity-40 focus-ring"
+              aria-label="Reabrir tarea"
+              title="Reabrir (volver a En curso)"
+            >
+              <RotateCcw size={14} /> <span className="hidden sm:inline">Reabrir</span>
+            </button>
+          </>
         )}
         {/* Abrir en barra sin arrancar (solo si no está abierta) */}
         {!isOpen && !done && (

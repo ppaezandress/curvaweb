@@ -7,7 +7,6 @@ import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/format";
 import { TaskCard } from "@/components/TaskCard";
-import { CurviPanel } from "@/components/curvi/CurviPanel";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { isAssignedTo, isDone } from "@/lib/task-status";
 
@@ -112,9 +111,6 @@ export default function TareasPage() {
           </div>
         }
       />
-
-      {/* Curvi en tira compacta (no roba espacio) */}
-      <CurviPanel compact />
 
       {/* Una sola barra de controles: buscar · agrupar · Done */}
       <div className="flex flex-wrap items-center gap-2">

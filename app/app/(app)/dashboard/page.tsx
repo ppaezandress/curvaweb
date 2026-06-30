@@ -13,7 +13,6 @@ import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { statusToneClass } from "@/lib/mock-data";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
-import { CurviPanel } from "@/components/curvi/CurviPanel";
 import { AITodayCard } from "@/components/AITodayCard";
 import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { MomentumDashboard } from "@/components/MomentumDashboard";
@@ -156,7 +155,7 @@ export default function HomePage() {
             })}
             <button onClick={openGuidedCreate} className="flex w-full items-center gap-3 border-t border-line bg-accent/5 px-4 py-3 text-left text-accent transition hover:bg-accent/10">
               <Plus size={15} />
-              <span className="text-sm font-semibold">Crear «{q.trim()}» — Curvi te ayuda a completarla</span>
+              <span className="text-sm font-semibold">Crear «{q.trim()}» y empezar a medir</span>
             </button>
           </div>
         )}
@@ -193,11 +192,6 @@ export default function HomePage() {
       {/* Tiempo de IA en vivo (conector Claude Code/Desktop) */}
       <div className="rise rise-3">
         <AITodayCard />
-      </div>
-
-      {/* Curvi: mentaliza el día + plan concreto con el porqué + Q&A */}
-      <div className="rise rise-3">
-        <CurviPanel />
       </div>
 
       {/* Momentum (estilo WHOOP): tu día vs tu día típico + semana interactiva */}

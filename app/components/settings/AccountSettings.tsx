@@ -39,7 +39,7 @@ export function AccountSettings() {
       if (!u.user) return;
       const path = `${u.user.id}/avatar-${Date.now()}.${(file.name.split(".").pop() || "jpg").toLowerCase()}`;
       const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
-      if (error) return;
+      if (error) { alert("No se pudo subir la foto: " + error.message); return; }
       const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
       await sb.from("profiles").update({ avatar_url: url }).eq("id", u.user.id);
       setPhotoUrl(url);
