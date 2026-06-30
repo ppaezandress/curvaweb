@@ -5,7 +5,7 @@ interface Props {
   waLink: string;
 }
 const { calLink, waLink } = Astro.props;
-const year = 2026;
+const year = new Date().getFullYear();
 ---
 <footer class="surface-ink text-sand-300 py-14 px-5">
   <div class="max-w-6xl mx-auto">

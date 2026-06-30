@@ -111,7 +111,7 @@ const productos = [
 <!-- Menú móvil -->
 <div id="mobile-menu" class="mobile-menu md:hidden">
   <div class="flex flex-col h-full pt-24 px-7 pb-8 bg-sand-50 overflow-y-auto">
-    <p class="eyebrow text-sand-400 mb-3">Servicios</p>
+    <p class="eyebrow text-sand-500 mb-3">Servicios</p>
     <nav class="flex flex-col" aria-label="Móvil">
       {pilares.flatMap((pil) => pil.items).map((it) => (
         <a href={it.href} class="flex items-center gap-3 py-3 border-b border-sand-200 text-ink">
@@ -120,7 +120,7 @@ const productos = [
         </a>
       ))}
     </nav>
-    <p class="eyebrow text-sand-400 mb-3 mt-7">Productos digitales</p>
+    <p class="eyebrow text-sand-500 mb-3 mt-7">Productos digitales</p>
     <nav class="flex flex-col">
       {productos.map((p) => (
         <a href={p.href} class="flex items-center gap-3 py-3 border-b border-sand-200 text-ink">

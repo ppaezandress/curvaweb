@@ -7,6 +7,7 @@ import '@fontsource-variable/inter';
 import '../styles/global.css';
 import { ClientRouter } from 'astro:transitions';
 import Seo from '../components/Seo.astro';
+import Thread from '../components/Thread.astro';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
 
@@ -17,6 +18,7 @@ interface Props {
   type?: 'website' | 'article';
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   bodyClass?: string;
+  thread?: boolean;
 }
 
 const {
@@ -26,6 +28,7 @@ const {
   type,
   jsonLd,
   bodyClass = '',
+  thread = false,
 } = Astro.props;
 ---
 
@@ -35,7 +38,7 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="theme-color" content="#1a1410" />
+    <meta name="theme-color" content="#0b0a14" />
     <Seo title={title} description={description} image={image} type={type} jsonLd={jsonLd} />
     <ClientRouter />
   </head>
@@ -43,6 +46,8 @@ const {
   <body class={`bg-sand-50 text-ink antialiased overflow-x-hidden ${bodyClass}`}>
     <!-- Glow ambiental del cursor (persistente entre navegaciones) -->
     <div id="cursor-glow" class="cursor-glow" aria-hidden="true" transition:persist></div>
+
+    {thread && <Thread />}
 
     <slot />
 
@@ -66,6 +71,9 @@ const {
       import { initParallax } from '../scripts/parallax';
       import { initTabs } from '../scripts/tabs';
       import { initMagnetic } from '../scripts/magnetic';
+      import { initThread } from '../scripts/thread';
+      import { initCurvePin } from '../scripts/curve-pin';
+      import { initOdometer } from '../scripts/odometer';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -89,6 +97,9 @@ const {
         initParallax();
         initTabs();
         initMagnetic();
+        initThread();
+        initCurvePin();
+        initOdometer();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))

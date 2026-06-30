@@ -55,9 +55,9 @@ const despues = [
 // Hitos sobre la curva (coords % sobre la Bézier del viewBox 1280x420).
 // `at` = fracción del recorrido en que se "enciende" (sincroniza con el trazo); `href` = su servicio.
 const hitosCurva = [
-  { n: '01', label: 'Exploración',  left: 27.3, top: 79.8, at: 0.24, href: '/servicios/diagnostico' },
-  { n: '02', label: 'Diagnóstico',  left: 51.6, top: 59.5, at: 0.50, href: '/servicios/procesos' },
-  { n: '03', label: 'Implementación', left: 75.7, top: 31.9, at: 0.74, href: '/servicios/digitalizacion' },
+  { n: '01', label: 'Exploración',    cap: 'Entendemos tu operación a fondo.',      left: 27.3, top: 79.8, at: 0.24, href: '/servicios/diagnostico' },
+  { n: '02', label: 'Diagnóstico',    cap: 'Vemos qué se traba y por qué.',          left: 51.6, top: 59.5, at: 0.50, href: '/servicios/procesos' },
+  { n: '03', label: 'Implementación', cap: 'Lo armamos y se queda funcionando solo.', left: 75.7, top: 31.9, at: 0.74, href: '/servicios/digitalizacion' },
 ];
 
 // Mismo viaje como timeline vertical para móvil (la gráfica horizontal se aplana en pantallas chicas).
@@ -102,6 +102,7 @@ const producto = {
   title="CURVA. Transformación operativa y digital"
   description="Ordenamos y digitalizamos la operación de empresas en crecimiento para que el dueño recupere el control y el negocio jale sin él encima."
   jsonLd={jsonLd}
+  thread
 >
   <Nav overHero calLink={calLink} />
 
@@ -121,8 +122,8 @@ const producto = {
         <span class="inline-block w-7 h-px bg-ember-300/60"></span>
         Transformación operativa y digital
       </p>
-      <h1 data-load="2" class="display text-[2.7rem] leading-[1.04] sm:text-5xl lg:text-[4rem] font-semibold max-w-4xl tracking-tight text-balance">
-        Que tu empresa funcione por <span class="curve-text-live">estructura</span>, no por esfuerzo.
+      <h1 class="word-settle display text-[2.7rem] leading-[1.04] sm:text-5xl lg:text-[4rem] font-semibold max-w-4xl tracking-tight text-balance">
+        Que tu empresa funcione por <span class="word-after curve-text">estructura</span>, no por <span class="word-before">esfuerzo</span>.
       </h1>
       <p data-load="3" class="mt-7 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-xl">
         Ponemos orden, lo conectamos con tecnología y lo dejamos funcionando. Para que dejes de cargar la empresa en la espalda.
@@ -143,17 +144,16 @@ const producto = {
   </section>
 
   <!-- ============================== CINTA (qué hace CURVA — 2 filas opuestas, bordes difuminados) ============================== -->
-  <div class="cinta py-7 bg-ink select-none border-y border-white/5 space-y-3">
-    <svg width="0" height="0" class="absolute" aria-hidden="true"><defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#60a5fa"/></linearGradient></defs></svg>
+  <div class="cinta py-7 bg-ink select-none border-y border-white/5 space-y-3" aria-hidden="true">
     {[capacidades, [...capacidades].reverse()].map((row, r) => (
       <div class="overflow-hidden whitespace-nowrap">
         <div class={`marquee-track inline-flex items-center ${r === 1 ? 'marquee-rev' : ''}`}>
           {Array.from({ length: 2 }).map(() => (
             <span class="inline-flex items-center">
               {row.map((c) => (
-                <span class="mx-7 inline-flex items-center gap-3 text-sand-400">
-                  <svg viewBox="0 0 32 12" class="w-8 h-3 flex-shrink-0" fill="none" aria-hidden="true"><path d="M0,10 C7,10 9,2 16,2 C23,2 25,10 32,6" stroke="url(#mg)" stroke-width="2" stroke-linecap="round"/></svg>
-                  <span class="display text-lg sm:text-xl font-medium text-sand-300">{c}</span>
+                <span class="inline-flex items-center text-sand-300">
+                  <span class="display text-lg sm:text-xl font-medium">{c}</span>
+                  <span class="mx-7 text-ember-300/50">·</span>
                 </span>
               ))}
             </span>
@@ -190,12 +190,23 @@ const producto = {
     <div class="mx-auto max-w-6xl relative z-10">
       <div class="max-w-2xl mb-4">
         <p class="reveal eyebrow text-ember-300 mb-5">La curva</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">Hoy estás <span class="text-ember-300">aquí</span>. Te llevamos <span class="curve-text-live">acá</span>.</h2>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">Hoy estás <span class="word-before text-ember-300">aquí</span>. Te llevamos <span class="word-after curve-text">acá</span>.</h2>
         <p data-wordfade class="mt-5 text-lg sm:text-xl text-sand-200 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
       </div>
 
-      <!-- Escena horizontal (desktop): gráfica con punto viajero -->
-      <div class="reveal reveal-scale relative mt-12 sm:mt-20 hidden sm:block">
+      <!-- Escena horizontal (desktop): pin scrollytelling — el punto viaja atado al scroll -->
+      <div class="curve-pin hidden sm:block">
+       <div class="curve-pin-sticky">
+        <div class="reveal reveal-scale relative w-full mt-4">
+        <!-- Caption de etapa activa (cross-fade durante el pin) -->
+        <div class="pin-cap text-center display text-lg sm:text-2xl font-semibold text-sand-100 mb-7">
+          {hitosCurva.map((m, i) => (
+            <span class={i === 0 ? 'is-active' : ''}>
+              <span class="text-ember-300 tabular-nums mr-2">{m.n}</span>{m.label}
+              <span class="block text-sm sm:text-base font-normal text-sand-400 mt-1.5">{m.cap}</span>
+            </span>
+          ))}
+        </div>
         <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
           <defs>
             <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
@@ -238,8 +249,8 @@ const producto = {
           <path d={`${curvePath} L1240,392 L40,392 Z`} fill="url(#curve-area)"></path>
           <!-- Riel tenue -->
           <path d={curvePath} stroke="rgba(255,255,255,0.10)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10"></path>
-          <!-- Trazo firma ligado al scroll -->
-          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-draw="scroll" style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
+          <!-- Trazo firma ligado al pin (lo conduce curve-pin.ts) -->
+          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-pin style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
 
           <!-- Hitos sobre la curva -->
           <circle cx="350" cy="335" r="5" fill="#0b0a14" stroke="#8b5cf6" stroke-width="2.5"></circle>
@@ -268,12 +279,14 @@ const producto = {
         <!-- Extremos (letras grandes — Pau) -->
         <div class="absolute left-0 -bottom-2 sm:bottom-0 max-w-[48%]">
           <p class="eyebrow text-ember-300 mb-2 text-sm">Hoy</p>
-          <p class="display text-2xl sm:text-4xl font-semibold text-sand-100 leading-[1.05]">Operación por sensación</p>
+          <p class="display text-2xl sm:text-4xl font-semibold text-sand-100 leading-[1.05]">Operación por <span class="word-before">sensación</span></p>
         </div>
         <div class="absolute right-0 top-0 max-w-[48%] text-right">
           <p class="eyebrow text-blue-300 mb-2 text-sm">Con CURVA</p>
-          <p class="display text-2xl sm:text-4xl font-semibold text-blue-300 leading-[1.05]">Operación por sistema</p>
+          <p class="display text-2xl sm:text-4xl font-semibold text-blue-300 leading-[1.05]">Operación por <span class="word-after">sistema</span></p>
         </div>
+        </div>
+       </div>
       </div>
 
       <!-- Escena vertical (móvil): mismo viaje como timeline -->
@@ -377,9 +390,13 @@ const producto = {
         {numeros.map((n, i) => (
           <div class="num-rise text-center">
             <svg class="w-28 h-9 mx-auto mb-3 opacity-80" viewBox="0 0 100 32" fill="none" preserveAspectRatio="none" aria-hidden="true">
-              <path d={n.spark} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class={n.accent === 'ember' ? 'text-ember-300' : 'text-blue-300'}></path>
+              <path d={n.spark} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" pathLength="1" data-curve-draw="scroll" style="stroke-dasharray:1;stroke-dashoffset:1;" class={n.accent === 'ember' ? 'text-ember-300' : 'text-blue-300'}></path>
             </svg>
-            <p data-count={n.value} class={`display font-semibold tabular-nums leading-none ${i % 2 === 0 ? 'text-6xl sm:text-7xl curve-text-live' : 'text-5xl sm:text-6xl text-sand-50'}`}>{n.value}</p>
+            <p
+              data-count={i === 2 ? undefined : n.value}
+              data-odometer={i === 2 ? n.value : undefined}
+              class={`display font-semibold tabular-nums leading-none text-sand-50 ${i % 2 === 0 ? 'text-6xl sm:text-7xl' : 'text-5xl sm:text-6xl'}`}
+            >{n.value}</p>
             <p class="text-sm text-sand-400 mt-3 leading-snug">{n.label}</p>
           </div>
         ))}
