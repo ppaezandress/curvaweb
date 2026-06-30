@@ -7,6 +7,7 @@ import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
+import { AvatarCropModal } from "@/components/AvatarCropModal";
 
 // Avatar del nav que abre un menú: foto de perfil (subir) + cerrar sesión.
 export function ProfileMenu() {
@@ -17,6 +18,7 @@ export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -43,17 +45,23 @@ export function ProfileMenu() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Elegir archivo → abrir el modal de recorte (no subimos crudo).
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = ""; // permite re-elegir la misma imagen
+    if (file) setCropFile(file);
+  };
+
+  // Subir la foto YA recortada (cuadrada) que devuelve el modal.
+  const uploadBlob = async (blob: Blob) => {
     const sb = getSupabase();
     if (!sb) return;
     setUploading(true);
     try {
       const { data: u } = await sb.auth.getUser();
       if (!u.user) return;
-      const path = `${u.user.id}/avatar-${Date.now()}.${(file.name.split(".").pop() || "jpg").toLowerCase()}`;
-      const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      const path = `${u.user.id}/avatar-${Date.now()}.jpg`;
+      const { error } = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (error) { alert("No se pudo subir la foto: " + error.message); return; }
       const { data: pub } = sb.storage.from("avatars").getPublicUrl(path);
       const url = pub.publicUrl;
@@ -97,6 +105,13 @@ export function ProfileMenu() {
             <LogOut size={16} /> Cerrar sesión
           </button>
         </div>
+      )}
+      {cropFile && (
+        <AvatarCropModal
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onConfirm={(blob) => { setCropFile(null); uploadBlob(blob); }}
+        />
       )}
     </div>
   );

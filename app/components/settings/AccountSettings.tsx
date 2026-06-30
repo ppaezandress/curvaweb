@@ -7,6 +7,7 @@ import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { useTheme, type Theme } from "@/lib/use-theme";
 import { Avatar } from "@/components/Avatar";
+import { AvatarCropModal } from "@/components/AvatarCropModal";
 
 export function AccountSettings() {
   const { currentUserId } = useApp();
@@ -15,6 +16,7 @@ export function AccountSettings() {
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -29,16 +31,21 @@ export function AccountSettings() {
     })();
   }, []);
 
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) setCropFile(file);
+  };
+
+  const uploadBlob = async (blob: Blob) => {
     const sb = getSupabase();
-    if (!file || !sb) return;
+    if (!sb) return;
     setUploading(true);
     try {
       const { data: u } = await sb.auth.getUser();
       if (!u.user) return;
-      const path = `${u.user.id}/avatar-${Date.now()}.${(file.name.split(".").pop() || "jpg").toLowerCase()}`;
-      const { error } = await sb.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      const path = `${u.user.id}/avatar-${Date.now()}.jpg`;
+      const { error } = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (error) { alert("No se pudo subir la foto: " + error.message); return; }
       const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
       await sb.from("profiles").update({ avatar_url: url }).eq("id", u.user.id);
@@ -80,6 +87,13 @@ export function AccountSettings() {
       <ThemeSelector />
 
       <p className="text-xs text-muted">Tu nombre, correo y rol se sincronizan desde Notion (Team Tracker). Para cambiarlos, edítalos ahí.</p>
+      {cropFile && (
+        <AvatarCropModal
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onConfirm={(blob) => { setCropFile(null); uploadBlob(blob); }}
+        />
+      )}
     </div>
   );
 }
