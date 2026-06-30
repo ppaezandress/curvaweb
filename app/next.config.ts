@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
   // Headers de seguridad (portados del patrón de nazca-web). NO incluye CSP estricto aún
   // (se hace en un lote aparte, probado, para no romper realtime/imágenes/cámara).
   // Permissions-Policy: dejamos `camera=(self)` porque la app la usa (fotos de tarea/selfie).
+  // Análisis se simplificó: Reportes vive en Equipo; Recap y Rachas viven en Momentos.
+  // Redirect server-side (instantáneo, antes del routing) para enlaces/marcadores viejos.
+  async redirects() {
+    return [
+      { source: "/reportes", destination: "/equipo", permanent: false },
+      { source: "/recap", destination: "/momentos", permanent: false },
+      { source: "/rachas", destination: "/momentos", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

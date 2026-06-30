@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Camera, ExternalLink, Music, Flame, CalendarDays, Sparkles } from "lucide-react";
+import { Camera, ExternalLink, Music } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { readMusicLog, type MusicEntry } from "@/lib/music-log";
 import { hhmmFromISO } from "@/lib/format";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { notionTaskUrl } from "@/lib/notion-url";
 import { KudosCard } from "@/components/KudosCard";
+import { RachasBoard } from "@/components/RachasBoard";
+import { AchievementsStrip } from "@/components/AchievementsStrip";
+import { Flame } from "lucide-react";
 
 type TeamPhoto = { id: number; task_id: string; url: string; caption: string | null; user_id: string | null; created_at: string };
 
@@ -56,21 +58,17 @@ export default function MomentosPage() {
         <p className="mt-0.5 text-sm text-muted">Lo divertido del equipo: fotos, buena onda y música. 🎉</p>
       </div>
 
-      {/* Accesos rápidos a lo tuyo */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Link href="/recap" className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-4 text-sm font-semibold text-fg shadow-soft transition hover:border-accent">
-          <Sparkles size={18} className="text-accent" /> Tu Recap
-        </Link>
-        <Link href="/rachas" className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-4 text-sm font-semibold text-fg shadow-soft transition hover:border-accent">
-          <Flame size={18} className="text-accent" /> Rachas
-        </Link>
-        <Link href="/mensajes" className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-4 text-sm font-semibold text-fg shadow-soft transition hover:border-accent">
-          <CalendarDays size={18} className="text-accent" /> Mensajes
-        </Link>
-      </div>
-
       {/* Buena onda */}
       <KudosCard />
+
+      {/* Logros recientes (reacciones al cerrar tareas) */}
+      <AchievementsStrip />
+
+      {/* Rachas — para todos */}
+      <section>
+        <h2 className="mb-3 flex items-center gap-2 font-display text-xl font-bold text-fg"><Flame size={20} className="text-orange-500" /> Rachas</h2>
+        <RachasBoard />
+      </section>
 
       {/* Fotos del equipo */}
       <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">

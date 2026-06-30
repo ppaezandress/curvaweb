@@ -26,7 +26,6 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
 type Range = "week" | "month" | "all";
-type Lens = "team" | "me";
 
 // --- Solapamiento temporal (para el "aprovechamiento" de la espera de IA) ---
 type Interval = { s: number; e: number };
@@ -123,15 +122,13 @@ export default function InsightsPage() {
 
 function InsightsView() {
   const { taskById, projectById, clientById, memberById } = useData();
-  const { currentUserId, isAdmin } = useApp();
+  const { currentUserId } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>("month");
-  const [lens, setLens] = useState<Lens>("me"); // default: tu data; admin puede ver "Equipo"
   const [trendMode, setTrendMode] = useState<"weeks" | "months">("weeks");
-  const [selClient, setSelClient] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/time-entries")
@@ -142,13 +139,11 @@ function InsightsView() {
   }, []);
 
 
-  // Muro individuo/equipo: un NO-admin SIEMPRE ve solo su data (aunque no haya resuelto
-  // `me`, devolvemos vacío, nunca la de otros). Admin: "Equipo" = todo, "Yo" = self.
+  // "Mi tiempo": SIEMPRE solo tu data (la del equipo vive en /equipo). Si `me` no
+  // resolvió, vacío — nunca la de otros.
   const mine = useMemo(() => {
-    if (isAdmin && lens === "team") return records;
-    // En lente "Yo" (o cualquier no-admin): solo TUS registros. Si `me` no resolvió, vacío.
     return me ? records.filter((r) => r.person === me.name) : [];
-  }, [records, lens, me, isAdmin]);
+  }, [records, me]);
 
   const from = rangeStart(range);
   const inRange = useMemo(
@@ -279,24 +274,7 @@ function InsightsView() {
   const topShare = clientTotal > 0 ? Math.round((byClient[0].minutes / clientTotal) * 100) : 0;
 
   // Drill-down del cliente seleccionado: su tendencia por semana (6) + top tareas.
-  const clientDrill = useMemo(() => {
-    if (!selClient) return null;
-    const recs = inRange.filter((r) => clientKeyOf(r).key === selClient);
-    const wkStart = mondayOf(new Date());
-    const weeks: { label: string; minutes: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const s = new Date(wkStart); s.setDate(s.getDate() - i * 7);
-      const e = new Date(s); e.setDate(e.getDate() + 7);
-      const minutes = recs.filter((r) => { const t = r.start ? new Date(r.start).getTime() : 0; return t >= s.getTime() && t < e.getTime(); }).reduce((a, r) => a + r.minutes, 0);
-      weeks.push({ label: `${s.getDate()}/${s.getMonth() + 1}`, minutes });
-    }
-    const byTask = new Map<string, { name: string; minutes: number }>();
-    recs.forEach((r) => { const t = taskById[r.taskId]; const k = r.taskId || r.id; if (!byTask.has(k)) byTask.set(k, { name: t?.name || "(externa)", minutes: 0 }); byTask.get(k)!.minutes += r.minutes; });
-    const topTasks = [...byTask.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 5);
-    return { weeks, topTasks };
-  }, [selClient, inRange, taskById, projectById, clientById]);
-
-  // Perfil personal (lente "yo"): rasgos derivados de tu propia data.
+  // Perfil personal: rasgos derivados de tu propia data.
   const DIAS_LARGOS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
   const weekendMin = useMemo(
     () => inRange.filter((r) => { const g = new Date(r.start).getDay(); return g === 0 || g === 6; }).reduce((a, r) => a + r.minutes, 0),
@@ -311,27 +289,10 @@ function InsightsView() {
   return (
     <div className="space-y-7">
       <SectionHeader
-        title="Insights"
-        subtitle={isAdmin ? "Cómo trabaja CURVA: tendencias, ritmo y los logros del equipo." : "Tu tiempo: tus tendencias, tu ritmo y tus logros."}
+        title="Mi tiempo"
+        subtitle="Tu tiempo: tus tendencias, tu ritmo y tu perfil. Solo tú ves tu detalle."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {/* Lente: equipo / yo — el toggle solo para admins; los demás ven su data */}
-            {isAdmin && (
-              <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
-                {(["team", "me"] as Lens[]).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLens(l)}
-                    disabled={l === "me" && !me}
-                    className={`rounded-full px-3 py-1.5 font-medium transition focus-ring disabled:opacity-40 ${
-                      lens === l ? "bg-accent text-white" : "text-muted"
-                    }`}
-                  >
-                    {l === "team" ? "Equipo" : "Yo"}
-                  </button>
-                ))}
-              </div>
-            )}
             {/* Periodo */}
             <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
               {(["week", "month", "all"] as Range[]).map((r) => (
@@ -364,11 +325,7 @@ function InsightsView() {
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiDelta icon={<Clock size={16} />} label="Horas medidas" value={formatHours(totalMin * 60)} curr={totalMin} prev={prevTotalMin} />
             <KpiDelta icon={<CheckSquare size={16} />} label="Tareas trabajadas" value={String(distinctTasks)} curr={distinctTasks} prev={prevTasks} />
-            {lens === "team" ? (
-              <KpiDelta icon={<Users size={16} />} label="Personas activas" value={String(distinctPeople)} curr={distinctPeople} prev={null} />
-            ) : (
-              <KpiDelta icon={<CalendarCheck size={16} />} label="Días activos" value={String(activeDays)} curr={activeDays} prev={prevDays} />
-            )}
+            <KpiDelta icon={<CalendarCheck size={16} />} label="Días activos" value={String(activeDays)} curr={activeDays} prev={prevDays} />
             <KpiDelta icon={<Clock size={16} />} label="Horas por tarea" value={formatHours((distinctTasks ? totalMin / distinctTasks : 0) * 60)} curr={distinctTasks ? totalMin / distinctTasks : 0} prev={prevTotalMin != null && prevTasks ? prevTotalMin / prevTasks : null} />
           </div>
 
@@ -479,7 +436,7 @@ function InsightsView() {
               <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
                 <CalendarRange size={20} /> Días más productivos
               </h2>
-              <p className="mb-5 text-sm text-muted">En qué día de la semana rinde más {lens === "me" ? "tu trabajo" : "el equipo"}.</p>
+              <p className="mb-5 text-sm text-muted">En qué día de la semana rinde más tu trabajo.</p>
               <div className="space-y-3">
                 {byWeekday.map((min, i) => (
                   <div key={i} className="flex items-center gap-3">
@@ -516,75 +473,8 @@ function InsightsView() {
             </section>
           </div>
 
-          {/* Concentración de clientes */}
-          {lens === "team" && clientTotal > 0 && (
-            <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
-              <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
-                <Building2 size={20} /> Concentración de clientes
-              </h2>
-              <p className="mb-5 text-sm text-muted">
-                <span className="font-semibold text-fg">{byClient[0].label}</span> concentra el{" "}
-                <span className="font-semibold text-accent">{topShare}%</span> del tiempo.
-                {topShare >= 50 && " Vale la pena diversificar la cartera."}
-              </p>
-              <p className="mb-3 -mt-3 text-xs text-muted">Pica un cliente para ver su tendencia y en qué tareas se va.</p>
-              <div className="space-y-2">
-                {byClient.map((c) => {
-                  const share = Math.round((c.minutes / clientTotal) * 100);
-                  const on = selClient === c.key;
-                  const wkMax = clientDrill ? Math.max(...clientDrill.weeks.map((w) => w.minutes), 1) : 1;
-                  return (
-                    <div key={c.key} className={`rounded-xl transition ${on ? "bg-surface-2 p-3" : ""}`}>
-                      <button onClick={() => setSelClient(on ? null : c.key)} className="w-full text-left focus-ring rounded-lg">
-                        <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                          <span className={`truncate font-semibold ${on ? "text-accent" : "text-fg"}`}>{c.label}</span>
-                          <span className="tabular shrink-0 text-muted">
-                            <span className="font-semibold text-fg">{formatHours(c.minutes * 60)}</span>
-                            <span className="ml-2 text-muted">{share}%</span>
-                          </span>
-                        </div>
-                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
-                          <div className={`h-full rounded-full ${on ? "curva-gradient" : "bg-accent"}`} style={{ width: `${share}%` }} />
-                        </div>
-                      </button>
-                      {on && clientDrill && (
-                        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                          {/* Tendencia 6 semanas */}
-                          <div>
-                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Últimas 6 semanas</p>
-                            <div className="flex items-end justify-between gap-1.5" style={{ height: 64 }}>
-                              {clientDrill.weeks.map((w, i) => (
-                                <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
-                                  <div className={`w-full rounded-t ${i === clientDrill.weeks.length - 1 ? "curva-gradient" : "bg-accent/30"}`} style={{ height: Math.max(Math.round((w.minutes / wkMax) * 52), w.minutes > 0 ? 3 : 0) }} title={`${w.label}: ${formatHours(w.minutes * 60)}`} />
-                                  <span className="text-[9px] text-muted">{w.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          {/* Top tareas */}
-                          <div>
-                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">En qué se va</p>
-                            <div className="space-y-1">
-                              {clientDrill.topTasks.map((t, i) => (
-                                <div key={i} className="flex items-center justify-between gap-2 text-xs">
-                                  <span className="truncate text-fg">{t.name}</span>
-                                  <span className="tabular shrink-0 text-muted">{formatHours(t.minutes * 60)}</span>
-                                </div>
-                              ))}
-                              {clientDrill.topTasks.length === 0 && <p className="text-xs text-muted">Sin detalle.</p>}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Perfil del trabajador — solo en lente "me", solo lo ve la persona (anti-vigilancia) */}
-          {lens === "me" && me && (
+          {/* Perfil del trabajador — solo lo ve la persona (anti-vigilancia) */}
+          {me && (
                 <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">

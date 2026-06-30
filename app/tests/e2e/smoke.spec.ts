@@ -5,9 +5,9 @@ const TEAM = process.env.E2E_TEAM || "CURVA";
 const EMAIL = process.env.E2E_EMAIL || "";
 const PASSWORD = process.env.E2E_PASSWORD || "";
 
-// /reportes es admin-only (redirige a miembros); el e2e corre con cuenta de miembro, así que
-// no se incluye aquí (un goto directo a una ruta que redirige aborta en Chromium).
-const ROUTES = ["/dashboard", "/tareas", "/mensajes", "/insights", "/momentos", "/rachas", "/recap"];
+// Análisis se simplificó a Mi tiempo (/insights) + Momentos. /reportes,/recap,/rachas
+// ahora redirigen (no se prueban con goto directo: un redirect aborta en Chromium).
+const ROUTES = ["/dashboard", "/tareas", "/mensajes", "/insights", "/momentos"];
 
 async function login(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });

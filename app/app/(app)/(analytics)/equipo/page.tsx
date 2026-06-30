@@ -2,10 +2,11 @@
 
 import { AdminOnly } from "@/components/AdminOnly";
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Users, Wallet, Gauge, Flame, Building2, CheckSquare, Receipt, Activity, TrendingUp, Loader2, Sparkles } from "lucide-react";
+import { Clock, Users, Wallet, Gauge, Flame, Building2, CheckSquare, Receipt, Activity, TrendingUp, Loader2, Sparkles, Settings2, Download, Printer } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { formatHours } from "@/lib/format";
 import { useRates, money } from "@/lib/rates";
+import { toCSV, downloadCSV } from "@/lib/export";
 import { computeStreak, dayKey } from "@/lib/streaks";
 import { rangeStart, prevRange, smoothCurve, type Range } from "@/lib/analytics";
 import { mondayOf } from "@/lib/date";
@@ -30,11 +31,21 @@ export default function EquipoPage() {
 
 function EquipoView() {
   const { taskById, projectById, clientById, taskTypeById, members } = useData();
-  const { rateFor } = useRates();
+  const { rateFor, setDefault, setPerson, rates } = useRates();
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>("month");
+  const [showRates, setShowRates] = useState(false);
+
+  const exportCSV = () => {
+    const headers = ["Persona", "Cliente", "Tipo", "Estado", "Tarea", "Fecha", "Minutos", "Horas", "Costo (MXN)"];
+    const data = rows.map((r) => [
+      r.person, r.clientName, r.typeLabel, r.status, taskById[r.taskId]?.name || "(externa)",
+      r.start?.slice(0, 10) || "", r.minutes, (r.minutes / 60).toFixed(2), Math.round(r.cost),
+    ]);
+    downloadCSV(`curva-equipo-${range}.csv`, toCSV(headers, data));
+  };
 
   useEffect(() => {
     fetch("/api/time-entries")
@@ -225,19 +236,50 @@ function EquipoView() {
         title="Equipo"
         subtitle="El panorama completo: en qué se va el tiempo del equipo, cuánto cuesta y quién anda en qué."
         action={
-          <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
-            {(["week", "month", "all"] as Range[]).map((r) => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`rounded-full px-3 py-1.5 font-medium transition focus-ring ${range === r ? "bg-ink text-white" : "text-muted"}`}
-              >
-                {r === "week" ? "Semana" : r === "month" ? "Mes" : "Todo"}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <div className="inline-flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
+              {(["week", "month", "all"] as Range[]).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  className={`rounded-full px-3 py-1.5 font-medium transition focus-ring ${range === r ? "bg-ink text-white" : "text-muted"}`}
+                >
+                  {r === "week" ? "Semana" : r === "month" ? "Mes" : "Todo"}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-zinc-300">
+              <Settings2 size={15} /> Tarifas
+            </button>
+            <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-zinc-300">
+              <Download size={15} /> CSV
+            </button>
+            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white transition focus-ring hover:bg-ink-soft">
+              <Printer size={15} /> PDF
+            </button>
           </div>
         }
       />
+
+      {/* Editor de tarifas (para el costo) */}
+      {showRates && (
+        <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft print:hidden">
+          <h3 className="mb-1 font-display font-bold text-fg">Tarifas por hora (MXN)</h3>
+          <p className="mb-4 text-sm text-muted">Para estimar el costo del tiempo. Se guardan en este dispositivo.</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
+              <span className="font-medium text-muted">Default</span>
+              <input type="number" min={0} value={rates.default || ""} onChange={(e) => setDefault(Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-accent" placeholder="0" />
+            </label>
+            {members.filter((m) => m.name && m.name !== "—").map((m) => (
+              <label key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-line px-3 py-2 text-sm">
+                <span className="truncate font-medium text-muted">{m.name}</span>
+                <input type="number" min={0} value={rates.byPerson[m.name] || ""} onChange={(e) => setPerson(m.name, Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-accent" placeholder={String(rates.default || 0)} />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* En vivo ahora — presencia en tiempo real (independiente del rango/loading) */}
       <section>
