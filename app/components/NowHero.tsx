@@ -12,7 +12,7 @@ export function NowHero({
   assignedCount: number;
   runningCount: number;
 }) {
-  const { active, stop, loggedSecondsToday, focusApp } = useApp();
+  const { active, stop, loggedSecondsToday, focusApp, sessionSecondsForTask } = useApp();
   const elapsed = useLiveElapsed();
   const { taskById, clientById, projectById } = useData();
 
@@ -27,6 +27,9 @@ export function NowHero({
     const task = taskById[active.taskId];
     const client = task ? clientById[task.clientId] : undefined;
     const project = task ? projectById[task.projectId] : undefined;
+    // Total REAL acumulado en la tarea: lo previo (Notion) + sesiones cerradas + esta corrida en vivo.
+    // Es el número que crece y nunca reinicia al pausar/reanudar.
+    const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(active.taskId) + elapsed;
     return (
       <div className="curva-gradient overflow-hidden rounded-3xl p-6 text-white sm:p-8">
         <div className="flex items-center gap-2 text-sm font-medium text-white/80">
@@ -43,8 +46,14 @@ export function NowHero({
             </p>
           </div>
           <div className="text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/60">
+              Total en esta tarea
+            </p>
             <p className="tabular font-display text-4xl font-bold leading-none sm:text-5xl">
-              {formatClock(elapsed)}
+              {formatClock(totalLive)}
+            </p>
+            <p className="mt-1.5 text-sm text-white/70">
+              Esta sesión: <span className="tabular">{formatClock(elapsed)}</span>
             </p>
           </div>
         </div>

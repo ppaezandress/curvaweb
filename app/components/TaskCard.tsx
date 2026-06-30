@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw } from "lucide-react";
+import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw, Clock } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
@@ -125,7 +125,9 @@ export function TaskCard({ task }: { task: Task }) {
             {assignees.slice(0, 4).map((m) => <Avatar key={m!.id} member={m!} size={20} />)}
             {assignees.length > 4 && <span className="ml-2.5 text-xs font-medium text-muted">+{assignees.length - 4}</span>}
           </span>
-          <span className="tabular text-sm text-muted">{formatDuration(total)}</span>
+          <span className="tabular inline-flex items-center gap-1 text-sm text-muted" title="Tiempo total acumulado en esta tarea">
+            <Clock size={13} /> {formatDuration(total)}
+          </span>
           {onAI ? (
             <span className="ai-shimmer inline-flex items-center gap-1 rounded-full bg-curva-indigo/10 px-2 py-0.5 text-[11px] font-semibold text-curva-indigo">
               <Sparkles size={11} className="curva-live-dot" /> IA · {formatClock(elapsed)}

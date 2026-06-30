@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, X, Check, RefreshCw } from "lucide-react";
 import { useCelebrate } from "@/lib/celebrate-context";
+import { useApp } from "@/lib/app-context";
+import { useData } from "@/lib/data-context";
+import { formatDuration } from "@/lib/format";
 import { addReaction } from "@/lib/reactions";
 
 const EMOJIS = ["🔥", "🎉", "😮‍💨", "💪", "🧠", "😴", "🙌", "😅"];
@@ -10,6 +13,8 @@ const PHRASES = ["¡Tarea cerrada!", "¡Bien hecho!", "Una menos 💥", "¡A cel
 
 export function DoneCelebration() {
   const { celebrating, dismiss } = useCelebrate();
+  const { sessionSecondsForTask } = useApp();
+  const { taskById } = useData();
   const [emoji, setEmoji] = useState<string | null>(null);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -85,6 +90,10 @@ export function DoneCelebration() {
 
   if (!celebrating) return null;
 
+  // Total REAL en la tarea: lo previo (Notion) + todas las sesiones (la recién cerrada ya entró).
+  const task = taskById[celebrating.taskId];
+  const totalSec = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(celebrating.taskId);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       {/* confetti emoji simple */}
@@ -104,6 +113,12 @@ export function DoneCelebration() {
         <p className="text-sm font-medium text-accent">Tarea completada</p>
         <h2 className="mt-1 font-display text-2xl font-bold text-fg">{phrase.current}</h2>
         <p className="mt-1 truncate text-sm text-muted">{celebrating.taskName}</p>
+
+        {/* Tiempo total invertido en la tarea */}
+        <div className="mt-4 rounded-2xl bg-surface-2 px-4 py-3 text-center">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">Tiempo total en esta tarea</p>
+          <p className="tabular font-display text-3xl font-bold text-fg">{formatDuration(totalSec)}</p>
+        </div>
 
         {/* Selfie */}
         <div className="mt-5">
