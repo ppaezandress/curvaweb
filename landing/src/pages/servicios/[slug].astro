@@ -16,9 +16,10 @@ const { prev, next } = prevNext(s.slug);
 const calLink = 'https://cal.com/andres-paez/30min';
 const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
 
-const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-jade' } as const;
-const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-jade' } as const;
-const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/12', jade: 'bg-jade/12' } as const;
+// jade remapeado a azul (gold) — paleta v2 morado+azul, sin esmeralda.
+const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-gold' } as const;
+const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-gold' } as const;
+const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/12', jade: 'bg-gold/12' } as const;
 
 const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
 const jsonLd = [
@@ -50,14 +51,14 @@ const jsonLd = [
           <h1 class="reveal display text-4xl sm:text-5xl lg:text-[3.6rem] font-semibold tracking-tight leading-[1.04] mb-6 text-ink">{s.headline}</h1>
           <p class="reveal text-lg sm:text-xl text-sand-600 leading-relaxed max-w-2xl">{s.description}</p>
           <div class="reveal mt-8 flex flex-col sm:flex-row gap-3">
-            <a href={calLink} target="_blank" rel="noopener" class="group inline-flex items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
-              Agendar diagnóstico
+            <a href={calLink} target="_blank" rel="noopener" class="btn-pop group inline-flex items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
+              Agendar llamada de exploración
               <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
             </a>
           </div>
         </div>
-        <div class="reveal reveal-d1 lg:pt-1">
-          <div class="rounded-3xl border border-sand-200 bg-white p-6 sm:p-7">
+        <div class="reveal reveal-scale reveal-d1 lg:pt-1">
+          <div class="lift rounded-3xl border border-sand-200 bg-white p-6 sm:p-7">
             <p class="eyebrow text-sand-400 mb-4">Qué incluye</p>
             <div class="flex flex-wrap gap-2">
               {s.tags.map((tag) => (<span class="px-3.5 py-1.5 bg-sand-50 rounded-full text-[13px] font-medium text-sand-700 border border-sand-200">{tag}</span>))}
@@ -66,7 +67,9 @@ const jsonLd = [
         </div>
       </div>
     </div>
-    <Curve variant="divider" draw="scroll" class="pointer-events-none absolute -bottom-2 inset-x-0 w-full h-20 opacity-60" />
+    <div class="parallax pointer-events-none absolute -bottom-2 inset-x-0" data-parallax="16">
+      <Curve variant="divider" draw="scroll" class="w-full h-20 opacity-60" />
+    </div>
   </section>
 
   {s.video && (
@@ -96,7 +99,7 @@ const jsonLd = [
         <p class="reveal eyebrow text-sand-400 mb-10">{s.bloques.title}</p>
         <div class="grid sm:grid-cols-2 gap-5">
           {s.bloques.items.map((b, i) => (
-            <div class={`reveal reveal-d${Math.min(i + 1, 4)} surface-ink text-sand-50 p-8 rounded-3xl`}>
+            <div class={`reveal reveal-d${Math.min(i + 1, 4)} lift surface-ink text-sand-50 p-8 rounded-3xl`}>
               <p class="display font-semibold text-lg mb-2">{b.title}</p>
               <p class="text-[15px] text-sand-300 leading-relaxed">{b.desc}</p>
             </div>
@@ -111,8 +114,8 @@ const jsonLd = [
       <div class="mx-auto max-w-7xl">
         <p class="reveal eyebrow text-sand-400 mb-10">{s.herramientas.title}</p>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {s.herramientas.items.map((h) => (
-            <div class="reveal bg-sand-50 border border-sand-200 rounded-2xl p-6 text-center">
+          {s.herramientas.items.map((h, i) => (
+            <div class={`reveal reveal-d${Math.min(i + 1, 4)} lift bg-sand-50 border border-sand-200 rounded-2xl p-6 text-center`}>
               <p class="font-bold text-ink">{h.name}</p>
               <p class="text-xs text-sand-500 mt-1">{h.desc}</p>
             </div>
@@ -128,7 +131,7 @@ const jsonLd = [
         <p class="reveal eyebrow text-sand-400 mb-10">{s.incluye.title}</p>
         <div class="grid sm:grid-cols-2 gap-5">
           {s.incluye.items.map((b, i) => (
-            <div class={`reveal reveal-d${Math.min(i + 1, 4)} bg-sand-50 border border-sand-200 p-8 rounded-3xl`}>
+            <div class={`reveal reveal-d${Math.min(i + 1, 4)} lift bg-sand-50 border border-sand-200 p-8 rounded-3xl`}>
               <p class="display font-semibold text-lg mb-2 text-ink">{b.title}</p>
               <p class="text-[15px] text-sand-600 leading-relaxed">{b.desc}</p>
             </div>
@@ -162,9 +165,9 @@ const jsonLd = [
       <div class="mx-auto max-w-7xl">
         <p class={`eyebrow mb-12 ${accentText[s.accent]}`}>{s.resultados.title}</p>
         <div class="grid sm:grid-cols-3 gap-10">
-          {s.resultados.items.map((m) => (
-            <div class="border-t border-white/15 pt-6">
-              <p class="display text-5xl sm:text-6xl font-semibold curve-text">{m.value}</p>
+          {s.resultados.items.map((m, i) => (
+            <div class={`reveal reveal-d${Math.min(i + 1, 4)} border-t border-white/15 pt-6`}>
+              <p data-count={m.value} class="display text-5xl sm:text-6xl font-semibold curve-text">{m.value}</p>
               <p class="text-base text-sand-300 mt-3">{m.label}</p>
             </div>
           ))}
@@ -184,7 +187,7 @@ const jsonLd = [
         {s.casoDestacado.metrics && (
           <div class="grid grid-cols-3 gap-6">
             {s.casoDestacado.metrics.map((m) => (
-              <div class="border-t border-white/15 pt-5"><p class="display text-3xl sm:text-4xl font-semibold curve-text">{m.value}</p><p class="text-sm text-sand-400 mt-2">{m.label}</p></div>
+              <div class="border-t border-white/15 pt-5"><p data-count={m.value} class="display text-3xl sm:text-4xl font-semibold curve-text">{m.value}</p><p class="text-sm text-sand-400 mt-2">{m.label}</p></div>
             ))}
           </div>
         )}
@@ -197,8 +200,8 @@ const jsonLd = [
       <div class="mx-auto max-w-7xl">
         <p class="reveal eyebrow text-sand-400 mb-10">{s.casos.title}</p>
         <div class="grid sm:grid-cols-2 gap-6">
-          {s.casos.items.map((c) => (
-            <div class="reveal surface-ink text-sand-50 p-8 sm:p-9 rounded-3xl">
+          {s.casos.items.map((c, i) => (
+            <div class={`reveal reveal-d${Math.min(i + 1, 4)} lift surface-ink text-sand-50 p-8 sm:p-9 rounded-3xl`}>
               <p class={`eyebrow mb-3 ${accentText[s.accent]}`}>Caso</p>
               <p class="display font-semibold text-xl mb-2">{c.name}</p>
               <p class="text-[15px] text-sand-300 leading-relaxed mb-5">{c.desc}</p>
@@ -244,7 +247,7 @@ const jsonLd = [
         </div>
         <ul class="border-t border-sand-200">
           {s.senales.items.map((item, i) => (
-            <li class="flex gap-6 items-baseline py-5 border-b border-sand-200">
+            <li class={`reveal reveal-d${Math.min(i + 1, 4)} flex gap-6 items-baseline py-5 border-b border-sand-200`}>
               <span class={`display text-base font-semibold tabular-nums ${accentText[s.accent]}`}>0{i + 1}</span>
               <p class="text-lg sm:text-xl text-ink leading-snug">{item}</p>
             </li>
@@ -257,11 +260,11 @@ const jsonLd = [
   <!-- PREV / NEXT -->
   <section class="px-6 sm:px-10 py-14 bg-sand-50 border-t border-sand-200">
     <div class="mx-auto max-w-7xl grid sm:grid-cols-2 gap-4">
-      <a href={`/servicios/${prev.slug}`} class="group rounded-3xl border border-sand-200 bg-white p-7 hover:border-sand-400 hover:shadow-lg transition-all">
+      <a href={`/servicios/${prev.slug}`} class="lift group rounded-3xl border border-sand-200 bg-white p-7 hover:border-sand-400">
         <p class="eyebrow text-sand-400 mb-2">Anterior</p>
         <p class="display font-semibold text-ink flex items-center gap-2"><svg class="w-4 h-4 text-sand-400 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg>{prev.navLabel}</p>
       </a>
-      <a href={`/servicios/${next.slug}`} class="group rounded-3xl border border-sand-200 bg-white p-7 hover:border-sand-400 hover:shadow-lg transition-all sm:text-right">
+      <a href={`/servicios/${next.slug}`} class="lift group rounded-3xl border border-sand-200 bg-white p-7 hover:border-sand-400 sm:text-right">
         <p class="eyebrow text-sand-400 mb-2">Siguiente</p>
         <p class="display font-semibold text-ink flex items-center gap-2 sm:justify-end">{next.navLabel}<svg class="w-4 h-4 text-sand-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg></p>
       </a>
@@ -272,9 +275,9 @@ const jsonLd = [
   <section class="py-24 sm:py-32 px-6 sm:px-10 surface-ink text-sand-50">
     <div class="reveal mx-auto max-w-3xl text-center">
       <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.06]">{s.cta}</h2>
-      <p class="mt-5 text-lg text-sand-300 max-w-md mx-auto">30 minutos. Sin compromiso. Te decimos con honestidad si podemos ayudarte.</p>
-      <a href={calLink} target="_blank" rel="noopener" class="group mt-8 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 transition-all hover:gap-3">
-        Agendar conversación
+      <p class="mt-5 text-lg text-sand-300 max-w-md mx-auto">30 minutos. Te decimos derecho si te podemos ayudar o no.</p>
+      <a href={calLink} target="_blank" rel="noopener" class="btn-pop group mt-8 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
+        Agendar llamada de exploración
         <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
     </div>
