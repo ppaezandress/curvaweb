@@ -331,8 +331,104 @@ body {
 /* Capa de parallax (la mueve scripts/parallax.ts con el cursor) */
 .parallax { will-change: transform; transition: transform .25s cubic-bezier(0.22, 1, 0.36, 1); }
 
+/* ----------------------------- Segmented control (tabs estilo Framer/Mobbin) ----------------------------- */
+.seg {
+  position: relative;
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.seg-pill {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 0;
+  height: calc(100% - 10px);
+  border-radius: 999px;
+  background: var(--gradient-curve);
+  box-shadow: 0 10px 28px -10px rgba(124, 58, 237, 0.75);
+  transform: translateX(0);
+  transition: transform 0.5s var(--ease-pitch), width 0.5s var(--ease-pitch);
+  pointer-events: none;
+  z-index: 0;
+}
+.seg-btn {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0.6rem 1.15rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-sand-400);
+  transition: color 0.35s var(--ease-pitch);
+}
+.seg-btn:hover { color: var(--color-sand-200); }
+.seg-btn[aria-selected="true"] { color: #fff; }
+.seg-btn[aria-selected="true"]:hover { color: #fff; }
+
+.tab-panel {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(14px) scale(0.99);
+  filter: blur(3px);
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease-pitch), transform 0.5s var(--ease-pitch), filter 0.5s var(--ease-pitch);
+}
+.tab-panel.is-active {
+  position: relative;
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: auto;
+}
+
+/* ----------------------------- Mockup apilado (profundidad estilo Mobbin) ----------------------------- */
+.stack { position: relative; }
+.stack-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(18, 16, 30, 0.55);
+  pointer-events: none;
+}
+.stack-layer.l1 { transform: translateY(16px) scale(0.945); filter: blur(1px); opacity: 0.6; z-index: -1; }
+.stack-layer.l2 { transform: translateY(32px) scale(0.89);  filter: blur(2px); opacity: 0.32; z-index: -2; }
+.stack-front { position: relative; z-index: 1; }
+
+/* ----------------------------- Números: ascenso ligado al scroll (scroll-scrub) ----------------------------- */
+.num-rise { opacity: 0; transform: translateY(60px); }
+@supports (animation-timeline: view()) {
+  .num-rise {
+    animation: num-rise-kf linear both;
+    animation-timeline: view();
+    animation-range: cover 4% cover 40%;
+  }
+  @keyframes num-rise-kf {
+    from { opacity: 0; transform: translateY(60px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+@supports not (animation-timeline: view()) {
+  .num-rise { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal.reveal-scale { transform: none; }
   .lift:hover, .btn-pop:hover, .btn-pop:active { transform: none; }
   .parallax { transform: none !important; }
+  .seg-pill, .tab-panel { transition: none; }
+  .num-rise { opacity: 1 !important; transform: none !important; }
+  [data-magnetic] { transform: none !important; }
 }

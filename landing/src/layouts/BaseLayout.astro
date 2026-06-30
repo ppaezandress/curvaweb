@@ -64,6 +64,8 @@ const {
       import { initCount } from '../scripts/count';
       import { initWordFade } from '../scripts/wordfade';
       import { initParallax } from '../scripts/parallax';
+      import { initTabs } from '../scripts/tabs';
+      import { initMagnetic } from '../scripts/magnetic';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -85,6 +87,8 @@ const {
         initCount();
         initWordFade();
         initParallax();
+        initTabs();
+        initMagnetic();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))
