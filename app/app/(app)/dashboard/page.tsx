@@ -25,7 +25,7 @@ function greeting() {
 }
 
 export default function HomePage() {
-  const { currentUserId, active, stop, switchTo, loggedSecondsToday } = useApp();
+  const { currentUserId, active, stop, switchTo, loggedSecondsToday, sessionSecondsForTask } = useApp();
   const elapsed = useLiveElapsed();
   const { tasks, taskById, clientById, memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
@@ -166,8 +166,9 @@ export default function HomePage() {
         <section className="rise rise-2 curva-gradient overflow-hidden rounded-3xl p-6 text-white shadow-float">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-sm text-white/80"><span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" /> Corriendo</p>
-              <p className="tabular mt-2 font-display text-4xl font-bold sm:text-5xl">{formatClock(elapsed)}</p>
+              <p className="flex items-center gap-2 text-sm text-white/80"><span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" /> Total en esta tarea</p>
+              <p className="tabular mt-2 font-display text-4xl font-bold sm:text-5xl">{formatClock((activeTask.baselineSeconds ?? 0) + sessionSecondsForTask(activeTask.id) + elapsed)}</p>
+              <p className="mt-1 text-sm text-white/80">Esta sesión: <span className="tabular">{formatClock(elapsed)}</span></p>
               <p className="mt-1 truncate text-sm text-white/80">{activeTask.name}{activeClient ? ` · ${activeClient.name}` : ""}</p>
             </div>
             <button onClick={stop} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90">

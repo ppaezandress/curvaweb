@@ -81,11 +81,12 @@ function Lane({
 
 /* ── Fila principal: la tarea que trabajas A MANO ── */
 function ManualRow({ taskId }: { taskId: string }) {
-  const { pause, toggleAI, closeTask, autoResumed, aiEnabled } = useApp();
+  const { pause, toggleAI, closeTask, autoResumed, aiEnabled, sessionSecondsForTask } = useApp();
   const { partners } = useCoworking();
   const elapsed = useLiveElapsed(taskId);
   const { taskById, clientById, projectById } = useData();
   const task = taskById[taskId];
+  const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(taskId) + elapsed;
   const project = task ? projectById[task.projectId] : undefined;
   const client = project ? clientById[project.clientId] : undefined;
   const justResumed = autoResumed === taskId;
@@ -103,7 +104,8 @@ function ManualRow({ taskId }: { taskId: string }) {
         <p className="truncate text-sm font-semibold text-fg">{task?.name || "Tarea"}</p>
         <p className="truncate text-xs text-muted">
           {client?.name ? `${client.name} · ` : ""}
-          <span className="tabular font-semibold text-accent">{formatClock(elapsed)}</span>
+          <span className="tabular font-semibold text-accent">{formatClock(totalLive)}</span>
+          <span className="tabular text-muted"> · sesión {formatClock(elapsed)}</span>
         </p>
       </div>
       {/* Co-working en vivo: quién más está en ESTA tarea ahora mismo */}

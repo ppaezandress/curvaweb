@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
+import { useData } from "@/lib/data-context";
 import { formatClock } from "@/lib/format";
 import { categorizeFocus } from "@/lib/app-category";
 
@@ -12,7 +13,8 @@ function isTauri() {
 // Puente con la app de escritorio (Tauri). Sin notificaciones molestas:
 // cronómetro en la barra de menú, idle del sistema y app en foco.
 export function DesktopBridge() {
-  const { active, stop, markActivity, setFocus } = useApp();
+  const { active, stop, markActivity, setFocus, sessionSecondsForTask } = useApp();
+  const { taskById } = useData();
   const elapsed = useLiveElapsed();
   const lastTitle = useRef("");
   const stopRef = useRef(stop);
@@ -25,13 +27,16 @@ export function DesktopBridge() {
   // 1) Cronómetro en la barra de menú del Mac.
   useEffect(() => {
     if (!isTauri()) return;
-    const title = active ? `▶ ${formatClock(elapsed)}` : "⏱ CURVA";
+    const total = active
+      ? (taskById[active.taskId]?.baselineSeconds ?? 0) + sessionSecondsForTask(active.taskId) + elapsed
+      : 0;
+    const title = active ? `▶ ${formatClock(total)}` : "⏱ CURVA";
     if (title === lastTitle.current) return;
     lastTitle.current = title;
     import("@tauri-apps/api/core")
       .then(({ invoke }) => invoke("set_tray_title", { title }))
       .catch(() => {});
-  }, [active, elapsed]);
+  }, [active, elapsed, taskById, sessionSecondsForTask]);
 
   // 2) "Detener" desde el menú de la barra de menú → detiene el cronómetro.
   useEffect(() => {
