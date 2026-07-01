@@ -33,15 +33,15 @@ const WIN_E = 24 * 60;
 const SPAN = WIN_E - WIN_S;
 const pct = (m: number) => Math.max(0, Math.min(100, ((m - WIN_S) / SPAN) * 100));
 const BANDS = [
-  { from: 6 * 60, to: 12 * 60, cls: "bg-amber-50" },   // mañana
-  { from: 12 * 60, to: 18 * 60, cls: "bg-sky-50" },    // tarde
-  { from: 18 * 60, to: 24 * 60, cls: "bg-indigo-50" }, // noche
+  { from: 6 * 60, to: 12 * 60, cls: "bg-amber-50 dark:bg-amber-400/10" },   // mañana
+  { from: 12 * 60, to: 18 * 60, cls: "bg-sky-50 dark:bg-sky-400/10" },      // tarde
+  { from: 18 * 60, to: 24 * 60, cls: "bg-indigo-50 dark:bg-indigo-400/10" }, // noche
 ];
 const TICKS = [6, 9, 12, 15, 18, 21, 24].map((h) => h * 60);
 
 export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { currentUserId } = useApp();
-  const { tasks, clients, members, memberById } = useData();
+  const { tasks, clients, members, memberById, reload } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [area, setArea] = useState("Trabajo enfocado");
@@ -85,6 +85,13 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTask?.id]);
 
+  // Si `me` carga async (después de montar el modal), siémbralo al abrir para que
+  // "Guardar" nunca salga con 0 personas y el registro se pierda en silencio.
+  useEffect(() => {
+    if (open && me && Object.keys(attendees).length === 0) setAttendees({ [me.name]: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, me]);
+
   const AreaIcon = AREAS.find((a) => a.label === area)?.icon ?? Focus;
   const peopleCount = Object.keys(attendees).length;
 
@@ -107,7 +114,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
     try {
       const startedAt = new Date(`${date}T${startTime}:00`).getTime();
       const endedAt = new Date(`${date}T${endTime}:00`).getTime();
-      await fetch("/api/time-entries", {
+      const r = await fetch("/api/time-entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -120,6 +127,13 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           attendees: list,
         }),
       });
+      const ok = r.ok && (await r.json().catch(() => ({}))).ok !== false;
+      // Refrescar tareas para que el total (rollup "Horas registradas" de Notion) se
+      // actualice de inmediato. Un 2º reload diferido cubre el lag del rollup.
+      if (ok) {
+        await reload();
+        setTimeout(() => { reload(); }, 2000);
+      }
       onClose();
       setTaskId(""); setTaskQuery("");
     } finally {
@@ -137,12 +151,12 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
             <AreaIcon size={13} className="text-muted" />
             <span className="truncate">{area}</span>
-            <span className="text-zinc-300">·</span>
+            <span className="text-zinc-300 dark:text-zinc-600">·</span>
             <span className={valid ? "tabular font-semibold text-fg" : "text-rose-500"}>{valid ? formatDuration(minutes * 60) : "—"}</span>
-            <span className="text-zinc-300">·</span>
+            <span className="text-zinc-300 dark:text-zinc-600">·</span>
             <span>{peopleCount} {peopleCount === 1 ? "persona" : "personas"}</span>
           </span>
-          <button onClick={save} disabled={saving || !valid} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 active:scale-95 disabled:opacity-40">
+          <button onClick={save} disabled={saving || !valid || peopleCount === 0} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 active:scale-95 disabled:opacity-40">
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Guardar
           </button>
         </div>
@@ -164,10 +178,10 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
 
       {/* Horario — ¿de qué hora a qué hora? con mini-timeline visual */}
       <Field label="¿De qué hora a qué hora?">
-        <div className="rounded-2xl border border-line bg-gradient-to-b from-zinc-50/80 to-white p-3.5 shadow-soft">
+        <div className="rounded-2xl border border-line bg-surface-2 p-3.5 shadow-soft">
           <div className="flex items-end gap-2">
             <TimePart label="Inicio" value={startTime} onBump={(d) => bump("start", d)} onChange={setStartTime} />
-            <ArrowRight size={18} className="mb-3 shrink-0 text-zinc-300" />
+            <ArrowRight size={18} className="mb-3 shrink-0 text-zinc-300 dark:text-zinc-600" />
             <TimePart label="Fin" value={endTime} onBump={(d) => bump("end", d)} onChange={setEndTime} accent />
           </div>
 
@@ -181,7 +195,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
                 <Clock size={14} /> {formatDuration(minutes * 60)}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-500">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 dark:bg-rose-500/15 px-3 py-1.5 text-sm font-semibold text-rose-500">
                 El fin debe ser después del inicio
               </span>
             )}
