@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { useApp } from "@/lib/app-context";
-import { formatHours } from "@/lib/format";
+import { formatHours, formatDuration } from "@/lib/format";
 import { dayKey } from "@/lib/streaks";
 import { mondayOf, firstDayOfMonth, monthShort, DIAS_CORTOS } from "@/lib/date";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -272,6 +272,21 @@ function InsightsView() {
   }, [inRange, taskById, projectById, clientById]);
   const clientTotal = byClient.reduce((a, c) => a + c.minutes, 0);
   const topShare = clientTotal > 0 ? Math.round((byClient[0].minutes / clientTotal) * 100) : 0;
+  const clientMax = Math.max(...byClient.map((c) => c.minutes), 1);
+
+  // ---- Historial: mis últimos registros (qué hice y cuándo) ----
+  const historial = useMemo(() => {
+    return [...mine]
+      .filter((r) => r.start)
+      .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
+      .slice(0, 15)
+      .map((r) => {
+        const task = taskById[r.taskId];
+        const project = task ? projectById[task.projectId] : undefined;
+        const client = project ? clientById[project.clientId] : undefined;
+        return { id: r.id, when: new Date(r.start), taskName: task?.name || "Registro externo", client: client?.name, minutes: r.minutes, mode: r.mode };
+      });
+  }, [mine, taskById, projectById, clientById]);
 
   // Drill-down del cliente seleccionado: su tendencia por semana (6) + top tareas.
   // Perfil personal: rasgos derivados de tu propia data.
@@ -472,6 +487,56 @@ function InsightsView() {
               </div>
             </section>
           </div>
+
+          {/* Por cliente: cuánto tiempo le has metido a cada uno */}
+          {byClient.length > 0 && clientTotal > 0 && (
+            <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+              <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
+                <Building2 size={20} /> Tu tiempo por cliente
+              </h2>
+              <p className="mb-5 text-sm text-muted">Cuánto le has invertido a cada cliente en este periodo.</p>
+              <div className="space-y-3">
+                {byClient.map((c) => (
+                  <div key={c.key} className="flex items-center gap-3">
+                    <span className="w-28 shrink-0 truncate text-sm font-medium text-fg" title={c.label}>{c.label}</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <div className="curva-gradient h-full rounded-full" style={{ width: `${(c.minutes / clientMax) * 100}%` }} />
+                    </div>
+                    <span className="tabular w-20 shrink-0 text-right text-xs font-semibold text-fg">{formatDuration(c.minutes * 60)}</span>
+                    <span className="tabular w-9 shrink-0 text-right text-[11px] text-muted">{Math.round((c.minutes / clientTotal) * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Historial: mis últimos registros */}
+          {historial.length > 0 && (
+            <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+              <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
+                <CalendarRange size={20} /> Historial reciente
+              </h2>
+              <p className="mb-5 text-sm text-muted">Tus últimos registros de tiempo — qué hiciste y cuándo.</p>
+              <ul className="divide-y divide-line/70">
+                {historial.map((h) => (
+                  <li key={h.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-fg">
+                        {h.taskName}
+                        {h.mode === "ai" && <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-curva-indigo/10 px-1.5 py-0.5 text-[10px] font-semibold text-curva-indigo"><Sparkles size={9} /> IA</span>}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {h.when.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}
+                        {" · "}{h.when.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                        {h.client ? ` · ${h.client}` : ""}
+                      </p>
+                    </div>
+                    <span className="tabular shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-fg">{formatDuration(h.minutes * 60)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* Perfil del trabajador — solo lo ve la persona (anti-vigilancia) */}
           {me && (

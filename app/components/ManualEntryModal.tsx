@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Loader2, Check, Clock, Minus, Plus, ArrowRight,
+  Loader2, Check, Clock, Minus, Plus, ArrowRight, AlertTriangle,
   Focus, Phone, MapPin, Users, Search, MoreHorizontal, type LucideIcon,
 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
@@ -60,6 +60,16 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
   );
   const [earlyFor, setEarlyFor] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  // [3] Anti doble-registro: cargamos los registros existentes para avisar si el nuevo
+  // se encima con otro en la misma tarea (p. ej. una junta que otra persona ya registró).
+  const [records, setRecords] = useState<{ taskId: string; person: string; start: string; minutes: number }[]>([]);
+  const [dupMsg, setDupMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/time-entries").then((r) => r.json()).then((d) => setRecords(d.records || [])).catch(() => {});
+  }, [open]);
+  // Al cambiar tarea/fecha/horario, re-evaluamos (limpia el aviso previo).
+  useEffect(() => { setDupMsg(null); }, [taskId, date, startTime, endTime]);
 
   // Ajuste rápido ±15 min (sin cruzar el otro extremo).
   const bump = (which: "start" | "end", delta: number) => {
@@ -110,10 +120,24 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
       minutes: earlyFor.has(name) && attendees[name] ? (attendees[name] as number) : minutes,
     }));
     if (list.length === 0) return;
+    const startedAt = new Date(`${date}T${startTime}:00`).getTime();
+    const endedAt = new Date(`${date}T${endTime}:00`).getTime();
+    // [3] Si hay una tarea elegida y ya existe un registro que se encima con este
+    // horario, avisamos una vez antes de crear un duplicado. El 2º clic procede.
+    if (taskId && !dupMsg) {
+      const clash = records.find((r) => {
+        if (r.taskId !== taskId || !r.start) return false;
+        const rs = new Date(r.start).getTime();
+        const re = rs + r.minutes * 60000;
+        return rs < endedAt && re > startedAt;
+      });
+      if (clash) {
+        setDupMsg(`Ya hay un registro en esta tarea que se encima con ese horario (${clash.person || "alguien"}). ¿Registrar de todos modos?`);
+        return;
+      }
+    }
     setSaving(true);
     try {
-      const startedAt = new Date(`${date}T${startTime}:00`).getTime();
-      const endedAt = new Date(`${date}T${endTime}:00`).getTime();
       const r = await fetch("/api/time-entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,18 +171,25 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
       onClose={onClose}
       title="Registrar tiempo"
       footer={
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
-            <AreaIcon size={13} className="text-muted" />
-            <span className="truncate">{area}</span>
-            <span className="text-zinc-300 dark:text-zinc-600">·</span>
-            <span className={valid ? "tabular font-semibold text-fg" : "text-rose-500"}>{valid ? formatDuration(minutes * 60) : "—"}</span>
-            <span className="text-zinc-300 dark:text-zinc-600">·</span>
-            <span>{peopleCount} {peopleCount === 1 ? "persona" : "personas"}</span>
-          </span>
-          <button onClick={save} disabled={saving || !valid || peopleCount === 0} className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 active:scale-95 disabled:opacity-40">
-            {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Guardar
-          </button>
+        <div className="space-y-2.5">
+          {dupMsg && (
+            <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" /> <span>{dupMsg}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
+              <AreaIcon size={13} className="text-muted" />
+              <span className="truncate">{area}</span>
+              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+              <span className={valid ? "tabular font-semibold text-fg" : "text-rose-500"}>{valid ? formatDuration(minutes * 60) : "—"}</span>
+              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+              <span>{peopleCount} {peopleCount === 1 ? "persona" : "personas"}</span>
+            </span>
+            <button onClick={save} disabled={saving || !valid || peopleCount === 0} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-95 disabled:opacity-40 ${dupMsg ? "bg-amber-600 shadow-amber-600/20" : "bg-accent shadow-accent/20"}`}>
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {dupMsg ? "Registrar de todos modos" : "Guardar"}
+            </button>
+          </div>
         </div>
       }
     >
