@@ -1,4 +1,4 @@
-import { Home, ListTodo, MessageCircle, LineChart, type LucideIcon } from "lucide-react";
+import { Home, ListTodo, MessageCircle, LineChart, FolderOpen, type LucideIcon } from "lucide-react";
 import { PILOT } from "@/lib/pilot-flags";
 
 export type NavLink = { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean };
@@ -12,6 +12,7 @@ export function navLinks(): NavLink[] {
     { href: "/tareas", label: "Tareas", icon: ListTodo, match: (p) => p === "/tareas" || p === "/timesheet" },
     { href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" },
     { href: "/insights", label: "Análisis", icon: LineChart, match: (p) => ["/insights", "/reportes", "/rachas", "/recap", "/equipo", "/momentos"].includes(p) },
+    { href: "/recursos", label: "Recursos", icon: FolderOpen, match: (p) => p === "/recursos" },
   ];
   return links.filter((l) => PILOT.messages || l.href !== "/mensajes");
 }
