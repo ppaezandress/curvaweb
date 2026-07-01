@@ -29,6 +29,7 @@ import { formatHours, formatDuration } from "@/lib/format";
 import { dayKey } from "@/lib/streaks";
 import { mondayOf, firstDayOfMonth, monthShort, DIAS_CORTOS } from "@/lib/date";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { CountUp } from "@/components/anim/CountUp";
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
 type Range = "week" | "month" | "all";
@@ -212,6 +213,22 @@ function InsightsView() {
       .catch(() => setRecords([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // Reveal al scroll: cada sección con .insights-reveal aparece al entrar en viewport
+  // (portado del reveal.ts vanilla de la landing). Re-observa cuando cambia el contenido.
+  useEffect(() => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const els = Array.from(document.querySelectorAll<HTMLElement>(".insights-reveal:not(.is-visible)"));
+    if (reduce) { els.forEach((el) => el.classList.add("is-visible")); return; }
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("is-visible"); io.unobserve(e.target); } }),
+      { threshold: 0.1, rootMargin: "0px 0px -6% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+    // Se re-ejecuta cuando llega la data (records) o cambia el panorama; con eso las
+    // secciones nuevas quedan observadas. (smartInsights/doneTasks derivan de lo mismo.)
+  }, [loading, records, panorama.total]);
 
 
   // "Mi tiempo": SIEMPRE solo tu data (la del equipo vive en /equipo). Si `me` no
@@ -457,7 +474,7 @@ function InsightsView() {
 
       {/* Lo que te dice tu data — insights accionables para decidir mejor. */}
       {smartInsights.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-accent/[0.06] to-transparent shadow-soft">
+        <section className="reveal insights-reveal overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-accent/[0.06] to-transparent shadow-soft">
           <div className="flex items-center gap-2 px-6 pt-5">
             <Lightbulb size={18} className="text-accent" />
             <h2 className="font-display text-lg font-bold text-fg">Lo que te dice tu data</h2>
@@ -472,15 +489,15 @@ function InsightsView() {
       {/* Panorama de MIS tareas — mucha data por persona, aunque no midan tiempo. */}
       {panorama.total > 0 && (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <PanoStat icon={<CheckSquare size={16} />} label="Tareas asignadas" value={String(panorama.total)} />
-            <PanoStat icon={<CalendarCheck size={16} />} label="Terminadas" value={String(panorama.done)} tone="text-emerald-600" />
-            <PanoStat icon={<Target size={16} />} label="Cumplimiento" value={`${panorama.completion}%`} tone="text-accent" />
-            <PanoStat icon={<Clock size={16} />} label="Horas registradas" value={formatHours(panorama.totalSecs)} />
+          <div className="reveal insights-reveal grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <PanoStat icon={<CheckSquare size={16} />} label="Tareas asignadas" value={panorama.total} />
+            <PanoStat icon={<CalendarCheck size={16} />} label="Terminadas" value={panorama.done} tone="text-emerald-600" />
+            <PanoStat icon={<Target size={16} />} label="Cumplimiento" value={panorama.completion} suffix="%" tone="text-accent" />
+            <PanoStat icon={<Clock size={16} />} label="Horas registradas" value={panorama.totalSecs / 3600} decimals={1} suffix=" h" />
           </div>
 
           {/* Carga actual */}
-          <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+          <section className="reveal insights-reveal rounded-2xl border border-line bg-surface p-6 shadow-soft">
             <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><CalendarRange size={20} /> Tu carga actual</h2>
             <p className="mb-5 text-sm text-muted">Lo que tienes abierto ahora mismo.</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -492,7 +509,7 @@ function InsightsView() {
           </section>
 
           {/* Por estado — barra apilada + leyenda */}
-          <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+          <section className="reveal insights-reveal rounded-2xl border border-line bg-surface p-6 shadow-soft">
             <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><CheckSquare size={20} /> Tus tareas por estado</h2>
             <p className="mb-5 text-sm text-muted">Cómo se reparte todo tu trabajo.</p>
             <div className="flex h-3.5 w-full overflow-hidden rounded-full bg-surface-2">
@@ -511,7 +528,7 @@ function InsightsView() {
           </section>
 
           {/* Por cliente + por tipo */}
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="reveal insights-reveal grid gap-6 md:grid-cols-2">
             <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
               <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><Building2 size={20} /> Por cliente</h2>
               <p className="mb-5 text-sm text-muted">Cuántas tareas y horas por cliente.</p>
@@ -564,7 +581,7 @@ function InsightsView() {
       {/* Tareas terminadas: cuánto le metiste a cada una (lo que Diana pedía). Vive
           aquí, no en el inicio. Solo las que tienen tiempo real; el resto se cuenta. */}
       {doneTasks.list.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-soft">
+        <section className="reveal insights-reveal overflow-hidden rounded-2xl border border-line bg-surface shadow-soft">
           <div className="flex flex-wrap items-end justify-between gap-2 border-b border-line px-6 py-4">
             <div>
               <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
@@ -917,12 +934,12 @@ function InsightCard({ tone, icon, title, action }: { tone: "risk" | "watch" | "
   );
 }
 
-// KPI simple del panorama (sin delta).
-function PanoStat({ icon, label, value, tone = "text-fg" }: { icon: React.ReactNode; label: string; value: string; tone?: string }) {
+// KPI simple del panorama (sin delta), con número que cuenta al entrar.
+function PanoStat({ icon, label, value, decimals = 0, suffix = "", tone = "text-fg" }: { icon: React.ReactNode; label: string; value: number; decimals?: number; suffix?: string; tone?: string }) {
   return (
     <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
       <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted">{icon}{label}</p>
-      <p className={`tabular mt-1 font-display text-2xl font-bold ${tone}`}>{value}</p>
+      <p className={`tabular mt-1 font-display text-2xl font-bold ${tone}`}><CountUp value={value} decimals={decimals} suffix={suffix} /></p>
     </div>
   );
 }
@@ -931,7 +948,7 @@ function PanoStat({ icon, label, value, tone = "text-fg" }: { icon: React.ReactN
 function LoadCell({ value, label, tone }: { value: number; label: string; tone: string }) {
   return (
     <div className="rounded-2xl bg-surface-2/60 px-3 py-4 text-center">
-      <p className={`tabular font-display text-2xl font-bold leading-none ${tone}`}>{value}</p>
+      <p className={`tabular font-display text-2xl font-bold leading-none ${tone}`}><CountUp value={value} /></p>
       <p className="mt-1.5 text-[11px] font-medium text-muted">{label}</p>
     </div>
   );

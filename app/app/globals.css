@@ -27,6 +27,46 @@
   /* Curva de movimiento estándar del producto (la curva de ease) */
   --ease-curva: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-curve: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Snap tipo Framer/Pitch — para reveals y micro-interacciones (de la landing) */
+  --ease-pitch: cubic-bezier(0.6, 0, 0.05, 1);
+}
+
+/* Reveal al entrar en viewport: fade + subida + blur (portado de la landing).
+   La visibilidad la controla un IntersectionObserver que añade .is-visible. */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.99);
+  filter: blur(4px);
+  transition: opacity 0.6s var(--ease-pitch), transform 0.6s var(--ease-pitch), filter 0.6s var(--ease-pitch);
+  will-change: opacity, transform, filter;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* Botón magnético sutil (versión CSS, sin JS) */
+.btn-magnetic {
+  transition: transform 0.28s var(--ease-pitch), box-shadow 0.28s var(--ease-pitch);
+}
+.btn-magnetic:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+.btn-magnetic:active {
+  transform: translateY(0) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+  .btn-magnetic {
+    transition: none;
+  }
 }
 
 /* Neutros SEMÁNTICOS — inline para que las utilidades usen la var de runtime

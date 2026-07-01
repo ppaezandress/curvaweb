@@ -18,6 +18,7 @@ import { ManualEntryModal } from "@/components/ManualEntryModal";
 import { MomentumDashboard } from "@/components/MomentumDashboard";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { CountUp } from "@/components/anim/CountUp";
 
 function greeting() {
   const h = new Date().getHours();
@@ -205,7 +206,7 @@ export default function HomePage() {
           </div>
           <Link
             href="/insights"
-            className="group inline-flex shrink-0 items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-accent transition hover:border-accent hover:bg-accent/5 focus-ring"
+            className="btn-magnetic group inline-flex shrink-0 items-center gap-1 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-accent transition hover:border-accent hover:bg-accent/5 focus-ring"
           >
             Ver mi tiempo <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
           </Link>
@@ -280,7 +281,7 @@ function PriorityDot({ priority }: { priority: "Baja" | "Media" | "Alta" }) {
 function SummaryStat({ label, value, tone, border }: { label: string; value: number; tone: string; border?: boolean }) {
   return (
     <div className={`bg-surface-2/50 px-3 py-4 text-center ${border ? "border-l border-line" : ""}`}>
-      <p className={`tabular font-display text-3xl font-bold leading-none ${tone}`}>{value}</p>
+      <p className={`tabular font-display text-3xl font-bold leading-none ${tone}`}><CountUp value={value} /></p>
       <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
     </div>
   );
