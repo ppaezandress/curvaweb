@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
-import { formatClock } from "@/lib/format";
+import { formatClock, formatDuration } from "@/lib/format";
 import { dayKey, computeStreak } from "@/lib/culture";
 import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { statusToneClass } from "@/lib/mock-data";
@@ -53,6 +53,19 @@ export default function HomePage() {
     () => tasks.filter((t) => isAssignedTo(t, currentUserId)),
     [tasks, currentUserId],
   );
+  // Mi resumen: SOLO mi data real (tareas asignadas a mí). Conteos + terminadas con
+  // su tiempo total (baseline de Notion + sesiones del cronómetro). Sin data inventada.
+  const summary = useMemo(() => {
+    const done = mine.filter((t) => isDone(t.status));
+    const enCurso = mine.filter((t) => !isDone(t.status) && /curso|progress|haciendo/i.test(t.status)).length;
+    const demoradas = mine.filter((t) => !isDone(t.status) && /demor|atras|blocked|vencid/i.test(t.status)).length;
+    const withTime = done
+      .map((t) => ({ task: t, secs: t.baselineSeconds + sessionSecondsForTask(t.id) }))
+      .sort((a, b) => b.secs - a.secs);
+    const totalDoneSecs = withTime.reduce((a, r) => a + r.secs, 0);
+    return { doneCount: done.length, enCurso, demoradas, done: withTime.slice(0, 8), totalDoneSecs };
+  }, [mine, sessionSecondsForTask]);
+
   // "Para hoy": foco del día, ordenado por urgencia (vencidas/hoy/prioridad/en curso).
   const focusList = useMemo(() => {
     const today0 = new Date().setHours(0, 0, 0, 0);
@@ -178,6 +191,41 @@ export default function HomePage() {
         </section>
       )}
 
+      {/* Mi resumen: tareas hechas + tiempo real (mi data, sin métricas de nadie más) */}
+      <section className="rise rise-2 rounded-3xl border border-line bg-surface p-5 shadow-soft sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold text-fg">Mi resumen</h2>
+          <span className="tabular text-xs font-medium text-muted">{formatDuration(summary.totalDoneSecs)} en tareas terminadas</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2.5">
+          <SummaryStat label="Terminadas" value={summary.doneCount} tone="text-emerald-600" />
+          <SummaryStat label="En curso" value={summary.enCurso} tone="text-accent" />
+          <SummaryStat label="Demoradas" value={summary.demoradas} tone={summary.demoradas > 0 ? "text-rose-500" : "text-muted"} />
+        </div>
+
+        {summary.done.length > 0 ? (
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Terminadas · cuánto les metiste</p>
+            <ul className="divide-y divide-line/70">
+              {summary.done.map(({ task, secs }) => {
+                const client = clientById[task.clientId];
+                return (
+                  <li key={task.id} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-fg">{task.name}</p>
+                      {client && <p className="truncate text-xs text-muted">{client.name}</p>}
+                    </div>
+                    <span className="tabular shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-fg">{formatDuration(secs)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted">Aún no tienes tareas terminadas. Cuando cierres una, aquí verás cuánto tiempo le metiste.</p>
+        )}
+      </section>
+
       {/* Acciones primarias (sin duplicar el nav) */}
       <section className="rise rise-2 grid grid-cols-2 gap-3">
         <button onClick={() => { setNewName(""); setShowNew(true); }} className="flex items-center gap-3 rounded-2xl border border-accent bg-accent p-4 text-left text-white shadow-soft transition focus-ring hover:opacity-95 active:scale-[0.99]">
@@ -235,4 +283,14 @@ export default function HomePage() {
 function PriorityDot({ priority }: { priority: "Baja" | "Media" | "Alta" }) {
   const tone = priority === "Alta" ? "bg-rose-500" : priority === "Media" ? "bg-amber-500" : "bg-zinc-400";
   return <span className={`h-2 w-2 rounded-full ${tone}`} title={`Prioridad ${priority}`} />;
+}
+
+// Contador de "Mi resumen" (terminadas / en curso / demoradas).
+function SummaryStat({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-2xl bg-surface-2 px-3 py-3 text-center">
+      <p className={`tabular font-display text-2xl font-bold ${tone}`}>{value}</p>
+      <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
+    </div>
+  );
 }
