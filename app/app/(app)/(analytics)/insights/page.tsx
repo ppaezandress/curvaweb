@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { useApp } from "@/lib/app-context";
+import { isDone, isAssignedTo } from "@/lib/task-status";
 import { formatHours, formatDuration } from "@/lib/format";
 import { dayKey } from "@/lib/streaks";
 import { mondayOf, firstDayOfMonth, monthShort, DIAS_CORTOS } from "@/lib/date";
@@ -121,9 +122,20 @@ export default function InsightsPage() {
 }
 
 function InsightsView() {
-  const { taskById, projectById, clientById, memberById } = useData();
-  const { currentUserId } = useApp();
+  const { tasks, taskById, projectById, clientById, memberById } = useData();
+  const { currentUserId, sessionSecondsForTask } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;
+
+  // Tareas terminadas MÍAS con su tiempo real (baseline Notion + cronómetro).
+  // Solo mostramos las que tienen tiempo; contamos aparte las cerradas sin registro.
+  const doneTasks = useMemo(() => {
+    const mineDone = tasks.filter((t) => isAssignedTo(t, currentUserId) && isDone(t.status));
+    const withTime = mineDone
+      .map((t) => ({ task: t, secs: t.baselineSeconds + sessionSecondsForTask(t.id) }))
+      .filter((r) => r.secs > 0)
+      .sort((a, b) => b.secs - a.secs);
+    return { list: withTime.slice(0, 12), total: mineDone.length, timedTotalSec: withTime.reduce((a, r) => a + r.secs, 0), untimed: mineDone.length - withTime.length, maxSec: Math.max(...withTime.map((r) => r.secs), 1) };
+  }, [tasks, currentUserId, sessionSecondsForTask]);
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [loading, setLoading] = useState(true);
@@ -325,6 +337,50 @@ function InsightsView() {
           </div>
         }
       />
+
+      {/* Tareas terminadas: cuánto le metiste a cada una (lo que Diana pedía). Vive
+          aquí, no en el inicio. Solo las que tienen tiempo real; el resto se cuenta. */}
+      {doneTasks.list.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-soft">
+          <div className="flex flex-wrap items-end justify-between gap-2 border-b border-line px-6 py-4">
+            <div>
+              <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
+                <CheckSquare size={20} /> Tareas terminadas
+              </h2>
+              <p className="mt-0.5 text-sm text-muted">Cuánto tiempo le metiste a cada una.</p>
+            </div>
+            <div className="text-right">
+              <p className="tabular font-display text-2xl font-bold text-fg">{formatDuration(doneTasks.timedTotalSec)}</p>
+              <p className="text-xs text-muted">{doneTasks.total} terminadas{doneTasks.untimed > 0 ? ` · ${doneTasks.untimed} sin registro` : ""}</p>
+            </div>
+          </div>
+          <ul className="divide-y divide-line/70">
+            {doneTasks.list.map(({ task, secs }, i) => {
+              const client = clientById[task.clientId];
+              return (
+                <li key={task.id} className="flex items-center gap-4 px-6 py-3">
+                  <span className="tabular w-5 shrink-0 text-center text-sm font-bold text-muted/60">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-fg">{task.name}</p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="h-1.5 max-w-[220px] flex-1 overflow-hidden rounded-full bg-surface-2">
+                        <div className="curva-gradient h-full rounded-full" style={{ width: `${(secs / doneTasks.maxSec) * 100}%` }} />
+                      </div>
+                      {client && <span className="shrink-0 truncate text-[11px] text-muted">{client.name}</span>}
+                    </div>
+                  </div>
+                  <span className="tabular shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-fg">{formatDuration(secs)}</span>
+                </li>
+              );
+            })}
+          </ul>
+          {doneTasks.untimed > 0 && (
+            <p className="border-t border-line px-6 py-3 text-xs text-muted">
+              {doneTasks.untimed} tarea{doneTasks.untimed === 1 ? "" : "s"} más terminada{doneTasks.untimed === 1 ? "" : "s"} sin tiempo registrado (las cerraste sin medir con el cronómetro).
+            </p>
+          )}
+        </section>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-16 text-sm text-muted">
