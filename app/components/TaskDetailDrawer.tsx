@@ -6,6 +6,7 @@ import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, E
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { StatusPicker } from "@/components/StatusPicker";
+import { EsfuerzoPicker } from "@/components/EsfuerzoPicker";
 import { formatDuration, hhmmFromISO } from "@/lib/format";
 import { openInNotion } from "@/lib/notion-url";
 import { Avatar } from "@/components/Avatar";
@@ -87,6 +88,7 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-2">
               <StatusPicker taskId={task.id} status={task.status} onChanged={reload} />
+              <EsfuerzoPicker taskId={task.id} weight={task.weight} onChanged={reload} />
               {task.priority && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted"><Flag size={11} /> {task.priority}</span>}
             </div>
             <h2 className="font-display text-lg font-bold leading-tight text-fg">{task.name}</h2>

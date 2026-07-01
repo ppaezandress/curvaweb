@@ -65,7 +65,8 @@ export function ProfileMenu() {
       if (error) { alert("No se pudo subir la foto: " + error.message); return; }
       const { data: pub } = sb.storage.from("avatars").getPublicUrl(path);
       const url = pub.publicUrl;
-      await sb.from("profiles").update({ avatar_url: url }).eq("id", u.user.id);
+      const { error: upErr } = await sb.from("profiles").update({ avatar_url: url }).eq("id", u.user.id);
+      if (upErr) { alert("No se pudo guardar la foto en tu perfil: " + upErr.message); return; }
       setPhotoUrl(url);
     } finally {
       setUploading(false);
