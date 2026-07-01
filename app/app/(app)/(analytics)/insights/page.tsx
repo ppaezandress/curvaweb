@@ -16,6 +16,11 @@ import {
   ArrowDown,
   UserRound,
   Lock,
+  AlertTriangle,
+  Zap,
+  Sun,
+  CircleCheck,
+  Lightbulb,
 } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { useApp } from "@/lib/app-context";
@@ -369,6 +374,60 @@ function InsightsView() {
   const topWeekdayIdx = byWeekday.reduce((best, m, i, arr) => (m > arr[best] ? i : best), 0);
   const topSlotProfile = [...bySlot].sort((a, b) => b.minutes - a.minutes)[0];
 
+  // ── Motor de insights: traduce la data en decisiones accionables ──
+  // Cada regla dispara solo si el patrón es real; se ordena por urgencia (riesgo →
+  // atención → tip → logro) y se muestran los más relevantes. La meta: que la persona
+  // sepa QUÉ hacer con su data, no solo verla.
+  const smartInsights = useMemo(() => {
+    const out: { tone: "risk" | "watch" | "tip" | "win"; icon: string; title: string; action: string }[] = [];
+    const enCurso = panorama.byStatus.find((s) => s.label === "En curso")?.count || 0;
+    const demoradas = panorama.byStatus.find((s) => s.label === "Demoradas")?.count || 0;
+    const topClientTaskPct = panorama.byClient[0] && panorama.total > 0 ? Math.round((panorama.byClient[0].count / panorama.total) * 100) : 0;
+
+    // Riesgo — atención inmediata
+    if (panorama.vencidas > 0)
+      out.push({ tone: "risk", icon: "alert", title: `${panorama.vencidas} tarea${panorama.vencidas > 1 ? "s" : ""} vencida${panorama.vencidas > 1 ? "s" : ""}`, action: "Priorízalas hoy o mueve su fecha para no arrastrarlas." });
+    if (demoradas > 0)
+      out.push({ tone: "risk", icon: "alert", title: `${demoradas} tarea${demoradas > 1 ? "s" : ""} demorada${demoradas > 1 ? "s" : ""}`, action: "Detecta qué las traba y pide ayuda si algo te bloquea." });
+
+    // Atención — vigilar
+    if (panorama.porVencer > 0)
+      out.push({ tone: "watch", icon: "clock", title: `${panorama.porVencer} vence${panorama.porVencer > 1 ? "n" : ""} en 7 días`, action: "Bloquéalas en tu calendario antes de que se junten." });
+    if (enCurso >= 4)
+      out.push({ tone: "watch", icon: "zap", title: `${enCurso} tareas en curso a la vez`, action: "Cerrar unas antes de abrir más te hace avanzar más rápido." });
+    if (totalMin > 0 && topShare >= 55 && byClient[0] && byClient[0].label !== "Sin cliente")
+      out.push({ tone: "watch", icon: "building", title: `${topShare}% de tu tiempo en ${byClient[0].label}`, action: "Mucha concentración en un cliente — cuida el balance de tu semana." });
+    else if (topClientTaskPct >= 60 && panorama.byClient[0] && panorama.byClient[0].label !== "Sin cliente")
+      out.push({ tone: "watch", icon: "building", title: `${topClientTaskPct}% de tus tareas en ${panorama.byClient[0].label}`, action: "Casi todo tu foco está en un cliente." });
+
+    // Tendencia de tiempo (semana vs semana)
+    if (trend.length >= 2) {
+      const last = trend[trend.length - 1].minutes, prevW = trend[trend.length - 2].minutes;
+      if (prevW > 0) {
+        const p = Math.round(((last - prevW) / prevW) * 100);
+        if (p >= 15) out.push({ tone: "win", icon: "trend", title: `Mediste ${p}% más que la semana pasada`, action: "Vas en subida — mantén el ritmo." });
+        else if (p <= -15) out.push({ tone: "watch", icon: "trend", title: `Mediste ${Math.abs(p)}% menos que la semana pasada`, action: "¿Semana distinta, o se te olvidó registrar tu tiempo?" });
+      }
+    }
+
+    // Tips — cómo mejorar
+    if (panorama.sinFecha >= 3)
+      out.push({ tone: "tip", icon: "clock", title: `${panorama.sinFecha} tareas abiertas sin fecha`, action: "Ponles fecha de entrega para no perderlas de vista." });
+    if (totalMin > 0 && topSlotProfile && topSlotProfile.minutes > 0)
+      out.push({ tone: "tip", icon: "sun", title: `Rindes más por la ${topSlotProfile.label.toLowerCase()}`, action: "Agenda tus tareas más pesadas en esa franja del día." });
+    if (weekendPct >= 25)
+      out.push({ tone: "tip", icon: "alert", title: `Trabajas ${weekendPct}% en fin de semana`, action: "Ojo con el descanso — protege tus fines para sostener el ritmo." });
+
+    // Logros — reforzar
+    if (panorama.completion >= 70 && panorama.total >= 3)
+      out.push({ tone: "win", icon: "target", title: `Cierras el ${panorama.completion}% de lo que te asignan`, action: "Buen nivel de cumplimiento. ¡Sigue así!" });
+    if (panorama.vencidas === 0 && demoradas === 0 && panorama.abiertas > 0)
+      out.push({ tone: "win", icon: "check", title: "Vas al día", action: "Sin vencidas ni demoradas. 🎉 Mantén el control." });
+
+    const order = { risk: 0, watch: 1, tip: 2, win: 3 };
+    return out.sort((a, b) => order[a.tone] - order[b.tone]).slice(0, 6);
+  }, [panorama, topShare, byClient, totalMin, topSlotProfile, weekendPct, trend]);
+
   const empty = !loading && inRange.length === 0;
 
   return (
@@ -395,6 +454,20 @@ function InsightsView() {
           </div>
         }
       />
+
+      {/* Lo que te dice tu data — insights accionables para decidir mejor. */}
+      {smartInsights.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-accent/[0.06] to-transparent shadow-soft">
+          <div className="flex items-center gap-2 px-6 pt-5">
+            <Lightbulb size={18} className="text-accent" />
+            <h2 className="font-display text-lg font-bold text-fg">Lo que te dice tu data</h2>
+          </div>
+          <p className="px-6 pb-4 pt-0.5 text-sm text-muted">Señales de tu semana y qué puedes hacer con ellas.</p>
+          <div className="grid gap-px bg-line/60 sm:grid-cols-2">
+            {smartInsights.map((ins, i) => <InsightCard key={i} {...ins} />)}
+          </div>
+        </section>
+      )}
 
       {/* Panorama de MIS tareas — mucha data por persona, aunque no midan tiempo. */}
       {panorama.total > 0 && (
@@ -812,6 +885,33 @@ function KpiDelta({
             {delta.text}
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Tarjeta de insight accionable: hallazgo (título) + qué hacer (acción), con tono.
+function InsightCard({ tone, icon, title, action }: { tone: "risk" | "watch" | "tip" | "win"; icon: string; title: string; action: string }) {
+  const TONE: Record<string, { chip: string; ring: string }> = {
+    risk: { chip: "bg-rose-500/10 text-rose-500", ring: "text-rose-500" },
+    watch: { chip: "bg-amber-500/10 text-amber-600", ring: "text-amber-600" },
+    tip: { chip: "bg-accent/10 text-accent", ring: "text-accent" },
+    win: { chip: "bg-emerald-500/10 text-emerald-600", ring: "text-emerald-600" },
+  };
+  const ICONS: Record<string, typeof AlertTriangle> = {
+    alert: AlertTriangle, clock: Clock, zap: Zap, building: Building2,
+    trend: TrendingUp, sun: Sun, target: Target, check: CircleCheck,
+  };
+  const Icon = ICONS[icon] || Lightbulb;
+  const t = TONE[tone];
+  return (
+    <div className="flex items-start gap-3 bg-surface px-6 py-4">
+      <span className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${t.chip}`}>
+        <Icon size={16} />
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-fg">{title}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{action}</p>
       </div>
     </div>
   );
