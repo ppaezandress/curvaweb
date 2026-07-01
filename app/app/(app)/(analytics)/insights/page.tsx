@@ -122,9 +122,67 @@ export default function InsightsPage() {
 }
 
 function InsightsView() {
-  const { tasks, taskById, projectById, clientById, memberById } = useData();
+  const { tasks, taskById, projectById, clientById, memberById, taskTypeById } = useData();
   const { currentUserId, sessionSecondsForTask } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;
+
+  // Panorama de MIS tareas (independiente del cronómetro): estado, carga, cliente,
+  // tipo y esfuerzo. Da "mucha data" a cada persona aunque no mida tiempo.
+  const panorama = useMemo(() => {
+    const mineTasks = tasks.filter((t) => isAssignedTo(t, currentUserId));
+    const today0 = new Date().setHours(0, 0, 0, 0);
+    const in7 = today0 + 7 * 86_400_000;
+    const secsOf = (t: (typeof mineTasks)[number]) => t.baselineSeconds + sessionSecondsForTask(t.id);
+
+    const bucket = (s: string) =>
+      isDone(s) ? "Terminadas"
+      : /curso|progress|haciendo/i.test(s) ? "En curso"
+      : /demor|atras|blocked|vencid/i.test(s) ? "Demoradas"
+      : /validar|revis/i.test(s) ? "Por validar"
+      : /espera|hold/i.test(s) ? "En espera"
+      : "Sin empezar";
+    const STATUS_ORDER = ["En curso", "Por validar", "En espera", "Demoradas", "Sin empezar", "Terminadas"] as const;
+    const STATUS_TONE: Record<string, string> = {
+      "En curso": "bg-accent", "Por validar": "bg-curva-indigo", "En espera": "bg-amber-500",
+      "Demoradas": "bg-rose-500", "Sin empezar": "bg-zinc-400", "Terminadas": "bg-emerald-500",
+    };
+    const statusCount = new Map<string, number>();
+    const clientMap = new Map<string, { label: string; count: number; secs: number }>();
+    const typeMap = new Map<string, { label: string; count: number }>();
+    const weightMap = new Map<string, number>();
+    let vencidas = 0, porVencer = 0, sinFecha = 0, abiertas = 0, totalSecs = 0;
+
+    mineTasks.forEach((t) => {
+      statusCount.set(bucket(t.status), (statusCount.get(bucket(t.status)) || 0) + 1);
+      const client = clientById[t.clientId];
+      const ckey = t.internal ? "__int" : (client?.id || "__none");
+      const clabel = t.internal ? "Interno CURVA" : (client?.name || "Sin cliente");
+      const c = clientMap.get(ckey) || { label: clabel, count: 0, secs: 0 };
+      c.count++; c.secs += secsOf(t); clientMap.set(ckey, c);
+      const type = taskTypeById[t.typeId];
+      const tk = type?.label || "Sin tipo";
+      const ty = typeMap.get(tk) || { label: tk, count: 0 };
+      ty.count++; typeMap.set(tk, ty);
+      if (t.weight) weightMap.set(t.weight, (weightMap.get(t.weight) || 0) + 1);
+      totalSecs += secsOf(t);
+      if (!isDone(t.status)) {
+        abiertas++;
+        if (t.dueDate) {
+          const d = new Date(t.dueDate).getTime();
+          if (d < today0) vencidas++; else if (d < in7) porVencer++;
+        } else sinFecha++;
+      }
+    });
+
+    const total = mineTasks.length;
+    const done = statusCount.get("Terminadas") || 0;
+    const byStatus = STATUS_ORDER.filter((s) => (statusCount.get(s) || 0) > 0)
+      .map((s) => ({ label: s, count: statusCount.get(s) || 0, tone: STATUS_TONE[s] }));
+    const byClient = [...clientMap.values()].sort((a, b) => b.count - a.count || b.secs - a.secs);
+    const byType = [...typeMap.values()].sort((a, b) => b.count - a.count);
+    const byWeight = (["Ligera", "Media", "Pesada"] as const).map((w) => ({ label: w, count: weightMap.get(w) || 0 }));
+    return { total, done, completion: total ? Math.round((done / total) * 100) : 0, abiertas, vencidas, porVencer, sinFecha, totalSecs, byStatus, byClient, byType, byWeight, clientMax: Math.max(...byClient.map((c) => c.count), 1), typeMax: Math.max(...byType.map((t) => t.count), 1) };
+  }, [tasks, currentUserId, sessionSecondsForTask, clientById, taskTypeById]);
 
   // Tareas terminadas MÍAS con su tiempo real (baseline Notion + cronómetro).
   // Solo mostramos las que tienen tiempo; contamos aparte las cerradas sin registro.
@@ -316,8 +374,8 @@ function InsightsView() {
   return (
     <div className="space-y-7">
       <SectionHeader
-        title="Mi tiempo"
-        subtitle="Tu tiempo: tus tendencias, tu ritmo y tu perfil. Solo tú ves tu detalle."
+        title="Mi actividad"
+        subtitle="Todo tu trabajo de un vistazo: tus tareas, tu carga, tus clientes y tu tiempo. Solo tú ves tu detalle."
         action={
           <div className="flex flex-wrap items-center gap-2">
             {/* Periodo */}
@@ -337,6 +395,98 @@ function InsightsView() {
           </div>
         }
       />
+
+      {/* Panorama de MIS tareas — mucha data por persona, aunque no midan tiempo. */}
+      {panorama.total > 0 && (
+        <>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <PanoStat icon={<CheckSquare size={16} />} label="Tareas asignadas" value={String(panorama.total)} />
+            <PanoStat icon={<CalendarCheck size={16} />} label="Terminadas" value={String(panorama.done)} tone="text-emerald-600" />
+            <PanoStat icon={<Target size={16} />} label="Cumplimiento" value={`${panorama.completion}%`} tone="text-accent" />
+            <PanoStat icon={<Clock size={16} />} label="Horas registradas" value={formatHours(panorama.totalSecs)} />
+          </div>
+
+          {/* Carga actual */}
+          <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+            <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><CalendarRange size={20} /> Tu carga actual</h2>
+            <p className="mb-5 text-sm text-muted">Lo que tienes abierto ahora mismo.</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <LoadCell value={panorama.abiertas} label="Abiertas" tone="text-fg" />
+              <LoadCell value={panorama.vencidas} label="Vencidas" tone={panorama.vencidas > 0 ? "text-rose-500" : "text-muted"} />
+              <LoadCell value={panorama.porVencer} label="Vencen en 7 días" tone={panorama.porVencer > 0 ? "text-amber-600" : "text-muted"} />
+              <LoadCell value={panorama.sinFecha} label="Sin fecha" tone="text-muted" />
+            </div>
+          </section>
+
+          {/* Por estado — barra apilada + leyenda */}
+          <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+            <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><CheckSquare size={20} /> Tus tareas por estado</h2>
+            <p className="mb-5 text-sm text-muted">Cómo se reparte todo tu trabajo.</p>
+            <div className="flex h-3.5 w-full overflow-hidden rounded-full bg-surface-2">
+              {panorama.byStatus.map((s) => (
+                <div key={s.label} className={`h-full ${s.tone}`} style={{ width: `${(s.count / panorama.total) * 100}%` }} title={`${s.label}: ${s.count}`} />
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+              {panorama.byStatus.map((s) => (
+                <span key={s.label} className="inline-flex items-center gap-1.5 text-xs text-muted">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${s.tone}`} />
+                  {s.label} <span className="tabular font-semibold text-fg">{s.count}</span>
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* Por cliente + por tipo */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+              <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><Building2 size={20} /> Por cliente</h2>
+              <p className="mb-5 text-sm text-muted">Cuántas tareas y horas por cliente.</p>
+              <div className="space-y-3">
+                {panorama.byClient.slice(0, 7).map((c) => (
+                  <div key={c.label} className="flex items-center gap-3">
+                    <span className="w-24 shrink-0 truncate text-sm font-medium text-fg" title={c.label}>{c.label}</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <div className="curva-gradient h-full rounded-full" style={{ width: `${(c.count / panorama.clientMax) * 100}%` }} />
+                    </div>
+                    <span className="tabular w-16 shrink-0 text-right text-xs font-semibold text-fg">{c.count} {c.count === 1 ? "tarea" : "tareas"}</span>
+                    <span className="tabular w-12 shrink-0 text-right text-[11px] text-muted">{c.secs > 0 ? formatHours(c.secs) : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+              <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg"><Sparkles size={20} /> Por tipo de trabajo</h2>
+              <p className="mb-5 text-sm text-muted">Qué tipo de tareas haces más.</p>
+              <div className="space-y-3">
+                {panorama.byType.slice(0, 7).map((t) => (
+                  <div key={t.label} className="flex items-center gap-3">
+                    <span className="w-24 shrink-0 truncate text-sm font-medium text-fg" title={t.label}>{t.label}</span>
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${(t.count / panorama.typeMax) * 100}%` }} />
+                    </div>
+                    <span className="tabular w-16 shrink-0 text-right text-xs font-semibold text-fg">{t.count}</span>
+                  </div>
+                ))}
+              </div>
+              {panorama.byWeight.some((w) => w.count > 0) && (
+                <div className="mt-5 border-t border-line pt-4">
+                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted">Por esfuerzo</p>
+                  <div className="flex gap-2">
+                    {panorama.byWeight.map((w) => (
+                      <div key={w.label} className="flex-1 rounded-xl bg-surface-2 px-2 py-2.5 text-center">
+                        <p className="tabular font-display text-lg font-bold text-fg">{w.count}</p>
+                        <p className="text-[11px] text-muted">{w.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+        </>
+      )}
 
       {/* Tareas terminadas: cuánto le metiste a cada una (lo que Diana pedía). Vive
           aquí, no en el inicio. Solo las que tienen tiempo real; el resto se cuenta. */}
@@ -387,8 +537,8 @@ function InsightsView() {
           <Loader2 size={16} className="animate-spin" /> Cargando registros…
         </div>
       ) : empty ? (
-        <div className="rounded-2xl border border-dashed border-line p-12 text-center text-sm text-muted">
-          No hay registros en este rango. Dale play a una tarea para empezar a medir.
+        <div className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">
+          Aún no mides tiempo con el cronómetro en este periodo. Cuando le des <span className="font-semibold text-fg">play</span> a tus tareas, aquí aparecerán tus tendencias, ritmo y franjas del día.
         </div>
       ) : (
         <>
@@ -663,6 +813,26 @@ function KpiDelta({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+// KPI simple del panorama (sin delta).
+function PanoStat({ icon, label, value, tone = "text-fg" }: { icon: React.ReactNode; label: string; value: string; tone?: string }) {
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted">{icon}{label}</p>
+      <p className={`tabular mt-1 font-display text-2xl font-bold ${tone}`}>{value}</p>
+    </div>
+  );
+}
+
+// Celda de "carga actual".
+function LoadCell({ value, label, tone }: { value: number; label: string; tone: string }) {
+  return (
+    <div className="rounded-2xl bg-surface-2/60 px-3 py-4 text-center">
+      <p className={`tabular font-display text-2xl font-bold leading-none ${tone}`}>{value}</p>
+      <p className="mt-1.5 text-[11px] font-medium text-muted">{label}</p>
     </div>
   );
 }
