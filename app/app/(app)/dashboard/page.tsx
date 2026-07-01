@@ -19,6 +19,7 @@ import { MomentumDashboard } from "@/components/MomentumDashboard";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CountUp } from "@/components/anim/CountUp";
+import { Magnetic } from "@/components/anim/Magnetic";
 
 function greeting() {
   const h = new Date().getHours();
@@ -177,7 +178,7 @@ export default function HomePage() {
 
       {/* Ahora (si hay cronómetro) */}
       {active && activeTask && (
-        <section className="rise rise-2 curva-gradient overflow-hidden rounded-3xl p-6 text-white shadow-float">
+        <section className="rise rise-2 grain curva-gradient overflow-hidden rounded-3xl p-6 text-white shadow-float">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-sm text-white/80"><span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" /> Total en esta tarea</p>
@@ -185,9 +186,11 @@ export default function HomePage() {
               <p className="mt-1 text-sm text-white/80">Esta sesión: <span className="tabular">{formatClock(elapsed)}</span></p>
               <p className="mt-1 truncate text-sm text-white/80">{activeTask.name}{activeClient ? ` · ${activeClient.name}` : ""}</p>
             </div>
-            <button onClick={stop} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90">
-              <Pause size={15} fill="currentColor" /> Detener
-            </button>
+            <Magnetic className="shrink-0">
+              <button onClick={stop} className="inline-flex items-center gap-2 rounded-full bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90">
+                <Pause size={15} fill="currentColor" /> Detener
+              </button>
+            </Magnetic>
           </div>
         </section>
       )}

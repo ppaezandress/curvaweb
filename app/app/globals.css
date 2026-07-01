@@ -46,6 +46,28 @@
   filter: none;
 }
 
+/* Grano/ruido sutil sobre superficies con gradiente (profundidad, como la landing).
+   El contenedor debe tener overflow oculto y posición relativa. */
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+/* Asegura que el contenido quede por encima del grano */
+.grain > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Botón magnético sutil (versión CSS, sin JS) */
 .btn-magnetic {
   transition: transform 0.28s var(--ease-pitch), box-shadow 0.28s var(--ease-pitch);
