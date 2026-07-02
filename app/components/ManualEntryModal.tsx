@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
+import { isDone } from "@/lib/task-status";
 import { formatDuration } from "@/lib/format";
 import { Modal, Field, inputCls } from "@/components/Modal";
 import { Avatar } from "@/components/Avatar";
@@ -41,13 +42,14 @@ const TICKS = [6, 9, 12, 15, 18, 21, 24].map((h) => h * 60);
 
 export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { currentUserId } = useApp();
-  const { tasks, clients, members, memberById, reload } = useData();
+  const { tasks, clients, clientById, members, memberById, reload } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [area, setArea] = useState("Trabajo enfocado");
   const [clientId, setClientId] = useState("");
   const [taskId, setTaskId] = useState("");
   const [taskQuery, setTaskQuery] = useState("");
+  const [taskFocused, setTaskFocused] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   // Horario: de qué hora a qué hora (la duración se deriva). Default: la última hora.
   const [startTime, setStartTime] = useState(() => { const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5 - 60, 0, 0); return hhmm(d); });
@@ -81,10 +83,15 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
   // La timeline interactiva ajusta ambos extremos a la vez.
   const setRange = (s: number, e: number) => { setStartTime(fromMin(s)); setEndTime(fromMin(e)); };
 
+  // Con texto: filtra. Sin texto: muestra tareas recientes (no terminadas primero,
+  // más nuevas arriba) para poder elegir sin acordarse del nombre exacto.
   const taskMatches = useMemo(() => {
-    if (!taskQuery.trim()) return [];
     const base = clientId ? tasks.filter((t) => t.clientId === clientId) : tasks;
-    return base.filter((t) => t.name.toLowerCase().includes(taskQuery.toLowerCase())).slice(0, 6);
+    const q = taskQuery.trim().toLowerCase();
+    if (q) return base.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 8);
+    return [...base]
+      .sort((a, b) => Number(isDone(a.status)) - Number(isDone(b.status)) || (b.createdAt || "").localeCompare(a.createdAt || ""))
+      .slice(0, 8);
   }, [taskQuery, tasks, clientId]);
 
   const selectedTask = taskId ? tasks.find((t) => t.id === taskId) : undefined;
@@ -266,12 +273,26 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
             </button>
           ) : (
             <div className="relative">
-              <input value={taskQuery} onChange={(e) => setTaskQuery(e.target.value)} placeholder="Buscar tarea…" className={inputCls} />
-              {taskMatches.length > 0 && (
-                <div className="absolute z-10 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-line bg-surface shadow-float">
-                  {taskMatches.map((t) => (
-                    <button key={t.id} onClick={() => { setTaskId(t.id); setTaskQuery(""); }} className="block w-full truncate px-3 py-2 text-left text-sm hover:bg-surface-2">{t.name}</button>
-                  ))}
+              <input
+                value={taskQuery}
+                onChange={(e) => setTaskQuery(e.target.value)}
+                onFocus={() => setTaskFocused(true)}
+                onBlur={() => setTimeout(() => setTaskFocused(false), 150)}
+                placeholder="Buscar o elegir tarea reciente…"
+                className={inputCls}
+              />
+              {(taskFocused || taskQuery) && taskMatches.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-line bg-surface shadow-float">
+                  {!taskQuery && <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted">Recientes</p>}
+                  {taskMatches.map((t) => {
+                    const cl = clientById[t.clientId];
+                    return (
+                      <button key={t.id} onMouseDown={(e) => e.preventDefault()} onClick={() => { setTaskId(t.id); setTaskQuery(""); setTaskFocused(false); }} className="block w-full px-3 py-2 text-left hover:bg-surface-2">
+                        <span className="block truncate text-sm text-fg">{t.name}</span>
+                        {cl && <span className="block truncate text-[11px] text-muted">{cl.name}</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -409,10 +430,21 @@ function Timeline({
 
   return (
     <div className="mt-4 select-none">
-      {/* etiquetas de hora sobre los extremos */}
+      {/* etiquetas de hora sobre los extremos — cuando el intervalo es chico se
+          combinan en una sola (evita que los numeritos se encimen). */}
       <div className="relative mb-1 h-4 text-[10px] font-bold tabular">
-        <span className="absolute -translate-x-1/2 whitespace-nowrap text-fg" style={{ left: `${left}%` }}>{labelHourMin(startMin)}</span>
-        <span className="absolute -translate-x-1/2 whitespace-nowrap text-accent" style={{ left: `${right}%` }}>{labelHourMin(endMin)}</span>
+        {right - left < 16 ? (
+          <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${Math.min(88, Math.max(12, (left + right) / 2))}%` }}>
+            <span className="text-fg">{labelHourMin(startMin)}</span>
+            <span className="text-muted"> → </span>
+            <span className="text-accent">{labelHourMin(endMin)}</span>
+          </span>
+        ) : (
+          <>
+            <span className="absolute -translate-x-1/2 whitespace-nowrap text-fg" style={{ left: `${left}%` }}>{labelHourMin(startMin)}</span>
+            <span className="absolute -translate-x-1/2 whitespace-nowrap text-accent" style={{ left: `${right}%` }}>{labelHourMin(endMin)}</span>
+          </>
+        )}
       </div>
       {/* pista */}
       <div
@@ -435,7 +467,7 @@ function Timeline({
         )}
         {/* bloque arrastrable + handles */}
         {valid && (
-          <div data-h="move" className="curva-gradient absolute inset-y-1.5 z-20 cursor-grab rounded-lg shadow-md active:cursor-grabbing" style={{ left: `${left}%`, width: `${width}%` }}>
+          <div data-h="move" className="curva-gradient absolute inset-y-1.5 z-20 cursor-grab rounded-lg shadow-md active:cursor-grabbing" style={{ left: `${left}%`, width: `${width}%`, minWidth: "2.1rem" }}>
             <span data-h="start" className="absolute -left-1.5 top-1/2 flex h-7 w-3.5 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full bg-surface shadow-md">
               <span className="h-3.5 w-0.5 rounded-full bg-accent/60" />
             </span>
