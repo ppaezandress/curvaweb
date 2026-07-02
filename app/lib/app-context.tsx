@@ -63,6 +63,11 @@ type AppState = {
   entries: TimeEntry[];
   start: (taskId: string) => void;
   stop: () => void;
+  removeEntry: (id: string) => void; // quitar un registro mal medido
+
+  // Timer "olvidado" detectado al reabrir (corría > 8h). Se avisa y NO se cuenta solo.
+  staleTimer: ActiveTimer;
+  dismissStaleTimer: () => void;
 
   // Relojes de IA en paralelo (la IA trabaja mientras tú haces otra cosa).
   // Al delegar una tarea a la IA, si te quedas sin reloj manual, "saltas"
@@ -123,6 +128,8 @@ function readAiEnabled(userId: string): boolean {
 // cronómetros claramente OLVIDADOS (ej. dejado toda la noche), nunca trabajo real.
 const DEFAULT_GRACE_SECONDS = 300; // escritorio (Tauri), con idle del sistema
 const BROWSER_GRACE_SECONDS = 6 * 3600; // navegador: prácticamente no marca inactivo
+// Timer "olvidado": si al reabrir el cronómetro llevaba más de esto, no se cuenta solo.
+const STALE_TIMER_MS = 8 * 3600 * 1000;
 function isTauri() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
@@ -152,6 +159,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [openTasks, setOpenTasks] = useState<string[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [pendingReview, setPendingReview] = useState<PendingReview>(null);
+  const [staleTimer, setStaleTimer] = useState<ActiveTimer>(null);
   const [focusApp, setFocusApp] = useState<FocusApp>(null);
   const [autoResumed, setAutoResumed] = useState<string | null>(null);
   const [aiEnabled, setAiEnabledState] = useState(false);
@@ -273,7 +281,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const raw = localStorage.getItem(dataKey(userId));
           if (raw) {
             const parsed = JSON.parse(raw);
-            setActive(parsed.active ?? null);
+            // Timer olvidado: si el cronómetro llevaba corriendo > STALE (p.ej. lo
+            // dejaste toda la noche / apagaste la compu), NO lo restauramos corriendo
+            // ni lo contamos — lo pasamos a un aviso para que registres a mano lo real.
+            const restored = parsed.active ?? null;
+            if (restored && Date.now() - restored.startedAt > STALE_TIMER_MS) {
+              setStaleTimer(restored);
+            } else {
+              setActive(restored);
+            }
             setAiActive(parsed.aiActive ?? []);
             setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual" })));
             setOpenTasks(parsed.openTasks ?? []);
@@ -502,6 +518,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPendingReview(null);
   };
 
+  // Quitar un registro de tiempo ya guardado (p. ej. uno mal medido).
+  const removeEntry = (id: string) => setEntries((e) => e.filter((x) => x.id !== id));
+  // Descartar el aviso de "timer olvidado" (no cuenta ese tiempo).
+  const dismissStaleTimer = () => setStaleTimer(null);
+
   // Multi-tarea
   const openTask = (taskId: string) =>
     setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
@@ -542,7 +563,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value: AppState = {
     ready, currentUserId, setCurrentUser, logout, isAdmin, adminResolved,
-    active, entries, start, stop,
+    active, entries, start, stop, removeEntry,
+    staleTimer, dismissStaleTimer,
     aiActive, startAI, stopAI, toggleAI, isAI, autoResumed,
     openTasks, openTask, switchTo, pause, closeTask,
     pendingReview, resolveReview,

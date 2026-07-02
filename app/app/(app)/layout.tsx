@@ -8,6 +8,7 @@ import { TopNav } from "@/components/TopNav";
 import { BottomNav } from "@/components/BottomNav";
 import { TaskSwitcher } from "@/components/TaskSwitcher";
 import { IdleReview } from "@/components/IdleReview";
+import { StaleTimerNotice } from "@/components/StaleTimerNotice";
 import { DesktopBridge } from "@/components/DesktopBridge";
 import { NotionSync } from "@/components/NotionSync";
 import { Hotkeys } from "@/components/Hotkeys";
@@ -59,6 +60,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TaskSwitcher />
       <BottomNav />
       <IdleReview />
+      <StaleTimerNotice />
       <DesktopBridge />
       <NotionSync />
       <Hotkeys />

@@ -1,12 +1,12 @@
 "use client";
 
-import { Clock } from "lucide-react";
+import { Clock, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatDuration, hhmmFromMs as hhmm } from "@/lib/format";
 
 export function RecentSessions() {
-  const { entries } = useApp();
+  const { entries, removeEntry } = useApp();
   const { taskById, clientById } = useData();
   const recent = [...entries].reverse().slice(0, 6);
 
@@ -29,7 +29,7 @@ export function RecentSessions() {
             const task = taskById[e.taskId];
             const client = task ? clientById[task.clientId] : undefined;
             return (
-              <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
+              <li key={e.id} className="group flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-fg">
                     {task?.name ?? "Tarea"}
@@ -38,9 +38,19 @@ export function RecentSessions() {
                     {client?.name} · {hhmm(e.startedAt)}–{hhmm(e.endedAt)}
                   </p>
                 </div>
-                <span className="tabular shrink-0 text-sm font-semibold text-fg">
-                  {formatDuration(e.seconds)}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="tabular text-sm font-semibold text-fg">
+                    {formatDuration(e.seconds)}
+                  </span>
+                  <button
+                    onClick={() => { if (confirm("¿Quitar este registro de tiempo?")) removeEntry(e.id); }}
+                    className="rounded-full p-1.5 text-muted opacity-0 transition hover:bg-rose-50 hover:text-rose-500 focus-ring group-hover:opacity-100"
+                    aria-label="Quitar registro"
+                    title="Quitar este registro"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </li>
             );
           })}
