@@ -5,6 +5,7 @@ import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
 import { Magnetic } from "@/components/anim/Magnetic";
+import { CursorGlow } from "@/components/anim/CursorGlow";
 
 export function NowHero({
   assignedCount,
@@ -33,6 +34,7 @@ export function NowHero({
     const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(active.taskId) + elapsed;
     return (
       <div className="grain curva-gradient overflow-hidden rounded-3xl p-6 text-white sm:p-8">
+        <CursorGlow />
         <div className="flex items-center gap-2 text-sm font-medium text-white/80">
           <span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" />
           Cronómetro corriendo

@@ -20,6 +20,7 @@ import { AchievementsStrip } from "@/components/AchievementsStrip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CountUp } from "@/components/anim/CountUp";
 import { Magnetic } from "@/components/anim/Magnetic";
+import { CursorGlow } from "@/components/anim/CursorGlow";
 
 function greeting() {
   const h = new Date().getHours();
@@ -179,6 +180,7 @@ export default function HomePage() {
       {/* Ahora (si hay cronómetro) */}
       {active && activeTask && (
         <section className="rise rise-2 grain curva-gradient overflow-hidden rounded-3xl p-6 text-white shadow-float">
+          <CursorGlow />
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-sm text-white/80"><span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" /> Total en esta tarea</p>
