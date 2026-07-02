@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ListTodo, Users, Building2, Search, Inbox, Check, Building, CalendarClock, CircleDot } from "lucide-react";
+import { ListTodo, Users, Building2, Search, Inbox, Check, Building, CalendarClock, CircleDot, Plus } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/format";
 import { TaskCard } from "@/components/TaskCard";
+import { NewTaskModal } from "@/components/NewTaskModal";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { isAssignedTo, isDone } from "@/lib/task-status";
 import { dueDateMs } from "@/lib/date";
@@ -41,6 +42,7 @@ export default function TareasPage() {
   const [group, setGroup] = useState<Group>("cliente");
   const [search, setSearch] = useState("");
   const [showDone, setShowDone] = useState(false);
+  const [showNew, setShowNew] = useState(false);
   const [clientFilter, setClientFilter] = useState<string | null>(null);
 
   const clientOf = (t: Task) => (t.internal ? INTERNAL : t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT);
@@ -126,6 +128,7 @@ export default function TareasPage() {
           ))}
         </div>
         <button onClick={() => setShowDone((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus-ring ${showDone ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-line bg-surface text-muted hover:border-zinc-300"}`}><Check size={15} /> Done</button>
+        <button onClick={() => setShowNew(true)} className="btn-magnetic inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 focus-ring"><Plus size={15} /> Nueva tarea</button>
       </div>
 
       {searchResults ? (
@@ -172,6 +175,8 @@ export default function TareasPage() {
           </div>
         </div>
       )}
+
+      <NewTaskModal open={showNew} onClose={() => setShowNew(false)} />
     </div>
   );
 }

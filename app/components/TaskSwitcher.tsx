@@ -1,9 +1,11 @@
 "use client";
 
-import { Play, Pause, X, Sparkles, Hand, ArrowDownLeft } from "lucide-react";
+import { useState } from "react";
+import { Play, Pause, X, Sparkles, Hand, ArrowDownLeft, CircleCheck } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { useCoworking } from "@/lib/use-coworking";
+import { useCelebrate } from "@/lib/celebrate-context";
 import { formatClock } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
 
@@ -83,9 +85,23 @@ function Lane({
 function ManualRow({ taskId }: { taskId: string }) {
   const { pause, toggleAI, closeTask, autoResumed, aiEnabled, sessionSecondsForTask } = useApp();
   const { partners } = useCoworking();
+  const { celebrate } = useCelebrate();
   const elapsed = useLiveElapsed(taskId);
-  const { taskById, clientById, projectById } = useData();
+  const { taskById, clientById, projectById, reload } = useData();
   const task = taskById[taskId];
+  const [marking, setMarking] = useState(false);
+
+  // Terminar la tarea directo desde el dock (sin ir a la tarjeta). Pausa + Done.
+  const terminar = async () => {
+    if (marking) return;
+    setMarking(true);
+    try {
+      pause();
+      await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, status: "DONE" }) });
+      celebrate(taskId, task?.name || "Tarea");
+      await reload();
+    } finally { setMarking(false); }
+  };
   const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(taskId) + elapsed;
   const project = task ? projectById[task.projectId] : undefined;
   const client = project ? clientById[project.clientId] : undefined;
@@ -138,6 +154,15 @@ function ManualRow({ taskId }: { taskId: string }) {
         title="Pausar (Espacio)"
       >
         <Pause size={15} fill="currentColor" />
+      </button>
+      <button
+        onClick={terminar}
+        disabled={marking}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-bold text-muted transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
+        aria-label="Terminar tarea"
+        title="Terminar (marcar Done)"
+      >
+        <CircleCheck size={15} /> <span className="hidden sm:inline">Terminar</span>
       </button>
       <button
         onClick={() => closeTask(taskId)}

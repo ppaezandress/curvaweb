@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Clock,
+  ArrowRight,
   CheckSquare,
   Users,
   TrendingUp,
@@ -407,20 +409,20 @@ function InsightsView() {
   // atención → tip → logro) y se muestran los más relevantes. La meta: que la persona
   // sepa QUÉ hacer con su data, no solo verla.
   const smartInsights = useMemo(() => {
-    const out: { tone: "risk" | "watch" | "tip" | "win"; icon: string; title: string; action: string }[] = [];
+    const out: { tone: "risk" | "watch" | "tip" | "win"; icon: string; title: string; action: string; href?: string }[] = [];
     const enCurso = panorama.byStatus.find((s) => s.label === "En curso")?.count || 0;
     const demoradas = panorama.byStatus.find((s) => s.label === "Demoradas")?.count || 0;
     const topClientTaskPct = panorama.byClient[0] && panorama.total > 0 ? Math.round((panorama.byClient[0].count / panorama.total) * 100) : 0;
 
     // Riesgo — atención inmediata
     if (panorama.vencidas > 0)
-      out.push({ tone: "risk", icon: "alert", title: `${panorama.vencidas} tarea${panorama.vencidas > 1 ? "s" : ""} vencida${panorama.vencidas > 1 ? "s" : ""}`, action: "Priorízalas hoy o mueve su fecha para no arrastrarlas." });
+      out.push({ tone: "risk", icon: "alert", title: `${panorama.vencidas} tarea${panorama.vencidas > 1 ? "s" : ""} vencida${panorama.vencidas > 1 ? "s" : ""}`, action: "Priorízalas hoy o mueve su fecha para no arrastrarlas.", href: "/tareas" });
     if (demoradas > 0)
-      out.push({ tone: "risk", icon: "alert", title: `${demoradas} tarea${demoradas > 1 ? "s" : ""} demorada${demoradas > 1 ? "s" : ""}`, action: "Detecta qué las traba y pide ayuda si algo te bloquea." });
+      out.push({ tone: "risk", icon: "alert", title: `${demoradas} tarea${demoradas > 1 ? "s" : ""} demorada${demoradas > 1 ? "s" : ""}`, action: "Detecta qué las traba y pide ayuda si algo te bloquea.", href: "/tareas" });
 
     // Atención — vigilar
     if (panorama.porVencer > 0)
-      out.push({ tone: "watch", icon: "clock", title: `${panorama.porVencer} vence${panorama.porVencer > 1 ? "n" : ""} en 7 días`, action: "Bloquéalas en tu calendario antes de que se junten." });
+      out.push({ tone: "watch", icon: "clock", title: `${panorama.porVencer} vence${panorama.porVencer > 1 ? "n" : ""} en 7 días`, action: "Bloquéalas en tu calendario antes de que se junten.", href: "/tareas" });
     if (enCurso >= 4)
       out.push({ tone: "watch", icon: "zap", title: `${enCurso} tareas en curso a la vez`, action: "Cerrar unas antes de abrir más te hace avanzar más rápido." });
     if (totalMin > 0 && topShare >= 55 && byClient[0] && byClient[0].label !== "Sin cliente")
@@ -919,7 +921,7 @@ function KpiDelta({
 }
 
 // Tarjeta de insight accionable: hallazgo (título) + qué hacer (acción), con tono.
-function InsightCard({ tone, icon, title, action }: { tone: "risk" | "watch" | "tip" | "win"; icon: string; title: string; action: string }) {
+function InsightCard({ tone, icon, title, action, href }: { tone: "risk" | "watch" | "tip" | "win"; icon: string; title: string; action: string; href?: string }) {
   const TONE: Record<string, { chip: string; ring: string }> = {
     risk: { chip: "bg-rose-500/10 text-rose-500", ring: "text-rose-500" },
     watch: { chip: "bg-amber-500/10 text-amber-600", ring: "text-amber-600" },
@@ -932,17 +934,21 @@ function InsightCard({ tone, icon, title, action }: { tone: "risk" | "watch" | "
   };
   const Icon = ICONS[icon] || Lightbulb;
   const t = TONE[tone];
-  return (
-    <div className="flex items-start gap-3 bg-surface px-6 py-4">
+  const inner = (
+    <>
       <span className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${t.chip}`}>
         <Icon size={16} />
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-fg">{title}</p>
+        <p className="text-sm font-semibold text-fg">{title}{href && <ArrowRight size={12} className="ml-1 inline opacity-50" />}</p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">{action}</p>
       </div>
-    </div>
+    </>
   );
+  if (href) {
+    return <Link href={href} className="flex items-start gap-3 bg-surface px-6 py-4 transition hover:bg-surface-2">{inner}</Link>;
+  }
+  return <div className="flex items-start gap-3 bg-surface px-6 py-4">{inner}</div>;
 }
 
 // KPI simple del panorama (sin delta), con número que cuenta al entrar.
