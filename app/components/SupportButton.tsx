@@ -37,18 +37,26 @@ export function SupportButton() {
     setCapturing(true);
     try {
       const { toJpeg } = await import("html-to-image");
-      const dataUrl = await toJpeg(document.body, {
-        quality: 0.7, pixelRatio: 0.7, cacheBust: true,
-        filter: (node) => {
-          const el = node as HTMLElement;
-          if (el?.classList?.contains?.("modal-backdrop")) return false;
-          if (el?.dataset?.noCapture === "1") return false;
-          return true;
-        },
-      });
+      // Timeout: en pantallas pesadas html-to-image puede colgarse. Con la carrera,
+      // a los 8s se rinde en vez de dejar el botón atorado en "Capturando…".
+      const dataUrl = await Promise.race([
+        toJpeg(document.body, {
+          quality: 0.7, pixelRatio: 0.7, cacheBust: true,
+          filter: (node) => {
+            const el = node as HTMLElement;
+            if (el?.classList?.contains?.("modal-backdrop")) return false;
+            if (el?.dataset?.noCapture === "1") return false;
+            return true;
+          },
+        }),
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000)),
+      ]);
       setShot(dataUrl);
-    } catch { /* no se pudo capturar → pueden subir imagen */ }
-    setCapturing(false);
+    } catch {
+      alert("No se pudo capturar esta pantalla. Puedes subir una imagen en su lugar.");
+    } finally {
+      setCapturing(false);
+    }
   };
 
   const onFile = (file?: File) => {

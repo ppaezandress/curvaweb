@@ -84,12 +84,13 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
     setSending(true);
     try {
       const { data: u } = await sb.auth.getUser();
-      if (!u.user) return;
+      if (!u.user) { alert("Para subir fotos necesitas iniciar sesión con tu correo y contraseña (no el acceso rápido)."); return; }
       const path = `${u.user.id}/${taskId}/${Date.now()}.${shot.ext}`;
       const { error } = await sb.storage.from("task-photos").upload(path, shot.blob, { upsert: true, contentType: shot.blob.type || "image/jpeg" });
-      if (error) return;
+      if (error) { alert("No se pudo subir la foto: " + error.message); return; }
       const { data: pub } = sb.storage.from("task-photos").getPublicUrl(path);
-      await sb.from("task_photos").insert({ task_id: taskId, user_id: u.user.id, url: pub.publicUrl, caption: caption.trim() || null });
+      const { error: insErr } = await sb.from("task_photos").insert({ task_id: taskId, user_id: u.user.id, url: pub.publicUrl, caption: caption.trim() || null });
+      if (insErr) { alert("No se pudo guardar la foto: " + insErr.message); return; }
       clearShot();
       onClose(); // enviada → aparece en el Recap del equipo
     } finally { setSending(false); }
