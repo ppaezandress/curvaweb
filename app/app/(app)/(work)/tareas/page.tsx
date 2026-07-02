@@ -9,6 +9,7 @@ import { formatDuration } from "@/lib/format";
 import { TaskCard } from "@/components/TaskCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { isAssignedTo, isDone } from "@/lib/task-status";
+import { dueDateMs } from "@/lib/date";
 
 type View = "mine" | "all";
 type Group = "cliente" | "urgencia" | "estado";
@@ -68,9 +69,9 @@ export default function TareasPage() {
 
   // Agrupaciones (listas planas, sin acordeones).
   const horizon = (t: Task): string => {
-    if (!t.dueDate) return "nofecha";
+    const due = dueDateMs(t.dueDate);
+    if (due == null) return "nofecha";
     const today0 = new Date().setHours(0, 0, 0, 0);
-    const due = new Date(t.dueDate).getTime();
     if (due < today0) return "vencidas";
     if (due < today0 + DAY) return "hoy";
     if (due < today0 + 7 * DAY) return "semana";

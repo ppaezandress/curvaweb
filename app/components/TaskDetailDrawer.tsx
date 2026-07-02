@@ -8,17 +8,15 @@ import { useData } from "@/lib/data-context";
 import { StatusPicker } from "@/components/StatusPicker";
 import { EsfuerzoPicker } from "@/components/EsfuerzoPicker";
 import { formatDuration, hhmmFromISO } from "@/lib/format";
+import { dueDateLabel } from "@/lib/date";
 import { openInNotion } from "@/lib/notion-url";
 import { Avatar } from "@/components/Avatar";
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
 const DEFAULT_EST: Record<string, number> = { Ligera: 30, Media: 90, Pesada: 180 };
 
-function dayLabel(iso: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-}
+// Fecha de vencimiento sin correrse por zona horaria (usa parseDateOnly).
+const dayLabel = (iso: string) => dueDateLabel(iso);
 
 // Detalle por tarea: su historial real de sesiones + cómo se compara con tu benchmark.
 // Es el "genera data por tarea y aprende de eso" — abre desde cualquier TaskCard.

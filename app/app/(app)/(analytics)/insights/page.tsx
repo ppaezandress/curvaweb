@@ -27,7 +27,7 @@ import { useApp } from "@/lib/app-context";
 import { isDone, isAssignedTo } from "@/lib/task-status";
 import { formatHours, formatDuration } from "@/lib/format";
 import { dayKey } from "@/lib/streaks";
-import { mondayOf, firstDayOfMonth, monthShort, DIAS_CORTOS } from "@/lib/date";
+import { mondayOf, firstDayOfMonth, monthShort, DIAS_CORTOS, dueDateMs } from "@/lib/date";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { CountUp } from "@/components/anim/CountUp";
 
@@ -173,8 +173,8 @@ function InsightsView() {
       totalSecs += secsOf(t);
       if (!isDone(t.status)) {
         abiertas++;
-        if (t.dueDate) {
-          const d = new Date(t.dueDate).getTime();
+        const d = dueDateMs(t.dueDate);
+        if (d != null) {
           if (d < today0) vencidas++; else if (d < in7) porVencer++;
         } else sinFecha++;
       }

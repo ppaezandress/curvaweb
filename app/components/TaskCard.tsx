@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw, Clock } from "lucide-react";
+import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw, Clock, CalendarClock } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
 import { useCelebrate } from "@/lib/celebrate-context";
 import { formatClock, formatDuration } from "@/lib/format";
+import { dueDateMs, dueDateLabel } from "@/lib/date";
 import { isDone as isDoneStatus } from "@/lib/task-status";
 import { openInNotion } from "@/lib/notion-url";
 import { Avatar } from "@/components/Avatar";
@@ -89,6 +90,21 @@ export function TaskCard({ task }: { task: Task }) {
     sessionSecondsForTask(task.id) +
     (isRunning || onAI ? elapsed : 0);
 
+  // Chip de vencimiento (fecha corregida por zona horaria). Tono por urgencia.
+  const due = (() => {
+    const ms = dueDateMs(task.dueDate);
+    if (ms == null) return null;
+    const today0 = new Date().setHours(0, 0, 0, 0);
+    const days = Math.round((ms - today0) / 86_400_000);
+    const label = dueDateLabel(task.dueDate);
+    const short = days < 0 ? `Venció ${label}` : days === 0 ? "Hoy" : days === 1 ? "Mañana" : label;
+    const tone = days < 0 ? "bg-rose-500/10 text-rose-500"
+      : days === 0 ? "bg-amber-500/10 text-amber-600"
+      : days <= 7 ? "bg-accent/10 text-accent"
+      : "bg-surface-2 text-muted";
+    return { label, short, tone };
+  })();
+
   return (
     <div
       className={`flex items-center gap-4 rounded-2xl border bg-surface p-4 transition ${
@@ -128,6 +144,11 @@ export function TaskCard({ task }: { task: Task }) {
           <span className="tabular inline-flex items-center gap-1 text-sm text-muted" title="Tiempo total acumulado en esta tarea">
             <Clock size={13} /> {formatDuration(total)}
           </span>
+          {due && !done && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${due.tone}`} title={`Vence ${due.label}`}>
+              <CalendarClock size={11} /> {due.short}
+            </span>
+          )}
           {onAI ? (
             <span className="ai-shimmer inline-flex items-center gap-1 rounded-full bg-curva-indigo/10 px-2 py-0.5 text-[11px] font-semibold text-curva-indigo">
               <Sparkles size={11} className="curva-live-dot" /> IA · {formatClock(elapsed)}
