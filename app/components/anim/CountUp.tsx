@@ -28,9 +28,12 @@ export function CountUp({
     const el = ref.current;
     if (!el) return;
     const reduce = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) { setDisplay(value); return; }
+    // Si ya animó una vez (o hay reduced-motion), reflejar el nuevo valor directo:
+    // así el número NO se queda congelado cuando la data cambia (recarga/tarea cerrada).
+    if (reduce || fired.current) { setDisplay(value); return; }
 
     const run = () => {
+      fired.current = true;
       const start = performance.now();
       const tick = (now: number) => {
         const p = Math.min(1, (now - start) / duration);
@@ -43,11 +46,7 @@ export function CountUp({
     };
 
     const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting && !fired.current) { fired.current = true; run(); }
-        });
-      },
+      (entries) => entries.forEach((e) => { if (e.isIntersecting && !fired.current) run(); }),
       { threshold: 0.4 },
     );
     io.observe(el);
