@@ -59,14 +59,14 @@ export default function HomePage() {
   // Mi resumen: SOLO mi data real (tareas asignadas a mí). Conteos + terminadas con
   // su tiempo total (baseline de Notion + sesiones del cronómetro). Sin data inventada.
   const summary = useMemo(() => {
-    const done = mine.filter((t) => isDone(t.status));
+    // "Terminadas" acotado a los últimos 30 días (por fecha de creación) para que no
+    // muestre el histórico completo de Notion (que confundía: "¿terminé 102?").
+    const from30 = Date.now() - 30 * 86_400_000;
+    const recentDone = mine.filter((t) => isDone(t.status) && (t.createdAt ? new Date(t.createdAt).getTime() >= from30 : false));
     const enCurso = mine.filter((t) => !isDone(t.status) && /curso|progress|haciendo/i.test(t.status)).length;
     const demoradas = mine.filter((t) => !isDone(t.status) && /demor|atras|blocked|vencid/i.test(t.status)).length;
-    const withTime = done
-      .map((t) => ({ task: t, secs: t.baselineSeconds + sessionSecondsForTask(t.id) }))
-      .sort((a, b) => b.secs - a.secs);
-    const totalDoneSecs = withTime.reduce((a, r) => a + r.secs, 0);
-    return { doneCount: done.length, enCurso, demoradas, done: withTime.slice(0, 8), totalDoneSecs };
+    const totalDoneSecs = recentDone.reduce((a, t) => a + t.baselineSeconds + sessionSecondsForTask(t.id), 0);
+    return { doneCount: recentDone.length, enCurso, demoradas, totalDoneSecs };
   }, [mine, sessionSecondsForTask]);
 
   // "Para hoy": foco del día, ordenado por urgencia (vencidas/hoy/prioridad/en curso).
@@ -205,8 +205,8 @@ export default function HomePage() {
             <h2 className="font-display text-lg font-bold text-fg">Mi resumen</h2>
             <p className="mt-0.5 text-xs text-muted">
               {summary.totalDoneSecs > 0
-                ? <>Llevas <span className="tabular font-semibold text-fg">{formatDuration(summary.totalDoneSecs)}</span> en tareas que cerraste</>
-                : "Tu pulso de la semana."}
+                ? <>Últimos 30 días · <span className="tabular font-semibold text-fg">{formatDuration(summary.totalDoneSecs)}</span> en tareas cerradas</>
+                : "Tu pulso de los últimos 30 días."}
             </p>
           </div>
           <Link

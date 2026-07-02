@@ -132,12 +132,20 @@ function InsightsView() {
   const { currentUserId, sessionSecondsForTask } = useApp();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
+  const [range, setRange] = useState<Range>("month");
+
   // Panorama de MIS tareas (independiente del cronómetro): estado, carga, cliente,
   // tipo y esfuerzo. Da "mucha data" a cada persona aunque no mida tiempo.
   const panorama = useMemo(() => {
     const mineTasks = tasks.filter((t) => isAssignedTo(t, currentUserId));
     const today0 = new Date().setHours(0, 0, 0, 0);
     const in7 = today0 + 7 * 86_400_000;
+    // Conteos (terminadas, por estado/cliente/tipo) acotados al periodo elegido
+    // (por fecha de creación). "Todo" = histórico. La CARGA actual (abiertas/
+    // vencidas) NO se acota: siempre refleja el estado de hoy.
+    const from = rangeStart(range);
+    const inRange = (t: (typeof mineTasks)[number]) => range === "all" || (t.createdAt ? new Date(t.createdAt).getTime() >= from : false);
+    const scoped = mineTasks.filter(inRange);
     const secsOf = (t: (typeof mineTasks)[number]) => t.baselineSeconds + sessionSecondsForTask(t.id);
 
     const bucket = (s: string) =>
@@ -158,7 +166,8 @@ function InsightsView() {
     const weightMap = new Map<string, number>();
     let vencidas = 0, porVencer = 0, sinFecha = 0, abiertas = 0, totalSecs = 0;
 
-    mineTasks.forEach((t) => {
+    // Conteos por periodo (scoped)
+    scoped.forEach((t) => {
       statusCount.set(bucket(t.status), (statusCount.get(bucket(t.status)) || 0) + 1);
       const client = clientById[t.clientId];
       const ckey = t.internal ? "__int" : (client?.id || "__none");
@@ -171,6 +180,9 @@ function InsightsView() {
       ty.count++; typeMap.set(tk, ty);
       if (t.weight) weightMap.set(t.weight, (weightMap.get(t.weight) || 0) + 1);
       totalSecs += secsOf(t);
+    });
+    // Carga ACTUAL (todas mis abiertas, sin acotar por periodo)
+    mineTasks.forEach((t) => {
       if (!isDone(t.status)) {
         abiertas++;
         const d = dueDateMs(t.dueDate);
@@ -180,7 +192,7 @@ function InsightsView() {
       }
     });
 
-    const total = mineTasks.length;
+    const total = scoped.length;
     const done = statusCount.get("Terminadas") || 0;
     const byStatus = STATUS_ORDER.filter((s) => (statusCount.get(s) || 0) > 0)
       .map((s) => ({ label: s, count: statusCount.get(s) || 0, tone: STATUS_TONE[s] }));
@@ -188,7 +200,7 @@ function InsightsView() {
     const byType = [...typeMap.values()].sort((a, b) => b.count - a.count);
     const byWeight = (["Ligera", "Media", "Pesada"] as const).map((w) => ({ label: w, count: weightMap.get(w) || 0 }));
     return { total, done, completion: total ? Math.round((done / total) * 100) : 0, abiertas, vencidas, porVencer, sinFecha, totalSecs, byStatus, byClient, byType, byWeight, clientMax: Math.max(...byClient.map((c) => c.count), 1), typeMax: Math.max(...byType.map((t) => t.count), 1) };
-  }, [tasks, currentUserId, sessionSecondsForTask, clientById, taskTypeById]);
+  }, [tasks, currentUserId, sessionSecondsForTask, clientById, taskTypeById, range]);
 
   // Tareas terminadas MÍAS con su tiempo real (baseline Notion + cronómetro).
   // Solo mostramos las que tienen tiempo; contamos aparte las cerradas sin registro.
@@ -203,7 +215,6 @@ function InsightsView() {
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState<Range>("month");
   const [trendMode, setTrendMode] = useState<"weeks" | "months">("weeks");
 
   useEffect(() => {
