@@ -7,7 +7,7 @@ import { hhmmFromISO } from "@/lib/format";
 import { parseMessage, notionTaskUrl } from "@/lib/notion-url";
 import { cn } from "@/lib/cn";
 
-export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string };
+export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null };
 export type ChatProfile = { id: string; name: string; avatar_url: string | null };
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
@@ -35,6 +35,24 @@ export function MessageItem({
       <div className="mt-0.5"><Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={32} /></div>
       <div className={cn("max-w-[78%]", mine && "text-right")}>
         <p className="text-xs text-muted">{prof?.name || "—"} · {hhmmFromISO(msg.created_at)}</p>
+
+        {/* Adjunto: imagen / video / audio */}
+        {msg.attachment_url && (
+          <div className={cn("mt-1 inline-block overflow-hidden", mine && "text-right")}>
+            {msg.attachment_type === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
+                <img src={msg.attachment_url} alt="adjunto" className="max-h-72 max-w-[min(78vw,20rem)] rounded-2xl border border-line object-cover" />
+              </a>
+            ) : msg.attachment_type === "video" ? (
+              <video src={msg.attachment_url} controls className="max-h-72 max-w-[min(78vw,20rem)] rounded-2xl border border-line" />
+            ) : (
+              <audio src={msg.attachment_url} controls className="w-64 max-w-[78vw]" />
+            )}
+          </div>
+        )}
+
+        {msg.body.trim() && (
         <div className={cn("mt-0.5 inline-block rounded-2xl px-3.5 py-2 text-left text-sm", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
           {parts.map((p, i) =>
             p.type === "text" ? (
@@ -66,6 +84,7 @@ export function MessageItem({
             ),
           )}
         </div>
+        )}
 
         {/* Reacciones */}
         <div className={cn("mt-1 flex items-center gap-1", mine && "justify-end")}>

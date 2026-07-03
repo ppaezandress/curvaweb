@@ -1,21 +1,32 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Send, ListTodo, AtSign, X } from "lucide-react";
+import { Send, ListTodo, AtSign, X, Paperclip, Mic, Square, Loader2, ImageIcon, Film, Music } from "lucide-react";
 import type { Task, Member } from "@/lib/mock-data";
 import { taskToken, userToken } from "@/lib/notion-url";
+import { getSupabase } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { cn } from "@/lib/cn";
 
 type Trigger = { kind: "user" | "task"; query: string } | null;
+export type Attachment = { url: string; type: "image" | "video" | "audio" };
+
+const kindOf = (mime: string): Attachment["type"] =>
+  mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "image";
 
 // Composer estilo Slack: "@" menciona personas, "/" menciona tareas (→ Notion).
-export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; members: Member[]; onSend: (body: string) => void; onTyping?: () => void }) {
+// Adjuntos: imagen / video / audio (subir archivo o grabar audio).
+export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void }) {
   const [text, setText] = useState("");
   const [trigger, setTrigger] = useState<Trigger>(null);
   const [people, setPeople] = useState<Member[]>([]);
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+  const [attach, setAttach] = useState<Attachment | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const recRef = useRef<{ rec: MediaRecorder; chunks: Blob[] } | null>(null);
   const lastTyping = useRef(0);
 
   const matches = useMemo(() => {
@@ -27,28 +38,62 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
 
   const onChange = (v: string) => {
     setText(v);
-    // Avisa "escribiendo" como mucho cada 1.5s.
     const now = Date.now();
     if (onTyping && v.trim() && now - lastTyping.current > 1500) { lastTyping.current = now; onTyping(); }
-    const at = v.match(/@([^@/\s][^@/]*|)$/); // "@..." al final
-    const slash = v.match(/\/([^/@\s][^/@]*|)$/); // "/..." al final
+    const at = v.match(/@([^@/\s][^@/]*|)$/);
+    const slash = v.match(/\/([^/@\s][^/@]*|)$/);
     if (at) setTrigger({ kind: "user", query: at[1] });
     else if (slash) setTrigger({ kind: "task", query: slash[1] });
     else setTrigger(null);
   };
 
-  const stripTrigger = () =>
-    setText((v) => v.replace(/[@/]([^@/]*)$/, "").trimEnd());
+  const stripTrigger = () => setText((v) => v.replace(/[@/]([^@/]*)$/, "").trimEnd());
+  const pickPerson = (m: Member) => { stripTrigger(); setTrigger(null); setPeople((p) => (p.some((x) => x.id === m.id) ? p : [...p, m])); inputRef.current?.focus(); };
+  const pickTask = (t: Task) => { stripTrigger(); setTrigger(null); setPendingTasks((p) => (p.some((x) => x.id === t.id) ? p : [...p, t])); inputRef.current?.focus(); };
 
-  const pickPerson = (m: Member) => {
-    stripTrigger(); setTrigger(null);
-    setPeople((p) => (p.some((x) => x.id === m.id) ? p : [...p, m]));
-    inputRef.current?.focus();
+  // Sube un blob al bucket chat-media y deja el adjunto listo para enviar.
+  const uploadBlob = async (blob: Blob, ext: string) => {
+    const sb = getSupabase();
+    if (!sb) return;
+    setUploading(true);
+    try {
+      const { data: u } = await sb.auth.getUser();
+      if (!u.user) { alert("Inicia sesión con tu correo para adjuntar archivos."); return; }
+      const path = `${u.user.id}/${Date.now()}.${ext}`;
+      const { error } = await sb.storage.from("chat-media").upload(path, blob, { contentType: blob.type || "application/octet-stream", upsert: true });
+      if (error) { alert("No se pudo subir el archivo: " + error.message); return; }
+      const url = sb.storage.from("chat-media").getPublicUrl(path).data.publicUrl;
+      setAttach({ url, type: kindOf(blob.type || "") });
+    } finally { setUploading(false); }
   };
-  const pickTask = (t: Task) => {
-    stripTrigger(); setTrigger(null);
-    setPendingTasks((p) => (p.some((x) => x.id === t.id) ? p : [...p, t]));
-    inputRef.current?.focus();
+
+  const onFile = (file?: File) => {
+    if (!file) return;
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    uploadBlob(file, ext);
+  };
+
+  // Grabar audio con el micrófono.
+  const toggleRecord = async () => {
+    if (recording) {
+      recRef.current?.rec.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        uploadBlob(blob, "webm");
+      };
+      recRef.current = { rec, chunks };
+      rec.start();
+      setRecording(true);
+    } catch { alert("No se pudo acceder al micrófono."); }
   };
 
   const submit = () => {
@@ -57,9 +102,9 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
       ...pendingTasks.map((t) => taskToken(t.id, t.name)),
     ].join(" ");
     const body = [text.trim(), tokens].filter(Boolean).join(" ");
-    if (!body) return;
-    onSend(body);
-    setText(""); setPeople([]); setPendingTasks([]); setTrigger(null);
+    if (!body && !attach) return;
+    onSend(body, attach || undefined);
+    setText(""); setPeople([]); setPendingTasks([]); setTrigger(null); setAttach(null);
   };
 
   return (
@@ -104,17 +149,33 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
         </div>
       )}
 
+      {/* Preview del adjunto */}
+      {(attach || uploading) && (
+        <div className="mb-2 inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-2.5 py-1.5">
+          {uploading ? <Loader2 size={14} className="animate-spin text-muted" /> : attach?.type === "image" ? <ImageIcon size={14} className="text-accent" /> : attach?.type === "video" ? <Film size={14} className="text-accent" /> : <Music size={14} className="text-accent" />}
+          <span className="text-xs font-medium text-muted">{uploading ? "Subiendo…" : `${attach?.type === "image" ? "Imagen" : attach?.type === "video" ? "Video" : "Audio"} listo`}</span>
+          {attach && !uploading && <button onClick={() => setAttach(null)} className="rounded-full p-0.5 text-muted hover:bg-surface focus-ring" aria-label="Quitar adjunto"><X size={12} /></button>}
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
+        <input ref={fileRef} type="file" accept="image/*,video/*,audio/*" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
+        <button onClick={() => fileRef.current?.click()} disabled={uploading || recording} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring disabled:opacity-40" aria-label="Adjuntar archivo" title="Adjuntar imagen, video o audio">
+          <Paperclip size={16} />
+        </button>
+        <button onClick={toggleRecord} disabled={uploading} className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition focus-ring disabled:opacity-40", recording ? "border-rose-500 bg-rose-500 text-white" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label={recording ? "Detener grabación" : "Grabar audio"} title={recording ? "Detener y enviar audio" : "Grabar un audio"}>
+          {recording ? <Square size={15} fill="currentColor" /> : <Mic size={16} />}
+        </button>
         <textarea
           ref={inputRef}
           value={text}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
           rows={1}
-          placeholder="Escribe un mensaje…  (@ persona · / tarea · Enter envía)"
+          placeholder={recording ? "Grabando audio… toca ⏹ para enviar" : "Escribe un mensaje…  (@ persona · / tarea · 📎 adjunta)"}
           className="max-h-32 flex-1 resize-none rounded-2xl border border-line px-4 py-2.5 text-sm outline-none transition [field-sizing:content] focus:border-accent"
         />
-        <button onClick={submit} disabled={!text.trim() && people.length === 0 && pendingTasks.length === 0}
+        <button onClick={submit} disabled={uploading || (!text.trim() && people.length === 0 && pendingTasks.length === 0 && !attach)}
           className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}
           aria-label="Enviar">
           <Send size={16} />

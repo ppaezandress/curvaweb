@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Plus, MessageSquarePlus } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -9,11 +9,12 @@ import { Avatar } from "@/components/Avatar";
 import { Composer } from "@/components/chat/Composer";
 import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg } from "@/components/chat/MessageItem";
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
+import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
 import { SpaceAvatar } from "@/components/chat/SpaceAvatar";
 import { CultureRail } from "@/components/chat/CultureRail";
 import { cn } from "@/lib/cn";
 
-type Channel = { id: number; name: string; kind: string; created_by: string | null };
+type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean };
 type ReactionRow = { id: number; message_id: number; user_id: string; emoji: string };
 
 function daySepLabel(iso: string): string {
@@ -24,7 +25,7 @@ function daySepLabel(iso: string): string {
 }
 
 export default function MensajesPage() {
-  const { currentUserId } = useApp();
+  const { currentUserId, isAdmin } = useApp();
   const { members, tasks } = useData();
   const sb = getSupabase();
 
@@ -38,6 +39,7 @@ export default function MensajesPage() {
   const [reactions, setReactions] = useState<ReactionRow[]>([]);
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const profilesRef = useRef(profiles); profilesRef.current = profiles;
   // "Está escribiendo…" en vivo (broadcast, sin tocar la BD).
@@ -68,7 +70,7 @@ export default function MensajesPage() {
   const loadChannels = useCallback(async () => {
     if (!sb) return;
     const [{ data: chs }, { data: mems }] = await Promise.all([
-      sb.from("channels").select("id,name,kind,created_by").order("id"),
+      sb.from("channels").select("*").order("id"),
       sb.from("channel_members").select("channel_id,user_id"),
     ]);
     setChannels((chs as Channel[]) || []);
@@ -96,7 +98,7 @@ export default function MensajesPage() {
     if (!sb || activeId == null) return;
     let active = true;
     (async () => {
-      const { data: msgs } = await sb.from("messages").select("id,user_id,body,kind,created_at").eq("channel_id", activeId).order("created_at");
+      const { data: msgs } = await sb.from("messages").select("*").eq("channel_id", activeId).order("created_at");
       if (!active) return;
       setMessages((msgs as ChatMsg[]) || []);
       const ids = (msgs || []).map((m: { id: number }) => m.id);
@@ -149,9 +151,11 @@ export default function MensajesPage() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const send = async (body: string) => {
+  const send = async (body: string, attachment?: { url: string; type: string }) => {
     if (!sb || !myUid || activeId == null) return;
-    await sb.from("messages").insert({ channel_id: activeId, user_id: myUid, body, kind: "user" });
+    const row: Record<string, unknown> = { channel_id: activeId, user_id: myUid, body, kind: "user" };
+    if (attachment) { row.attachment_url = attachment.url; row.attachment_type = attachment.type; }
+    await sb.from("messages").insert(row);
   };
 
   const toggleReaction = async (messageId: number, emoji: string) => {
@@ -170,6 +174,12 @@ export default function MensajesPage() {
     await loadChannels();
     setActiveId(ch.id);
   };
+
+  // Admin de canales (creador o admin de la app; RLS lo respalda)
+  const renameChannel = async (id: number, name: string) => { if (!sb) return; await sb.from("channels").update({ name }).eq("id", id); await loadChannels(); };
+  const setChannelHidden = async (id: number, hidden: boolean) => { if (!sb) return; await sb.from("channels").update({ is_hidden: hidden }).eq("id", id); await loadChannels(); };
+  const addChannelMember = async (id: number, uid: string) => { if (!sb) return; await sb.from("channel_members").insert({ channel_id: id, user_id: uid }); await loadChannels(); };
+  const removeChannelMember = async (id: number, uid: string) => { if (!sb) return; await sb.from("channel_members").delete().eq("channel_id", id).eq("user_id", uid); await loadChannels(); };
 
   const startDM = async (otherProfileId: string) => {
     if (!sb || !myUid) return;
@@ -226,8 +236,10 @@ export default function MensajesPage() {
     return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Cargando mensajes…</div>;
   }
 
-  const teamCh = channels.filter((c) => c.kind === "team");
-  const customCh = channels.filter((c) => c.kind === "channel");
+  // Los canales ocultos solo los ve su creador o un admin (para poder mostrarlos de nuevo).
+  const canSeeHidden = (c: Channel) => !c.is_hidden || isAdmin || c.created_by === myUid;
+  const teamCh = channels.filter((c) => c.kind === "team" && canSeeHidden(c));
+  const customCh = channels.filter((c) => c.kind === "channel" && canSeeHidden(c));
   const dmCh = channels.filter((c) => c.kind === "dm");
   const activeChannel = channels.find((c) => c.id === activeId);
 
@@ -267,14 +279,19 @@ export default function MensajesPage() {
 
         <div className="mb-3 flex items-center gap-2.5 border-b border-line pb-3">
           {activeChannel && renderChannelIcon(activeChannel, 34)}
-          <div className="min-w-0">
-            <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}{activeChannel?.is_hidden && <span className="ml-2 rounded-full bg-amber-500/10 px-2 py-0.5 align-middle text-[10px] font-semibold text-amber-600">oculto</span>}</h1>
             <p className="text-xs text-muted">
               {activeChannel?.kind === "team" ? "Todo el equipo · tiempo real"
                 : activeChannel?.kind === "dm" ? "Mensaje directo · privado"
                 : "Espacio privado · tiempo real"}
             </p>
           </div>
+          {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
+            <button onClick={() => setSettingsOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Ajustes del canal" title="Ajustes del canal">
+              <Settings size={16} />
+            </button>
+          )}
         </div>
 
         <div className="flex-1 space-y-1.5 overflow-y-auto pr-1">
@@ -318,6 +335,22 @@ export default function MensajesPage() {
       <aside className="hidden w-64 shrink-0 xl:block"><CultureRail /></aside>
 
       <CreateChannelModal open={showNewChannel} onClose={() => setShowNewChannel(false)} members={teammatesWithAccount} onCreate={createChannel} />
+
+      {activeChannel && (
+        <ChannelSettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          channel={activeChannel}
+          currentMembers={memberships.filter((m) => m.channel_id === activeChannel.id).map((m) => profiles[m.user_id]).filter(Boolean)}
+          candidates={teammatesWithAccount
+            .map((m) => notionToProfile[m.id])
+            .filter((p): p is ChatProfile & { notion_user_id?: string } => !!p && !memberships.some((mem) => mem.channel_id === activeChannel.id && mem.user_id === p.id))}
+          onRename={(name) => renameChannel(activeChannel.id, name)}
+          onToggleHidden={(hidden) => setChannelHidden(activeChannel.id, hidden)}
+          onAddMember={(uid) => addChannelMember(activeChannel.id, uid)}
+          onRemoveMember={(uid) => removeChannelMember(activeChannel.id, uid)}
+        />
+      )}
     </div>
   );
 }
