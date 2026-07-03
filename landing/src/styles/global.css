@@ -321,11 +321,69 @@ body {
   .curve-dot { offset-distance: 50%; }
 }
 
-/* Partículas / puntos de dato que parpadean sobre la escena */
-.twinkle { animation: twinkle 4s ease-in-out infinite; }
+/* ===== La Curva 10x — vida continua (no depende del scroll) ===== */
+/* Cometa que sube la curva en bucle, con estela de puntos rezagados */
+.curve-comet {
+  offset-rotate: 0deg; offset-distance: 0%; opacity: 0;
+  animation: curve-climb 6.5s cubic-bezier(0.42, 0, 0.28, 1) infinite;
+  will-change: offset-distance, opacity;
+}
+.curve-comet--head { animation-delay: 0s; }
+.curve-comet--t1 { animation-delay: 0.1s; }
+.curve-comet--t2 { animation-delay: 0.2s; }
+.curve-comet--t3 { animation-delay: 0.3s; }
+@keyframes curve-climb {
+  0%   { offset-distance: 0%;   opacity: 0; }
+  9%   { opacity: 1; }
+  60%  { offset-distance: 100%; opacity: 1; }
+  73%  { offset-distance: 100%; opacity: 0; }  /* llega a la cima y se desvanece */
+  100% { offset-distance: 0%;   opacity: 0; }  /* reset invisible */
+}
+
+/* Estela luminosa que recorre la línea (pathLength=100 en el markup) */
+.curve-streak {
+  stroke-dasharray: 8 92; stroke-dashoffset: 0; opacity: 0.5;
+  animation: curve-streak 5s linear infinite; will-change: stroke-dashoffset;
+}
+@keyframes curve-streak { to { stroke-dashoffset: -100; } }
+
+/* Cima: aura que respira, nodo que late, anillos que irradian */
+.summit-aura { transform-box: fill-box; transform-origin: center; animation: summit-breathe 5s ease-in-out infinite; }
+@keyframes summit-breathe {
+  0%, 100% { opacity: 0.7; transform: scale(0.94); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+.summit-node { transform-box: fill-box; transform-origin: center; animation: summit-node 3.4s ease-in-out infinite; }
+@keyframes summit-node {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(186, 230, 253, 0.6)); }
+  50%      { filter: drop-shadow(0 0 13px rgba(186, 230, 253, 0.95)); }
+}
+.summit-ring { transform-box: fill-box; transform-origin: center; opacity: 0; animation: summit-ring 3.4s ease-out infinite; }
+.summit-ring--2 { animation-delay: 1.7s; }
+@keyframes summit-ring {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  70%  { opacity: 0; }
+  100% { transform: scale(3.6); opacity: 0; }
+}
+
+/* Partículas / puntos de dato: parpadean y ascienden lentamente */
+.twinkle { animation: twinkle 4s ease-in-out infinite, drift-up 9s ease-in-out infinite; }
 @keyframes twinkle {
   0%, 100% { opacity: 0.15; }
   50%      { opacity: 0.7; }
+}
+@keyframes drift-up {
+  0%, 100% { transform: translateY(5px); }
+  50%      { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curve-comet, .curve-streak, .summit-aura, .summit-node, .summit-ring, .twinkle {
+    animation: none !important;
+  }
+  .curve-comet--head { offset-distance: 100%; opacity: 1; }
+  .curve-comet--t1, .curve-comet--t2, .curve-comet--t3 { opacity: 0; }
+  .summit-aura { opacity: 0.7; }
 }
 
 /* Hito sobre la curva: etiqueta posicionada por % sobre un punto del viewBox */
@@ -751,4 +809,163 @@ body {
   .curve-pin-sticky { position: static; min-height: 0; }
   .pin-cap > span { transition: none; }
   .twinkle { animation: none; opacity: 0.4; }
+}
+
+/* ===== Interruptor pains→gains 10x (sección Problema) — Emiliano =====
+   Dolor = papeles sueltos y grises. Con CURVA = sistema: se alinean en cascada,
+   la columna se dibuja con un pulso y los nodos se encienden con palomita. */
+.pg { --pg-blue: #2563eb; --pg-sky: #38bdf8; --pg-dur: 0.7s; }
+
+/* ── Cabecera: switch + barra de progreso del auto-play ── */
+.pg-head { margin-bottom: 2.25rem; }
+.pg-switch {
+  display: inline-flex; align-items: center; gap: 0.85rem;
+  cursor: pointer; user-select: none;
+}
+.pg-off, .pg-on {
+  font-size: 0.9rem; font-weight: 600; letter-spacing: -0.01em;
+  transition: color 0.4s var(--ease-pitch), transform 0.4s var(--ease-pitch);
+}
+.pg-off { color: var(--color-ink); }
+.pg-on { color: var(--color-sand-400); }
+.pg-track {
+  position: relative; height: 2rem; width: 3.75rem; flex-shrink: 0;
+  border-radius: 9999px; background: var(--color-sand-300);
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.14);
+  transition: background 0.45s var(--ease-pitch), box-shadow 0.45s var(--ease-pitch);
+}
+.pg-knob {
+  position: absolute; top: 0.25rem; left: 0.25rem; height: 1.5rem; width: 1.5rem;
+  border-radius: 9999px; background: #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+  transition: transform 0.5s var(--ease-pitch), width 0.2s var(--ease-pitch);
+}
+#pg-toggle:checked ~ .pg-head .pg-track {
+  background: linear-gradient(120deg, var(--pg-blue), var(--pg-sky));
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.14), 0 0 0 4px color-mix(in srgb, var(--pg-blue) 12%, transparent);
+}
+#pg-toggle:checked ~ .pg-head .pg-knob { transform: translateX(1.75rem); }
+#pg-toggle:checked ~ .pg-head .pg-off { color: var(--color-sand-400); }
+#pg-toggle:checked ~ .pg-head .pg-on { color: var(--pg-blue); }
+#pg-toggle:focus-visible ~ .pg-head .pg-track { outline: 2px solid var(--pg-blue); outline-offset: 3px; }
+
+/* Barra de progreso del auto-play (la llena pgauto.ts vía scaleX) */
+.pg-progress {
+  margin-top: 0.9rem; height: 3px; width: 100%; max-width: 22rem;
+  border-radius: 9999px; background: var(--color-sand-200); overflow: hidden;
+  opacity: 0.9; transition: opacity 0.4s;
+}
+.pg-progress-bar {
+  display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left;
+  background: linear-gradient(90deg, var(--pg-blue), var(--pg-sky));
+  border-radius: 9999px;
+}
+.pg[data-pg-paused] .pg-progress { opacity: 0.35; }
+.pg-hint {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  margin-top: 0.7rem; font-size: 0.75rem; color: var(--color-sand-400);
+}
+.pg-hint svg { flex-shrink: 0; }
+
+/* ── Columna / spine ── */
+.pg-list { position: relative; padding-left: 0.25rem; }
+/* Riel punteado (dolor): entrecortado, se apaga con CURVA */
+.pg-list::before {
+  content: ""; position: absolute; left: 1rem; top: 1.9rem; bottom: 1.9rem; width: 2px;
+  background-image: repeating-linear-gradient(to bottom, var(--color-sand-300) 0 5px, transparent 5px 12px);
+  transition: opacity 0.5s;
+}
+/* Columna que se DIBUJA de arriba a abajo con un pulso al activar CURVA */
+.pg-list::after {
+  content: ""; position: absolute; left: 1rem; top: 1.9rem; bottom: 1.9rem; width: 2px;
+  transform: translateX(-1px) scaleY(0); transform-origin: top;
+  background: linear-gradient(to bottom, var(--pg-blue), var(--pg-sky));
+  border-radius: 2px; box-shadow: 0 0 14px color-mix(in srgb, var(--pg-blue) 45%, transparent);
+  opacity: 0; transition: opacity 0.3s, transform 0.9s var(--ease-pitch);
+}
+#pg-toggle:checked ~ .pg-list::before { opacity: 0; }
+#pg-toggle:checked ~ .pg-list::after { opacity: 1; transform: translateX(-1px) scaleY(1); }
+
+/* ── Cada par (papel) ── */
+.pg-item {
+  display: grid; grid-template-columns: 2rem 1fr; gap: 1rem; align-items: start;
+  margin: 0.55rem 0;
+  --stagger: calc(var(--i) * 80ms);
+}
+.pg-rail { display: flex; justify-content: center; padding-top: 1.35rem; }
+
+/* Nodo */
+.pg-dot {
+  position: relative; height: 1.15rem; width: 1.15rem; border-radius: 9999px;
+  background: #fff; border: 2px solid var(--color-sand-300);
+  box-shadow: 0 0 0 4px var(--color-sand-50);
+  display: grid; place-items: center; color: #fff;
+  transition: background 0.5s var(--ease-pitch), border-color 0.5s var(--ease-pitch),
+    box-shadow 0.5s var(--ease-pitch), transform 0.5s var(--ease-pitch);
+  transition-delay: var(--stagger);
+}
+.pg-check {
+  width: 0.7rem; height: 0.7rem; opacity: 0; transform: scale(0.4);
+  transition: opacity 0.4s, transform 0.4s var(--ease-pitch);
+  transition-delay: calc(var(--stagger) + 120ms);
+}
+#pg-toggle:checked ~ .pg-list .pg-dot {
+  background: linear-gradient(135deg, var(--pg-blue), var(--pg-sky));
+  border-color: transparent; transform: scale(1.12);
+  box-shadow: 0 0 0 4px var(--color-sand-50), 0 0 16px color-mix(in srgb, var(--pg-blue) 55%, transparent);
+}
+#pg-toggle:checked ~ .pg-list .pg-check { opacity: 1; transform: scale(1); }
+
+/* Tarjeta */
+.pg-card {
+  position: relative; border-radius: 1rem; padding: 1rem 1.15rem;
+  background: color-mix(in srgb, var(--color-sand-100) 55%, #fff);
+  border: 1px solid var(--color-sand-200);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition: transform var(--pg-dur) var(--ease-pitch), background var(--pg-dur) var(--ease-pitch),
+    border-color var(--pg-dur) var(--ease-pitch), box-shadow var(--pg-dur) var(--ease-pitch);
+  transition-delay: var(--stagger);
+}
+/* Estado DOLOR: papeles sueltos, ligeramente girados y desalineados */
+.pg-item:nth-child(1) .pg-card { transform: translateX(16px) rotate(-1deg); }
+.pg-item:nth-child(2) .pg-card { transform: translateX(-10px) rotate(0.8deg); }
+.pg-item:nth-child(3) .pg-card { transform: translateX(22px) rotate(-0.5deg); }
+.pg-item:nth-child(4) .pg-card { transform: translateX(-6px) rotate(0.9deg); }
+/* Estado CURVA: se alinean, se aclaran, con acento azul y elevación */
+#pg-toggle:checked ~ .pg-list .pg-card {
+  transform: none; background: #fff;
+  border-color: color-mix(in srgb, var(--pg-blue) 22%, var(--color-sand-200));
+  box-shadow: -3px 0 0 0 var(--pg-blue), 0 18px 34px -22px rgba(37, 99, 235, 0.5);
+}
+
+.pg-num {
+  display: inline-block; font-family: var(--font-display, inherit);
+  font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--color-sand-400);
+  transition: color var(--pg-dur) var(--ease-pitch); transition-delay: var(--stagger);
+}
+#pg-toggle:checked ~ .pg-list .pg-num { color: var(--pg-blue); }
+
+/* Texto: crossfade dolor→gain, en cascada */
+.pg-texts { display: grid; margin-top: 0.3rem; }
+.pg-pain, .pg-gain {
+  grid-area: 1 / 1; font-size: 1.2rem; line-height: 1.4; letter-spacing: -0.01em;
+  transition: opacity 0.5s var(--ease-pitch), transform 0.5s var(--ease-pitch);
+  transition-delay: var(--stagger);
+}
+.pg-pain { color: var(--color-ink); }
+.pg-gain { color: var(--pg-blue); font-weight: 500; opacity: 0; transform: translateY(9px); }
+#pg-toggle:checked ~ .pg-list .pg-pain { opacity: 0; transform: translateY(-9px); }
+#pg-toggle:checked ~ .pg-list .pg-gain { opacity: 1; transform: none; }
+
+@media (min-width: 640px) {
+  .pg-pain, .pg-gain { font-size: 1.4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-card, .pg-knob, .pg-pain, .pg-gain, .pg-dot, .pg-check, .pg-list::after, .pg-num {
+    transition-duration: 0.001s !important; transition-delay: 0s !important;
+  }
+  .pg-item .pg-card { transform: none !important; }
+  .pg-progress { display: none; }
 }

@@ -91,6 +91,8 @@ const {
       import { initHeroAI } from '../scripts/hero-ai';
       import { initCheckout } from '../scripts/checkout';
       import { initCarousel } from '../scripts/carousel';
+      import { initHitos } from '../scripts/hitos';
+      import { initPgAuto } from '../scripts/pgauto';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -122,6 +124,8 @@ const {
         initHeroAI();
         initCheckout();
         initCarousel();
+        initHitos();
+        initPgAuto();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))

@@ -6,6 +6,7 @@ import Curve from '../components/Curve.astro';
 import HeroAsk from '../components/HeroAsk.astro';
 import ImpactoCarrusel from '../components/ImpactoCarrusel.astro';
 import Caminos from '../components/Caminos.astro';
+import RedNodos from '../components/RedNodos.astro';
 import Intro from '../components/Intro.astro';
 import { areas } from '../data/areas';
 
@@ -50,7 +51,16 @@ const hoy = [
 const despues = [
   'El negocio corre sin ti encima.',
   'Cada quien sabe qué hacer, sin preguntarte.',
-  'Creces con números, no con corazonadas.',
+  'Creces con números claros, no a ciegas.',
+];
+
+// Interruptor pains→gains (sección "¿Te suena algo de esto?"): el mismo punto,
+// "antes" (dolor) → "después" (con CURVA). Gains de la auditoría de Emiliano.
+const pares = [
+  { pain: 'El negocio depende de pocas personas para no detenerse.', gain: 'El negocio no depende de ti: puede funcionar solo.' },
+  { pain: 'Los procesos viven en la cabeza, no en un sistema.',       gain: 'El conocimiento se centraliza en un solo lugar, para todo el equipo.' },
+  { pain: 'Cada venta nueva trae más trabajo y desorden, no más claridad.', gain: 'Sostienes más ventas sin perder el orden, con una dirección clara.' },
+  { pain: 'Hay con qué crecer, pero falta la estructura para lograrlo.', gain: 'Tienes los cimientos y la estructura para crecer.' },
 ];
 
 // Hitos sobre la curva (coords % sobre la Bézier del viewBox 1280x420).
@@ -68,6 +78,7 @@ const paradas = [
   { eyebrow: '02', label: 'Diagnóstico', accent: 'ember' as const },
   { eyebrow: '03', label: 'Implementación', accent: 'gold' as const },
   { eyebrow: 'Con CURVA', label: 'Operación por sistema', accent: 'gold' as const },
+  { eyebrow: 'La cima', label: 'Cambio de vida', accent: 'gold' as const },
 ];
 
 // Pasos redefinidos por Pau (mata "digitalización" como paso único; un proyecto puede no ser digital).
@@ -164,14 +175,45 @@ const producto = {
         <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.08] tracking-tight text-ink text-balance">¿Te suena algo de esto?</h2>
         <p class="reveal mt-6 text-lg text-sand-600 leading-relaxed max-w-md">Si te late seguido, el problema no es falta de esfuerzo. Es falta de sistema.</p>
       </div>
-      <ul class="border-t border-sand-200 self-center">
-        {problema.map((item, i) => (
-          <li class={`reveal reveal-d${i + 1} flex gap-6 items-baseline py-7 border-b border-sand-200 group`}>
-            <span class={`display text-base font-semibold tabular-nums ${accentText[areas[i % areas.length].accent]}`}>0{i + 1}</span>
-            <p class="text-xl sm:text-2xl text-ink leading-snug group-hover:translate-x-1 transition-transform">{item}</p>
-          </li>
-        ))}
-      </ul>
+      <!-- Interruptor pains→gains: papeles sueltos (dolor) → sistema ordenado (con CURVA).
+           Se alterna solo (pgauto.ts) y se pausa al pasar el cursor. -->
+      <div class="pg reveal self-center w-full" data-pg>
+        <input type="checkbox" id="pg-toggle" class="sr-only" aria-label="Alternar entre el problema de hoy y lo que hace CURVA" />
+
+        <div class="pg-head">
+          <label for="pg-toggle" class="pg-switch">
+            <span class="pg-off">Así se siente hoy</span>
+            <span class="pg-track">
+              <span class="pg-knob"></span>
+            </span>
+            <span class="pg-on">Esto es lo que hace CURVA</span>
+          </label>
+          <div class="pg-progress" aria-hidden="true"><span class="pg-progress-bar"></span></div>
+          <span class="pg-hint" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 12a9 9 0 1015.5-6.2M18.5 3v3h-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            se alterna solo · pásale el cursor para pausar
+          </span>
+        </div>
+
+        <ul class="pg-list" role="list">
+          {pares.map((p, i) => (
+            <li class="pg-item" style={`--i:${i}`}>
+              <span class="pg-rail">
+                <span class="pg-dot">
+                  <svg class="pg-check" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </span>
+              </span>
+              <div class="pg-card">
+                <span class="pg-num">0{i + 1}</span>
+                <div class="pg-texts">
+                  <p class="pg-pain">{p.pain}</p>
+                  <p class="pg-gain">{p.gain}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -188,17 +230,27 @@ const producto = {
       <!-- Escena horizontal (desktop): la curva se dibuja al hacer scroll -->
       <div class="reveal reveal-scale relative w-full mt-8 pt-12 pb-16 hidden sm:block">
         <!-- Con CURVA: arriba-derecha, junto al final ALTO de la curva (el éxito) -->
-        <div class="absolute top-0 right-0 max-w-[46%] text-right">
-          <p class="eyebrow text-jade-300 mb-1.5 text-sm">Con CURVA</p>
+        <div class="absolute top-0 right-0 max-w-[52%] text-right">
+          <p class="eyebrow text-jade-300 mb-1.5 text-sm">La cima · Con CURVA</p>
           <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">Operación por <span class="word-after">sistema</span></p>
+          <p class="mt-2 text-sm text-sand-100/90">Y con eso, un <span class="font-semibold text-jade-300">cambio de vida</span>.</p>
         </div>
         <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible parallax" data-parallax="10" aria-hidden="true">
           <defs>
             <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#ffffff"></stop>
-              <stop offset="0.5" stop-color="#e0f2fe"></stop>
-              <stop offset="1" stop-color="#7dd3fc"></stop>
+              <stop offset="0" stop-color="#60a5fa"></stop>
+              <stop offset="0.45" stop-color="#bae6fd"></stop>
+              <stop offset="1" stop-color="#ffffff"></stop>
             </linearGradient>
+            <linearGradient id="curve-comet-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#7dd3fc" stop-opacity="0"></stop>
+              <stop offset="1" stop-color="#ffffff"></stop>
+            </linearGradient>
+            <radialGradient id="summit-aura" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#bae6fd" stop-opacity="0.55"></stop>
+              <stop offset="55%" stop-color="#60a5fa" stop-opacity="0.18"></stop>
+              <stop offset="100%" stop-color="#2563eb" stop-opacity="0"></stop>
+            </radialGradient>
             <linearGradient id="curve-area" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"></stop>
               <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
@@ -217,6 +269,8 @@ const producto = {
             </filter>
           </defs>
 
+          <!-- Aura de la cima (respira detrás del nodo final) -->
+          <ellipse class="summit-aura" cx="1240" cy="70" rx="220" ry="170" fill="url(#summit-aura)"></ellipse>
           <!-- Plano técnico de fondo -->
           <rect width="1280" height="420" fill="url(#grid)" mask="url(#grid-mask)"></rect>
           <!-- Eje base -->
@@ -234,21 +288,29 @@ const producto = {
           <path d={`${curvePath} L1240,392 L40,392 Z`} fill="url(#curve-area)"></path>
           <!-- Riel tenue -->
           <path d={curvePath} stroke="rgba(255,255,255,0.20)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10"></path>
-          <!-- Trazo firma ligado al pin (lo conduce curve-pin.ts) -->
-          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-draw="scroll" style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
+          <!-- Trazo firma: se dibuja con el scroll (curve-draw.ts) -->
+          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-draw="scroll" data-hito-path style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
+          <!-- Estela de energía que recorre la curva en bucle (ambient) -->
+          <path class="curve-streak" d={curvePath} stroke="url(#curve-comet-grad)" stroke-width="4" stroke-linecap="round" fill="none" filter="url(#curve-glow)" pathLength="100"></path>
 
-          <!-- Hitos sobre la curva -->
-          <circle cx="350" cy="335" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
-          <circle cx="660" cy="250" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
-          <circle cx="969" cy="134" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
+          <!-- Hitos sobre la curva (coords exactas las coloca hitos.ts con getPointAtLength) -->
+          <circle data-hito cx="350" cy="335" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
+          <circle data-hito cx="660" cy="250" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
+          <circle data-hito cx="969" cy="134" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
 
           <!-- Nodo inicio (hoy) -->
-          <circle cx="40" cy="360" r="9" fill="#ffffff" stroke="#ffffff" stroke-width="3"></circle>
-          <!-- Nodo fin (con CURVA) -->
-          <circle cx="1240" cy="70" r="11" fill="#ffffff" stroke="#7dd3fc" stroke-width="3"></circle>
+          <circle cx="40" cy="360" r="9" fill="#ffffff" stroke="rgba(255,255,255,0.35)" stroke-width="7"></circle>
 
-          <!-- Punto viajero (con halo) -->
-          <circle class="curve-dot" r="6" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="9"></circle>
+          <!-- Cima (con CURVA): anillos que irradian + nodo que brilla -->
+          <circle class="summit-ring" cx="1240" cy="70" r="12" fill="none" stroke="#bae6fd" stroke-width="2"></circle>
+          <circle class="summit-ring summit-ring--2" cx="1240" cy="70" r="12" fill="none" stroke="#bae6fd" stroke-width="2"></circle>
+          <circle class="summit-node" cx="1240" cy="70" r="11" fill="#ffffff" stroke="#7dd3fc" stroke-width="3"></circle>
+
+          <!-- Cometa viajero: sube la curva en bucle (offset-path = curvePath) -->
+          <circle class="curve-comet curve-comet--t3" r="3" fill="#7dd3fc" style={`offset-path: path('${curvePath}');`}></circle>
+          <circle class="curve-comet curve-comet--t2" r="4" fill="#bae6fd" style={`offset-path: path('${curvePath}');`}></circle>
+          <circle class="curve-comet curve-comet--t1" r="5" fill="#e0f2fe" style={`offset-path: path('${curvePath}');`}></circle>
+          <circle class="curve-comet curve-comet--head" r="6" fill="#ffffff" filter="url(#curve-glow)" style={`offset-path: path('${curvePath}');`}></circle>
         </svg>
 
         <!-- Hitos: chip flotante clickeable que se "enciende" al pasar el trazo (solo desktop) -->
@@ -284,31 +346,8 @@ const producto = {
         </ul>
       </div>
 
-      <!-- Antes / después en dos columnas -->
-      <div class="grid sm:grid-cols-2 gap-5 sm:gap-8 mt-14 sm:mt-20">
-        <div class="reveal rounded-3xl border border-white/20 bg-white/10 p-7 sm:p-9">
-          <p class="eyebrow text-jade-300 mb-6">Dónde estás hoy</p>
-          <ul class="space-y-4">
-            {hoy.map((h) => (
-              <li class="flex gap-3 text-sand-100 leading-relaxed">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-jade-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-                <span>{h}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div class="reveal reveal-d1 rounded-3xl border border-white/20 bg-white/10 p-7 sm:p-9">
-          <p class="eyebrow text-white mb-6">A dónde llegas</p>
-          <ul class="space-y-4">
-            {despues.map((d) => (
-              <li class="flex gap-3 text-sand-100 leading-relaxed">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
-                <span>{d}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <!-- (Los cuadritos "Dónde estás hoy / A dónde llegas" se quitaron — feedback de
+           Emiliano: darle más énfasis a la curva del proceso, menos texto redundante.) -->
     </div>
   </section>
 
@@ -317,6 +356,9 @@ const producto = {
 
   <!-- ============================== IMPACTO REAL (carrusel de casos con cifra) ============================== -->
   <ImpactoCarrusel />
+
+  <!-- ============================== PERSONAS (diagrama de nodos: por qué lo hacemos) ============================== -->
+  <RedNodos />
 
   <!-- ============================== PRODUCTO (ventaja injusta) ============================== -->
   <section class="text-ink py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden">
