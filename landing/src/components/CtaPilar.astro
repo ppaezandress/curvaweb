@@ -1,0 +1,25 @@
+---
+// CTA por pilar: cada pilar de consultoría cierra con su propia invitación
+// ("¿Crees que esto es para ti? ..."). No un solo CTA genérico al final.
+import type { Accent } from '../data/areas';
+interface Props {
+  text: string;
+  calLink: string;
+  waLink: string;
+  dark?: boolean;
+  accent?: Accent;
+}
+const { text, calLink, waLink, dark = false } = Astro.props;
+---
+<div class={`mt-6 rounded-2xl border p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between ${dark ? 'border-white/12 bg-white/[0.04]' : 'border-sand-200 bg-white'}`}>
+  <p class={`text-[15px] font-medium leading-snug ${dark ? 'text-sand-200' : 'text-ink'}`}>{text}</p>
+  <div class="flex gap-2.5 flex-shrink-0">
+    <a href={calLink} target="_blank" rel="noopener" class="btn-pop inline-flex items-center gap-2 text-sm font-semibold bg-ember text-white px-5 py-2.5 rounded-full hover:bg-ember-600 whitespace-nowrap">
+      Agendar llamada
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+    </a>
+    <a href={waLink} target="_blank" rel="noopener" class={`btn-pop inline-flex items-center text-sm font-semibold px-5 py-2.5 rounded-full whitespace-nowrap transition-colors ${dark ? 'text-sand-100 border border-white/20 hover:bg-white/10' : 'text-ink border border-sand-300 hover:bg-sand-50'}`}>
+      Escríbenos
+    </a>
+  </div>
+</div>

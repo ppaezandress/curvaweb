@@ -1,0 +1,73 @@
+---
+// Composer IA inline del hero: se ve "AI-powered", es multilínea, graba voz y
+// TRANSCRIBE, y responde ahí mismo (mini-chat). Lógica en scripts/hero-ai.ts.
+// El subtítulo del hero vive aquí, DEBAJO de la tarjeta.
+export interface Props { calLink?: string }
+const { calLink = 'https://cal.com/andres-paez/30min' } = Astro.props;
+
+const seeds = ['Mi equipo hace todo manual', 'Dependo de mí para todo', 'Quiero vender más en línea'];
+---
+<div id="hero-ai" data-cal-link={calLink} data-load="5" class="mt-9 mx-auto max-w-2xl relative text-left">
+  <!-- Anillo con glow animado (señal IA, decorativo) -->
+  <span class="hero-ai-ring pointer-events-none absolute -inset-[3px] rounded-[1.65rem]" aria-hidden="true"></span>
+
+  <div class="hero-ai-card relative rounded-3xl bg-white border border-sand-200 shadow-2xl overflow-hidden">
+    <!-- Header IA -->
+    <div class="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-sand-200">
+      <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--gradient-curve)">
+        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2zm6.5 10l.8 2.5 2.7.9-2.7.9-.8 2.7-.8-2.7-2.7-.9 2.7-.9.8-2.5z"/></svg>
+      </span>
+      <p class="text-sm font-semibold text-ink leading-tight flex items-center gap-2">
+        Asistente IA · CURVA
+        <span class="hero-ai-live inline-block w-1.5 h-1.5 rounded-full bg-jade flex-shrink-0" aria-hidden="true"></span>
+      </p>
+      <span class="ml-auto text-[11px] text-sand-500 hidden sm:inline">Responde aquí mismo</span>
+    </div>
+
+    <!-- Conversación (oculta hasta el 1er turno) -->
+    <div data-hero-log class="hero-ai-log px-4 sm:px-5 py-4 space-y-3 overflow-y-auto hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+    <!-- Chips de sugerencia (semilla; luego se reemplazan por opciones de la IA) -->
+    <div data-hero-chips class="px-4 sm:px-5 pt-3 flex flex-wrap gap-2">
+      {seeds.map((s) => (
+        <button type="button" data-hero-chip class="text-[13px] text-sand-600 border border-sand-300 rounded-full px-3.5 py-1.5 hover:border-ember hover:text-ember transition-colors">{s}</button>
+      ))}
+    </div>
+
+    <!-- Paso de correo inline (oculto hasta que se necesita) -->
+    <form data-hero-email-form class="px-4 sm:px-5 py-3 border-t border-sand-200 hidden">
+      <label for="hero-ai-email" class="block text-[13px] text-sand-600 mb-2">Para responderte, déjame tu correo:</label>
+      <div class="flex gap-2">
+        <input id="hero-ai-email" data-hero-email type="email" required autocomplete="email" placeholder="tu@correo.com"
+          class="flex-1 min-w-0 rounded-xl border border-sand-300 bg-white px-4 py-2.5 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors" />
+        <button type="submit" class="btn-pop bg-ember text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-ember-600 whitespace-nowrap">Enviar</button>
+      </div>
+      <p data-hero-email-error class="hidden text-rose-500 text-[13px] mt-1.5" aria-live="polite"></p>
+    </form>
+
+    <!-- Composer -->
+    <form data-hero-form class="p-3 sm:p-4 flex items-end gap-2 border-t border-sand-200">
+      <label for="hero-ai-input" class="sr-only">Describe tu problema</label>
+      <textarea id="hero-ai-input" data-hero-input rows="1" maxlength="1500"
+        placeholder="Describe tu problema… o manda un audio"
+        class="flex-1 min-w-0 resize-none max-h-40 min-h-[52px] rounded-2xl border border-sand-300 bg-white px-4 py-3.5 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors text-[15px] leading-relaxed"></textarea>
+      <button type="button" data-hero-mic aria-pressed="false" aria-label="Grabar audio"
+        class="hero-ai-mic btn-pop flex-shrink-0 w-12 h-12 rounded-full border border-sand-300 text-sand-600 hover:bg-sand-100 flex items-center justify-center transition-colors">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"></path></svg>
+      </button>
+      <button type="submit" data-hero-send aria-label="Preguntar a la IA"
+        class="btn-pop btn-arrow flex-shrink-0 inline-flex items-center justify-center gap-2 h-12 px-5 rounded-full bg-flare text-white text-sm font-semibold hover:bg-flare-600 whitespace-nowrap transition-colors">
+        Preguntar
+        <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6-6m6 6l-6 6"></path></svg>
+      </button>
+    </form>
+
+    <!-- Estado para lectores de pantalla -->
+    <p data-hero-status class="sr-only" aria-live="polite"></p>
+  </div>
+</div>
+
+<!-- Subtítulo reubicado + reescrito, DEBAJO de la tarjeta -->
+<p data-load="5" class="mt-6 text-lg sm:text-xl text-sand-100 leading-relaxed max-w-xl mx-auto text-balance">
+  Describe tu problema o mándanos un audio, y la IA te lleva directo a la solución —sin navegar el menú.
+</p>

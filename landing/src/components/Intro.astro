@@ -1,0 +1,84 @@
+---
+// Cortinilla espectacular: el logo de CURVA se dibuja solo — la curva se traza
+// con un "cometa" naranja recorriéndola, luego aparece el wordmark, y el telón
+// se abre revelando el hero. Solo 1ª visita de sesión; respeta reduced-motion.
+// Timeline orquestada con CSS; scripts/intro.ts controla el gating y el cierre.
+---
+<div id="intro" class="intro-overlay" role="presentation" aria-hidden="true">
+  <div class="intro-glow"></div>
+  <div class="intro-lockup">
+    <svg class="intro-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="intro-grad" x1="2" y1="0" x2="22" y2="0" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#2563eb"></stop>
+          <stop offset="0.5" stop-color="#3b82f6"></stop>
+          <stop offset="1" stop-color="#38bdf8"></stop>
+        </linearGradient>
+      </defs>
+      <!-- riel tenue -->
+      <path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#e2e8f0" stroke-width="2.2" stroke-linecap="round"></path>
+      <!-- trazo firma que se dibuja -->
+      <path class="intro-draw" d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#intro-grad)" stroke-width="2.5" stroke-linecap="round" pathLength="1"></path>
+      <!-- cometa naranja que recorre la curva -->
+      <path class="intro-comet" d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#f97316" stroke-width="2.6" stroke-linecap="round" pathLength="1"></path>
+    </svg>
+    <div class="intro-word-wrap"><span class="intro-word display">curva</span></div>
+  </div>
+</div>
+
+<style>
+  .intro-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    background: #f8fafc;
+    opacity: 1;
+    transition: opacity .78s cubic-bezier(0.55, 0, 1, 0.45), transform .78s cubic-bezier(0.16, 1, 0.3, 1), filter .78s ease-in;
+  }
+  /* Cierre impactante: destello naranja + el logo se lanza al frente + zoom/blur/lift al hero */
+  .intro-overlay.intro-out { opacity: 0; transform: scale(1.18) translateY(-3%); filter: blur(12px); }
+  .intro-glow {
+    position: absolute; width: 42rem; height: 42rem; border-radius: 9999px;
+    background: radial-gradient(circle, rgba(37,99,235,0.12), transparent 70%);
+    filter: blur(20px);
+    transition: transform .55s cubic-bezier(0.7,0,0.2,1), background .45s ease, opacity .55s ease;
+  }
+  .intro-out .intro-glow {
+    transform: scale(2.1);
+    background: radial-gradient(circle, rgba(249,115,22,0.52), rgba(37,99,235,0.18) 42%, transparent 74%);
+  }
+  .intro-lockup {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.1rem;
+    transform: translateY(4px);
+    transition: transform .55s cubic-bezier(0.7, 0, 0.2, 1);
+  }
+  .intro-out .intro-lockup { animation: none; transform: scale(1.52) translateY(-16px); }
+  .intro-mark { width: clamp(88px, 16vw, 132px); height: auto; overflow: visible; filter: drop-shadow(0 8px 22px rgba(37,99,235,0.28)); }
+
+  .intro-draw  { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .intro-comet { stroke-dasharray: 0.07 0.93; stroke-dashoffset: 1.07; opacity: 0; filter: drop-shadow(0 0 6px rgba(249,115,22,0.9)); }
+
+  .intro-word-wrap { overflow: hidden; padding: 0 .1em; }
+  .intro-word {
+    display: inline-block; font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 700;
+    letter-spacing: -0.02em; color: var(--color-ink);
+    transform: translateY(110%);
+  }
+
+  /* Timeline al reproducir */
+  .intro-play .intro-draw  { animation: intro-draw 1.05s cubic-bezier(0.65,0,0.35,1) forwards .15s; }
+  .intro-play .intro-comet { animation: intro-comet 1.05s cubic-bezier(0.65,0,0.35,1) forwards .15s; }
+  .intro-play .intro-word  { animation: intro-word 0.75s cubic-bezier(0.16,1,0.3,1) forwards .95s; }
+  .intro-play .intro-lockup { animation: intro-settle 0.7s cubic-bezier(0.16,1,0.3,1) forwards 1.25s; }
+
+  @keyframes intro-draw  { to { stroke-dashoffset: 0; } }
+  @keyframes intro-comet {
+    0% { stroke-dashoffset: 1.07; opacity: 0; }
+    12% { opacity: 1; }
+    88% { opacity: 1; }
+    100% { stroke-dashoffset: 0.07; opacity: 0; }
+  }
+  @keyframes intro-word   { to { transform: translateY(0); } }
+  @keyframes intro-settle { to { transform: translateY(-2px) scale(1.02); } }
+
+  @media (prefers-reduced-motion: reduce) { .intro-overlay { display: none; } }
+</style>

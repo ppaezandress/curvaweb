@@ -1,0 +1,89 @@
+---
+// Cierre navegacional (estilo mosaico BCG): 3 tiles = los 3 frentes reales de
+// CURVA. Tiles grandes con gradiente de marca, motivo de la curva y CTA con
+// flecha firma. Toda la tarjeta es clickeable y accesible (focus-visible).
+export interface Props { calLink?: string }
+const { calLink = 'https://cal.com/andres-paez/30min' } = Astro.props;
+
+const caminos = [
+  {
+    eyebrow: 'Consultoría',
+    title: 'Ordena y transforma tu operación',
+    desc: 'Dos frentes —digital y de negocio— para que la empresa crezca con estructura y no dependa de ti.',
+    href: '/consultoria/transformacion-de-negocio',
+    accent: 'ember',
+    cta: 'Ver consultoría',
+  },
+  {
+    eyebrow: 'Soluciones digitales',
+    title: 'Herramientas listas para tu negocio',
+    desc: 'Software y automatizaciones que resuelven un problema concreto, sin proyecto de meses.',
+    href: '/soluciones',
+    accent: 'jade',
+    cta: 'Ver soluciones',
+  },
+  {
+    // PLACEHOLDER: pásame la URL real de "Clases de Claude" para quitar el "Próximamente".
+    eyebrow: 'Clases de Claude',
+    title: 'Aprende a usar la IA en tu empresa',
+    desc: 'Capacitamos a tu equipo para que aproveche la IA en su operación real, no en teoría.',
+    href: '#',
+    accent: 'flare',
+    cta: 'Próximamente',
+    pronto: true,
+  },
+] as const;
+
+// Motivo de la curva (marca de agua ascendente).
+const curva = 'M0,150 C90,150 120,60 220,44 C320,28 360,20 440,8';
+---
+<section id="caminos" class="py-24 sm:py-36 px-6 sm:px-10 relative overflow-hidden" aria-labelledby="caminos-title">
+  <div class="mx-auto max-w-7xl">
+    <div class="max-w-2xl mb-14 sm:mb-16">
+      <p class="reveal eyebrow-lead text-ember mb-5">Por dónde empezar</p>
+      <h2 id="caminos-title" class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">Tres formas de trabajar con nosotros.</h2>
+      <p class="reveal mt-5 text-lg text-sand-600 leading-relaxed">Elige tu punto de entrada. Todo se conecta: puedes empezar por una y sumar las demás cuando tenga sentido.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-5 sm:gap-6">
+      {caminos.map((c, i) => (
+        <a
+          href={c.href}
+          aria-label={`${c.eyebrow}: ${c.title}`}
+          class={`camino-tile group lift accent-${c.accent} reveal reveal-d${i + 1} relative flex flex-col rounded-3xl p-8 sm:p-9 min-h-[360px] sm:min-h-[420px] text-white overflow-hidden`}
+        >
+          {/* Motivo de la curva (marca de agua) */}
+          <svg class="pointer-events-none absolute inset-x-0 bottom-0 w-full h-40 opacity-25" viewBox="0 0 440 160" fill="none" preserveAspectRatio="none" aria-hidden="true">
+            <path d={curva} stroke="#fff" stroke-width="2.5" stroke-linecap="round"></path>
+          </svg>
+          {/* Scrim para legibilidad AA del texto sobre el gradiente */}
+          <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" aria-hidden="true"></span>
+
+          <div class="relative z-10 flex items-center justify-between gap-3">
+            <p class="eyebrow text-white/90">{c.eyebrow}</p>
+            {c.pronto && <span class="inline-flex items-center rounded-full bg-white/90 text-ink px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider">Próximamente</span>}
+          </div>
+
+          <div class="relative z-10 mt-auto">
+            <h3 class="display text-2xl sm:text-[1.7rem] font-semibold leading-[1.12] text-balance">{c.title}</h3>
+            <p class="mt-3 text-white/85 text-[15px] leading-relaxed max-w-[92%]">{c.desc}</p>
+            <span class="arrow-cta mt-6 inline-flex items-center gap-2 text-sm font-semibold">
+              {c.cta}
+              {!c.pronto && <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>}
+            </span>
+          </div>
+        </a>
+      ))}
+    </div>
+
+    <p class="reveal mt-10 text-center text-sand-500 text-[15px]">
+      ¿No sabes por cuál? <a href={calLink} target="_blank" rel="noopener" class="text-ember font-semibold link-underline">Cuéntanos en 30 min</a> y te decimos.
+    </p>
+  </div>
+</section>
+
+<style>
+  .camino-tile:focus-visible { outline: 3px solid var(--color-ink); outline-offset: 3px; }
+  /* En el tile, la flecha firma hereda el blanco del texto */
+  .camino-tile .arrow-cta { color: #fff; }
+</style>

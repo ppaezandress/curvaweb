@@ -46,8 +46,9 @@ export function initWordFade(): void {
       const lit = prog * spans.length;
       spans.forEach((s, i) => {
         const on = i < lit;
-        s.style.opacity = on ? '1' : '0.2';
-        s.style.filter = on ? 'none' : 'blur(3px)';
+        // Legible siempre: solo sube la opacidad al "encenderse" (sin blur que lo vuelva ilegible).
+        s.style.opacity = on ? '1' : '0.55';
+        s.style.filter = 'none';
       });
     });
   };

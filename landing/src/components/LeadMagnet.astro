@@ -2,18 +2,21 @@
 // Lead magnet de baja fricción: checklist descargable a cambio del correo.
 // La lógica de captura/entrega vive en scripts/leadmagnet.ts (re-armado en page-load).
 ---
-<section class="py-20 sm:py-28 px-6 sm:px-10 bg-sand-50 border-t border-sand-200">
-  <div class="mx-auto max-w-5xl rounded-3xl border border-sand-200 bg-white overflow-hidden grid md:grid-cols-2 shadow-sm">
+<section class="py-20 sm:py-28 px-6 sm:px-10 relative overflow-hidden">
+  <div class="reveal mx-auto max-w-5xl rounded-3xl border border-sand-200 bg-white overflow-hidden grid md:grid-cols-2 shadow-sm">
     <!-- Portada del checklist -->
-    <div class="relative bg-ink p-8 sm:p-10 flex items-center justify-center overflow-hidden">
-      <div class="glow-orb" style="width:20rem;height:20rem;top:-4rem;left:-4rem;background:radial-gradient(circle,rgba(124,58,237,0.5),transparent 70%);"></div>
-      <img
-        src="/checklist-preview.png"
-        alt="Vista del checklist: 10 señales de que tu operación necesita estructura"
-        width="794" height="1123"
-        loading="lazy"
-        class="relative z-10 w-44 sm:w-52 rounded-lg shadow-2xl rotate-[-3deg]"
-      />
+    <div class="relative p-8 sm:p-10 flex items-center justify-center overflow-hidden" style="background:var(--gradient-curve)">
+      <div class="glow-orb" style="width:20rem;height:20rem;top:-4rem;left:-4rem;background:radial-gradient(circle,rgba(255,255,255,0.28),transparent 70%);"></div>
+      <div class="relative z-10 w-44 sm:w-52 rotate-[-3deg]">
+        <img
+          src="/checklist-preview.png"
+          alt="Vista del checklist: 10 señales de que tu operación necesita estructura"
+          width="794" height="1123"
+          loading="lazy"
+          class="parallax w-full rounded-lg shadow-2xl"
+          data-parallax="12"
+        />
+      </div>
     </div>
 
     <!-- Form -->

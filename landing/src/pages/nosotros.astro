@@ -3,15 +3,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Curve from '../components/Curve.astro';
-import { Picture } from 'astro:assets';
-import andresImg from '../assets/andres.jpg';
-import ivanaImg from '../assets/ivana.jpg';
 
 const calLink = 'https://cal.com/andres-paez/30min';
 const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
 
 const siEs = [
-  'Consultora de transformación operativa y digital.',
+  'Consultora de transformación digital y de negocio.',
   'Aliado cercano de los fundadores.',
   'Diseñador de sistemas internos.',
   'Socio para empresas que ya crecieron, pero necesitan orden.',
@@ -31,13 +28,13 @@ const jsonLd = {
 };
 ---
 
-<BaseLayout title="Nosotros — CURVA" description="Quiénes somos, en qué creemos y hacia dónde vamos. Una consultora de transformación operativa y digital para empresas en crecimiento." jsonLd={jsonLd}>
+<BaseLayout title="Nosotros — CURVA" description="Quiénes somos, en qué creemos y hacia dónde vamos. Una consultora de transformación digital y de negocio para empresas en crecimiento." jsonLd={jsonLd}>
   <Nav calLink={calLink} />
 
   <!-- HERO -->
   <section class="pt-36 pb-20 sm:pt-44 sm:pb-28 px-6 sm:px-10 bg-sand-50 relative overflow-hidden">
     <div class="mx-auto max-w-7xl relative z-10">
-      <p class="reveal eyebrow text-ember mb-5">Nosotros</p>
+      <p class="reveal eyebrow-lead text-ember mb-5">Nosotros</p>
       <h1 class="reveal display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] text-ink max-w-3xl">Un aliado cercano para fundadores que quieren crecer con orden.</h1>
     </div>
     <div class="parallax pointer-events-none absolute -bottom-2 inset-x-0" data-parallax="16">
@@ -49,7 +46,7 @@ const jsonLd = {
   <section class="py-24 sm:py-32 px-6 sm:px-10 bg-white border-t border-sand-200">
     <div class="mx-auto max-w-7xl grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-12 lg:gap-24">
       <div class="lg:sticky lg:top-28 self-start">
-        <p class="eyebrow text-ember mb-5">Posicionamiento</p>
+        <p class="eyebrow-lead text-ember mb-5">Posicionamiento</p>
         <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink">Claros en lo que somos.</h2>
       </div>
       <div class="grid sm:grid-cols-2 gap-12">
@@ -72,7 +69,7 @@ const jsonLd = {
   <!-- MISIÓN / VISIÓN -->
   <section class="surface-ink text-sand-50 py-28 sm:py-36 px-6 sm:px-10">
     <div class="mx-auto max-w-7xl">
-      <p class="reveal eyebrow text-ember-300 mb-7">Hacia dónde vamos</p>
+      <p class="reveal eyebrow-lead text-ember-300 mb-7">Hacia dónde vamos</p>
       <h2 class="reveal display text-3xl sm:text-4xl lg:text-[3.4rem] font-semibold leading-[1.08] max-w-4xl">Liberar a fundadores y equipos para <span class="curve-text">crecer con orden</span>.</h2>
       <div class="mt-20 grid md:grid-cols-2 gap-12 lg:gap-20 border-t border-white/12 pt-14">
         <div>
@@ -81,32 +78,31 @@ const jsonLd = {
         </div>
         <div>
           <p class="eyebrow text-sand-400 mb-4">Visión</p>
-          <p class="text-lg sm:text-xl text-sand-300 leading-relaxed">Ser la consultora de referencia en <span class="text-sand-50">Latinoamérica</span> en transformación operativa y digital para empresas en crecimiento.</p>
+          <p class="text-lg sm:text-xl text-sand-300 leading-relaxed">Ser la consultora de referencia en <span class="text-sand-50">Latinoamérica</span> en transformación digital y de negocio para empresas en crecimiento.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- EQUIPO -->
+  <!-- CERCANÍA (nuestro diferenciador, contado como visión — sin fotos de equipo) -->
   <section class="py-24 sm:py-32 px-6 sm:px-10 bg-white">
-    <div class="mx-auto max-w-7xl grid lg:grid-cols-[minmax(0,0.65fr)_minmax(0,1.35fr)] gap-12 lg:gap-24">
+    <div class="mx-auto max-w-7xl grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-12 lg:gap-24">
       <div class="lg:sticky lg:top-28 self-start">
-        <p class="eyebrow text-ember mb-5">Equipo</p>
-        <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink">Quiénes están detrás.</h2>
+        <p class="eyebrow-lead text-ember mb-5">Lo que nos hace distintos</p>
+        <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">La cercanía no es un extra. Es como trabajamos.</h2>
       </div>
-      <div class="grid sm:grid-cols-2 gap-10">
-        <div class="reveal">
-          <div class="w-full aspect-[4/5] overflow-hidden rounded-3xl bg-sand-100 mb-5 shadow-lg"><Picture src={andresImg} formats={['avif', 'webp']} alt="Andrés Páez Cortazar" width={640} height={800} class="w-full h-full object-cover object-top" loading="lazy" /></div>
-          <h3 class="display font-semibold text-lg text-ink">Andrés Páez Cortazar</h3>
-          <p class="text-ember text-sm font-semibold mb-2">Fundador</p>
-          <p class="text-sand-600 text-[15px] leading-relaxed">Estrategia y Transformación de Negocios, Tec de Monterrey. IA aplicada a negocios. Ponente en Global Money Week 2025 (OECD).</p>
-        </div>
-        <div class="reveal reveal-d1">
-          <div class="w-full aspect-[4/5] overflow-hidden rounded-3xl bg-sand-100 mb-5 shadow-lg"><Picture src={ivanaImg} formats={['avif', 'webp']} alt="Ivana Garduño Mayo" width={640} height={800} class="w-full h-full object-cover object-top" loading="lazy" /></div>
-          <h3 class="display font-semibold text-lg text-ink">Ivana Garduño Mayo</h3>
-          <p class="text-ember text-sm font-semibold mb-2">Co-Founder</p>
-          <p class="text-sand-600 text-[15px] leading-relaxed">Organización y ejecución de proyectos de transformación. Gobernanza y estructura organizacional.</p>
-        </div>
+      <div class="grid sm:grid-cols-2 gap-8">
+        {[
+          { t: 'Metidos en tu día a día', d: 'En tu WhatsApp, en tus juntas, en la cancha. No el consultor que ves una vez al mes.' },
+          { t: 'Manos a la obra', d: 'No solo decimos qué hacer. Lo hacemos contigo, hombro con hombro.' },
+          { t: 'Hasta que jala solo', d: 'No nos vamos cuando entregamos. Nos quedamos hasta que funciona sin nosotros.' },
+          { t: 'Sin humo', d: 'Te decimos derecho si te podemos ayudar o no. Y lo que hacemos, se nota.' },
+        ].map((c, i) => (
+          <div class={`reveal reveal-d${i + 1} rounded-3xl border border-sand-200 bg-sand-50 p-7`}>
+            <p class="display font-semibold text-lg text-ink mb-2">{c.t}</p>
+            <p class="text-sand-600 text-[15px] leading-relaxed">{c.d}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>
@@ -117,7 +113,7 @@ const jsonLd = {
       <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.06]">Cuéntanos de tu empresa.</h2>
       <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group mt-8 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
         Agendar llamada de exploración
-        <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
     </div>
   </section>

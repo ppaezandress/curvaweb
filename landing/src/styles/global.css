@@ -3,14 +3,15 @@
 /* ============================================================
    CURVA — Design System
    Concepto: "la curva de transformación" (de esfuerzo a estructura).
-   Paleta morado→azul→verde (disruptiva, confiable, profesional) + Poppins/Inter.
+   Paleta "Cobalto & aire": cobalto → azul → cian sobre neutros claros
+   y tinta marino (no negro). Confiable, tech, luminosa. Sin morado.
    Los nombres de token se conservan; cambian los valores.
    ============================================================ */
 
 @theme {
-  /* Neutros fríos (gris pizarra) */
-  --color-sand-50:  #f8fafc;
-  --color-sand-100: #f1f5f9;
+  /* Neutros fríos-claros (gris pizarra, 50 más luminoso) */
+  --color-sand-50:  #f5f8ff;
+  --color-sand-100: #eef3fb;
   --color-sand-200: #e2e8f0;
   --color-sand-300: #cbd5e1;
   --color-sand-400: #94a3b8;
@@ -20,25 +21,30 @@
   --color-sand-800: #1e293b;
   --color-sand-900: #0f172a;
 
-  /* Tinta profunda (fondos oscuros, tinte violáceo) */
-  --color-ink:   #0b0a14;
-  --color-ink-2: #12101e;
+  /* Tinta profunda (fondos oscuros: azul marino, no negro) */
+  --color-ink:   #0f1e3d;
+  --color-ink-2: #12213f;
 
-  /* Acento primario — violeta disruptivo */
-  --color-ember-300: #a78bfa;
-  --color-ember:     #7c3aed;
-  --color-ember-600: #6d28d9;
+  /* Acento primario — cobalto */
+  --color-ember-300: #93c5fd;
+  --color-ember:     #2563eb;
+  --color-ember-600: #1d4ed8;
 
-  /* Acento de crecimiento — esmeralda */
-  --color-jade-300: #6ee7b7;
-  --color-jade:     #10b981;
+  /* Acento-2 — cian brillante (antes "jade", remapeado a cian) */
+  --color-jade-300: #7dd3fc;
+  --color-jade:     #38bdf8;
 
-  /* Acento de confianza — azul */
-  --color-gold: #2563eb;
+  /* Acento de confianza — cian (antes "gold" azul) */
+  --color-gold: #38bdf8;
+
+  /* Acento POTENTE — naranja (energía, CTAs de alto impacto) */
+  --color-flare-300: #fdba74;
+  --color-flare:     #f97316;
+  --color-flare-600: #ea580c;
 
   /* Compatibilidad */
-  --color-accent: #7c3aed;
-  --color-accent-hover: #6d28d9;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
 
   /* Tipografía de antes: Poppins (display) + Inter (texto) */
   --font-display: 'Poppins', system-ui, -apple-system, sans-serif;
@@ -52,9 +58,9 @@
 
 /* Tokens que no son del theme de Tailwind */
 :root {
-  /* Gradiente firma: morado → azul (paleta v2 de Pau, sin esmeralda) */
-  --gradient-curve: linear-gradient(110deg, #7c3aed 0%, #4f46e5 48%, #2563eb 100%);
-  --gradient-curve-soft: linear-gradient(110deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
+  /* Gradiente firma: cobalto → azul → cian (paleta "Cobalto & aire") */
+  --gradient-curve: linear-gradient(110deg, #2563eb 0%, #3b82f6 48%, #38bdf8 100%);
+  --gradient-curve-soft: linear-gradient(110deg, #93c5fd 0%, #60a5fa 50%, #7dd3fc 100%);
   --dur-1: 160ms; --dur-2: 320ms; --dur-3: 600ms; --dur-4: 900ms;
 }
 
@@ -70,6 +76,27 @@
   letter-spacing: 0.22em;
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+/* Eyebrow "editorial" (tipo BCG): línea guía + etiqueta. Para encabezados de
+   sección alineados a la izquierda. La línea usa currentColor → se adapta al
+   color del eyebrow (ember sobre blanco, cian sobre azul). */
+.eyebrow-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.eyebrow-lead::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  flex: none;
 }
 
 /* Texto con el gradiente firma (de esfuerzo a estructura) */
@@ -88,31 +115,73 @@
 
 /* ----------------------------- Superficies ----------------------------- */
 
-/* Mesh oscuro frío: morado / índigo / azul (sin verde ni magenta — paleta v2) */
+/* Mesh oscuro frío: cobalto / azul / cian (paleta "Cobalto & aire") */
 .surface-ink {
   background-color: var(--color-ink);
   background-image:
-    radial-gradient(62% 80% at 6% -5%, rgba(124, 58, 237, 0.32) 0%, transparent 55%),
-    radial-gradient(54% 62% at 102% 6%, rgba(79, 70, 229, 0.24) 0%, transparent 56%),
-    radial-gradient(72% 80% at 12% 105%, rgba(37, 99, 235, 0.28) 0%, transparent 58%),
-    radial-gradient(60% 70% at 96% 100%, rgba(99, 102, 241, 0.20) 0%, transparent 58%);
+    radial-gradient(62% 80% at 6% -5%, rgba(37, 99, 235, 0.34) 0%, transparent 55%),
+    radial-gradient(54% 62% at 102% 6%, rgba(56, 189, 248, 0.22) 0%, transparent 56%),
+    radial-gradient(72% 80% at 12% 105%, rgba(59, 130, 246, 0.28) 0%, transparent 58%),
+    radial-gradient(60% 70% at 96% 100%, rgba(125, 211, 252, 0.16) 0%, transparent 58%);
 }
 .surface-ink-soft {
   background-color: var(--color-ink-2);
   background-image:
-    radial-gradient(80% 90% at 50% -10%, rgba(124, 58, 237, 0.22) 0%, transparent 60%),
-    radial-gradient(64% 70% at 100% 100%, rgba(37, 99, 235, 0.18) 0%, transparent 60%),
-    radial-gradient(64% 70% at 0% 100%, rgba(99, 102, 241, 0.16) 0%, transparent 60%);
+    radial-gradient(80% 90% at 50% -10%, rgba(37, 99, 235, 0.24) 0%, transparent 60%),
+    radial-gradient(64% 70% at 100% 100%, rgba(56, 189, 248, 0.16) 0%, transparent 60%),
+    radial-gradient(64% 70% at 0% 100%, rgba(59, 130, 246, 0.16) 0%, transparent 60%);
 }
 
 /* En móvil los radiales grandes son caros de pintar: los simplificamos */
 @media (max-width: 640px) {
   .surface-ink, .surface-ink-soft {
     background-image:
-      radial-gradient(85% 60% at 50% 0%, rgba(124, 58, 237, 0.26) 0%, transparent 60%),
-      radial-gradient(70% 50% at 100% 100%, rgba(37, 99, 235, 0.18) 0%, transparent 60%);
+      radial-gradient(85% 60% at 50% 0%, rgba(37, 99, 235, 0.28) 0%, transparent 60%),
+      radial-gradient(70% 50% at 100% 100%, rgba(56, 189, 248, 0.16) 0%, transparent 60%);
   }
 }
+
+/* ----------------------------- Atmósfera continua (flujo claro sin cortes) ----------------------------- */
+.flow-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(50% 36% at 92% 4%, rgba(56, 189, 248, 0.16), transparent 62%),
+    radial-gradient(48% 42% at 3% 22%, rgba(37, 99, 235, 0.15), transparent 62%),
+    radial-gradient(40% 30% at 97% 58%, rgba(249, 115, 22, 0.09), transparent 60%),
+    radial-gradient(50% 40% at 14% 88%, rgba(37, 99, 235, 0.13), transparent 62%),
+    linear-gradient(180deg, #ffffff 0%, #eef4ff 45%, #ffffff 100%);
+}
+
+/* Zona de COLOR potente (tipo Pitch): cobalto saturado con bordes difuminados hacia el blanco.
+   El ::before lleva el gradiente y se enmascara arriba/abajo → la banda de color se funde en el blanco. */
+.zone-color { position: relative; color: #fff; isolation: isolate; }
+.zone-color::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0;
+  z-index: -1;
+  background:
+    radial-gradient(72% 90% at 16% 6%, #3b82f6, transparent 60%),
+    radial-gradient(66% 95% at 100% 100%, #22a5e6, transparent 55%),
+    linear-gradient(155deg, #2563eb 0%, #1d4ed8 55%, #2563eb 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
+}
+.zone-color .glow-orb { display: none; }
+
+/* Zona de color con bordes DEFINIDOS (sin difuminar) — para variar el ritmo */
+.zone-solid { position: relative; color: #fff; isolation: isolate; }
+.zone-solid::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(72% 90% at 16% 6%, #3b82f6, transparent 60%),
+    radial-gradient(66% 95% at 100% 100%, #22a5e6, transparent 55%),
+    linear-gradient(155deg, #2563eb 0%, #1d4ed8 55%, #2563eb 100%);
+}
+.zone-solid .glow-orb { display: none; }
 
 /* ----------------------------- Base ----------------------------- */
 
@@ -143,7 +212,7 @@ body {
   z-index: 30;
   opacity: 0;
   transform: translate3d(var(--cx, 0), var(--cy, 0), 0) translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 60%);
   transition: opacity 0.4s ease;
   mix-blend-mode: screen;
   will-change: transform;
@@ -210,7 +279,7 @@ body {
 
 /* Texto con gradiente animado (el degradado "respira"). */
 .curve-text-live {
-  background: linear-gradient(110deg, #a78bfa, #818cf8, #60a5fa, #a78bfa);
+  background: linear-gradient(110deg, #60a5fa, #38bdf8, #93c5fd, #60a5fa);
   background-size: 280% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -328,8 +397,60 @@ body {
 .btn-pop:hover { transform: translateY(-2px) scale(1.02); }
 .btn-pop:active { transform: scale(0.97); }
 
+/* Flecha firma (estilo BCG): al hover la flecha sale por la derecha y reentra
+   por la izquierda. La marca es [data-arrow] en el <svg>. Se dispara desde el
+   contenedor con .btn-arrow / .arrow-cta o desde cualquier .group padre. */
+[data-arrow] { display: inline-block; transition: transform .35s var(--ease-pitch); }
+@keyframes arrow-cycle {
+  0%   { transform: translateX(0);      opacity: 1; }
+  42%  { transform: translateX(150%);   opacity: 0; }
+  43%  { transform: translateX(-150%);  opacity: 0; }
+  100% { transform: translateX(0);      opacity: 1; }
+}
+.btn-arrow:hover [data-arrow],
+.arrow-cta:hover [data-arrow],
+.group:hover [data-arrow] { animation: arrow-cycle .52s var(--ease-pitch); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-arrow:hover [data-arrow],
+  .arrow-cta:hover [data-arrow],
+  .group:hover [data-arrow] { animation: none; }
+}
+
 /* Capa de parallax (la mueve scripts/parallax.ts con el cursor) */
 .parallax { will-change: transform; transition: transform .25s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ----------------------------- Gradientes de marca por acento (tarjetas de impacto + tiles de caminos) ----------------------------- */
+/* Terminan en tono profundo → el texto blanco chico pasa contraste AA. */
+.accent-ember { background: linear-gradient(155deg, #3b82f6 0%, #1e40af 100%); }
+.accent-jade  { background: linear-gradient(155deg, #22b8e6 0%, #0c4a6e 100%); }
+.accent-flare { background: linear-gradient(155deg, #fb923c 0%, #9a3412 100%); }
+
+/* ----------------------------- Dots del carrusel (creados por JS → deben ser globales, no scoped) ----------------------------- */
+/* El área táctil es el botón (padding); el punto visual va en ::after. */
+.caso-dot {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  padding: 9px 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.caso-dot::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-sand-300);
+  transition: width .4s var(--ease-pitch), background-color .4s var(--ease-pitch);
+}
+.caso-dot:hover::after { background: var(--color-sand-400); }
+.caso-dot.is-active::after { width: 26px; background: var(--color-ember); }
+@media (prefers-reduced-motion: reduce) {
+  .caso-dot::after { transition: none; }
+}
 
 /* ----------------------------- Segmented control (tabs estilo Framer/Mobbin) ----------------------------- */
 .seg {
@@ -338,9 +459,9 @@ body {
   gap: 4px;
   padding: 5px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
+  background: #ffffff;
+  border: 1px solid var(--color-sand-200);
+  box-shadow: 0 8px 24px -16px rgba(15, 30, 61, 0.25);
   white-space: nowrap;
 }
 .seg-pill {
@@ -351,7 +472,7 @@ body {
   height: calc(100% - 10px);
   border-radius: 999px;
   background: var(--gradient-curve);
-  box-shadow: 0 10px 28px -10px rgba(124, 58, 237, 0.75);
+  box-shadow: 0 10px 28px -10px rgba(37, 99, 235, 0.65);
   transform: translateX(0);
   transition: transform 0.5s var(--ease-pitch), width 0.5s var(--ease-pitch);
   pointer-events: none;
@@ -369,10 +490,10 @@ body {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.9rem;
-  color: var(--color-sand-400);
+  color: var(--color-sand-500);
   transition: color 0.35s var(--ease-pitch);
 }
-.seg-btn:hover { color: var(--color-sand-200); }
+.seg-btn:hover { color: var(--color-sand-700); }
 .seg-btn[aria-selected="true"] { color: #fff; }
 .seg-btn[aria-selected="true"]:hover { color: #fff; }
 
@@ -399,8 +520,9 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(18, 16, 30, 0.55);
+  border: 1px solid var(--color-sand-200);
+  background: #ffffff;
+  box-shadow: 0 20px 48px -32px rgba(15, 30, 61, 0.35);
   pointer-events: none;
 }
 .stack-layer.l1 { transform: translateY(16px) scale(0.945); filter: blur(1px); opacity: 0.6; z-index: -1; }
@@ -456,7 +578,7 @@ body {
   width: 13px; height: 13px;
   border-radius: 9999px;
   background: #fff;
-  box-shadow: 0 0 18px 5px rgba(124, 58, 237, 0.65), 0 0 6px 1px rgba(96, 165, 250, 0.9);
+  box-shadow: 0 0 18px 5px rgba(37, 99, 235, 0.6), 0 0 6px 1px rgba(56, 189, 248, 0.9);
   opacity: 0;
   transition: opacity .4s var(--ease-curve);
   will-change: transform;
@@ -507,7 +629,119 @@ body {
 }
 .pin-cap > span.is-active { opacity: 1; transform: none; }
 
+/* ----------------------------- Hero claro (Pitch + chat IA) ----------------------------- */
+/* Titular grande. Acotado a "estructura" (10 car.) para que nunca se corte. */
+.hero-phrase { font-size: clamp(3rem, 12vw, 9rem); }
+/* Contraste de peso = diseño: "estructura" pesada (más), "esfuerzo" ligera (menos). */
+.hero-word-strong { font-weight: 800; letter-spacing: -0.045em; }
+
+/* Fondo AZUL del hero (cobalto profundo → texto blanco pasa contraste AA holgado). */
+.hero-blue {
+  background-color: #1d4ed8;
+  background-image:
+    radial-gradient(72% 60% at 12% -8%, #3b82f6 0%, transparent 58%),
+    radial-gradient(64% 70% at 104% 108%, #1e40af 0%, transparent 60%),
+    linear-gradient(160deg, #1e40af 0%, #1d4ed8 52%, #1e3a8a 100%);
+}
+/* Velo radial OSCURO: apaga las líneas bajo el texto → el blanco resalta (legibilidad). */
+.hero-veil {
+  background: radial-gradient(60% 55% at 50% 45%, rgba(9, 20, 48, 0.72) 0%, rgba(9, 20, 48, 0.34) 46%, transparent 80%);
+}
+.hero-plus { color: var(--color-jade); font-weight: 800; }
+.hero-minus { color: rgba(255, 255, 255, 0.7); font-weight: 300; }
+.hero-faint { color: rgba(255, 255, 255, 0.52); font-weight: 300; letter-spacing: -0.01em; }
+.hero-ask-box {
+  box-shadow: 0 24px 64px -28px rgba(15, 30, 61, 0.28), 0 2px 8px -2px rgba(15, 30, 61, 0.08);
+}
+.hero-ask-box:focus-within {
+  box-shadow: 0 24px 70px -26px rgba(37, 99, 235, 0.34), 0 0 0 4px color-mix(in srgb, var(--color-ember) 14%, transparent);
+}
+
+/* ----------------------------- Composer IA del hero ----------------------------- */
+/* Anillo con glow que "respira" — señal AI-powered. Anima el ángulo del conic
+   (con @property) para que giren los colores sin mover la caja. */
+@property --hero-ring-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.hero-ai-ring {
+  --hero-ring-a: 0deg;
+  background: conic-gradient(from var(--hero-ring-a),
+    rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.55) 18%,
+    rgba(37, 99, 235, 0.6) 40%, rgba(249, 115, 22, 0.45) 62%,
+    rgba(56, 189, 248, 0.55) 82%, rgba(56, 189, 248, 0) 100%);
+  filter: blur(8px);
+  opacity: 0.8;
+  animation: hero-ring-spin 7s linear infinite;
+}
+@keyframes hero-ring-spin { to { --hero-ring-a: 360deg; } }
+/* Fallback si el navegador no soporta @property: glow estático suave. */
+@supports not (background: conic-gradient(from var(--hero-ring-a), red, blue)) {
+  .hero-ai-ring { background: var(--gradient-curve); animation: none; }
+}
+
+.hero-ai-card { box-shadow: 0 30px 80px -32px rgba(15, 30, 61, 0.5); }
+.hero-ai-log { max-height: min(38vh, 22rem); scroll-behavior: smooth; }
+
+.hero-ai-live { animation: hero-live 2.2s ease-in-out infinite; }
+@keyframes hero-live {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.2); }
+}
+
+.hero-ai-mic.recording {
+  background: #ef4444; color: #fff; border-color: #ef4444;
+  animation: hero-mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes hero-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hero-ai-ring { animation: none; }
+  .hero-ai-live { animation: none; opacity: 0.8; }
+  .hero-ai-mic.recording { animation: none; }
+  .hero-ai-log { scroll-behavior: auto; }
+}
+
+.hero-line {
+  display: block;
+  will-change: transform, clip-path;
+  clip-path: inset(-0.15em 0 110% 0);
+  opacity: 0;
+}
+.is-loaded .hero-line { animation: hero-rise 1.05s var(--ease-pitch) both 0.15s; }
+.is-loaded .hero-line-2 { animation-delay: 0.28s; }
+@keyframes hero-rise {
+  from { clip-path: inset(-0.15em 0 110% 0); opacity: 0; transform: translateY(0.28em); }
+  to   { clip-path: inset(-0.15em 0 -0.2em 0); opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-line { animation: none !important; opacity: 1; clip-path: none; }
+}
+
+/* ----------------------------- Chat lead magnet ----------------------------- */
+.chat-log .dot {
+  width: 6px; height: 6px; border-radius: 9999px;
+  background: var(--color-sand-400);
+  display: inline-block;
+  animation: chat-dot 1.2s ease-in-out infinite;
+}
+.chat-log .dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-log .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes chat-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+[data-chat-mic].recording {
+  background: #ef4444; color: #fff; border-color: #ef4444;
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-log .dot, [data-chat-mic].recording { animation: none; }
   .thread-line { stroke-dashoffset: 0 !important; }
   .thread-dot { display: none; }
   .is-loaded .word-settle .word-before, .is-loaded .word-settle .word-after { animation: none; }

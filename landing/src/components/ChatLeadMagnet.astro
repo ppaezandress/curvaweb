@@ -1,0 +1,65 @@
+---
+// Lead magnet duro: el visitante llega con su problema y el chat lo guía hasta
+// agendar. El "engine" es el contenido del sitio (ver lib/knowledge.ts).
+// Pide correo antes de escribir (anti-abuso + captura de lead). Texto y audios.
+// Lógica en scripts/chat.ts.
+const calLink = 'https://cal.com/andres-paez/30min';
+---
+<section id="chat-lm" class="zone-solid py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden" data-cal-link={calLink}>
+  <div class="mx-auto max-w-3xl relative z-10">
+    <div class="text-center mb-10">
+      <p class="reveal eyebrow text-jade-300 mb-5">Cuéntanos tu problema</p>
+      <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance text-white">Cuéntame tu problema y te decimos cómo te ayudamos.</h2>
+      <p class="reveal mt-4 text-lg text-sand-200 max-w-xl mx-auto leading-relaxed">Sin navegar el menú. Escribe (o manda un audio) y te digo qué de CURVA te sirve — y te agendo si quieres.</p>
+    </div>
+
+    <div class="reveal rounded-3xl border border-sand-200 bg-white shadow-xl overflow-hidden">
+      <!-- Encabezado del chat -->
+      <div class="flex items-center gap-3 px-5 py-4 border-b border-sand-200">
+        <span class="w-8 h-8 rounded-full flex items-center justify-center" style="background:var(--gradient-curve)">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path></svg>
+        </span>
+        <div>
+          <p class="text-sm font-semibold text-ink leading-tight">Asistente de CURVA</p>
+          <p class="text-[11px] text-sand-500 leading-tight">Responde con casos reales de la página</p>
+        </div>
+      </div>
+
+      <!-- Gate de correo (anti-abuso + lead) -->
+      <form data-chat-gate class="p-6 sm:p-8">
+        <label for="chat-email" class="block text-sm text-sand-600 mb-3">Déjame tu correo para empezar. Con eso te doy seguimiento (y evitamos spam).</label>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="chat-email" data-chat-email type="email" required placeholder="tu@correo.com" autocomplete="email"
+            class="flex-1 rounded-full border border-sand-300 bg-white px-5 py-3.5 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors" />
+          <button type="submit" class="btn-pop btn-arrow inline-flex items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-6 py-3.5 rounded-full hover:bg-ember-600 whitespace-nowrap">
+            Empezar
+            <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+          </button>
+        </div>
+        <p data-chat-gate-error class="hidden text-rose-500 text-sm mt-2"></p>
+      </form>
+
+      <!-- Panel de chat (oculto hasta pasar el gate) -->
+      <div data-chat-panel hidden>
+        <div data-chat-log class="chat-log px-5 sm:px-6 py-6 space-y-4 overflow-y-auto" role="log" aria-live="polite"></div>
+        <div data-chat-chips class="px-5 sm:px-6 pb-3 flex flex-wrap gap-2"></div>
+        <form data-chat-form class="p-4 border-t border-sand-200 flex items-end gap-2">
+          <textarea data-chat-input rows="1" placeholder="Escribe tu problema…" aria-label="Tu mensaje"
+            class="flex-1 resize-none max-h-32 rounded-2xl border border-sand-300 bg-white px-4 py-3 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors"></textarea>
+          <button type="button" data-chat-mic aria-label="Grabar audio" class="btn-pop flex-shrink-0 w-11 h-11 rounded-full border border-sand-300 text-sand-600 hover:bg-sand-100 flex items-center justify-center transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"></path></svg>
+          </button>
+          <button type="submit" data-chat-send aria-label="Enviar" class="btn-pop flex-shrink-0 w-11 h-11 rounded-full bg-ember text-white hover:bg-ember-600 flex items-center justify-center transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"></path></svg>
+          </button>
+        </form>
+        <!-- Nota: el input es extensible a imágenes (Pendiente #3) — no implementado aún. -->
+      </div>
+    </div>
+    <p class="reveal mt-4 text-center text-xs text-sand-200">Tus conversaciones nos ayudan a atenderte mejor. Nada de spam.</p>
+  </div>
+</section>
+
+<style>
+  .chat-log { min-height: 16rem; max-height: 26rem; }
+</style>

@@ -1,4 +1,5 @@
 ---
+import '@fontsource/poppins/300.css';
 import '@fontsource/poppins/500.css';
 import '@fontsource/poppins/600.css';
 import '@fontsource/poppins/700.css';
@@ -38,9 +39,20 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="theme-color" content="#0b0a14" />
+    <meta name="theme-color" content="#0f1e3d" />
     <Seo title={title} description={description} image={image} type={type} jsonLd={jsonLd} />
     <ClientRouter />
+    <!-- Cortinilla: marca "ya vista" antes de pintar para no mostrar flash en visitas repetidas -->
+    <script is:inline>
+      (function () {
+        try {
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (reduce || sessionStorage.getItem('curva:intro-seen') === '1') {
+            document.documentElement.setAttribute('data-intro-seen', '1');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body class={`bg-sand-50 text-ink antialiased overflow-x-hidden ${bodyClass}`}>
@@ -73,6 +85,12 @@ const {
       import { initThread } from '../scripts/thread';
       import { initCurvePin } from '../scripts/curve-pin';
       import { initOdometer } from '../scripts/odometer';
+      import { initHeroCanvas } from '../scripts/hero-canvas';
+      import { initIntro } from '../scripts/intro';
+      import { initChat } from '../scripts/chat';
+      import { initHeroAI } from '../scripts/hero-ai';
+      import { initCheckout } from '../scripts/checkout';
+      import { initCarousel } from '../scripts/carousel';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -81,6 +99,7 @@ const {
 
       // Efímeros: re-armar en cada carga y tras cada navegación con View Transitions.
       document.addEventListener('astro:page-load', () => {
+        initIntro();
         initReveal();
         initCursorGlow();
         initCurveDraw();
@@ -98,6 +117,11 @@ const {
         initThread();
         initCurvePin();
         initOdometer();
+        initHeroCanvas();
+        initChat();
+        initHeroAI();
+        initCheckout();
+        initCarousel();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))

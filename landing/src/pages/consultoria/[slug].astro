@@ -1,0 +1,192 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import Curve from '../../components/Curve.astro';
+import Credenciales from '../../components/Credenciales.astro';
+import CtaPilar from '../../components/CtaPilar.astro';
+import { frentes, getFrente, otroFrente } from '../../data/consultoria';
+import { casosDe } from '../../data/casos';
+
+export function getStaticPaths() {
+  return frentes.map((f) => ({ params: { slug: f.slug }, props: { frente: f } }));
+}
+
+const { frente: f } = Astro.props;
+const otro = otroFrente(f.slug)!;
+const casos = casosDe(f.slug as any);
+
+const calLink = 'https://cal.com/andres-paez/30min';
+const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
+
+const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-gold' } as const;
+const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-gold' } as const;
+const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/15', jade: 'bg-gold/12' } as const;
+
+const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'Service', name: f.title, description: f.description, serviceType: 'Consultoría', areaServed: 'México', provider: { '@type': 'ProfessionalService', name: 'CURVA', url: origin } },
+  { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: origin + '/' },
+    { '@type': 'ListItem', position: 2, name: 'Consultoría', item: origin + '/#servicios' },
+    { '@type': 'ListItem', position: 3, name: f.navLabel, item: origin + '/consultoria/' + f.slug },
+  ] },
+];
+---
+
+<BaseLayout title={`${f.title} — CURVA`} description={f.description} jsonLd={jsonLd}>
+  <Nav calLink={calLink} />
+
+  <a href={`#${f.pilares[0].id}`} class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+
+  <!-- ============== HERO (home de área — se entiende solo) ============== -->
+  <section class="surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-20 sm:pb-28 px-6 sm:px-10 overflow-hidden">
+    <div class="glow-orb" style="width:32rem;height:32rem;top:-8rem;left:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.5),transparent 70%);"></div>
+    <div class="glow-orb" style="width:26rem;height:26rem;bottom:-8rem;right:-6rem;background:radial-gradient(circle,rgba(56,189,248,0.4),transparent 70%);animation-delay:-7s;"></div>
+    <div class="mx-auto max-w-6xl relative z-10">
+      <nav aria-label="Migas" class="reveal flex items-center gap-2 text-sm text-sand-400 mb-8">
+        <a href="/" class="hover:text-sand-50 transition-colors">Inicio</a>
+        <span class="text-sand-600">/</span>
+        <a href="/#servicios" class="hover:text-sand-50 transition-colors">Consultoría</a>
+        <span class="text-sand-600">/</span>
+        <span class="text-sand-100 font-medium">{f.navLabel}</span>
+      </nav>
+      {f.destacado && (
+        <p class="reveal inline-flex items-center gap-2 rounded-full border border-ember-300/30 bg-ember/10 px-3.5 py-1.5 text-[12px] font-semibold text-ember-300 mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-ember-300"></span> Nuestro frente más fuerte
+        </p>
+      )}
+      <p class={`reveal eyebrow-lead mb-5 ${accentText[f.accent]}`}>{f.eyebrow}</p>
+      <h1 class="reveal display text-4xl sm:text-5xl lg:text-[3.8rem] font-semibold tracking-tight leading-[1.04] max-w-4xl text-balance">{f.headline}</h1>
+      <p class="reveal mt-6 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-2xl">{f.description}</p>
+
+      <div class="reveal mt-9 flex flex-col sm:flex-row gap-3">
+        <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group inline-flex items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
+          Agendar llamada
+          <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        </a>
+        {casos.length > 0 && (
+          <a href="#casos-area" class="btn-pop inline-flex items-center justify-center gap-2 text-base font-semibold text-sand-100 border border-white/20 px-7 py-4 rounded-full hover:bg-white/10 transition-colors">Ver casos de éxito</a>
+        )}
+      </div>
+
+      <!-- Índice de pilares (los mismos que el menú) -->
+      <div class="reveal mt-12 flex flex-wrap gap-2.5">
+        {f.pilares.map((p, i) => (
+          <a href={`#${p.id}`} class="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm text-sand-200 hover:border-white/25 hover:bg-white/[0.08] transition-colors">
+            <span class={`tabular-nums text-xs font-semibold ${accentText[f.accent]}`}>0{i + 1}</span>
+            {p.titulo}
+          </a>
+        ))}
+      </div>
+    </div>
+    <div class="parallax pointer-events-none absolute -bottom-2 inset-x-0" data-parallax="16">
+      <Curve variant="divider" draw="scroll" class="w-full h-20 opacity-40" />
+    </div>
+  </section>
+
+  <!-- ============== PILARES (apilados, muy diferenciados) ============== -->
+  {f.pilares.map((p, i) => {
+    const dark = i % 2 === 1; // alterna claro/oscuro para separarlos con fuerza
+    return (
+      <section id={p.id} class={`scroll-mt-24 py-20 sm:py-28 px-6 sm:px-10 border-t ${dark ? 'surface-ink text-sand-50 border-white/10' : 'bg-white border-sand-200'}`}>
+        <div class="mx-auto max-w-6xl">
+          <div class="grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-10 lg:gap-16">
+            <div class="lg:sticky lg:top-28 self-start">
+              <div class="flex items-baseline gap-4 mb-5">
+                <span class={`display text-5xl sm:text-6xl font-semibold tabular-nums ${dark ? 'curve-text' : accentText[f.accent]}`}>0{i + 1}</span>
+                <span class={`eyebrow ${dark ? 'text-ember-300' : accentText[f.accent]}`}>Pilar</span>
+              </div>
+              <h2 class={`display text-3xl sm:text-4xl font-semibold tracking-tight leading-[1.08] text-balance ${dark ? 'text-sand-50' : 'text-ink'}`}>{p.titulo}</h2>
+              <p class={`mt-5 text-lg leading-relaxed ${dark ? 'text-sand-300' : 'text-sand-600'}`}>{p.subtitulo}</p>
+              {p.ejemplo && (
+                <p class={`mt-4 text-[15px] italic leading-relaxed ${dark ? 'text-sand-400' : 'text-sand-500'}`}>{p.ejemplo}</p>
+              )}
+            </div>
+            <div class="self-center">
+              <ul class={`grid sm:grid-cols-2 gap-3`}>
+                {p.bullets.map((b) => (
+                  <li class={`flex items-start gap-3 rounded-2xl border p-4 ${dark ? 'border-white/10 bg-white/[0.03]' : 'border-sand-200 bg-sand-50'}`}>
+                    <span class={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${accentBar[f.accent]}`}></span>
+                    <span class={`text-[15px] leading-snug ${dark ? 'text-sand-200' : 'text-sand-800'}`}>{b}</span>
+                  </li>
+                ))}
+              </ul>
+              <CtaPilar text={f.ctaPilar} calLink={calLink} waLink={waLink} dark={dark} accent={f.accent} />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  })}
+
+  <!-- ============== CASOS DE ÉXITO DEL ÁREA ============== -->
+  {casos.length > 0 && (
+    <section id="casos-area" class="scroll-mt-24 py-20 sm:py-28 px-6 sm:px-10 bg-sand-50 border-t border-sand-200">
+      <div class="mx-auto max-w-6xl">
+        <p class="reveal eyebrow-lead text-ember mb-4">Casos de éxito</p>
+        <h2 class="reveal display text-3xl sm:text-4xl font-semibold tracking-tight leading-[1.08] text-ink mb-12 text-balance">Esto ya lo hicimos aquí.</h2>
+        <div class="space-y-6">
+          {casos.map((c) => (
+            <article class="reveal lift rounded-3xl border border-sand-200 bg-white overflow-hidden grid lg:grid-cols-[1.5fr_1fr]">
+              <div class="p-8 sm:p-10 lg:border-r border-sand-200">
+                <span class={`px-3 py-1 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} text-[11px] font-semibold uppercase tracking-wide`}>{c.categoria}</span>
+                <h3 class="display text-2xl sm:text-3xl font-semibold my-6 text-ink leading-tight">{c.title}</h3>
+                <dl class="space-y-5">
+                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>El reto</dt><dd class="text-sand-700 leading-relaxed">{c.reto}</dd></div>
+                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Qué hicimos</dt><dd class="text-sand-700 leading-relaxed">{c.hicimos}</dd></div>
+                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Resultado</dt><dd class="text-ink font-medium leading-relaxed">{c.resultado}</dd></div>
+                </dl>
+              </div>
+              <div class="p-8 sm:p-10 bg-sand-50 flex flex-col">
+                <div class="grid grid-cols-2 gap-x-6 gap-y-7">
+                  {c.metrics.map((m) => (<div><p data-count={m.value} class="display text-3xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
+                </div>
+                {c.quote && (
+                  <blockquote class="mt-8 pt-7 border-t border-sand-200">
+                    <p class="text-ink text-[15px] leading-snug font-medium">{c.quote}</p>
+                  </blockquote>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ============== CREDENCIALES (discreta, fancy) ============== -->
+  <Credenciales data={f.credenciales} />
+
+  <!-- ============== NAV ENTRE FRENTES ============== -->
+  <section class="px-6 sm:px-10 py-14 bg-sand-50 border-t border-sand-200">
+    <div class="mx-auto max-w-6xl">
+      <a href={`/consultoria/${otro.slug}`} class="lift group block rounded-3xl border border-sand-200 bg-white p-7 sm:p-9 hover:border-sand-400 sm:flex items-center justify-between gap-6">
+        <div>
+          <p class="eyebrow text-sand-400 mb-2">El otro frente de consultoría</p>
+          <p class="display text-2xl font-semibold text-ink">{otro.navLabel}</p>
+          <p class="text-sand-600 mt-2 text-[15px] leading-relaxed max-w-lg">{otro.description}</p>
+        </div>
+        <svg data-arrow class="w-6 h-6 flex-shrink-0 text-sand-400 mt-4 sm:mt-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============== CTA FINAL ============== -->
+  <section class="py-24 sm:py-32 px-6 sm:px-10 surface-ink text-sand-50">
+    <div class="reveal mx-auto max-w-3xl text-center">
+      <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.06]">Cuéntanos de tu empresa.</h2>
+      <p class="mt-5 text-lg text-sand-300 max-w-md mx-auto">30 minutos. Te decimos derecho si te podemos ayudar o no.</p>
+      <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group mt-8 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
+        Agendar llamada
+        <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+      </a>
+    </div>
+  </section>
+
+  <a href={waLink} target="_blank" rel="noopener" class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all" aria-label="Contactar por WhatsApp">
+    <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"></path></svg>
+  </a>
+
+  <Footer calLink={calLink} waLink={waLink} />
+</BaseLayout>

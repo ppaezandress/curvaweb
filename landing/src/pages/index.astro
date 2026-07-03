@@ -3,10 +3,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Curve from '../components/Curve.astro';
-import LeadMagnet from '../components/LeadMagnet.astro';
-import ProcesoTabs from '../components/ProcesoTabs.astro';
+import HeroAsk from '../components/HeroAsk.astro';
+import ImpactoCarrusel from '../components/ImpactoCarrusel.astro';
+import Caminos from '../components/Caminos.astro';
+import Intro from '../components/Intro.astro';
 import { areas } from '../data/areas';
-import { casos } from '../data/casos';
 
 const calLink = 'https://cal.com/andres-paez/30min';
 const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
@@ -26,7 +27,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ProfessionalService',
   name: 'CURVA',
-  description: 'Consultoría de transformación operativa y digital para empresas en crecimiento.',
+  description: 'Consultoría de transformación digital y de negocio para empresas en crecimiento.',
   areaServed: 'México',
   address: { '@type': 'PostalAddress', addressLocality: 'Ciudad de México', addressCountry: 'MX' },
   serviceType: ['Consultoría empresarial', 'Digitalización', 'Automatización con IA'],
@@ -55,9 +56,9 @@ const despues = [
 // Hitos sobre la curva (coords % sobre la Bézier del viewBox 1280x420).
 // `at` = fracción del recorrido en que se "enciende" (sincroniza con el trazo); `href` = su servicio.
 const hitosCurva = [
-  { n: '01', label: 'Exploración',    cap: 'Entendemos tu operación a fondo.',      left: 27.3, top: 79.8, at: 0.24, href: '/servicios/diagnostico' },
-  { n: '02', label: 'Diagnóstico',    cap: 'Vemos qué se traba y por qué.',          left: 51.6, top: 59.5, at: 0.50, href: '/servicios/procesos' },
-  { n: '03', label: 'Implementación', cap: 'Lo armamos y se queda funcionando solo.', left: 75.7, top: 31.9, at: 0.74, href: '/servicios/digitalizacion' },
+  { n: '01', label: 'Exploración',    cap: 'Entendemos tu operación a fondo.',      left: 27.3, top: 79.8, at: 0.24, href: '/consultoria/transformacion-de-negocio' },
+  { n: '02', label: 'Diagnóstico',    cap: 'Vemos qué se traba y por qué.',          left: 51.6, top: 59.5, at: 0.50, href: '/consultoria/transformacion-de-negocio#procesos' },
+  { n: '03', label: 'Implementación', cap: 'Lo armamos y se queda funcionando solo.', left: 75.7, top: 31.9, at: 0.74, href: '/consultoria/transformacion-digital' },
 ];
 
 // Mismo viaje como timeline vertical para móvil (la gráfica horizontal se aplana en pantallas chicas).
@@ -99,61 +100,51 @@ const producto = {
 ---
 
 <BaseLayout
-  title="CURVA. Transformación operativa y digital"
-  description="Ordenamos y digitalizamos la operación de empresas en crecimiento para que el dueño recupere el control y el negocio jale sin él encima."
+  title="CURVA. Transformación digital y de negocio"
+  description="Tu empresa, por sistema. Menos esfuerzo, más estructura. Ordenamos y digitalizamos la operación de empresas en crecimiento para que el dueño recupere el control y el negocio jale sin él encima."
   jsonLd={jsonLd}
   thread
 >
-  <Nav overHero calLink={calLink} />
+  <div class="flow-bg" aria-hidden="true"></div>
+  <Intro />
+  <Nav calLink={calLink} />
 
   <a href="#problema" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
 
-  <!-- ============================== HERO ============================== -->
-  <section class="surface-ink grain text-sand-50 relative min-h-[94vh] flex flex-col justify-center overflow-hidden">
-    <div class="glow-orb" style="width:34rem;height:34rem;top:-8rem;left:-6rem;background:radial-gradient(circle,rgba(124,58,237,0.55),transparent 70%);"></div>
-    <div class="glow-orb" style="width:30rem;height:30rem;bottom:-10rem;right:-4rem;background:radial-gradient(circle,rgba(37,99,235,0.45),transparent 70%);animation-delay:-7s;"></div>
+  <!-- ============================== HERO — claro, estilo Pitch, con chat IA ============================== -->
+  <section class="hero-lite hero-blue relative min-h-[100svh] flex flex-col justify-center overflow-hidden">
+    <!-- Lienzo generativo: líneas BLANCAS elegantes ALREDEDOR del texto (centro limpio), se esculpen con el cursor -->
+    <canvas id="hero-canvas" class="pointer-events-none absolute inset-0 w-full h-full z-[1]" aria-hidden="true"></canvas>
+    <div class="hero-veil absolute inset-0 z-[2] pointer-events-none"></div>
 
-    <div class="parallax pointer-events-none absolute inset-x-0 bottom-0 z-[2]" data-parallax="22">
-      <Curve variant="hero" draw="auto" stroke={1.6} class="w-full h-[30vh] opacity-40" />
-    </div>
-
-    <div class="mx-auto max-w-6xl w-full px-6 sm:px-10 relative z-10 pt-24">
-      <p data-load="1" class="eyebrow text-ember-300 mb-7 inline-flex items-center gap-2.5">
-        <span class="inline-block w-7 h-px bg-ember-300/60"></span>
-        Transformación operativa y digital
-      </p>
-      <h1 class="word-settle display text-[2.7rem] leading-[1.04] sm:text-5xl lg:text-[4rem] font-semibold max-w-4xl tracking-tight text-balance">
-        Que tu empresa funcione por <span class="word-after curve-text">estructura</span>, no por <span class="word-before">esfuerzo</span>.
+    <div class="mx-auto max-w-5xl w-full px-6 sm:px-10 relative z-10 text-center translate-y-[4vh] sm:translate-y-[5vh]">
+      <p data-load="1" class="eyebrow-lead text-jade-300 mb-8">Transformación digital y de negocio</p>
+      <h1 class="hero-phrase display tracking-[-0.03em] leading-[0.82] text-white">
+        <span class="hero-line"><span class="hero-plus">+</span>&nbsp;<span class="hero-word-strong">estructura</span></span>
+        <span class="hero-line hero-line-2"><span class="hero-minus">−</span>&nbsp;<span class="hero-faint">esfuerzo</span></span>
       </h1>
-      <p data-load="3" class="mt-7 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-xl">
-        Ponemos orden, lo conectamos con tecnología y lo dejamos funcionando. Para que dejes de cargar la empresa en la espalda.
-      </p>
-      <div data-load="4" class="mt-10">
-        <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group inline-flex w-fit items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
-          Agendar llamada de exploración
-          <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
-        </a>
-      </div>
-      <div data-load="5" class="mt-14 flex flex-wrap items-center gap-x-8 gap-y-3 text-sand-400 text-[13px]">
-        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-ember"></span> Consultoría y estructura</span>
-        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-gold"></span> Digitalización y automatización</span>
-        <span class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-gold"></span> Agentes con IA</span>
-      </div>
+      <!-- Composer IA inline: escribe o dicta y la IA responde aquí mismo -->
+      <HeroAsk calLink={calLink} />
+
+      <p data-load="5" class="mt-5 text-sm text-sand-200">o <a href={calLink} target="_blank" rel="noopener" class="text-jade-300 font-semibold link-underline">agenda una llamada</a></p>
     </div>
-    <a href="#problema" aria-label="Bajar" class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10"><svg class="w-6 h-6 text-sand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"></path></svg></a>
+
+    <div data-hero-scrollhint class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center" data-load="5">
+      <a href="#problema" aria-label="Bajar al contenido" class="animate-bounce"><svg class="w-5 h-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"></path></svg></a>
+    </div>
   </section>
 
   <!-- ============================== CINTA (qué hace CURVA — 2 filas opuestas, bordes difuminados) ============================== -->
-  <div class="cinta py-7 bg-ink select-none border-y border-white/5 space-y-3" aria-hidden="true">
+  <div class="cinta py-7 select-none border-y border-sand-200 space-y-3" aria-hidden="true">
     {[capacidades, [...capacidades].reverse()].map((row, r) => (
       <div class="overflow-hidden whitespace-nowrap">
         <div class={`marquee-track inline-flex items-center ${r === 1 ? 'marquee-rev' : ''}`}>
           {Array.from({ length: 2 }).map(() => (
             <span class="inline-flex items-center">
               {row.map((c) => (
-                <span class="inline-flex items-center text-sand-300">
+                <span class="inline-flex items-center text-sand-600">
                   <span class="display text-lg sm:text-xl font-medium">{c}</span>
-                  <span class="mx-7 text-ember-300/50">·</span>
+                  <span class="mx-7 text-ember/50">·</span>
                 </span>
               ))}
             </span>
@@ -164,12 +155,12 @@ const producto = {
   </div>
 
   <!-- ============================== EL PROBLEMA ============================== -->
-  <section id="problema" class="py-24 sm:py-36 px-6 sm:px-10 bg-sand-50 relative overflow-hidden">
-    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-8rem;background:radial-gradient(circle,rgba(124,58,237,0.12),transparent 70%);mix-blend-mode:normal;opacity:0.8;"></div>
+  <section id="problema" class="py-24 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
+    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-8rem;background:radial-gradient(circle,rgba(37, 99, 235,0.12),transparent 70%);mix-blend-mode:normal;opacity:0.8;"></div>
     <div class="glow-orb" style="width:26rem;height:26rem;bottom:-8rem;left:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);mix-blend-mode:normal;opacity:0.8;animation-delay:-8s;"></div>
     <div class="mx-auto max-w-7xl grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-12 lg:gap-24 relative z-10">
       <div class="lg:sticky lg:top-28 self-start">
-        <p class="reveal eyebrow text-ember mb-5">Para quién es esto</p>
+        <p class="reveal eyebrow-lead text-ember mb-5">Para quién es esto</p>
         <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.08] tracking-tight text-ink text-balance">¿Te suena algo de esto?</h2>
         <p class="reveal mt-6 text-lg text-sand-600 leading-relaxed max-w-md">Si te late seguido, el problema no es falta de esfuerzo. Es falta de sistema.</p>
       </div>
@@ -185,41 +176,35 @@ const producto = {
   </section>
 
   <!-- ============================== LA CURVA (transformación) ============================== -->
-  <section id="la-curva" class="surface-ink grain text-sand-50 py-24 sm:py-36 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
-    <div class="glow-orb" style="width:28rem;height:28rem;top:18%;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(37,99,235,0.32),transparent 70%);"></div>
+  <section id="la-curva" class="zone-solid py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
+    <div class="glow-orb" style="width:28rem;height:28rem;top:18%;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);"></div>
     <div class="mx-auto max-w-6xl relative z-10">
       <div class="max-w-2xl mb-4">
-        <p class="reveal eyebrow text-ember-300 mb-5">La curva</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">Hoy estás <span class="word-before text-ember-300">aquí</span>. Te llevamos <span class="word-after curve-text">acá</span>.</h2>
-        <p data-wordfade class="mt-5 text-lg sm:text-xl text-sand-200 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
+        <p class="reveal eyebrow-lead text-jade-300 mb-5">La curva</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance text-white">Hoy estás <span class="word-before text-jade-300">aquí</span>. Te llevamos <span class="word-after text-jade-300">acá</span>.</h2>
+        <p data-wordfade class="mt-5 text-lg sm:text-xl text-sand-100 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
       </div>
 
-      <!-- Escena horizontal (desktop): pin scrollytelling — el punto viaja atado al scroll -->
-      <div class="curve-pin hidden sm:block">
-       <div class="curve-pin-sticky">
-        <div class="reveal reveal-scale relative w-full mt-4">
-        <!-- Caption de etapa activa (cross-fade durante el pin) -->
-        <div class="pin-cap text-center display text-lg sm:text-2xl font-semibold text-sand-100 mb-7">
-          {hitosCurva.map((m, i) => (
-            <span class={i === 0 ? 'is-active' : ''}>
-              <span class="text-ember-300 tabular-nums mr-2">{m.n}</span>{m.label}
-              <span class="block text-sm sm:text-base font-normal text-sand-400 mt-1.5">{m.cap}</span>
-            </span>
-          ))}
+      <!-- Escena horizontal (desktop): la curva se dibuja al hacer scroll -->
+      <div class="reveal reveal-scale relative w-full mt-8 pt-12 pb-16 hidden sm:block">
+        <!-- Con CURVA: arriba-derecha, junto al final ALTO de la curva (el éxito) -->
+        <div class="absolute top-0 right-0 max-w-[46%] text-right">
+          <p class="eyebrow text-jade-300 mb-1.5 text-sm">Con CURVA</p>
+          <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">Operación por <span class="word-after">sistema</span></p>
         </div>
-        <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
+        <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible parallax" data-parallax="10" aria-hidden="true">
           <defs>
             <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#7c3aed"></stop>
-              <stop offset="0.5" stop-color="#4f46e5"></stop>
-              <stop offset="1" stop-color="#2563eb"></stop>
+              <stop offset="0" stop-color="#ffffff"></stop>
+              <stop offset="0.5" stop-color="#e0f2fe"></stop>
+              <stop offset="1" stop-color="#7dd3fc"></stop>
             </linearGradient>
             <linearGradient id="curve-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#2563eb" stop-opacity="0.22"></stop>
-              <stop offset="1" stop-color="#2563eb" stop-opacity="0"></stop>
+              <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"></stop>
+              <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
             </linearGradient>
             <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M48 0 H0 V48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"></path>
+              <path d="M48 0 H0 V48" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"></path>
             </pattern>
             <radialGradient id="grid-fade" cx="42%" cy="40%" r="70%">
               <stop offset="0" stop-color="#fff"></stop>
@@ -235,58 +220,52 @@ const producto = {
           <!-- Plano técnico de fondo -->
           <rect width="1280" height="420" fill="url(#grid)" mask="url(#grid-mask)"></rect>
           <!-- Eje base -->
-          <line x1="40" y1="392" x2="1240" y2="392" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
+          <line x1="40" y1="392" x2="1240" y2="392" stroke="rgba(255,255,255,0.18)" stroke-width="1"></line>
 
           <!-- Partículas / puntos de dato -->
-          <circle cx="180" cy="300" r="2.5" fill="#a78bfa" class="twinkle"></circle>
+          <circle cx="180" cy="300" r="2.5" fill="#93c5fd" class="twinkle"></circle>
           <circle cx="520" cy="190" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-1.2s"></circle>
           <circle cx="760" cy="320" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-2.1s"></circle>
           <circle cx="1080" cy="150" r="2.5" fill="#60a5fa" class="twinkle" style="animation-delay:-0.6s"></circle>
-          <circle cx="340" cy="120" r="1.8" fill="#a78bfa" class="twinkle" style="animation-delay:-3s"></circle>
+          <circle cx="340" cy="120" r="1.8" fill="#93c5fd" class="twinkle" style="animation-delay:-3s"></circle>
           <circle cx="980" cy="300" r="1.8" fill="#60a5fa" class="twinkle" style="animation-delay:-1.8s"></circle>
 
           <!-- Área de crecimiento bajo la curva -->
           <path d={`${curvePath} L1240,392 L40,392 Z`} fill="url(#curve-area)"></path>
           <!-- Riel tenue -->
-          <path d={curvePath} stroke="rgba(255,255,255,0.10)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10"></path>
+          <path d={curvePath} stroke="rgba(255,255,255,0.20)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10"></path>
           <!-- Trazo firma ligado al pin (lo conduce curve-pin.ts) -->
-          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-pin style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
+          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-draw="scroll" style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
 
           <!-- Hitos sobre la curva -->
-          <circle cx="350" cy="335" r="5" fill="#0b0a14" stroke="#8b5cf6" stroke-width="2.5"></circle>
-          <circle cx="660" cy="250" r="5" fill="#0b0a14" stroke="#3b82f6" stroke-width="2.5"></circle>
-          <circle cx="969" cy="134" r="5" fill="#0b0a14" stroke="#3b82f6" stroke-width="2.5"></circle>
+          <circle cx="350" cy="335" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
+          <circle cx="660" cy="250" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
+          <circle cx="969" cy="134" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
 
           <!-- Nodo inicio (hoy) -->
-          <circle cx="40" cy="360" r="9" fill="#0b0a14" stroke="#a78bfa" stroke-width="3"></circle>
+          <circle cx="40" cy="360" r="9" fill="#ffffff" stroke="#ffffff" stroke-width="3"></circle>
           <!-- Nodo fin (con CURVA) -->
-          <circle cx="1240" cy="70" r="11" fill="#2563eb" stroke="#93c5fd" stroke-width="3"></circle>
+          <circle cx="1240" cy="70" r="11" fill="#ffffff" stroke="#7dd3fc" stroke-width="3"></circle>
 
           <!-- Punto viajero (con halo) -->
-          <circle class="curve-dot" r="6" fill="#fff" stroke="rgba(255,255,255,0.22)" stroke-width="9"></circle>
+          <circle class="curve-dot" r="6" fill="#ffffff" stroke="rgba(255,255,255,0.3)" stroke-width="9"></circle>
         </svg>
 
         <!-- Hitos: chip flotante clickeable que se "enciende" al pasar el trazo (solo desktop) -->
         {hitosCurva.map((m) => (
           <div class="milestone hidden sm:block" data-at={m.at} style={`left:${m.left}%;top:${m.top}%`}>
-            <a href={m.href} class="lm-chip group absolute left-1/2 -translate-x-1/2 bottom-full mb-4 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-ink-2/80 backdrop-blur-md border border-white/10 px-3 py-1.5 text-[11px] font-semibold text-sand-200 shadow-xl shadow-black/40 transition-all hover:border-ember-300/50 hover:-translate-y-0.5">
-              <span class="lm-num text-ember-300 tabular-nums transition-colors">{m.n}</span>{m.label}
+            <a href={m.href} class="lm-chip group absolute left-1/2 -translate-x-1/2 bottom-full mb-4 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white border border-sand-200 px-3 py-1.5 text-[11px] font-semibold text-sand-700 shadow-lg transition-all hover:border-ember-300/50 hover:-translate-y-0.5">
+              <span class="lm-num text-ember tabular-nums transition-colors">{m.n}</span>{m.label}
               <svg class="lm-arrow w-3 h-3 opacity-0 -ml-1 transition-all group-hover:opacity-100 group-hover:ml-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
             </a>
           </div>
         ))}
 
-        <!-- Extremos (letras grandes — Pau) -->
-        <div class="absolute left-0 -bottom-2 sm:bottom-0 max-w-[48%]">
-          <p class="eyebrow text-ember-300 mb-2 text-sm">Hoy</p>
-          <p class="display text-2xl sm:text-4xl font-semibold text-sand-100 leading-[1.05]">Operación por <span class="word-before">sensación</span></p>
+        <!-- Hoy: abajo-izquierda, junto al inicio BAJO de la curva (punto de partida) -->
+        <div class="absolute bottom-0 left-0 max-w-[46%]">
+          <p class="eyebrow text-jade-300 mb-1.5 text-sm">Hoy</p>
+          <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">Operación por <span class="word-before">sensación</span></p>
         </div>
-        <div class="absolute right-0 top-0 max-w-[48%] text-right">
-          <p class="eyebrow text-blue-300 mb-2 text-sm">Con CURVA</p>
-          <p class="display text-2xl sm:text-4xl font-semibold text-blue-300 leading-[1.05]">Operación por <span class="word-after">sistema</span></p>
-        </div>
-        </div>
-       </div>
       </div>
 
       <!-- Escena vertical (móvil): mismo viaje como timeline -->
@@ -295,11 +274,11 @@ const producto = {
         <ul class="space-y-8">
           {paradas.map((p) => (
             <li class="relative">
-              <span class={`absolute -left-9 top-0.5 w-[26px] h-[26px] rounded-full border-2 ${accentBorder[p.accent]} bg-ink flex items-center justify-center`}>
+              <span class={`absolute -left-9 top-0.5 w-[26px] h-[26px] rounded-full border-2 ${accentBorder[p.accent]} bg-white flex items-center justify-center`}>
                 <span class={`w-2 h-2 rounded-full ${accentBar[p.accent]}`}></span>
               </span>
               <p class={`eyebrow ${accentText[p.accent]} mb-1`}>{p.eyebrow}</p>
-              <p class="display text-lg font-semibold text-sand-100 leading-tight">{p.label}</p>
+              <p class="display text-lg font-semibold text-ink leading-tight">{p.label}</p>
             </li>
           ))}
         </ul>
@@ -307,23 +286,23 @@ const producto = {
 
       <!-- Antes / después en dos columnas -->
       <div class="grid sm:grid-cols-2 gap-5 sm:gap-8 mt-14 sm:mt-20">
-        <div class="reveal rounded-3xl border border-white/10 bg-white/[0.03] p-7 sm:p-9 backdrop-blur-sm">
-          <p class="eyebrow text-ember-300 mb-6">Dónde estás hoy</p>
+        <div class="reveal rounded-3xl border border-white/20 bg-white/10 p-7 sm:p-9">
+          <p class="eyebrow text-jade-300 mb-6">Dónde estás hoy</p>
           <ul class="space-y-4">
             {hoy.map((h) => (
-              <li class="flex gap-3 text-sand-300 leading-relaxed">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-ember-300/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+              <li class="flex gap-3 text-sand-100 leading-relaxed">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-jade-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
                 <span>{h}</span>
               </li>
             ))}
           </ul>
         </div>
-        <div class="reveal reveal-d1 rounded-3xl border border-gold/30 bg-gold/[0.07] p-7 sm:p-9 backdrop-blur-sm">
-          <p class="eyebrow text-blue-300 mb-6">A dónde llegas</p>
+        <div class="reveal reveal-d1 rounded-3xl border border-white/20 bg-white/10 p-7 sm:p-9">
+          <p class="eyebrow text-white mb-6">A dónde llegas</p>
           <ul class="space-y-4">
             {despues.map((d) => (
-              <li class="flex gap-3 text-sand-200 leading-relaxed">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+              <li class="flex gap-3 text-sand-100 leading-relaxed">
+                <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
                 <span>{d}</span>
               </li>
             ))}
@@ -333,163 +312,36 @@ const producto = {
     </div>
   </section>
 
-  <!-- ============================== SERVICIOS ============================== -->
-  <section id="servicios" class="py-24 sm:py-36 px-6 sm:px-10 bg-white border-t border-sand-200">
-    <div class="mx-auto max-w-7xl">
-      <div class="max-w-2xl mb-16">
-        <p class="reveal eyebrow text-ember mb-5">Qué hacemos</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">Estrategia, tecnología y personas. Lo que tu operación pida.</h2>
-      </div>
+  <!-- ============================== ÁREAS (cómo te ayudamos — mosaico claro) ============================== -->
+  <Caminos calLink={calLink} />
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-        {areas.map((a, i) => (
-          <a href={a.href} data-tilt="2" class={`reveal reveal-d${i + 1} group relative rounded-3xl bg-sand-50 border border-sand-200 p-9 sm:p-12 flex flex-col min-h-[360px] overflow-hidden hover:shadow-2xl hover:border-sand-300 transition-all`}>
-            <span class={`absolute inset-x-0 top-0 h-1 ${accentBar[a.accent]}`}></span>
-            <span class={`absolute -right-10 -top-10 w-40 h-40 rounded-full ${accentSoft[a.accent]} blur-2xl opacity-0 group-hover:opacity-100 transition-opacity`}></span>
-            <div class={`relative w-14 h-14 rounded-2xl ${accentSoft[a.accent]} flex items-center justify-center mb-7`}>
-              <svg class={`w-7 h-7 ${accentText[a.accent]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d={icons[a.icon]}></path></svg>
-            </div>
-            <h3 class="relative display text-2xl font-semibold mb-3 text-ink">{a.title}</h3>
-            <p class="relative text-sand-600 text-[15px] leading-relaxed">{a.desc}</p>
-            <div class="relative mt-5 flex flex-wrap gap-2">
-              {a.tags.map((t) => (<span class="text-[11px] font-medium text-sand-600 bg-white border border-sand-200 rounded-full px-2.5 py-1">{t}</span>))}
-            </div>
-            <span class={`relative mt-auto pt-7 inline-flex items-center gap-2 text-sm font-semibold ${accentText[a.accent]} group-hover:gap-3 transition-all`}>
-              Ver más
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
-            </span>
-          </a>
-        ))}
-      </div>
-      <p class="reveal mt-8 text-center text-sand-500 text-[15px] max-w-2xl mx-auto">Los dos frentes no van por separado: los integramos en una sola estrategia, según lo que tu operación necesite.</p>
-    </div>
-  </section>
-
-  <!-- ============================== CÓMO TRABAJAMOS ============================== -->
-  <section class="surface-ink-soft text-sand-50 py-24 sm:py-36 px-6 sm:px-10">
-    <div class="mx-auto max-w-7xl">
-      <div class="max-w-2xl mb-16">
-        <p class="reveal eyebrow text-ember-300 mb-5">Cómo trabajamos</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">No te dejamos un PDF. <span class="text-sand-500">Nos quedamos hasta que funcione.</span></h2>
-      </div>
-      <ProcesoTabs proceso={proceso} />
-    </div>
-  </section>
-
-  <!-- ============================== NÚMEROS (banda de impacto) ============================== -->
-  {/* ⚠ VALORES PLACEHOLDER en `numeros` (frontmatter) — reemplazar con cifras reales antes de publicar. */}
-  <section class="surface-ink grain text-sand-50 py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden">
-    <div class="glow-orb" style="width:32rem;height:32rem;top:10%;left:-8rem;background:radial-gradient(circle,rgba(124,58,237,0.38),transparent 70%);"></div>
-    <div class="glow-orb" style="width:28rem;height:28rem;bottom:-6rem;right:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.34),transparent 70%);animation-delay:-9s;"></div>
-    <div class="mx-auto max-w-7xl relative z-10">
-      <div class="text-center mb-16 sm:mb-20">
-        <h2 class="reveal display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05]">Curva en <span class="curve-text-live">números</span></h2>
-        <p class="reveal mt-4 text-lg sm:text-xl text-sand-400">Nuestros éxitos totales.</p>
-      </div>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-16 items-end">
-        {numeros.map((n, i) => (
-          <div class="num-rise text-center">
-            <svg class="w-28 h-9 mx-auto mb-3 opacity-80" viewBox="0 0 100 32" fill="none" preserveAspectRatio="none" aria-hidden="true">
-              <path d={n.spark} stroke="currentColor" stroke-width="2.5" stroke-linecap="round" pathLength="1" data-curve-draw="scroll" style="stroke-dasharray:1;stroke-dashoffset:1;" class={n.accent === 'ember' ? 'text-ember-300' : 'text-blue-300'}></path>
-            </svg>
-            <p
-              data-count={i === 2 ? undefined : n.value}
-              data-odometer={i === 2 ? n.value : undefined}
-              class={`display font-semibold tabular-nums leading-none text-sand-50 ${i % 2 === 0 ? 'text-6xl sm:text-7xl' : 'text-5xl sm:text-6xl'}`}
-            >{n.value}</p>
-            <p class="text-sm text-sand-400 mt-3 leading-snug">{n.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================== CASOS ============================== -->
-  <section id="casos" class="py-24 sm:py-36 px-6 sm:px-10 bg-sand-50">
-    <div class="mx-auto max-w-7xl">
-      <div class="mb-14 max-w-2xl">
-        <p class="reveal eyebrow text-ember mb-5">Resultados</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">Lo que hemos construido.</h2>
-        <p class="reveal mt-5 text-lg text-sand-600 leading-relaxed">Casos reales, con números reales. Lo que pasa cuando una operación deja de jalar a pulso.</p>
-      </div>
-
-      <div class="space-y-8">
-        {casos.map((c, i) => (
-          <article class={`reveal reveal-d${i + 1} lift rounded-3xl border border-sand-200 bg-white overflow-hidden grid lg:grid-cols-[1.5fr_1fr]`}>
-            {/* Historia: reto → qué hicimos → resultado */}
-            <div class="p-8 sm:p-10 lg:border-r border-sand-200">
-              <div class="flex items-center gap-3 mb-6">
-                <span class={`px-3 py-1 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} text-[11px] font-semibold uppercase tracking-wide`}>{c.categoria}</span>
-                {c.logo ? <img src={c.logo} alt="" class="h-6 opacity-80" /> : null}
-              </div>
-              <h3 class="display text-2xl sm:text-3xl font-semibold mb-8 text-ink leading-tight">{c.title}</h3>
-              <dl class="space-y-5">
-                <div class="sm:flex gap-5">
-                  <dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>El reto</dt>
-                  <dd class="text-sand-700 leading-relaxed">{c.reto}</dd>
-                </div>
-                <div class="sm:flex gap-5">
-                  <dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Qué hicimos</dt>
-                  <dd class="text-sand-700 leading-relaxed">{c.hicimos}</dd>
-                </div>
-                <div class="sm:flex gap-5">
-                  <dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Resultado</dt>
-                  <dd class="text-ink font-medium leading-relaxed">{c.resultado}</dd>
-                </div>
-              </dl>
-            </div>
-            {/* Prueba: métricas + testimonial con autor */}
-            <div class="p-8 sm:p-10 bg-sand-50 flex flex-col">
-              <div class="grid grid-cols-2 gap-x-6 gap-y-7">
-                {c.metrics.map((m) => (<div><p data-count={m.value} class="display text-3xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
-              </div>
-              {c.quote && (
-                <blockquote class="mt-8 pt-7 border-t border-sand-200">
-                  <p class="text-ink text-[15px] leading-snug font-medium mb-4">{c.quote}</p>
-                  {c.autor && (
-                    <figcaption class="flex items-center gap-3">
-                      <span class={`w-9 h-9 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} flex items-center justify-center flex-shrink-0`}>
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0v.75H4.5v-.75z"></path></svg>
-                      </span>
-                      <span class="text-[13px] leading-tight">
-                        <span class="block font-semibold text-ink">{c.autor.nombre === 'PENDIENTE' ? 'Cliente de CURVA' : c.autor.nombre}</span>
-                        <span class="block text-sand-500">{c.autor.cargo}{c.autor.empresa !== 'PENDIENTE' ? ` · ${c.autor.empresa}` : ''}</span>
-                      </span>
-                    </figcaption>
-                  )}
-                </blockquote>
-              )}
-            </div>
-          </article>
-        ))}
-      </div>
-    </div>
-  </section>
+  <!-- ============================== IMPACTO REAL (carrusel de casos con cifra) ============================== -->
+  <ImpactoCarrusel />
 
   <!-- ============================== PRODUCTO (ventaja injusta) ============================== -->
-  <section class="surface-ink grain text-sand-50 py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden">
-    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-6rem;background:radial-gradient(circle,rgba(124,58,237,0.40),transparent 70%);"></div>
+  <section class="text-ink py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden">
+    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-6rem;background:radial-gradient(circle,rgba(37, 99, 235,0.10),transparent 70%);"></div>
     <div class="mx-auto max-w-7xl relative z-10 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
       <div>
-        <p class="reveal eyebrow text-ember-300 mb-5">Nuestra ventaja</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance">Lo que hacemos se adapta a tu operación. <span class="curve-text-live">No al revés.</span></h2>
-        <p class="reveal mt-6 text-lg text-sand-300 leading-relaxed">
+        <p class="reveal eyebrow-lead text-ember mb-5">Nuestra ventaja</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance text-ink">Lo que hacemos se adapta a tu operación. <span class="curve-text">No al revés.</span></h2>
+        <p class="reveal mt-6 text-lg text-sand-600 leading-relaxed">
           No te metemos una herramienta a fuerza ni te copiamos la receta de otro. Entendemos cómo trabaja tu
           gente y armamos lo que de verdad les sirve. Y lo digital no llega solo: viene con capacitación,
           cercanía y acompañamiento hasta que tu equipo lo hace suyo.
         </p>
         <ul class="reveal reveal-d1 mt-8 space-y-3">
           {['Nos adaptamos a tu operación, no tú a nosotros', 'Capacitación y acompañamiento, no solo entregables', 'Cercanía real: estamos contigo durante el cambio'].map((p) => (
-            <li class="flex gap-3 text-sand-200">
-              <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+            <li class="flex gap-3 text-sand-700">
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
               <span>{p}</span>
             </li>
           ))}
         </ul>
         {producto.link !== '#' && (
-          <a href={producto.link} target="_blank" rel="noopener" class="reveal reveal-d2 mt-8 inline-flex items-center gap-2 text-sm font-semibold text-ember-300 hover:gap-3 transition-all link-underline">
+          <a href={producto.link} target="_blank" rel="noopener" class="reveal reveal-d2 arrow-cta mt-8 inline-flex items-center gap-2 text-sm font-semibold text-ember link-underline">
             Conocer Curva Tiempos
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+            <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
           </a>
         )}
       </div>
@@ -501,27 +353,27 @@ const producto = {
           <span class="stack-layer l2" aria-hidden="true"></span>
           <div class="stack-front parallax" data-parallax="14">
         {producto.shot ? (
-          <img src={producto.shot} alt="Curva Tiempos" class="rounded-2xl border border-white/15 shadow-2xl w-full" />
+          <img src={producto.shot} alt="Curva Tiempos" class="rounded-2xl border border-sand-200 shadow-2xl w-full" />
         ) : (
-          <div class="rounded-2xl border border-white/15 bg-ink-2/70 backdrop-blur overflow-hidden shadow-2xl">
-            <div class="flex items-center gap-1.5 px-4 py-3 border-b border-white/10">
-              <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
-              <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
-              <span class="w-2.5 h-2.5 rounded-full bg-white/20"></span>
+          <div class="rounded-2xl border border-sand-200 bg-white overflow-hidden shadow-2xl">
+            <div class="flex items-center gap-1.5 px-4 py-3 border-b border-sand-200">
+              <span class="w-2.5 h-2.5 rounded-full bg-sand-300"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-sand-300"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-sand-300"></span>
               <span class="ml-3 text-[11px] text-sand-500">curva-tiempos</span>
             </div>
-            <div class="aspect-[16/10] p-6 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-ember/15 via-transparent to-gold/15">
+            <div class="aspect-[16/10] p-6 sm:p-8 flex flex-col justify-between bg-gradient-to-br from-ember/10 via-transparent to-gold/10">
               <div class="flex items-center gap-2">
-                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#pt)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="pt" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#a78bfa"></stop><stop offset="0.5" stop-color="#818cf8"></stop><stop offset="1" stop-color="#60a5fa"></stop></linearGradient></defs></svg>
-                <span class="display font-semibold text-sand-100">Curva Tiempos</span>
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#pt)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="pt" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#93c5fd"></stop><stop offset="0.5" stop-color="#60a5fa"></stop><stop offset="1" stop-color="#60a5fa"></stop></linearGradient></defs></svg>
+                <span class="display font-semibold text-ink">Curva Tiempos</span>
               </div>
               <svg viewBox="0 0 320 90" fill="none" class="w-full" aria-hidden="true">
                 <path d="M0,80 C70,80 90,40 160,38 C230,36 250,60 320,20" stroke="url(#ptc)" stroke-width="2.5" stroke-linecap="round"></path>
-                <defs><linearGradient id="ptc" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#4f46e5"></stop><stop offset="1" stop-color="#2563eb"></stop></linearGradient></defs>
+                <defs><linearGradient id="ptc" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2563eb"></stop><stop offset="0.5" stop-color="#3b82f6"></stop><stop offset="1" stop-color="#2563eb"></stop></linearGradient></defs>
               </svg>
               <div class="grid grid-cols-3 gap-3">
                 {['Horas','Tareas','Equipo'].map((t) => (
-                  <div class="rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+                  <div class="rounded-lg bg-sand-50 border border-sand-200 px-3 py-2">
                     <span class="block text-[10px] text-sand-500">{t}</span>
                     <span class="block h-1.5 mt-1.5 rounded-full bg-gradient-to-r from-ember to-gold opacity-70"></span>
                   </div>
@@ -537,44 +389,21 @@ const producto = {
     </div>
   </section>
 
-  <!-- ============================== CERCANÍA ============================== -->
-  <section class="py-24 sm:py-32 px-6 sm:px-10 bg-white border-t border-sand-200">
-    <div class="mx-auto max-w-4xl text-center">
-      <p class="reveal eyebrow text-ember mb-5">Cómo se siente trabajar con nosotros</p>
-      <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] text-ink text-balance">No somos el consultor que ves <span class="text-sand-400">una vez al mes</span>.</h2>
-      <p class="reveal mt-7 text-lg sm:text-xl text-sand-600 leading-relaxed max-w-2xl mx-auto">Estamos metidos en el día a día contigo: en tu WhatsApp, en tus juntas, en la cancha. Cuando algo se traba, no esperas una semana por una respuesta — nos arremangamos y lo sacamos juntos.</p>
-      <div class="mt-12 grid sm:grid-cols-3 gap-6 text-left">
-        {[
-          { t: 'Cercanos de verdad', d: 'Nos hablas y te contestamos. Sin filtros ni "lo escalo con mi equipo".' },
-          { t: 'Manos a la obra', d: 'No solo decimos qué hacer. Lo hacemos contigo, hombro con hombro.' },
-          { t: 'Hasta que jala', d: 'No nos vamos cuando entregamos. Nos quedamos hasta que funciona solo.' },
-        ].map((c, i) => (
-          <div class={`reveal reveal-d${i + 1} lift rounded-2xl border border-sand-200 bg-white p-6`}>
-            <p class="display font-semibold text-ink mb-2">{c.t}</p>
-            <p class="text-sand-600 text-[15px] leading-relaxed">{c.d}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================== LEAD MAGNET (baja fricción) ============================== -->
-  <LeadMagnet />
-
   <!-- ============================== CTA ============================== -->
-  <section class="surface-ink grain text-sand-50 py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
-    <Curve variant="band" draw="scroll" stroke={1.4} class="pointer-events-none absolute inset-x-0 top-0 w-full h-[18vh] opacity-30" />
+  <section class="zone-color py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
+    <Curve variant="band" draw="scroll" stroke={1.4} class="pointer-events-none absolute inset-x-0 top-0 w-full h-[18vh] opacity-25" />
     <div class="mx-auto max-w-3xl text-center relative z-10">
-      <h2 class="reveal display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.04] text-balance">Cuéntanos de tu empresa.</h2>
-      <p class="reveal mt-6 text-lg text-sand-300 max-w-md mx-auto leading-relaxed">30 minutos. Nos cuentas cómo está la operación y te decimos derecho si te podemos ayudar o no.</p>
+      <p class="reveal eyebrow text-jade-300 mb-5">Tu empresa, por sistema. Menos esfuerzo, más estructura.</p>
+      <h2 class="reveal display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.04] text-balance text-white">Cuéntanos de tu empresa.</h2>
+      <p class="reveal mt-6 text-lg text-sand-200 max-w-md mx-auto leading-relaxed">30 minutos. Nos cuentas cómo está la operación y te decimos derecho si te podemos ayudar o no.</p>
     </div>
     <!-- Calendario embebido (sin salir de la página) -->
     <div class="reveal mx-auto max-w-3xl mt-10 relative z-10">
-      <div class="rounded-3xl overflow-hidden border border-white/10 bg-white shadow-2xl">
+      <div class="rounded-3xl overflow-hidden border border-sand-200 bg-white shadow-2xl">
         <iframe src={`${calLink}?embed=true`} title="Agenda tu llamada de exploración" loading="lazy" class="w-full h-[640px] border-0"></iframe>
       </div>
-      <p class="mt-6 text-center text-sm text-sand-400">¿Todavía no para la llamada?
-        <a href={waLink} target="_blank" rel="noopener" class="text-sand-100 font-semibold underline underline-offset-2 hover:text-white">Escríbenos por WhatsApp.</a>
+      <p class="mt-6 text-center text-sm text-sand-200">¿Todavía no para la llamada?
+        <a href={waLink} target="_blank" rel="noopener" class="text-white font-semibold underline underline-offset-2 hover:text-jade-300">Escríbenos por WhatsApp.</a>
       </p>
     </div>
   </section>
