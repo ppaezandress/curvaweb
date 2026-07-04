@@ -248,10 +248,10 @@ function EquipoView() {
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-zinc-300">
+            <button onClick={() => setShowRates((s) => !s)} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-muted/40">
               <Settings2 size={15} /> Tarifas
             </button>
-            <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-zinc-300">
+            <button onClick={exportCSV} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-muted shadow-soft transition focus-ring hover:border-muted/40">
               <Download size={15} /> CSV
             </button>
             <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-sm font-medium text-white transition focus-ring hover:bg-ink-soft">

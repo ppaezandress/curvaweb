@@ -127,7 +127,7 @@ export default function TareasPage() {
             <button key={g.key} onClick={() => setGroup(g.key)} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition focus-ring ${group === g.key ? "bg-ink text-white" : "text-muted hover:text-fg"}`}>{g.icon} {g.label}</button>
           ))}
         </div>
-        <button onClick={() => setShowDone((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus-ring ${showDone ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-line bg-surface text-muted hover:border-zinc-300"}`}><Check size={15} /> Done</button>
+        <button onClick={() => setShowDone((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus-ring ${showDone ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-line bg-surface text-muted hover:border-muted/40"}`}><Check size={15} /> Done</button>
         <button onClick={() => setShowNew(true)} className="btn-magnetic inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 focus-ring"><Plus size={15} /> Nueva tarea</button>
       </div>
 

@@ -8,6 +8,7 @@ import {
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
+import { dueDateMs } from "@/lib/date";
 import { dayKey, computeStreak } from "@/lib/culture";
 import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { statusToneClass } from "@/lib/mock-data";
@@ -75,7 +76,7 @@ export default function HomePage() {
     const urg = (t: typeof mine[number]) => {
       let s = 0;
       if (active?.taskId === t.id) s += 200;
-      if (t.dueDate) { const due = new Date(t.dueDate).getTime(); if (due < today0) s += 100; else if (due < today0 + 86_400_000) s += 50; }
+      if (t.dueDate) { const due = dueDateMs(t.dueDate); if (due != null) { if (due < today0) s += 100; else if (due < today0 + 86_400_000) s += 50; } }
       if (t.priority === "Alta") s += 40; else if (t.priority === "Media") s += 15;
       if (/curso|progress|haciendo/i.test(t.status)) s += 10;
       return s;

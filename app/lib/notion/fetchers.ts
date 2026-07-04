@@ -1,8 +1,15 @@
 // Convierte las bases de Notion (Tasks Tracker, CRM, Planeación) en los tipos
 // que ya usa la UI. Solo se ejecuta del lado servidor.
 
+import { unstable_cache } from "next/cache";
 import { queryAll, type NotionPage } from "./client";
 import type { Member, Client, Project, Task, TaskType } from "@/lib/mock-data";
+
+// La data de Notion es común a todo el equipo y la API es lenta (~3 s por carga completa).
+// Se cachea a nivel fetcher (revalidate 60 s) y se invalida al escribir vía revalidateTag.
+// La sesión/autorización se resuelve en el route ANTES de leer estos fetchers (no aquí).
+const CACHE_SECONDS = 60;
+const TIME_LOOKBACK_DAYS = 180; // cubre insights (6 meses) y rachas (~60 días)
 
 const DB = {
   tasks: process.env.NOTION_DB_TASKS || "",
@@ -61,10 +68,14 @@ export type TimeRecord = {
   mode: "manual" | "ai"; // manual (tus manos) o ai (espera/IA trabajando)
 };
 
-export async function getTimeRecords(): Promise<TimeRecord[]> {
+async function getTimeRecordsUncached(): Promise<TimeRecord[]> {
   if (!DB.time) return [];
+  // Solo los últimos N días: evita escanear el historial completo (crece sin límite y
+  // dispara paginación secuencial). Insights usa hasta 6 meses; rachas ~60 días.
+  const sinceIso = new Date(Date.now() - TIME_LOOKBACK_DAYS * 86_400_000).toISOString();
   const pages = await queryAll(DB.time, {
     sorts: [{ timestamp: "created_time", direction: "descending" }],
+    filter: { property: "Inicio", date: { on_or_after: sinceIso } },
   });
   return pages
     .map((pg) => {
@@ -82,6 +93,12 @@ export async function getTimeRecords(): Promise<TimeRecord[]> {
     .filter((r) => r.minutes > 0);
 }
 
+// Cacheado: se invalida con revalidateTag("time-entries") tras registrar tiempo.
+export const getTimeRecords = unstable_cache(getTimeRecordsUncached, ["time-records"], {
+  tags: ["time-entries"],
+  revalidate: CACHE_SECONDS,
+});
+
 export type CurvaData = {
   members: Member[];
   clients: Client[];
@@ -90,7 +107,7 @@ export type CurvaData = {
   taskTypes: TaskType[];
 };
 
-export async function getCurvaData(): Promise<CurvaData> {
+async function getCurvaDataUncached(): Promise<CurvaData> {
   const [taskPages, clientPages, projectPages] = await Promise.all([
     queryAll(DB.tasks),
     queryAll(DB.crm),
@@ -171,3 +188,10 @@ export async function getCurvaData(): Promise<CurvaData> {
 
   return { members, clients, projects, tasks, taskTypes };
 }
+
+// Cacheado: se invalida con revalidateTag("curva-data") al crear/editar una tarea, y también
+// tras registrar tiempo (cambia el rollup "Horas registradas" = baseline de cada tarea).
+export const getCurvaData = unstable_cache(getCurvaDataUncached, ["curva-data"], {
+  tags: ["curva-data"],
+  revalidate: CACHE_SECONDS,
+});

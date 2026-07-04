@@ -5,6 +5,7 @@
 
 import type { Task } from "@/lib/mock-data";
 import { formatDuration } from "@/lib/format";
+import { dueDateMs } from "@/lib/date";
 
 export type CurviRec = { taskId: string; start: string; minutes: number };
 type Weight = "Ligera" | "Media" | "Pesada";
@@ -53,7 +54,8 @@ const startOfDay = (ms: number) => { const d = new Date(ms); d.setHours(0, 0, 0,
 type DueState = "overdue" | "today" | "soon" | "none";
 function dueState(t: Task, now: number): DueState {
   if (!t.dueDate) return "none";
-  const due = new Date(t.dueDate).getTime();
+  const due = dueDateMs(t.dueDate);
+  if (due == null) return "none";
   const today0 = startOfDay(now);
   const today1 = today0 + 86_400_000;
   if (due < today0) return "overdue";

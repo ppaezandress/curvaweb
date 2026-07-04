@@ -112,7 +112,7 @@ export function TaskCard({ task }: { task: Task }) {
           ? "border-accent shadow-lg shadow-accent/10"
           : onAI
             ? "border-curva-indigo shadow-lg shadow-curva-indigo/10"
-            : "border-line hover:border-zinc-300"
+            : "border-line hover:border-muted/40"
       } ${autoResumed === task.id ? "curva-handoff" : ""}`}
     >
       {/* Ícono de tipo */}

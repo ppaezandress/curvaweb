@@ -18,9 +18,11 @@ export function AITodayCard() {
   const [todayMin, setTodayMin] = useState(0);
   const [now, setNow] = useState(Date.now());
 
-  // Acumulado de hoy en Modo IA
+  // Acumulado de hoy en Modo IA. Gateado por aiEnabled: con "Tiempo con IA" OFF (piloto) el
+  // componente no se muestra (return null abajo), pero los hooks corren igual — sin este gate,
+  // el interval de 30 s escaneaba el historial de tiempos aunque la feature esté apagada.
   useEffect(() => {
-    if (!me?.name) return;
+    if (!me?.name || !aiEnabled) return;
     const load = () => fetch("/api/time-entries").then((r) => r.json()).then((d) => {
       const t0 = new Date(); t0.setHours(0, 0, 0, 0);
       const min = (d.records || [])
@@ -32,7 +34,7 @@ export function AITodayCard() {
     load();
     const id = setInterval(load, 30000);
     return () => clearInterval(id);
-  }, [me?.name]);
+  }, [me?.name, aiEnabled]);
 
   // Reloj en vivo mientras la IA trabaja
   useEffect(() => {

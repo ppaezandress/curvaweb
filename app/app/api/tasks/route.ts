@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
+import { requireSession } from "@/lib/auth/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,8 @@ const PatchTaskSchema = z.object({
 
 // Crear una tarea nueva en el Tasks Tracker.
 export async function POST(req: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
   if (!notionConfigured() || !TASKS) {
     return NextResponse.json({ ok: false, error: "Notion no configurado" }, { status: 400 });
   }
@@ -60,6 +64,7 @@ export async function POST(req: Request) {
       method: "POST",
       body: JSON.stringify({ parent: { database_id: TASKS }, properties }),
     });
+    revalidateTag("curva-data", "max"); // refresca la lista de tareas cacheada
     return NextResponse.json({ ok: true, id: page.id });
   } catch {
     return NextResponse.json({ ok: false, error: "No se pudo procesar la tarea" }, { status: 500 });
@@ -67,7 +72,12 @@ export async function POST(req: Request) {
 }
 
 // Actualizar el Status de una tarea (p. ej. marcar DONE).
+// NOTA: por ahora basta con exigir sesión (cierra la escritura anónima / IDOR). El control
+// más fino (solo responsable/auxiliar o admin puede editar una tarea dada) queda como
+// seguimiento: requiere leer el responsable de la página en Notion antes de cada PATCH.
 export async function PATCH(req: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
   if (!notionConfigured()) {
     return NextResponse.json({ ok: false, error: "Notion no configurado" }, { status: 400 });
   }
@@ -94,6 +104,7 @@ export async function PATCH(req: Request) {
       method: "PATCH",
       body: JSON.stringify({ properties }),
     });
+    revalidateTag("curva-data", "max");
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false, error: "No se pudo procesar la tarea" }, { status: 500 });

@@ -56,7 +56,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 9000);
     fetch("/api/data", { signal: ctrl.signal })
-      .then((r) => r.json())
+      .then((r) => {
+        // Sin sesión (p. ej. en /login): la API responde 401 ANTES de tocar Notion (no hay
+        // full-scan). Devolvemos vacío sin parsear el cuerpo de error como si fueran datos.
+        if (!r.ok) return { source: r.status === 401 ? "anon" : "error" };
+        return r.json();
+      })
       .then((d) => {
         setData({
           members: d.members ?? [],

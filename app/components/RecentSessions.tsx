@@ -44,7 +44,7 @@ export function RecentSessions() {
                   </span>
                   <button
                     onClick={() => { if (confirm("¿Quitar este registro de tiempo?")) removeEntry(e.id); }}
-                    className="rounded-full p-1.5 text-muted opacity-0 transition hover:bg-rose-50 hover:text-rose-500 focus-ring group-hover:opacity-100"
+                    className="rounded-full p-1.5 text-muted opacity-100 transition hover:bg-danger/10 hover:text-danger focus-ring focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     aria-label="Quitar registro"
                     title="Quitar este registro"
                   >

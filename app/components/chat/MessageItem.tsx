@@ -94,7 +94,7 @@ export function MessageItem({
               onClick={() => onToggleReaction(msg.id, r.emoji)}
               className={cn(
                 "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs transition focus-ring",
-                r.mine ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-zinc-300",
+                r.mine ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-muted/40",
               )}
             >
               {r.emoji} {r.count}
@@ -103,7 +103,7 @@ export function MessageItem({
           <div className="relative">
             <button
               onClick={() => setPickerOpen((o) => !o)}
-              className="rounded-full p-1 text-zinc-300 opacity-0 transition hover:bg-surface-2 hover:text-muted focus-ring group-hover:opacity-100"
+              className="rounded-full p-1 text-muted/70 opacity-100 transition hover:bg-surface-2 hover:text-fg focus-ring focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
               aria-label="Reaccionar"
             >
               <SmilePlus size={14} />

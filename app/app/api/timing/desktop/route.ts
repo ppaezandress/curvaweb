@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timing, projectFromCwd } from "@/lib/timing-store";
 import { logAITime } from "@/lib/notion/time";
+import { PILOT } from "@/lib/pilot-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 // (con su inicio y fin), a diferencia de Claude Code que usa start/stop por turno.
 // Body: { email, cwd, startedAt, endedAt, sessionId }. Solo metadatos, nunca contenido.
 export async function POST(req: Request) {
+  if (!PILOT.aiTime) return NextResponse.json({ ok: false, error: "disabled" }, { status: 403 });
   const headerEmail = (req.headers.get("x-curva-user") || "").trim();
   const body = await req.json().catch(() => ({} as Record<string, unknown>));
   const b = body as { email?: string; cwd?: string; startedAt?: number; endedAt?: number; sessionId?: string };

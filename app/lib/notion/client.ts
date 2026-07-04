@@ -11,25 +11,39 @@ export function notionConfigured() {
   return TOKEN.startsWith("ntn_") || TOKEN.startsWith("secret_");
 }
 
+const MAX_RETRIES = 3;
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 export async function notionFetch<T = unknown>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(BASE + path, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      "Notion-Version": VERSION,
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-    cache: "no-store",
-  });
-  if (!res.ok) {
+  let attempt = 0;
+  // Reintenta ante rate-limit (429) y errores transitorios de Notion (5xx), respetando el
+  // header Retry-After. Cubre queryAll (lecturas) y los POST (registro de tiempo/tareas), así
+  // un burst de dos usuarios recargando a la vez ya no tira los datos a "mock".
+  for (;;) {
+    const res = await fetch(BASE + path, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Notion-Version": VERSION,
+        "Content-Type": "application/json",
+        ...(init?.headers || {}),
+      },
+      cache: "no-store",
+    });
+    if (res.ok) return res.json() as Promise<T>;
+    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const backoff = retryAfter > 0 ? retryAfter * 1000 : Math.min(2000 * 2 ** attempt, 8000);
+      attempt += 1;
+      await sleep(backoff);
+      continue;
+    }
     const body = await res.text();
     throw new Error(`Notion ${res.status}: ${body}`);
   }
-  return res.json() as Promise<T>;
 }
 
 type QueryResponse = {

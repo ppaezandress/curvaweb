@@ -134,7 +134,7 @@ export default function TimesheetPage() {
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
           <CalendarDays size={16} className="text-muted" />
           {label}
-          <button onClick={() => setWeekStart(mondayOf(new Date()))} className="ml-2 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition hover:bg-zinc-200">
+          <button onClick={() => setWeekStart(mondayOf(new Date()))} className="ml-2 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition hover:bg-surface-2">
             Esta semana
           </button>
         </div>
@@ -170,7 +170,7 @@ export default function TimesheetPage() {
                     {r.client && <div className="truncate text-xs text-muted">{r.client}</div>}
                   </td>
                   {r.cells.map((c, i) => (
-                    <td key={i} className={`px-2 py-3 text-center tabular ${c ? "font-semibold text-fg" : "text-zinc-300"} ${i === todayIdx ? "bg-accent/5" : ""}`}>
+                    <td key={i} className={`px-2 py-3 text-center tabular ${c ? "font-semibold text-fg" : "text-muted/70"} ${i === todayIdx ? "bg-accent/5" : ""}`}>
                       {fmtH(c)}
                     </td>
                   ))}

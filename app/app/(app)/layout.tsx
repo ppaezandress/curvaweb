@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { TopNav } from "@/components/TopNav";
@@ -32,8 +34,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!ready || !dataReady || !currentUserId) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-muted">
-        Cargando…
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5">
+        <Logo className="breathe text-3xl text-fg" />
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Loader2 size={16} className="animate-spin" /> Cargando tu espacio…
+        </div>
       </div>
     );
   }
@@ -47,11 +52,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       <TopNav />
       <main
-        className="mx-auto max-w-5xl px-4 py-6 sm:py-8"
-        style={{ paddingBottom: hasDock ? 140 : 88 }}
+        className={`mx-auto max-w-5xl px-4 py-6 sm:py-8 ${
+          hasDock ? "pb-[150px] sm:pb-[120px]" : "pb-[88px] sm:pb-8"
+        }`}
       >
         {(source === "mock" || source === "mock-local") && (
-          <div className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-5 rounded-2xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-fg">
             ⚠️ Estás viendo <b>datos de prueba</b> — no se pudo conectar a Notion ahorita. Tu tiempo medido sí se guarda; recarga en un rato para ver tu info real.
           </div>
         )}

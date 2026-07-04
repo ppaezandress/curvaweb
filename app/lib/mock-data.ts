@@ -123,17 +123,20 @@ export const taskTypeById = Object.fromEntries(taskTypes.map((t) => [t.id, t]));
 export const taskById = Object.fromEntries(tasks.map((t) => [t.id, t]));
 
 // Tono del badge según el Status (tolerante a nombres reales de Notion).
+// Pills de estado theme-aware: patrón alfa (bg-X/15 text-X) con tokens semánticos que ya
+// suben un punto en oscuro. Antes eran bg-*-100 text-*-700 (light-only) → stickers claros
+// brillantes en modo oscuro.
 export function statusToneClass(status: string): string {
   const s = (status || "").toLowerCase();
   if (s.includes("done") || s.includes("complet") || s.includes("listo"))
-    return "bg-emerald-100 text-emerald-700";
+    return "bg-success/15 text-success";
   if (s.includes("curso") || s.includes("progress") || s.includes("haciendo"))
-    return "bg-blue-100 text-blue-700";
+    return "bg-blue-500/15 text-blue-600 dark:text-blue-300";
   if (s.includes("validar") || s.includes("revis"))
-    return "bg-amber-100 text-amber-700";
+    return "bg-warn/15 text-warn";
   if (s.includes("espera") || s.includes("hold") || s.includes("pausa"))
-    return "bg-purple-100 text-purple-700";
+    return "bg-accent/15 text-accent";
   if (s.includes("demor") || s.includes("atras") || s.includes("blocked"))
-    return "bg-rose-100 text-rose-700";
-  return "bg-zinc-100 text-zinc-600"; // sin empezar / desconocido
+    return "bg-danger/15 text-danger";
+  return "bg-muted/15 text-muted"; // sin empezar / desconocido
 }

@@ -4,6 +4,7 @@ import { getCurvaDataFromPostgres } from "@/lib/pg/fetchers";
 import { notionConfigured } from "@/lib/notion/client";
 import { DATA_SOURCE } from "@/lib/source";
 import { members, clients, projects, tasks, taskTypes } from "@/lib/mock-data";
+import { requireSession } from "@/lib/auth/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ function publicSafe(d: { members: { email?: string }[] } & Record<string, unknow
 }
 
 export async function GET(req: Request) {
+  // Es data de negocio interna (clientes, proyectos, carga por persona) → exige sesión.
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
   // Override por query (?source=postgres) para validar sin flipear el flag global.
   const override = new URL(req.url).searchParams.get("source");
   const source = override === "postgres" || override === "notion" ? override : DATA_SOURCE;
