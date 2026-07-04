@@ -102,7 +102,7 @@ export function ProfileMenu() {
           <Link href="/ajustes" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
             <Settings size={16} /> Ajustes
           </Link>
-          <button onClick={logout} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-rose-500 transition hover:bg-rose-50">
+          <button onClick={logout} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-danger transition hover:bg-danger/10">
             <LogOut size={16} /> Cerrar sesión
           </button>
         </div>

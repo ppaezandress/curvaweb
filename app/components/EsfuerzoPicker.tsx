@@ -9,11 +9,11 @@ type Weight = (typeof WEIGHTS)[number];
 
 const toneOf = (w?: string) =>
   w === "Pesada"
-    ? "bg-rose-100 text-rose-700"
+    ? "bg-danger/15 text-danger"
     : w === "Media"
-      ? "bg-amber-100 text-amber-700"
+      ? "bg-warn/15 text-warn"
       : w === "Ligera"
-        ? "bg-emerald-100 text-emerald-700"
+        ? "bg-success/15 text-success"
         : "bg-surface-2 text-muted";
 
 // Badge de esfuerzo clickeable: permite corregir a mano el esfuerzo de una tarea
