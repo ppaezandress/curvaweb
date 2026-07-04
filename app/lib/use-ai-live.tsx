@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { PILOT } from "@/lib/pilot-flags";
 
 export type AILive = { live: boolean; project?: string; startedAt?: number };
 
@@ -19,7 +20,9 @@ export function AILiveProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AILive>({ live: false });
 
   useEffect(() => {
-    if (!email) return;
+    // "Tiempo con IA" OFF en el piloto → no hay nada que rastrear: ni polling de respaldo cada
+    // 8 s ni suscripción realtime (antes corría para todo usuario logueado, ~75k invocaciones/día).
+    if (!email || !PILOT.aiTime) return;
     let cancelled = false;
     const e = email.toLowerCase();
 
@@ -56,6 +59,7 @@ export function AILiveProvider({ children }: { children: React.ReactNode }) {
       if (sb && sub) sb.removeChannel(sub);
     };
   }, [email]);
+  // PILOT.aiTime es constante en runtime (env), no necesita ir en deps.
 
   return <Ctx.Provider value={state}>{children}</Ctx.Provider>;
 }

@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+
+const FOCUSABLE =
+  'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])';
 
 export function Modal({
   open,
@@ -18,18 +21,35 @@ export function Modal({
   footer?: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
+    // Devuelve el foco a quien abrió el modal al cerrarlo.
+    const opener = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") { onClose(); return; }
+      // Focus-trap: Tab cicla dentro del panel, no se escapa al fondo.
+      if (e.key === "Tab" && panelRef.current) {
+        const items = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+    // Enfoca el panel al abrir (lectores de pantalla anuncian el diálogo).
+    const raf = requestAnimationFrame(() => panelRef.current?.focus());
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      cancelAnimationFrame(raf);
+      opener?.focus?.();
     };
   }, [open, onClose]);
 
@@ -43,12 +63,21 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float sm:rounded-3xl"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float outline-none sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 className="font-display text-lg font-bold text-fg">{title}</h2>
-          <button onClick={onClose} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-muted">
+          <h2 id={titleId} className="font-display text-lg font-bold text-fg">{title}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring"
+          >
             <X size={18} />
           </button>
         </div>

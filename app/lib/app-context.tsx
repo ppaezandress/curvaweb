@@ -9,6 +9,7 @@ import {
 } from "react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { PILOT } from "@/lib/pilot-flags";
+import { dayKey } from "@/lib/streaks";
 
 // Naturaleza de una sesión de tiempo:
 //  - "manual": tú trabajando con tus manos (máximo una a la vez).
@@ -24,6 +25,13 @@ export type TimeEntry = {
   seconds: number; // segundos CONTADOS (lo que vale el registro)
   inactiveSeconds: number; // de esos, cuántos fueron sin actividad (marcados)
   mode: TimeMode; // manual (tus manos) o ai (espera/IA trabajando)
+  // Ciclo de vida frente a Notion (evita el DOBLE CONTEO tramo-local + rollup):
+  //  posted  = NotionSync confirmó la escritura (guardamos el id de la página).
+  //  synced  = el baseline (rollup "Horas registradas") ya lo absorbió tras un reload
+  //            → deja de sumarse localmente por-tarea (el baseline ya lo cuenta).
+  posted?: boolean;
+  synced?: boolean;
+  notionId?: string;
 };
 
 type ActiveTimer = {
@@ -64,6 +72,8 @@ type AppState = {
   start: (taskId: string) => void;
   stop: () => void;
   removeEntry: (id: string) => void; // quitar un registro mal medido
+  markEntryPosted: (id: string, notionId?: string) => void; // NotionSync confirmó la escritura
+  reconcileEntries: () => void; // llamar al llegar baseline fresco (reload de Notion)
 
   // Timer "olvidado" detectado al reabrir (corría > 8h). Se avisa y NO se cuenta solo.
   staleTimer: ActiveTimer;
@@ -290,8 +300,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             } else {
               setActive(restored);
             }
-            setAiActive(parsed.aiActive ?? []);
-            setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual" })));
+            // Relojes de IA olvidados (> STALE, p. ej. dejados toda la noche) NO se restauran
+            // corriendo: se descartan para que no sigan acumulando elapsed (gemelo del guard
+            // del timer manual de arriba).
+            setAiActive((parsed.aiActive ?? []).filter((a: AiTimer) => Date.now() - a.startedAt <= STALE_TIMER_MS));
+            // Los tramos rehidratados vienen de sesiones previas → ya están en Notion y en el
+            // baseline. Se marcan synced para que NO se sumen otra vez localmente (doble conteo).
+            setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual", synced: true })));
             setOpenTasks(parsed.openTasks ?? []);
           }
         } catch { /* */ }
@@ -389,8 +404,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const raw = localStorage.getItem(dataKey(id));
         const parsed = raw ? JSON.parse(raw) : { active: null, aiActive: [], entries: [], openTasks: [] };
         setActive(parsed.active ?? null);
-        setAiActive(parsed.aiActive ?? []);
-        setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual" })));
+        setAiActive((parsed.aiActive ?? []).filter((a: AiTimer) => Date.now() - a.startedAt <= STALE_TIMER_MS));
+        setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual", synced: true })));
         setOpenTasks(parsed.openTasks ?? []);
       } catch {
         setActive(null); setAiActive([]); setEntries([]); setOpenTasks([]);
@@ -520,6 +535,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Quitar un registro de tiempo ya guardado (p. ej. uno mal medido).
   const removeEntry = (id: string) => setEntries((e) => e.filter((x) => x.id !== id));
+
+  // NotionSync confirmó la escritura del tramo (guardamos el id de la página de Notion).
+  // Sigue contando localmente hasta que un reload traiga el baseline actualizado.
+  const markEntryPosted = (id: string, notionId?: string) =>
+    setEntries((e) => e.map((x) => (x.id === id ? { ...x, posted: true, notionId } : x)));
+
+  // Reconciliación: se llama cuando llega baseline fresco de Notion (reload de /api/data).
+  // 1) Los tramos ya posteados pasan a synced → dejan de sumarse localmente por-tarea (el
+  //    baseline ya los incluye) sin flicker, porque el salto del baseline y este flip ocurren
+  //    en el mismo reload. 2) Poda los synced de días PREVIOS (ya no aportan a "hoy" y evitan
+  //    que localStorage crezca sin fin); los de hoy se conservan para "Registrado hoy".
+  const reconcileEntries = () =>
+    setEntries((e) => {
+      const today = dayKey(Date.now());
+      return e
+        .map((x) => (x.posted && !x.synced ? { ...x, synced: true } : x))
+        .filter((x) => !(x.synced && dayKey(x.endedAt) !== today));
+    });
   // Descartar el aviso de "timer olvidado" (no cuenta ese tiempo).
   const dismissStaleTimer = () => setStaleTimer(null);
 
@@ -536,9 +569,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const isAI = (taskId: string) => aiActive.some((a) => a.taskId === taskId);
 
+  // Segundos LOCALES por tarea = solo tramos que el baseline de Notion aún NO absorbió
+  // (!synced). Los synced ya están en task.baselineSeconds → sumarlos aquí los contaría dos
+  // veces. El tramo vivo (elapsed) lo añaden los consumidores aparte.
   const sessionSecondsForTask = (taskId: string) =>
-    entries.filter((e) => e.taskId === taskId).reduce((a, e) => a + e.seconds, 0);
-  const loggedSecondsToday = entries.reduce((a, e) => a + e.seconds, 0);
+    entries.filter((e) => e.taskId === taskId && !e.synced).reduce((a, e) => a + e.seconds, 0);
+  // "Registrado hoy" = tramos cuyo fin es HOY (local), estén o no sincronizados. Es un total
+  // del día independiente (no se combina con el baseline), así que cuenta una sola vez.
+  const todayKey = dayKey(Date.now());
+  const loggedSecondsToday = entries
+    .filter((e) => dayKey(e.endedAt) === todayKey)
+    .reduce((a, e) => a + e.seconds, 0);
 
   // Rol: refresca is_admin cuando cambia el usuario (hidratación o tras login).
   useEffect(() => {
@@ -563,7 +604,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value: AppState = {
     ready, currentUserId, setCurrentUser, logout, isAdmin, adminResolved,
-    active, entries, start, stop, removeEntry,
+    active, entries, start, stop, removeEntry, markEntryPosted, reconcileEntries,
     staleTimer, dismissStaleTimer,
     aiActive, startAI, stopAI, toggleAI, isAI, autoResumed,
     openTasks, openTask, switchTo, pause, closeTask,

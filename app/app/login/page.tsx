@@ -133,7 +133,7 @@ export default function LoginPage() {
               </div>
               <div className="mt-4 space-y-3">
                 <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
-                {err && <p className="text-sm text-rose-500">{err}</p>}
+                {err && <p className="text-sm text-danger">{err}</p>}
                 <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Entrar
                 </button>
@@ -151,7 +151,7 @@ export default function LoginPage() {
                 <Input icon={<KeyRound size={16} />} value={team} onChange={(v) => setTeam(v)} placeholder="Código de equipo (ej. CURVA)" />
                 <Input icon={<AtSign size={16} />} value={email} onChange={setEmail} placeholder="Tu correo" type="email" />
                 <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
-                {err && <p className="text-sm text-rose-500">{err}</p>}
+                {err && <p className="text-sm text-danger">{err}</p>}
                 <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Entrar
                 </button>
@@ -187,7 +187,7 @@ function Input({ icon, value, onChange, placeholder, type = "text" }: { icon: Re
   return (
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{icon}</span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} type={type}
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} type={type} aria-label={placeholder}
         className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent" />
     </div>
   );
@@ -197,9 +197,9 @@ function PasswordInput({ value, onChange, show, toggle, onEnter }: { value: stri
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"><Lock size={16} /></span>
       <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
-        type={show ? "text" : "password"} placeholder="Contraseña" autoFocus
+        type={show ? "text" : "password"} placeholder="Contraseña" autoFocus aria-label="Contraseña"
         className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none transition focus:border-accent" />
-      <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-muted">
+      <button type="button" onClick={toggle} aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-fg">
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
     </div>

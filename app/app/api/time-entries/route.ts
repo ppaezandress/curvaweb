@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
-import { getTimeRecords } from "@/lib/notion/fetchers";
+import { getTimeRecords, type TimeRecord } from "@/lib/notion/fetchers";
+import { requireSession, getPersona } from "@/lib/auth/guard";
+
+// Un registro de tiempo cambia el historial (time-entries) Y el rollup "Horas registradas"
+// de la tarea (baseline en curva-data) → invalidamos ambos para que el próximo reload traiga
+// el baseline fresco (clave para que la reconciliación de doble-conteo funcione).
+function invalidateTimeCaches() {
+  revalidateTag("time-entries", "max");
+  revalidateTag("curva-data", "max");
+}
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +32,25 @@ const TimeEntrySchema = z.object({
   attendees: z.array(z.object({ name: z.string(), minutes: z.number() })).optional(),
 });
 
-// Historial real de registros. El muro individuo/equipo (no ver las HORAS de otros) se
-// aplica en las vistas por rol: timesheet/recap se filtran a "self" para no-admins, e
-// insights/reportes son admin-only. Las rachas (días activos, NO horas) usan todo, para todos.
+// El muro individuo/equipo (no ver las HORAS de otros) se aplica AHORA en el servidor, no
+// solo en las vistas: para no-admins se ponen en cero los minutos de los registros ajenos,
+// pero se conservan persona + fecha para que el board de rachas (días activos, NO horas)
+// siga funcionando para todos. Los admins reciben el historial completo.
+function redactForNonAdmin(records: TimeRecord[], myName: string): TimeRecord[] {
+  return records.map((r) =>
+    (r.person || "").trim() === myName ? r : { ...r, minutes: 0, inactiveMinutes: 0 },
+  );
+}
+
 export async function GET() {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
   if (!notionConfigured() || !DB) return NextResponse.json({ records: [] });
   try {
     const records = await getTimeRecords();
-    return NextResponse.json({ records });
+    const persona = await getPersona(auth.sb, auth.user.id);
+    const safe = persona?.is_admin ? records : redactForNonAdmin(records, persona?.name || "");
+    return NextResponse.json({ records: safe });
   } catch {
     return NextResponse.json({ records: [] });
   }
@@ -89,9 +110,12 @@ async function createRow(props: {
 //  - Manual:     { taskId?, clientId?, area, startedAt, endedAt, attendees:[{name,minutes}] }
 //    → crea UNA fila por asistente (cada quien con sus minutos: "se fue antes").
 export async function POST(req: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
   if (!notionConfigured() || !DB) {
     return NextResponse.json({ ok: false, skipped: true });
   }
+  const persona = await getPersona(auth.sb, auth.user.id);
   try {
     const valid = TimeEntrySchema.safeParse(await req.json());
     if (!valid.success) {
@@ -114,18 +138,21 @@ export async function POST(req: Request) {
         });
         ids.push(id);
       }
+      invalidateTimeCaches();
       return NextResponse.json({ ok: true, ids });
     }
 
-    // Modo cronómetro (una persona)
+    // Modo cronómetro (una persona): la identidad SIEMPRE es la del usuario autenticado,
+    // nunca el userName del body (spoofable). Cae a "" (—) si el perfil no está sembrado.
     const minutes = Math.round((Number(b.seconds) / 60) * 10) / 10;
     const inactiveMinutes = b.inactiveSeconds ? (Number(b.inactiveSeconds) / 60) : 0;
     const id = await createRow({
       taskId, clientId, taskName, area,
-      userName: b.userName || "",
+      userName: persona?.name || "",
       startedAt, endedAt, minutes, inactiveMinutes,
       mode: b.mode === "ai" ? "ai" : "manual",
     });
+    invalidateTimeCaches();
     return NextResponse.json({ ok: true, id });
   } catch {
     return NextResponse.json({ ok: false, error: "No se pudo registrar el tiempo" });

@@ -131,7 +131,7 @@ export function AvatarCropModal({
         <p className="mt-1 text-center text-xs text-muted">Arrastra para mover · desliza para acercar</p>
 
         <div className="mt-4 flex gap-2">
-          <button onClick={onCancel} className="flex-1 rounded-full border border-line py-2.5 text-sm font-semibold text-muted transition hover:border-zinc-300 focus-ring">
+          <button onClick={onCancel} className="flex-1 rounded-full border border-line py-2.5 text-sm font-semibold text-muted transition hover:border-muted/40 focus-ring">
             Cancelar
           </button>
           <button onClick={confirm} disabled={busy || !nat} className="flex-1 rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 focus-ring">

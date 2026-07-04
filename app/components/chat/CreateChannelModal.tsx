@@ -45,7 +45,7 @@ export function CreateChannelModal({
           {members.map((m) => {
             const on = picked.has(m.id);
             return (
-              <button key={m.id} onClick={() => toggle(m.id)} className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-accent bg-accent/5" : "border-line hover:border-zinc-300")}>
+              <button key={m.id} onClick={() => toggle(m.id)} className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-accent bg-accent/5" : "border-line hover:border-muted/40")}>
                 <Avatar member={m} size={32} />
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-fg">{m.name}</span></span>
                 {on && <Check size={16} className="text-accent" />}

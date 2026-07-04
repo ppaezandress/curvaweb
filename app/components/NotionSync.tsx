@@ -4,39 +4,62 @@ import { useEffect, useRef } from "react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 
-// Sincroniza cada sesión de cronómetro (al detener) hacia la base
-// "Registro de Tiempo" en Notion, vía /api/time-entries.
-// Solo envía sesiones cerradas DESPUÉS de cargar la página (evita duplicar
-// los registros locales que ya se sincronizaron en sesiones anteriores).
+// Sincroniza cada sesión de cronómetro (al detener) hacia la base "Registro de Tiempo" en
+// Notion, vía /api/time-entries. Solo envía sesiones cerradas DESPUÉS de cargar la página
+// (las rehidratadas ya se enviaron en su sesión y vienen marcadas synced). A diferencia de
+// antes, CONFIRMA la escritura: si Notion falla (devuelve ok:false, incluso con status 200),
+// NO marca el tramo como enviado y lo reintenta en el siguiente ciclo (no se pierde tiempo).
 export function NotionSync() {
-  const { entries } = useApp();
-  const { taskById, memberById } = useData();
+  const { entries, markEntryPosted, reconcileEntries } = useApp();
+  const { taskById, source, tasks } = useData();
   const sessionStart = useRef<number>(Date.now());
-  const sent = useRef<Set<string>>(new Set());
+  const inFlight = useRef<Set<string>>(new Set());
 
+  // La identidad (Persona) la fija el servidor con la sesión; el userName del body se ignora.
   useEffect(() => {
+    // No sincronizar contra datos de prueba: los taskId de mock no existen en Notion y el
+    // POST fallaría con una relación inválida (perdiendo el tramo).
+    if (source !== "notion") return;
     entries.forEach((e) => {
-      if (e.endedAt <= sessionStart.current) return; // de sesiones previas
-      if (sent.current.has(e.id)) return;
-      sent.current.add(e.id);
+      if (e.endedAt <= sessionStart.current) return; // sesiones previas (ya enviadas)
+      if (e.posted || inFlight.current.has(e.id)) return;
+      inFlight.current.add(e.id);
       const task = taskById[e.taskId];
-      const user = memberById[e.userId];
       fetch("/api/time-entries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           taskId: e.taskId,
           taskName: task?.name || "",
-          userName: user?.name || "",
           startedAt: e.startedAt,
           endedAt: e.endedAt,
           seconds: e.seconds,
           inactiveSeconds: e.inactiveSeconds || 0,
           mode: e.mode || "manual",
         }),
-      }).catch(() => {});
+      })
+        .then((r) => r.json().catch(() => ({ ok: false })))
+        .then((j: { ok?: boolean; id?: string }) => {
+          if (j && j.ok !== false) {
+            markEntryPosted(e.id, j.id); // confirmado: guarda el id de Notion
+          } else {
+            inFlight.current.delete(e.id); // fallo real → reintenta al próximo ciclo
+          }
+        })
+        .catch(() => {
+          inFlight.current.delete(e.id); // red caída → reintenta
+        });
     });
-  }, [entries, taskById, memberById]);
+  }, [entries, taskById, source, markEntryPosted]);
+
+  // Cuando llega baseline fresco de Notion (cambia la lista de tareas tras un reload), los
+  // tramos ya posteados pasan a contarse por el baseline y se dejan de sumar localmente.
+  // Solo nos importa dispararlo cuando cambia el baseline (tasks) o el source, no en cada
+  // recreación de reconcileEntries.
+  useEffect(() => {
+    if (source === "notion") reconcileEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, source]);
 
   return null;
 }

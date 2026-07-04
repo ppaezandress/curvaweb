@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { timing, projectFromCwd } from "@/lib/timing-store";
 import { logAITime } from "@/lib/notion/time";
 import { broadcastAI } from "@/lib/realtime";
+import { PILOT } from "@/lib/pilot-flags";
 
 export const dynamic = "force-dynamic";
 
 // Hook Stop de Claude Code: cierra el turno y registra el tiempo de IA.
 export async function POST(req: Request) {
+  if (!PILOT.aiTime) return NextResponse.json({ ok: false, error: "disabled" }, { status: 403 });
   const email = (req.headers.get("x-curva-user") || "").trim();
   const body = await req.json().catch(() => ({} as Record<string, unknown>));
   const sid = String((body as { session_id?: string }).session_id || "");

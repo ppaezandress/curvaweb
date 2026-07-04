@@ -3,6 +3,25 @@
 > App de **medición de tiempo + gestión de tareas + capa social** para el equipo de CURVA, conectada a Notion. Meta: producto interno hoy, **SaaS** después.
 > Última actualización: 2026-06-24. Repo: **`ppaezandress/curvaweb`**, carpeta **`/app`** (la landing Astro vive en `/landing`).
 
+## 🔴 ESTADO ACTUAL — 2026-07-03 (leer ANTES que el resto; supersede detalles viejos abajo)
+
+Auditoría completa (5 dimensiones) + remediación en 3 olas. **Build + tsc limpios.** Migraciones 0001–0020 EXISTEN en `supabase/migrations/`; la navegación vieja (Reportes/Recap/Rachas) hoy **redirige** vía `next.config.ts` a `/equipo` y `/momentos` (ignora referencias antiguas a esas rutas). `main` sincronizado con origin.
+
+**Ola 1 — Seguridad + dato central (hecha):**
+- **Guard de sesión** en todas las APIs sensibles: `lib/auth/guard.ts` (`requireSession` + `getPersona`), aplicado en `tasks`, `time-entries`, `data`. Las escrituras anónimas y el IDOR quedaron cerrados (verificado: 401/403 sin sesión). `time-entries` POST fuerza la persona del usuario logueado (no el `userName` del body); GET redacta las horas ajenas para no-admin (conserva persona+fecha para rachas). `timing/*` → 403 mientras `PILOT.aiTime` esté OFF.
+- **Doble conteo de tiempo ARREGLADO**: `TimeEntry` ahora lleva `posted`/`synced`/`notionId`. `sessionSecondsForTask` suma solo `!synced`; `NotionSync` confirma la escritura (deja de perder tiempo en silencio) y al refrescarse el baseline se marca `synced` (reconciliación en `app-context.reconcileEntries`, disparada desde `NotionSync` al cambiar `tasks`). `loggedSecondsToday` filtra por hoy local (`dayKey`). Guard stale de 8h también para timers de IA.
+- **Fechas UTC**: `dashboard`, `curvi/engine` y `ManualEntryModal` usan `dueDateMs()`/`dayKey()` local.
+
+**Ola 2 — Fiabilidad/perf (hecha):**
+- **Caché Notion**: `getCurvaData`/`getTimeRecords` en `unstable_cache` (revalidate 60s, tags `curva-data`/`time-entries`); invalidación con `revalidateTag(tag,"max")` tras escribir (tasks y time-entries). Carga caliente ~3.3s → <100ms.
+- **Retry/backoff 429/5xx** en `notionFetch` (respeta `Retry-After`).
+- **Gates de polling**: `AITodayCard` y `AILiveProvider` ya no pollean con `aiTime` OFF.
+- **`getTimeRecords`** filtra a los últimos 180 días.
+
+**Ola 3 — Pulido UX (hecha):** `Modal.tsx` con `role="dialog"`+focus-trap+aria; dock (`TaskSwitcher`) ya no tapa `BottomNav` en móvil; acciones solo-hover visibles en táctil; `statusToneClass` y neutros zinc → tokens theme-aware; estado de carga con logo+spinner. Pendiente (cola larga, baja prioridad): semánticos hardcodeados restantes en paneles poco vistos (settings, algunos detalles de dashboard/insights).
+
+**Pendiente de TU lado:** correr `supabase/APLICAR-pendientes.sql` / verificar 0019-0020 en prod; reglas de Vercel Firewall (rate limiting); commit/push. Rate limiting NO está en código (Vercel serverless no comparte memoria).
+
 ## 🆕 Sesión 2026-06-24 (4 mejoras post-demo — leer primero)
 Build limpio. Plan: `~/.claude/plans/crea-un-plan-mode-sorted-cosmos.md`. Cuatro hitos del feedback de la junta donde se mostró la app:
 1. **Toggle "Tiempo con IA"** (sesión previa, ya pusheado): opt-in en Ajustes→Integraciones (`aiEnabled` en `lib/app-context.tsx`, clave `curva.aiEnabled.{userId}`, default OFF). Apaga toda la UI de IA + `AISync`.

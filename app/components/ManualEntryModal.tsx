@@ -9,6 +9,7 @@ import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { isDone } from "@/lib/task-status";
 import { formatDuration } from "@/lib/format";
+import { dayKey } from "@/lib/streaks";
 import { Modal, Field, inputCls } from "@/components/Modal";
 import { Avatar } from "@/components/Avatar";
 
@@ -50,7 +51,8 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
   const [taskId, setTaskId] = useState("");
   const [taskQuery, setTaskQuery] = useState("");
   const [taskFocused, setTaskFocused] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // Fecha LOCAL (no toISOString, que en UTC salta a "mañana" después de las 18:00 en México).
+  const [date, setDate] = useState(() => dayKey(Date.now()));
   // Horario: de qué hora a qué hora (la duración se deriva). Default: la última hora.
   const [startTime, setStartTime] = useState(() => { const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5 - 60, 0, 0); return hhmm(d); });
   const [endTime, setEndTime] = useState(() => { const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5, 0, 0); return hhmm(d); });
@@ -188,9 +190,9 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
               <AreaIcon size={13} className="text-muted" />
               <span className="truncate">{area}</span>
-              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+              <span className="text-muted/70 dark:text-zinc-600">·</span>
               <span className={valid ? "tabular font-semibold text-fg" : "text-rose-500"}>{valid ? formatDuration(minutes * 60) : "—"}</span>
-              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+              <span className="text-muted/70 dark:text-zinc-600">·</span>
               <span>{peopleCount} {peopleCount === 1 ? "persona" : "personas"}</span>
             </span>
             <button onClick={save} disabled={saving || !valid || peopleCount === 0} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-95 disabled:opacity-40 ${dupMsg ? "bg-amber-600 shadow-amber-600/20" : "bg-accent shadow-accent/20"}`}>
@@ -206,7 +208,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           {AREAS.map(({ label, icon: Icon }) => {
             const on = area === label;
             return (
-              <button key={label} onClick={() => setArea(label)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 ${on ? "bg-ink text-white shadow-sm" : "border border-line text-muted hover:border-zinc-300"}`}>
+              <button key={label} onClick={() => setArea(label)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition active:scale-95 ${on ? "bg-ink text-white shadow-sm" : "border border-line text-muted hover:border-muted/40"}`}>
                 <Icon size={13} className={on ? "text-white" : "text-muted"} /> {label}
               </button>
             );
@@ -219,7 +221,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
         <div className="rounded-2xl border border-line bg-surface-2 p-3.5 shadow-soft">
           <div className="flex items-end gap-2">
             <TimePart label="Inicio" value={startTime} onBump={(d) => bump("start", d)} onChange={setStartTime} />
-            <ArrowRight size={18} className="mb-3 shrink-0 text-zinc-300 dark:text-zinc-600" />
+            <ArrowRight size={18} className="mb-3 shrink-0 text-muted/70 dark:text-zinc-600" />
             <TimePart label="Fin" value={endTime} onBump={(d) => bump("end", d)} onChange={setEndTime} accent />
           </div>
 
@@ -310,7 +312,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           {members.filter((m) => m.name && m.name !== "—").map((m) => {
             const on = m.name in attendees;
             return (
-              <button key={m.id} onClick={() => toggleAttendee(m.name)} className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-medium transition active:scale-95 ${on ? "bg-accent/10 text-accent ring-1 ring-accent/40" : "border border-line text-muted hover:border-zinc-300"}`}>
+              <button key={m.id} onClick={() => toggleAttendee(m.name)} className={`inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-xs font-medium transition active:scale-95 ${on ? "bg-accent/10 text-accent ring-1 ring-accent/40" : "border border-line text-muted hover:border-muted/40"}`}>
                 <Avatar member={m} size={20} /> {m.name.split(" ")[0]}
               </button>
             );

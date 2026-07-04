@@ -20,7 +20,7 @@ export function TaskSwitcher() {
   const pausedIds = openTasks.filter((t) => t !== manualId && !aiSet.has(t));
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] sm:pb-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(56px+env(safe-area-inset-bottom)+12px)] sm:pb-4">
       <div className="pointer-events-auto mx-auto max-w-3xl overflow-hidden rounded-[20px] border border-line bg-surface/92 shadow-float backdrop-blur-xl">
         {/* ── Zona: A MANO (tu cronómetro, uno a la vez) ── */}
         <div className="p-1.5">
@@ -158,7 +158,7 @@ function ManualRow({ taskId }: { taskId: string }) {
       <button
         onClick={terminar}
         disabled={marking}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-bold text-muted transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-bold text-muted transition hover:border-success hover:text-success disabled:opacity-40 focus-ring"
         aria-label="Terminar tarea"
         title="Terminar (marcar Done)"
       >
@@ -166,7 +166,7 @@ function ManualRow({ taskId }: { taskId: string }) {
       </button>
       <button
         onClick={() => closeTask(taskId)}
-        className="shrink-0 rounded-md p-1 text-zinc-300 transition hover:bg-surface-2 hover:text-muted"
+        className="shrink-0 rounded-md p-1 text-muted/70 transition hover:bg-surface-2 hover:text-fg"
         aria-label="Cerrar"
       >
         <X size={14} />
@@ -216,7 +216,7 @@ function AiChip({ taskId }: { taskId: string }) {
       {/* Detener IA */}
       <button
         onClick={() => stopAI(taskId)}
-        className="shrink-0 rounded-md p-1 text-curva-indigo/50 opacity-0 transition hover:text-curva-indigo group-hover:opacity-100"
+        className="shrink-0 rounded-md p-1 text-curva-indigo/60 opacity-100 transition hover:text-curva-indigo focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         aria-label="Detener IA"
         title="Detener IA"
       >
@@ -248,7 +248,7 @@ function PausedChip({ taskId }: { taskId: string }) {
       {aiEnabled && (
         <button
           onClick={() => toggleAI(taskId)}
-          className="shrink-0 rounded-md p-1 text-zinc-300 transition hover:text-curva-indigo"
+          className="shrink-0 rounded-md p-1 text-muted/70 transition hover:text-curva-indigo"
           aria-label="Pasar a la IA"
           title="Pasar a la IA"
         >
@@ -257,7 +257,7 @@ function PausedChip({ taskId }: { taskId: string }) {
       )}
       <button
         onClick={() => closeTask(taskId)}
-        className="shrink-0 rounded-md p-1 text-zinc-300 opacity-0 transition hover:text-muted group-hover:opacity-100"
+        className="shrink-0 rounded-md p-1 text-muted/60 opacity-100 transition hover:text-fg focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         aria-label="Cerrar"
       >
         <X size={13} />
