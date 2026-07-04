@@ -197,7 +197,7 @@ export function TaskCard({ task }: { task: Task }) {
         )}
         {done && (
           <>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">
               <Check size={12} /> Done
             </span>
             <button

@@ -133,7 +133,7 @@ export default function HomePage() {
         <h1 className="mt-0.5 font-brand text-3xl font-semibold tracking-tight text-fg">
           {me?.name?.split(" ")[0] || "👋"}
           {localStreak > 1 && (
-            <span className="ml-3 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 align-middle text-sm font-semibold text-orange-600">
+            <span className="ml-3 inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-1 align-middle text-sm font-semibold text-orange-500">
               <Flame size={14} /> {localStreak} días
             </span>
           )}

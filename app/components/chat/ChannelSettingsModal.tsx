@@ -56,7 +56,7 @@ export function ChannelSettingsModal({
                     <Avatar name={m.name} src={m.avatar_url} size={22} />
                     <span className="truncate text-sm text-fg">{m.name}</span>
                   </span>
-                  <button onClick={() => onRemoveMember(m.id)} className="rounded-full p-1.5 text-muted transition hover:bg-rose-50 hover:text-rose-500 focus-ring" aria-label="Quitar" title="Quitar del canal">
+                  <button onClick={() => onRemoveMember(m.id)} className="rounded-full p-1.5 text-muted transition hover:bg-danger/10 hover:text-danger focus-ring" aria-label="Quitar" title="Quitar del canal">
                     <Trash2 size={14} />
                   </button>
                 </div>

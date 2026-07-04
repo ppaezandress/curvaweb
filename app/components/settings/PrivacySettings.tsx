@@ -97,7 +97,7 @@ export function PrivacySettings() {
         </button>
         <button
           onClick={() => alert("Para borrar tus registros, escríbenos y lo procesamos. (Borrado self-service: próximamente.)")}
-          className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-rose-500 transition hover:border-rose-300 focus-ring"
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-danger transition hover:border-danger/40 focus-ring"
         >
           <Trash2 size={15} /> Borrar mis registros
         </button>

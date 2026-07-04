@@ -124,7 +124,7 @@ export default function RecursosPage() {
                 <ExternalLink size={16} />
               </a>
               {r.added_by === uid && (
-                <button onClick={() => remove(r.id)} className="shrink-0 rounded-full p-2 text-muted transition hover:bg-rose-50 hover:text-rose-500 focus-ring" aria-label="Borrar">
+                <button onClick={() => remove(r.id)} className="shrink-0 rounded-full p-2 text-muted transition hover:bg-danger/10 hover:text-danger focus-ring" aria-label="Borrar">
                   <Trash2 size={15} />
                 </button>
               )}

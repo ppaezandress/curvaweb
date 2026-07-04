@@ -63,7 +63,7 @@ export function TeamPresence() {
             <div key={r.user_id} className="flex items-start gap-2.5">
               <div className="relative">
                 <Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={36} />
-                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${r.in_meeting ? "bg-rose-500" : r.is_active ? "bg-curva-teal" : online ? "bg-amber-400" : "bg-zinc-300"}`} />
+                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface ${r.in_meeting ? "bg-danger" : r.is_active ? "bg-curva-teal" : online ? "bg-warn" : "bg-muted"}`} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-fg">{prof?.name || "—"}</p>

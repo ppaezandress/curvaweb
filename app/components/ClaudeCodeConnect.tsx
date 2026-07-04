@@ -83,7 +83,7 @@ export function ClaudeCodeConnect() {
           </ol>
 
           {!email && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">Tu correo no está en el equipo de Notion, así que el snippet trae un placeholder. Cámbialo por tu correo registrado.</p>
+            <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn">Tu correo no está en el equipo de Notion, así que el snippet trae un placeholder. Cámbialo por tu correo registrado.</p>
           )}
 
           <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2/60 px-3 py-2.5 text-sm">
