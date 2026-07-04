@@ -8,10 +8,12 @@ const TEAM_CODE = (process.env.NEXT_PUBLIC_TEAM_CODE || "CURVA").toUpperCase();
 // Admins (ven la data de todos + dashboard del equipo). El resto solo su propia data.
 const ADMIN_EMAILS = ["ppaezandress@gmail.com", "osbalmar2004@gmail.com"];
 
-// Alta de cuenta del piloto. La AUTORIZACIÓN vive aquí, en el servidor (no en el cliente):
+// Asegura la cuenta del piloto ANTES de mandar el código de acceso al correo. La
+// AUTORIZACIÓN vive aquí, en el servidor (no en el cliente):
 //  1) código de equipo correcto, 2) el correo DEBE estar en el roster de Notion,
 //  3) el notion_user_id se DERIVA del roster (nunca se confía en el cliente).
-// Así nadie crea cuentas basura ni se mapea a la identidad de otro.
+// NO se fija contraseña: el ingreso es por código de un solo uso al correo (OTP), así que
+// solo el DUEÑO del correo puede entrar → cierra la toma de cuenta por pre-registro.
 export async function POST(req: Request) {
   if (!supabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "Supabase no configurado" }, { status: 400 });
@@ -22,11 +24,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const email = String(body.email || "").trim().toLowerCase();
-    const password = String(body.password || "");
     const teamCode = String(body.teamCode || "").trim().toUpperCase();
 
-    if (!email || password.length < 6) {
-      return NextResponse.json({ ok: false, error: "Correo y contraseña (6+) requeridos" }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ ok: false, error: "Correo requerido" }, { status: 400 });
     }
     // 1) Código de equipo — validado en el SERVIDOR
     if (teamCode !== TEAM_CODE) {
@@ -44,9 +45,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Tu correo no está dado de alta en el equipo (debe ser el de Notion)." }, { status: 403 });
     }
 
-    // 3) Crear o encontrar la cuenta
+    // 3) Crear o encontrar la cuenta (SIN contraseña — el ingreso es por código al correo)
     const { data, error } = await admin.auth.admin.createUser({
-      email, password, email_confirm: true, user_metadata: { name: member.name },
+      email, email_confirm: true, user_metadata: { name: member.name },
     });
     let userId = data?.user?.id;
     if (error) {

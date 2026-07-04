@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, LogIn, KeyRound, Lock, AtSign, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Loader2, LogIn, KeyRound, AtSign, ArrowRight, MailCheck } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -19,11 +19,14 @@ export default function LoginPage() {
 
   const [team, setTeam] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [code, setCode] = useState("");
+  // Flujo en dos pasos: pides un código a tu correo y luego lo escribes. Sin contraseña →
+  // solo el dueño del correo puede entrar (cierra la toma de cuenta por pre-registro).
+  const [step, setStep] = useState<"request" | "verify">("request");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  // "Bienvenido de nuevo": recordamos quién entró en este dispositivo
+  const [note, setNote] = useState("");
+  // "Bienvenido de nuevo": recordamos quién entró en este dispositivo.
   const [remembered, setRemembered] = useState<{ email: string; memberId: string; name: string } | null>(null);
   const [welcomeMode, setWelcomeMode] = useState(true);
 
@@ -53,53 +56,56 @@ export default function LoginPage() {
 
   const enterLegacy = (id: string) => { setCurrentUser(id); router.push("/dashboard"); };
 
-  const signIn = async () => {
-    setErr("");
+  // Paso 1 — pedir el código: el SERVIDOR valida (código de equipo + correo en roster y
+  // asegura la cuenta), luego Supabase envía un código de un solo uso al correo.
+  const requestCode = async () => {
+    setErr(""); setNote("");
     const teamVal = (welcomeMode && remembered ? (team || TEAM_CODE) : team).trim().toUpperCase();
     const emailVal = (welcomeMode && remembered ? remembered.email : email).trim().toLowerCase();
     if (teamVal !== TEAM_CODE) { setErr("Código de equipo incorrecto"); return; }
-    if (!emailVal || password.length < 6) { setErr("Escribe tu contraseña (6+)"); return; }
+    if (!emailVal || !emailVal.includes("@")) { setErr("Escribe un correo válido"); return; }
     const sb = getSupabase();
     if (!sb) { setErr("Backend no configurado"); return; }
     setBusy(true);
-    // La AUTORIZACIÓN (código + correo en roster + mapeo) la hace el SERVIDOR en
-    // /api/auth/register. El cliente ya no valida nada (era saltable).
-    const callRegister = () =>
-      fetch("/api/auth/register", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailVal, password, teamCode: teamVal }),
-      }).then((r) => r.json()).catch(() => ({ ok: false, error: "Sin conexión" }));
     try {
-      // 1) Intenta entrar directo (caso de cada día) — no pega a register.
-      let { error } = await sb.auth.signInWithPassword({ email: emailVal, password });
-      let mappedId: string | undefined;
-      let mappedName: string | undefined;
-      if (error) {
-        // 2) Primer ingreso: el servidor valida y crea/mapea.
-        const reg = await callRegister();
-        if (!reg.ok) { setErr(reg.error || "No autorizado"); return; }
-        mappedId = reg.notionUserId; mappedName = reg.name;
-        ({ error } = await sb.auth.signInWithPassword({ email: emailVal, password }));
-        if (error) { setErr("Correo o contraseña incorrectos"); return; }
-      }
+      const reg = await fetch("/api/auth/register", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailVal, teamCode: teamVal }),
+      }).then((r) => r.json()).catch(() => ({ ok: false, error: "Sin conexión" }));
+      if (!reg.ok) { setErr(reg.error || "No autorizado"); return; }
+      const { error } = await sb.auth.signInWithOtp({ email: emailVal, options: { shouldCreateUser: false } });
+      if (error) { setErr("No se pudo enviar el código. Reintenta en un momento."); return; }
+      setEmail(emailVal);
+      setStep("verify");
+      setNote(`Te enviamos un código a ${emailVal}. Revisa tu correo (y spam).`);
+    } finally { setBusy(false); }
+  };
+
+  // Paso 2 — verificar el código y entrar.
+  const verifyCode = async () => {
+    setErr("");
+    const token = code.trim();
+    if (token.length < 6) { setErr("Escribe el código de 6 dígitos"); return; }
+    const sb = getSupabase();
+    if (!sb) { setErr("Backend no configurado"); return; }
+    setBusy(true);
+    try {
+      const emailVal = email.trim().toLowerCase();
+      const { error } = await sb.auth.verifyOtp({ email: emailVal, token, type: "email" });
+      if (error) { setErr("Código incorrecto o vencido. Pide uno nuevo."); return; }
       const { data: u } = await sb.auth.getUser();
       if (!u.user) { setErr("No se pudo iniciar sesión"); return; }
-      // 3) ¿Ya está mapeado el perfil?
-      if (!mappedId) {
-        const { data: prof } = await sb.from("profiles").select("notion_user_id").eq("id", u.user.id).maybeSingle();
-        mappedId = (prof?.notion_user_id as string) || undefined;
-      }
-      // 4) Si aún no, que el servidor lo mapee (valida roster).
-      if (!mappedId) {
-        const reg = await callRegister();
-        if (reg.ok && reg.notionUserId) { mappedId = reg.notionUserId; mappedName = reg.name; }
-      }
+      // El perfil (con notion_user_id) ya lo dejó listo el servidor al pedir el código.
+      const { data: prof } = await sb.from("profiles").select("notion_user_id, name").eq("id", u.user.id).maybeSingle();
+      const mappedId = (prof?.notion_user_id as string) || undefined;
       if (!mappedId) { setErr("No pudimos mapear tu cuenta. Contacta a tu admin."); return; }
-      persist(mappedId, mappedName || remembered?.name);
+      persist(mappedId, (prof?.name as string) || remembered?.name);
       setCurrentUser(mappedId);
       router.push("/dashboard");
     } finally { setBusy(false); }
   };
+
+  const resetToRequest = () => { setStep("request"); setCode(""); setErr(""); setNote(""); };
 
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
@@ -120,8 +126,25 @@ export default function LoginPage() {
 
           {noBackend ? (
             <Picker title="¿Quién eres?" subtitle="Entra con tu usuario." list={members} onPick={(m) => enterLegacy(m.id)} />
+          ) : step === "verify" ? (
+            // ----- Paso 2: escribe el código del correo -----
+            <>
+              <h2 className="font-display text-2xl font-bold text-fg">Revisa tu correo 📬</h2>
+              {note && <p className="mt-1 flex items-center gap-1.5 text-sm text-muted"><MailCheck size={15} className="text-success" /> {note}</p>}
+              <div className="mt-6 space-y-3">
+                <CodeInput value={code} onChange={setCode} onEnter={verifyCode} />
+                {err && <p className="text-sm text-danger">{err}</p>}
+                <button onClick={verifyCode} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                  {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Entrar
+                </button>
+                <div className="flex items-center justify-between text-xs text-muted">
+                  <button onClick={requestCode} disabled={busy} className="transition hover:text-fg">Reenviar código</button>
+                  <button onClick={resetToRequest} className="transition hover:text-fg">Usar otro correo</button>
+                </div>
+              </div>
+            </>
           ) : welcomeMode && remembered ? (
-            // ----- Bienvenido de nuevo: solo contraseña -----
+            // ----- Bienvenido de nuevo: solo pedir el código -----
             <>
               <h2 className="font-display text-2xl font-bold text-fg">Hola de nuevo 👋</h2>
               <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-soft">
@@ -132,30 +155,28 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="mt-4 space-y-3">
-                <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
                 {err && <p className="text-sm text-danger">{err}</p>}
-                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
-                  {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Entrar
+                <button onClick={requestCode} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                  {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Enviarme un código
                 </button>
-                <button onClick={() => { setWelcomeMode(false); setRemembered(null); setPassword(""); setErr(""); }} className="w-full text-center text-xs text-muted transition hover:text-curva-pink">
+                <button onClick={() => { setWelcomeMode(false); setRemembered(null); setErr(""); }} className="w-full text-center text-xs text-muted transition hover:text-curva-pink">
                   No soy {(remembered.name || remembered.email).split(/[\s@]/)[0]} · usar otra cuenta
                 </button>
               </div>
             </>
           ) : (
-            // ----- Login completo -----
+            // ----- Login completo: código de equipo + correo -----
             <>
               <h2 className="font-display text-2xl font-bold text-fg">Inicia sesión</h2>
-              <p className="mt-1 text-sm text-muted">Con el código de tu equipo y tu cuenta.</p>
+              <p className="mt-1 text-sm text-muted">Con el código de tu equipo y tu correo. Te mandamos un código de acceso.</p>
               <div className="mt-6 space-y-3">
-                <Input icon={<KeyRound size={16} />} value={team} onChange={(v) => setTeam(v)} placeholder="Código de equipo (ej. CURVA)" />
-                <Input icon={<AtSign size={16} />} value={email} onChange={setEmail} placeholder="Tu correo" type="email" />
-                <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
+                <Input icon={<KeyRound size={16} />} value={team} onChange={(v) => setTeam(v)} placeholder="Código de equipo" />
+                <Input icon={<AtSign size={16} />} value={email} onChange={setEmail} placeholder="Tu correo" type="email" onEnter={requestCode} />
                 {err && <p className="text-sm text-danger">{err}</p>}
-                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
-                  {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Entrar
+                <button onClick={requestCode} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                  {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Enviarme un código
                 </button>
-                <p className="text-center text-[11px] text-muted">Primera vez con tu correo → se crea tu cuenta automáticamente.</p>
+                <p className="text-center text-[11px] text-muted">Sin contraseñas: entras con un código de un solo uso a tu correo.</p>
               </div>
             </>
           )}
@@ -183,25 +204,30 @@ function PickRow({ m, onClick }: { m: { name: string; role?: string; color: stri
     </button>
   );
 }
-function Input({ icon, value, onChange, placeholder, type = "text" }: { icon: React.ReactNode; value: string; onChange: (v: string) => void; placeholder: string; type?: string }) {
+function Input({ icon, value, onChange, placeholder, type = "text", onEnter }: { icon: React.ReactNode; value: string; onChange: (v: string) => void; placeholder: string; type?: string; onEnter?: () => void }) {
   return (
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{icon}</span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} type={type} aria-label={placeholder}
+      <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && onEnter) onEnter(); }}
+        placeholder={placeholder} type={type} aria-label={placeholder}
         className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent" />
     </div>
   );
 }
-function PasswordInput({ value, onChange, show, toggle, onEnter }: { value: string; onChange: (v: string) => void; show: boolean; toggle: () => void; onEnter: () => void }) {
+function CodeInput({ value, onChange, onEnter }: { value: string; onChange: (v: string) => void; onEnter: () => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
   return (
-    <div className="relative">
-      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"><Lock size={16} /></span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
-        type={show ? "text" : "password"} placeholder="Contraseña" autoFocus aria-label="Contraseña"
-        className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none transition focus:border-accent" />
-      <button type="button" onClick={toggle} aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-fg">
-        {show ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
-    </div>
+    <input
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
+      onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      placeholder="000000"
+      aria-label="Código de 6 dígitos"
+      className="w-full rounded-2xl border border-line bg-surface py-3 text-center text-2xl font-bold tracking-[0.4em] outline-none transition focus:border-accent"
+    />
   );
 }
