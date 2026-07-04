@@ -27,7 +27,7 @@ export interface Caso {
 
 export const casos: Caso[] = [
   {
-    categoria: 'Transformación Digital · Innovation',
+    categoria: 'Transformación Digital · Innovación',
     accent: 'ember',
     area: 'transformacion-digital',
     anchor: 'innovation',
@@ -48,7 +48,7 @@ export const casos: Caso[] = [
     href: '/consultoria/transformacion-digital#innovation',
   },
   {
-    categoria: 'Transformación Digital · Process Optimization',
+    categoria: 'Transformación Digital · Optimización de procesos',
     accent: 'gold',
     area: 'transformacion-digital',
     anchor: 'procesos',

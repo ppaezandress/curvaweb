@@ -8,14 +8,14 @@ const items = data.items.filter((c) => !c.pendiente);
 ---
 <section class="py-16 sm:py-20 px-6 sm:px-10 bg-white border-t border-sand-200">
   <div class="mx-auto max-w-4xl">
-    <p class="reveal eyebrow text-sand-400 mb-3">{data.title}</p>
+    <p class="reveal eyebrow text-sand-600 mb-3">{data.title}</p>
     <p class="reveal text-lg sm:text-xl text-sand-700 leading-relaxed max-w-2xl">{data.intro}</p>
     <ul class="reveal mt-9 divide-y divide-sand-200 border-y border-sand-200">
       {items.map((c) => (
         <li class="flex items-baseline gap-5 py-4">
-          <span class="eyebrow text-[10px] text-sand-400 w-28 flex-shrink-0 pt-0.5">{c.tipo}</span>
+          <span class="eyebrow text-[10px] text-sand-600 w-28 flex-shrink-0 pt-0.5">{c.tipo}</span>
           <span class="text-ink font-medium text-[15px] leading-snug">{c.nombre}</span>
-          {c.emisor && <span class="ml-auto text-sm text-sand-400 flex-shrink-0">{c.emisor}</span>}
+          {c.emisor && <span class="ml-auto text-sm text-sand-600 flex-shrink-0">{c.emisor}</span>}
         </li>
       ))}
     </ul>

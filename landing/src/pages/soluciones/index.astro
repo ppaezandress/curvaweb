@@ -8,7 +8,8 @@ import { soluciones } from '../../data/soluciones';
 const calLink = 'https://cal.com/andres-paez/30min';
 const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20las%20soluciones%20digitales%20de%20CURVA';
 
-const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-gold' } as const;
+// gold/jade (cian #38bdf8) NO pasan contraste como texto sobre fondo claro → azul (ember).
+const accentText = { ember: 'text-ember', gold: 'text-ember', jade: 'text-ember' } as const;
 const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-gold' } as const;
 const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/15', jade: 'bg-gold/12' } as const;
 
@@ -21,18 +22,31 @@ const icons: Record<string, string> = {
   template: 'M4 5h16v4H4V5zm0 8h7v6H4v-6zm11 0h5v6h-5v-6z',
 };
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'ItemList',
-  name: 'Soluciones digitales — CURVA',
-  itemListElement: soluciones.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.titulo })),
-};
+const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Soluciones digitales — CURVA',
+    itemListElement: soluciones.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.titulo })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: origin + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Soluciones digitales', item: origin + '/soluciones' },
+    ],
+  },
+];
 ---
 
 <BaseLayout title="Soluciones digitales — CURVA" description="Páginas web, sistemas y apps a la medida, clases de Claude y Notion, y plantillas listas para comprar. Entregables que puedes tener con un solo aliado." jsonLd={jsonLd}>
   <Nav calLink={calLink} />
 
-  <a href="#web" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+  <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+
+  <main id="contenido" tabindex="-1">
 
   <!-- ============== HERO ============== -->
   <section class="surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-20 sm:pb-28 px-6 sm:px-10 overflow-hidden">
@@ -77,7 +91,11 @@ const jsonLd = {
                 {s.bullets.map((b) => (<li class="text-[13px] font-medium text-sand-700 bg-white border border-sand-200 rounded-full px-3 py-1.5">{b}</li>))}
               </ul>
             )}
-            {s.cta && (
+            {s.cta && s.cta.href === '#' ? (
+              <span class="mt-6 inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/12 px-3.5 py-1.5 text-xs font-semibold text-sand-300">
+                Próximamente
+              </span>
+            ) : s.cta && (
               <a href={s.cta.href} class={`mt-6 arrow-cta inline-flex items-center gap-2 text-sm font-semibold ${accentText[s.accent]} link-underline`}>
                 {s.cta.label}
                 <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
@@ -140,6 +158,8 @@ const jsonLd = {
   <a href={waLink} target="_blank" rel="noopener" class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all" aria-label="Contactar por WhatsApp">
     <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"></path></svg>
   </a>
+
+  </main>
 
   <Footer calLink={calLink} waLink={waLink} />
 </BaseLayout>

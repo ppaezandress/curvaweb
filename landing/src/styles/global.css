@@ -42,6 +42,12 @@
   --color-flare:     #f97316;
   --color-flare-600: #ea580c;
 
+  /* Acento IA — violeta eléctrico (marca "IA / Claude": composer, clases de Claude) */
+  --color-ai-300: #c4b5fd;
+  --color-ai:     #7c3aed;
+  --color-ai-600: #6d28d9;
+  --gradient-ai:  linear-gradient(120deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+
   /* Compatibilidad */
   --color-accent: #2563eb;
   --color-accent-hover: #1d4ed8;
@@ -386,6 +392,11 @@ body {
   .summit-aura { opacity: 0.7; }
 }
 
+/* Gate de rendimiento: pausa las animaciones de una sección pesada cuando está
+   fuera de viewport (lo activa anim-gate.ts poniendo .is-offscreen). Sin cambio visual. */
+[data-anim-gate].is-offscreen,
+[data-anim-gate].is-offscreen * { animation-play-state: paused !important; }
+
 /* Hito sobre la curva: etiqueta posicionada por % sobre un punto del viewBox */
 /* Ancla puntual sobre el nodo; la etiqueta-chip flota por encima vía bottom-full. */
 .milestone {
@@ -483,6 +494,16 @@ body {
 .accent-ember { background: linear-gradient(155deg, #3b82f6 0%, #1e40af 100%); }
 .accent-jade  { background: linear-gradient(155deg, #22b8e6 0%, #0c4a6e 100%); }
 .accent-flare { background: linear-gradient(155deg, #fb923c 0%, #9a3412 100%); }
+.accent-ai    { background: linear-gradient(155deg, #a855f7 0%, #5b21b6 100%); }
+
+/* Botón "IA" (composer): violeta eléctrico con gradiente + glow (marca "IA/Claude"). */
+.btn-ai {
+  background-image: linear-gradient(120deg, var(--color-ai) 0%, var(--color-ai-600) 100%);
+  box-shadow: 0 6px 20px -6px color-mix(in srgb, var(--color-ai) 60%, transparent);
+  transition: box-shadow .3s var(--ease-pitch), filter .3s var(--ease-pitch);
+}
+.btn-ai:hover { filter: brightness(1.07); box-shadow: 0 9px 26px -6px color-mix(in srgb, var(--color-ai) 78%, transparent); }
+.btn-ai:focus-visible { outline: 2px solid var(--color-ai); outline-offset: 3px; }
 
 /* ----------------------------- Dots del carrusel (creados por JS → deben ser globales, no scoped) ----------------------------- */
 /* El área táctil es el botón (padding); el punto visual va en ::after. */

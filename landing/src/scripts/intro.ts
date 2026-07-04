@@ -22,8 +22,10 @@ export function initIntro() {
   // Dispara la timeline CSS.
   requestAnimationFrame(() => overlay.classList.add('intro-play'));
 
-  const OUT_AT = 2100;   // tras dibujar + wordmark + settle
-  const REMOVE_AT = 2980; // deja completar la transición de cierre (0.78s)
+  // Cierra en cuanto el wordmark ya se leyó (se recorta el settle final de ~350ms
+  // para bajar el LCP en primera visita, sin cortar el dibujo ni el wordmark).
+  const OUT_AT = 1750;   // el wordmark termina de entrar ~1.70s
+  const REMOVE_AT = 2530; // + transición de cierre (0.78s)
   window.setTimeout(() => {
     overlay.classList.add('intro-out');
     // Avisa al hero que ya se ve → dispara el asentamiento de las líneas.

@@ -144,11 +144,13 @@ const solucionesMenu = soluciones.map((s) => ({ label: s.titulo, href: `/solucio
   .nav-bar.scrolled .nav-cta:hover { background: #1b3a6b; }
   .nav-bar.scrolled .burger-line { background: var(--color-ink); }
 
-  .nav-menu, .nav-mega { opacity: 0; transform: translateY(-8px) scale(.98); pointer-events: none; transition: opacity .25s ease, transform .25s ease; transform-origin: top; }
-  .nav-menu.open, .nav-mega.open { opacity: 1; transform: none; pointer-events: auto; }
+  /* visibility:hidden saca los enlaces del cerrado del orden de tabulación (a11y);
+     se retrasa hasta que termina el fade para no cortar la animación. */
+  .nav-menu, .nav-mega { opacity: 0; visibility: hidden; transform: translateY(-8px) scale(.98); pointer-events: none; transition: opacity .25s ease, transform .25s ease, visibility 0s .25s; transform-origin: top; }
+  .nav-menu.open, .nav-mega.open { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity .25s ease, transform .25s ease, visibility 0s; }
   .menu-item { transition: background-color .15s ease, color .15s ease; }
   .menu-item:hover { background-color: var(--color-sand-50); }
 
-  .mobile-menu { position: fixed; inset: 0; z-index: 40; transform: translateX(100%); transition: transform .35s var(--ease-curve); }
-  .mobile-menu.open { transform: translateX(0); }
+  .mobile-menu { position: fixed; inset: 0; z-index: 40; visibility: hidden; transform: translateX(100%); transition: transform .35s var(--ease-curve), visibility 0s .35s; }
+  .mobile-menu.open { visibility: visible; transform: translateX(0); transition: transform .35s var(--ease-curve), visibility 0s; }
 </style>

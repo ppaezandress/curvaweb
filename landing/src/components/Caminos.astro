@@ -5,7 +5,10 @@
 export interface Props { calLink?: string }
 const { calLink = 'https://cal.com/andres-paez/30min' } = Astro.props;
 
-const caminos = [
+const caminos: Array<{
+  eyebrow: string; title: string; desc: string; href: string;
+  accent: 'ember' | 'jade' | 'flare' | 'ai'; cta: string; pronto?: boolean;
+}> = [
   {
     eyebrow: 'Consultoría',
     title: 'Ordena y transforma tu operación',
@@ -28,11 +31,11 @@ const caminos = [
     title: 'Aprende a usar la IA en tu empresa',
     desc: 'Capacitamos a tu equipo para que aproveche la IA en su operación real, no en teoría.',
     href: '#',
-    accent: 'flare',
+    accent: 'ai',
     cta: 'Próximamente',
     pronto: true,
   },
-] as const;
+];
 
 // Motivo de la curva (marca de agua ascendente).
 const curva = 'M0,150 C90,150 120,60 220,44 C320,28 360,20 440,8';

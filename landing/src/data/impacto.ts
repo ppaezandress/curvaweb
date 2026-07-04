@@ -5,13 +5,14 @@
 // ilustrativas para mostrar la estructura. Se reemplazan por casos reales (con
 // permiso del cliente). Los dos primeros salen de data/casos.ts (hechos reales,
 // autor pendiente). Pásame cifras/clientes reales y quito el marcador.
-import type { Accent } from './areas';
+// Los casos usan también el acento cálido 'flare' (naranja), además de los de areas.
+type ImpactoAccent = 'ember' | 'gold' | 'jade' | 'flare';
 
 export interface ImpactoCaso {
   stat: string;        // la cifra protagonista (ej. '−73%', '4 meses', '2.4×')
   statLabel: string;   // qué mide la cifra
   categoria: string;   // etiqueta de área/capacidad
-  accent: Accent;      // color de la cabecera
+  accent: ImpactoAccent; // color de la cabecera
   title: string;       // la transformación, en una línea
   desc: string;        // contexto corto (1–2 líneas)
   href: string;        // deep-link al caso/área

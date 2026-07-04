@@ -4,24 +4,37 @@
 // (sentirse · trabajar · vivir mejor). CURVA es el nodo central que transforma.
 // Desktop: grafo SVG con conectores que "fluyen". Móvil: versión apilada.
 // Idea de Emiliano. Motion con significado, respeta prefers-reduced-motion.
+// Íconos (24×24, trazo). set:html los inyecta dentro de cada nodo.
+const icons: Record<string, string> = {
+  founder: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  team: '<circle cx="9" cy="9" r="3"/><circle cx="16.4" cy="9.6" r="2.5"/><path d="M3 20c0-3 2.7-5.2 6-5.2s6 2.2 6 5.2"/><path d="M15.4 20c0-2.4 1.3-4.4 3.6-5"/>',
+  client: '<path d="M6.4 8h11.2l-1 11.5h-9.2L6.4 8Z"/><path d="M9 8V6.2a3 3 0 0 1 6 0V8"/>',
+  calm: '<circle cx="12" cy="12" r="9"/><path d="M8 14.5a5 5 0 0 0 8 0"/><path d="M9 9.6h.01M15 9.6h.01"/>',
+  spark: '<path d="M13 2 4 14h7l-2 8 9-12h-7l2-8Z"/>',
+  star: '<path d="M12 3l1.9 4.4L18 9l-4.1 1.6L12 15l-1.9-4.4L6 9l4.1-1.6L12 3Z"/>',
+};
+
 const personas = [
-  { label: 'Fundadores', y: 92 },
-  { label: 'Equipo', y: 200 },
-  { label: 'Clientes', y: 308 },
+  { label: 'Fundadores', icon: 'founder', y: 104 },
+  { label: 'Equipo', icon: 'team', y: 220 },
+  { label: 'Clientes', icon: 'client', y: 336 },
 ];
 const resultados = [
-  { label: 'Sentirse mejor', y: 92 },
-  { label: 'Trabajar mejor', y: 200 },
-  { label: 'Vivir mejor', y: 308 },
+  { title: 'Sentirse mejor', sub: 'Menos estrés', icon: 'calm', y: 104 },
+  { title: 'Trabajar mejor', sub: 'Mayor motivación', icon: 'spark', y: 220 },
+  { title: 'Vivir mejor', sub: 'Mayor calidad de vida', icon: 'star', y: 336 },
 ];
-// Conectores (cúbicas) izquierda→centro y centro→derecha.
-const hub = { x: 450, y: 200 };
-const leftX = 190;
-const rightX = 710;
-const toHub = (y: number) => `M${leftX},${y} C300,${y} 330,${hub.y} ${hub.x - 66},${hub.y}`;
-const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} ${rightX},${y}`;
+
+// Geometría (viewBox 0 0 920 440). Pastillas de 232×78, huecos simétricos al hub.
+const hub = { x: 460, y: 220, r: 66 };
+const pillW = 232;
+const pillH = 78;
+const leftX = 45;                 // borde izq. de las pastillas de personas (der. = 277)
+const rightX = 643;               // borde izq. de las pastillas de resultados (der. = 875)
+const toHub = (y: number) => `M${leftX + pillW},${y} C345,${y} 356,${hub.y} ${hub.x - hub.r},${hub.y}`;
+const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y} ${rightX},${y}`;
 ---
-<section id="personas" class="bg-sand-50 py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden" aria-labelledby="personas-title">
+<section id="personas" data-anim-gate class="bg-sand-50 py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden" aria-labelledby="personas-title">
   <div class="mx-auto max-w-6xl">
     <div class="max-w-2xl mb-14 sm:mb-16">
       <p class="reveal eyebrow-lead text-ember mb-5">Por qué lo hacemos</p>
@@ -35,8 +48,8 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
 
     <!-- ── Grafo (desktop) ── -->
     <div class="reveal hidden md:block" data-red-nodos>
-      <svg viewBox="0 0 900 400" class="w-full h-auto" role="img"
-        aria-label="Diagrama: fundadores, equipo y clientes pasan por CURVA y salen sintiéndose, trabajando y viviendo mejor.">
+      <svg viewBox="0 0 920 440" class="w-full h-auto" role="img"
+        aria-label="Diagrama: fundadores, equipo y clientes pasan por CURVA y ganan bienestar: menos estrés, mayor motivación y mayor calidad de vida.">
         <defs>
           <linearGradient id="rn-flow" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stop-color="#1d4ed8"></stop>
@@ -47,9 +60,23 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
             <stop offset="0" stop-color="#1d4ed8"></stop>
             <stop offset="1" stop-color="#38bdf8"></stop>
           </linearGradient>
+          <linearGradient id="rn-pill-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#2f6bf0"></stop>
+            <stop offset="1" stop-color="#38bdf8"></stop>
+          </linearGradient>
+          <linearGradient id="rn-pill-hi" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.32"></stop>
+            <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"></stop>
+          </linearGradient>
           <filter id="rn-glow" x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="6" result="b"></feGaussianBlur>
             <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+          </filter>
+          <filter id="rn-shadow" x="-30%" y="-30%" width="160%" height="200%">
+            <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#1e40af" flood-opacity="0.28"></feDropShadow>
+          </filter>
+          <filter id="rn-shadow-soft" x="-30%" y="-30%" width="160%" height="200%">
+            <feDropShadow dx="0" dy="6" stdDeviation="11" flood-color="#1e293b" flood-opacity="0.10"></feDropShadow>
           </filter>
           <radialGradient id="rn-hub-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0" stop-color="#38bdf8" stop-opacity="0.5"></stop>
@@ -59,15 +86,15 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
         </defs>
 
         <!-- Halo del hub (respira detrás de CURVA) -->
-        <circle class="rn-hub-halo" cx={hub.x} cy={hub.y} r="115" fill="url(#rn-hub-glow)"></circle>
+        <circle class="rn-hub-halo" cx={hub.x} cy={hub.y} r="120" fill="url(#rn-hub-glow)"></circle>
 
         <!-- Conectores base -->
         <g fill="none" stroke="url(#rn-flow)" stroke-width="2" stroke-linecap="round">
           {personas.map((p) => (
-            <path d={toHub(p.y)} class="rn-link" opacity="0.4"></path>
+            <path d={toHub(p.y)} class="rn-link" opacity="0.38"></path>
           ))}
           {resultados.map((r) => (
-            <path d={fromHub(r.y)} class="rn-link rn-link--out" opacity="0.4"></path>
+            <path d={fromHub(r.y)} class="rn-link rn-link--out" opacity="0.38"></path>
           ))}
         </g>
 
@@ -81,28 +108,26 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
 
         <!-- Nodos: personas (izquierda) -->
         {personas.map((p, i) => (
-          <g class="rn-node" tabindex="0" role="listitem" aria-label={p.label} style={`--i:${i}`}>
-            <rect x={leftX - 96} y={p.y - 24} width="192" height="48" rx="24"
-              fill="#ffffff" stroke="#dbe4f5" stroke-width="1.5"></rect>
-            <circle class="rn-node-dot" cx={leftX - 74} cy={p.y} r="3.5" fill="#2563eb"></circle>
-            <text x={leftX + 8} y={p.y} text-anchor="middle" dominant-baseline="central"
-              class="rn-text" fill="#12213f">{p.label}</text>
+          <g class="rn-node" aria-label={p.label} style={`--i:${i}`}>
+            <rect x={leftX} y={p.y - pillH / 2} width={pillW} height={pillH} rx={pillH / 2}
+              fill="#ffffff" stroke="#dbe4f5" stroke-width="1.5" filter="url(#rn-shadow-soft)"></rect>
+            <circle cx={leftX + 40} cy={p.y} r="19" fill="#eaf1fd"></circle>
+            <g transform={`translate(${leftX + 40 - 11},${p.y - 11}) scale(0.92)`} fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[p.icon]} />
+            <text x={leftX + 74} y={p.y} dominant-baseline="central" class="rn-title" fill="#12213f">{p.label}</text>
           </g>
         ))}
 
         <!-- Anillos que irradian del hub -->
-        <circle class="rn-hub-ring" cx={hub.x} cy={hub.y} r="66" fill="none" stroke="#38bdf8" stroke-width="2"></circle>
-        <circle class="rn-hub-ring rn-hub-ring--2" cx={hub.x} cy={hub.y} r="66" fill="none" stroke="#38bdf8" stroke-width="2"></circle>
+        <circle class="rn-hub-ring" cx={hub.x} cy={hub.y} r={hub.r} fill="none" stroke="#38bdf8" stroke-width="2"></circle>
+        <circle class="rn-hub-ring rn-hub-ring--2" cx={hub.x} cy={hub.y} r={hub.r} fill="none" stroke="#38bdf8" stroke-width="2"></circle>
 
         <!-- Hub central: logo de CURVA -->
         <g class="rn-hub">
-          <circle cx={hub.x} cy={hub.y} r="66" fill="url(#rn-hub)" filter="url(#rn-glow)"></circle>
-          <circle cx={hub.x} cy={hub.y} r="66" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.5"></circle>
-          <!-- Marca (∧) -->
+          <circle cx={hub.x} cy={hub.y} r={hub.r} fill="url(#rn-hub)" filter="url(#rn-glow)"></circle>
+          <circle cx={hub.x} cy={hub.y} r={hub.r} fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.5"></circle>
           <svg x={hub.x - 30} y={hub.y - 34} width="60" height="60" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"></path>
           </svg>
-          <!-- Wordmark -->
           <text x={hub.x} y={hub.y + 20} text-anchor="middle" dominant-baseline="central"
             class="rn-hub-text" fill="#ffffff">curva</text>
         </g>
@@ -114,11 +139,15 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
 
         <!-- Nodos: resultados (derecha) -->
         {resultados.map((r, i) => (
-          <g class="rn-node rn-node--out" tabindex="0" role="listitem" aria-label={r.label} style={`--i:${i}`}>
-            <rect x={rightX - 96} y={r.y - 24} width="192" height="48" rx="24"
-              fill="url(#rn-hub)"></rect>
-            <text x={rightX} y={r.y} text-anchor="middle" dominant-baseline="central"
-              class="rn-text" fill="#ffffff">{r.label}</text>
+          <g class="rn-node rn-node--out" aria-label={`${r.title}: ${r.sub}`} style={`--i:${i}`}>
+            <rect x={rightX} y={r.y - pillH / 2} width={pillW} height={pillH} rx={pillH / 2}
+              fill="url(#rn-pill-grad)" filter="url(#rn-shadow)"></rect>
+            <rect x={rightX} y={r.y - pillH / 2} width={pillW} height={pillH} rx={pillH / 2}
+              fill="url(#rn-pill-hi)" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1"></rect>
+            <circle cx={rightX + 40} cy={r.y} r="19" fill="#ffffff" fill-opacity="0.22"></circle>
+            <g transform={`translate(${rightX + 40 - 11},${r.y - 11}) scale(0.92)`} fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[r.icon]} />
+            <text x={rightX + 74} y={r.y - 10} dominant-baseline="central" class="rn-title" fill="#ffffff">{r.title}</text>
+            <text x={rightX + 74} y={r.y + 13} dominant-baseline="central" class="rn-sub" fill="#ffffff" fill-opacity="0.88">{r.sub}</text>
           </g>
         ))}
       </svg>
@@ -143,7 +172,10 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
       </div>
       <div class="grid grid-cols-3 gap-2 text-center">
         {resultados.map((r) => (
-          <div class="rounded-2xl bg-[linear-gradient(120deg,#1d4ed8,#38bdf8)] px-2 py-3 text-[13px] font-semibold text-white">{r.label}</div>
+          <div class="rounded-2xl bg-[linear-gradient(120deg,#1d4ed8,#38bdf8)] px-2 py-3 text-white">
+            <p class="text-[13px] font-semibold leading-tight">{r.title}</p>
+            <p class="mt-0.5 text-[11px] text-white/80 leading-tight">{r.sub}</p>
+          </div>
         ))}
       </div>
     </div>
@@ -195,20 +227,16 @@ const fromHub = (y: number) => `M${hub.x + 66},${hub.y} C570,${hub.y} 600,${y} $
   .rn-hub circle:first-child { animation: rn-pulse 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
   @keyframes rn-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.02); } }
 
-  /* Nodos */
-  .rn-node rect, .rn-node text, .rn-node-dot { transition: transform 0.35s var(--ease-pitch, ease), filter 0.35s var(--ease-pitch, ease); }
-  .rn-node { cursor: default; }
-  .rn-node:hover rect, .rn-node:focus-visible rect { transform: translateY(-2px); filter: drop-shadow(0 8px 20px rgba(37, 99, 235, 0.28)); }
-  .rn-node:focus-visible { outline: none; }
-  .rn-node:focus-visible rect { stroke: #2563eb; stroke-width: 2; }
-  /* Punto guía de cada persona que late en secuencia (guía el ojo hacia CURVA) */
-  .rn-node-dot { transform-box: fill-box; transform-origin: center; animation: rn-dot 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * 0.55s); }
-  @keyframes rn-dot { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
-  .rn-text { font: 600 16px/1 'Poppins', system-ui, sans-serif; }
+  /* Nodos (pastillas): el grupo entero se eleva (no cada hijo, para no romper el transform del ícono) */
+  .rn-node { cursor: default; transition: transform 0.4s var(--ease-pitch, ease); }
+  .rn-node:hover, .rn-node:focus-visible { transform: translateY(-3px); outline: none; }
+  .rn-node:focus-visible rect:first-of-type { stroke: #2563eb; stroke-width: 2.5; }
+  .rn-title { font: 700 17px/1 'Poppins', system-ui, sans-serif; letter-spacing: -0.01em; }
+  .rn-sub { font: 500 13px/1 'Inter', system-ui, sans-serif; }
   .rn-hub-text { font: 700 20px/1 'Poppins', system-ui, sans-serif; letter-spacing: 0.02em; }
 
   @media (prefers-reduced-motion: reduce) {
-    .rn-pulse, .rn-hub-halo, .rn-hub-ring, .rn-orbit, .rn-node-dot, .rn-hub circle:first-child { animation: none !important; }
+    .rn-pulse, .rn-hub-halo, .rn-hub-ring, .rn-orbit, .rn-hub circle:first-child { animation: none !important; }
     .rn-hub-halo { opacity: 0.7; }
     .rn-hub-ring { opacity: 0; }
   }

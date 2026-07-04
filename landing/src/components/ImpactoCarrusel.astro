@@ -20,11 +20,11 @@ const spark = 'M0,44 C40,42 70,30 120,18 C170,7 210,8 260,3';
       </div>
       <!-- Controles prev/next (desktop) -->
       <div class="reveal hidden md:flex items-center gap-3 flex-shrink-0" aria-hidden="true">
-        <button type="button" data-carousel-prev aria-label="Caso anterior"
+        <button type="button" data-carousel-prev aria-label="Caso anterior" tabindex="-1"
           class="caso-nav w-12 h-12 rounded-full border border-sand-300 text-sand-700 flex items-center justify-center transition-all hover:bg-ember hover:border-ember hover:text-white disabled:opacity-30 disabled:pointer-events-none">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg>
         </button>
-        <button type="button" data-carousel-next aria-label="Caso siguiente"
+        <button type="button" data-carousel-next aria-label="Caso siguiente" tabindex="-1"
           class="caso-nav w-12 h-12 rounded-full border border-sand-300 text-sand-700 flex items-center justify-center transition-all hover:bg-ember hover:border-ember hover:text-white disabled:opacity-30 disabled:pointer-events-none">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
         </button>
@@ -117,6 +117,10 @@ const spark = 'M0,44 C40,42 70,30 120,18 C170,7 210,8 260,3';
     .flip-card:hover .flip-inner { transform: rotateY(180deg); }
   }
   .flip-cb:checked ~ .flip-inner { transform: rotateY(180deg); }
+  /* Teclado: al enfocar el enlace "Ver caso" (u otro control del reverso) la tarjeta
+     se voltea para que ese foco quede visible y operable. */
+  .flip-card:focus-within .flip-inner { transform: rotateY(180deg); }
+  .flip-card:focus-within .flip-back a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 6px; }
   .flip-cb:focus-visible ~ .flip-inner .flip-front { outline: 2px solid var(--color-ember); outline-offset: 3px; border-radius: 1.5rem; }
   .flip-hint svg { transition: transform 0.4s var(--ease-pitch, ease); }
   .flip-card:hover .flip-hint svg { transform: rotate(-180deg); }

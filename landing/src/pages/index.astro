@@ -8,21 +8,13 @@ import ImpactoCarrusel from '../components/ImpactoCarrusel.astro';
 import Caminos from '../components/Caminos.astro';
 import RedNodos from '../components/RedNodos.astro';
 import Intro from '../components/Intro.astro';
-import { areas } from '../data/areas';
 
 const calLink = 'https://cal.com/andres-paez/30min';
 const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
 
 const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-jade' } as const;
 const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-jade' } as const;
-const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/15', jade: 'bg-jade/12' } as const;
 const accentBorder = { ember: 'border-ember', gold: 'border-gold', jade: 'border-jade' } as const;
-
-const icons: Record<string, string> = {
-  compass: 'M12 21a9 9 0 100-18 9 9 0 000 18zm3.5-12.5l-2 5.5-5.5 2 2-5.5 5.5-2z',
-  bolt: 'M13 2L4.5 13.5H11l-1 8.5L19.5 10H13l0-8z',
-  spark: 'M12 2l2.1 6.3L20 10l-5.9 1.7L12 18l-2.1-6.3L4 10l5.9-1.7L12 2z',
-};
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -34,25 +26,6 @@ const jsonLd = {
   serviceType: ['Consultoría empresarial', 'Digitalización', 'Automatización con IA'],
   founder: { '@type': 'Person', name: 'Andrés Páez Cortazar' },
 };
-
-const problema = [
-  'El negocio depende de pocas personas para no detenerse.',
-  'Los procesos viven en la cabeza, no en un sistema.',
-  'Cada venta nueva trae más trabajo y desorden, no más claridad.',
-  'Hay con qué crecer, pero falta la estructura para lograrlo.',
-];
-
-// La curva: el "antes" y el "después" que recorre el cliente con nosotros.
-const hoy = [
-  'Si tú paras, todo para.',
-  'El día se te va apagando incendios.',
-  'Vendes más y el caos crece igual.',
-];
-const despues = [
-  'El negocio corre sin ti encima.',
-  'Cada quien sabe qué hacer, sin preguntarte.',
-  'Creces con números claros, no a ciegas.',
-];
 
 // Interruptor pains→gains (sección "¿Te suena algo de esto?"): el mismo punto,
 // "antes" (dolor) → "después" (con CURVA). Gains de la auditoría de Emiliano.
@@ -81,26 +54,11 @@ const paradas = [
   { eyebrow: 'La cima', label: 'Cambio de vida', accent: 'gold' as const },
 ];
 
-// Pasos redefinidos por Pau (mata "digitalización" como paso único; un proyecto puede no ser digital).
-const proceso = [
-  { num: '01', title: 'Exploración', desc: 'Una llamada para entender tu negocio y ver si te podemos ayudar.', dur: '30 min, gratis' },
-  { num: '02', title: 'Diagnóstico', desc: 'Nos metemos a tu operación y vemos qué está pasando de verdad.', dur: '1–3 semanas' },
-  { num: '03', title: 'Plan de implementación', desc: 'Una ruta clara: qué primero, qué después. Nada de planes de 200 páginas.', dur: 'Contigo' },
-  { num: '04', title: 'Implementación', desc: 'Lo armamos contigo y nos quedamos hasta que jala solo.', dur: 'Según el alcance' },
-];
 // Cinta animada representativa de lo que hace CURVA (sin logos — feedback de Pau).
 const capacidades = ['Diagnóstico operativo', 'Procesos y estructura', 'Automatización', 'Agentes con IA', 'ERPs implementados', 'Gobernanza', 'Capacitación', 'Acompañamiento'];
 
 // Path firma de la sección "La curva" (coincide con offset-path de .curve-dot en global.css).
 const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
-
-// Banda de números globales. ⚠️ VALORES PLACEHOLDER — reemplazar con cifras reales (ver lista de pendientes).
-const numeros = [
-  { value: '15+',    label: 'Empresas atendidas',       accent: 'ember', spark: 'M0,30 C22,28 38,22 58,14 C78,7 90,6 100,4' },
-  { value: '20+',    label: 'Sistemas en producción',   accent: 'gold',  spark: 'M0,31 C20,30 36,24 56,15 C76,8 90,9 100,3' },
-  { value: '500+',   label: 'Horas ahorradas al mes',   accent: 'ember', spark: 'M0,29 C24,27 40,20 60,12 C80,6 92,7 100,5' },
-  { value: '2,300+', label: 'Operaciones digitalizadas', accent: 'gold', spark: 'M0,30 C25,29 42,23 62,13 C82,6 93,5 100,4' },
-] as const;
 
 // Producto propio = prueba ("no entregamos PDFs, construimos software"). Curva Tiempos.
 const producto = {
@@ -120,7 +78,9 @@ const producto = {
   <Intro />
   <Nav calLink={calLink} />
 
-  <a href="#problema" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+  <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+
+  <main id="contenido" tabindex="-1">
 
   <!-- ============================== HERO — claro, estilo Pitch, con chat IA ============================== -->
   <section class="hero-lite hero-blue relative min-h-[100svh] flex flex-col justify-center overflow-hidden">
@@ -218,12 +178,12 @@ const producto = {
   </section>
 
   <!-- ============================== LA CURVA (transformación) ============================== -->
-  <section id="la-curva" class="zone-solid py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
+  <section id="la-curva" data-anim-gate class="zone-solid py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
     <div class="glow-orb" style="width:28rem;height:28rem;top:18%;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);"></div>
     <div class="mx-auto max-w-6xl relative z-10">
       <div class="max-w-2xl mb-4">
         <p class="reveal eyebrow-lead text-jade-300 mb-5">La curva</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance text-white">Hoy estás <span class="word-before text-jade-300">aquí</span>. Te llevamos <span class="word-after text-jade-300">acá</span>.</h2>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance text-white">Hoy estás <span class="whitespace-nowrap"><span class="word-before text-jade-300">aquí</span>.</span> Te llevamos <span class="whitespace-nowrap"><span class="word-after text-jade-300">acá</span>.</span></h2>
         <p data-wordfade class="mt-5 text-lg sm:text-xl text-sand-100 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
       </div>
 
@@ -453,6 +413,8 @@ const producto = {
   <a href={waLink} target="_blank" rel="noopener" data-magnetic="0.2" class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all" aria-label="Contactar por WhatsApp">
     <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"></path></svg>
   </a>
+
+  </main>
 
   <Footer calLink={calLink} waLink={waLink} />
 </BaseLayout>

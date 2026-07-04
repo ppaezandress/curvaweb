@@ -11,6 +11,10 @@ const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber
 ---
 <BaseLayout title="Aviso de privacidad — CURVA" description="Aviso de privacidad de CURVA, conforme a la LFPDPPP.">
   <Nav calLink={calLink} />
+
+  <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+
+  <main id="contenido" tabindex="-1">
   <section class="pt-36 pb-24 sm:pt-44 px-6 sm:px-10 bg-sand-50 min-h-screen">
     <div class="mx-auto max-w-3xl">
       <p class="eyebrow text-ember mb-5">Legal</p>
@@ -32,7 +36,7 @@ const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber
         </div>
         <div>
           <h2 class="display text-xl font-semibold text-ink mb-2">Tus derechos (ARCO)</h2>
-          <p>Puedes acceder, rectificar, cancelar u oponerte al tratamiento de tus datos, así como revocar tu consentimiento, escribiéndonos a <a href="mailto:hola@curva.mx" class="text-ember underline underline-offset-2">hola@curva.mx</a>. <span class="text-sand-400">(⚠️ confirmar correo real de contacto)</span></p>
+          <p>Puedes acceder, rectificar, cancelar u oponerte al tratamiento de tus datos, así como revocar tu consentimiento, escribiéndonos a <a href="mailto:hola@curva.mx" class="text-ember underline underline-offset-2">hola@curva.mx</a>.</p>
         </div>
         <div>
           <h2 class="display text-xl font-semibold text-ink mb-2">Cambios a este aviso</h2>
@@ -43,5 +47,7 @@ const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber
       <a href="/" class="inline-flex items-center gap-2 mt-14 text-sm font-semibold text-ember hover:gap-3 transition-all">← Volver al inicio</a>
     </div>
   </section>
+  </main>
+
   <Footer calLink={calLink} waLink={waLink} />
 </BaseLayout>

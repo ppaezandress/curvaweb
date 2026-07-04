@@ -4,7 +4,13 @@
 // getPointAtLength (a la fracción `data-at` de cada hito) y reposicionamos tanto el
 // <circle data-hito> como el chip .milestone. El % del chip se deriva del viewBox
 // del SVG (que llena su contenedor manteniendo la proporción).
+let cleanup: (() => void) | null = null;
+
 export function initHitos() {
+  // Limpia el listener de la navegación anterior (View Transitions re-arma esto).
+  cleanup?.();
+  cleanup = null;
+
   const path = document.querySelector<SVGPathElement>('path[data-hito-path]');
   if (!path) return;
   const svg = path.ownerSVGElement;
@@ -33,5 +39,5 @@ export function initHitos() {
   if (fonts?.ready) fonts.ready.then(place);
   const onResize = () => place();
   window.addEventListener('resize', onResize, { passive: true });
-  return () => window.removeEventListener('resize', onResize);
+  cleanup = () => window.removeEventListener('resize', onResize);
 }
