@@ -8,114 +8,144 @@ interface Props {
 }
 const { overHero = false, calLink } = Astro.props;
 
-// Consultoría: 2 frentes; cada frente muestra sus 3 pilares como anclas a la
-// MISMA página del frente (no abre otra página, hace scroll al pilar).
-const consultoria = frentes.map((f) => ({
+// Datos para "La Curva Viva" (menú a pantalla completa).
+const frentesData = frentes.map((f) => ({
   label: f.navLabel,
   href: `/consultoria/${f.slug}`,
   destacado: f.destacado,
-  items: f.pilares.map((p) => ({ label: p.titulo, href: `/consultoria/${f.slug}#${p.id}` })),
+  pilares: f.pilares.map((p) => ({ label: p.titulo, href: `/consultoria/${f.slug}#${p.id}` })),
 }));
+const solData = soluciones.map((s) => ({ label: s.titulo, href: `/soluciones#${s.id}`, icon: s.icon, destacado: s.destacado }));
 
-// Soluciones digitales: lista de soluciones (ancla dentro de /soluciones).
-const solucionesMenu = soluciones.map((s) => ({ label: s.titulo, href: `/soluciones#${s.id}` }));
+const solIcon: Record<string, string> = {
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
+  cube: '<path d="M12 3l8 4.6v8.8L12 21l-8-4.6V7.6L12 3z"/><path d="M12 12v9M4 7.6l8 4.4 8-4.4"/>',
+  claude: '<path d="M12 3v18M4.8 7.5l14.4 9M19.2 7.5l-14.4 9"/>',
+  notion: '<rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M9 8.2v7.6M9 8.2l6 7.6M15 8.2v7.6"/>',
+  template: '<rect x="3.5" y="4" width="17" height="16" rx="2.2"/><path d="M3.5 9.2h17M9.2 9.2V20"/>',
+};
+
+// Los 4 destinos que cuelgan de la curva. `kind` decide qué muestra el escenario.
+const destinos = [
+  { key: 'consultoria', label: 'Consultoría', word: 'Transformación', tag: 'Digitalizamos tu operación y transformamos tu negocio, de punta a punta.', kind: 'consultoria' as const, href: '' },
+  { key: 'soluciones', label: 'Soluciones digitales', word: 'A la medida', tag: 'Entregables que resuelven — sin meternos en tu infraestructura.', kind: 'soluciones' as const, href: '' },
+  { key: 'nosotros', label: 'Nosotros', word: 'Quiénes somos', tag: 'Cómo pensamos y por qué trabajamos pegados a tu operación.', kind: 'link' as const, href: '/nosotros', cta: 'Conocer al equipo' },
+  { key: 'conversemos', label: 'Conversemos', word: 'Hablemos', tag: 'Cuéntanos cómo trabajas hoy y te decimos por dónde empezar.', kind: 'cta' as const, href: calLink, cta: 'Agenda una llamada' },
+];
 ---
 
 <div id="site-nav" class="nav-bar fixed top-0 inset-x-0 z-50 px-3 sm:px-4 pt-3" data-over-hero={overHero ? '' : undefined}>
   <nav class="nav-inner mx-auto max-w-6xl flex items-center justify-between rounded-2xl pl-5 pr-2.5 py-2.5" aria-label="Principal">
     <a href="/" class="nav-logo display text-xl font-semibold tracking-tight flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#2563eb"></stop><stop offset="0.5" stop-color="#3b82f6"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#3b82f6"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
       curva
     </a>
 
-    <div class="flex items-center gap-1">
-      <!-- Mega-menú Consultoría (2 frentes con sus pilares) -->
-      <div data-dropdown class="hidden md:block">
-        <button data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" class="nav-link inline-flex items-center gap-1.5">
-          Consultoría
-          <svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
-        </button>
-        <div data-dropdown-menu role="menu" class="nav-mega fixed left-0 right-0 mx-auto top-[4.6rem] w-[min(94vw,52rem)] bg-white rounded-2xl shadow-2xl border border-sand-200 p-6">
-          <div class="grid grid-cols-2 gap-5">
-            {consultoria.map((frente) => (
-              <div>
-                <a href={frente.href} role="menuitem" class="menu-item flex items-center gap-2 text-[13px] font-semibold text-ink mb-3 px-3 py-2 rounded-lg">
-                  {frente.label}
-                  {frente.destacado && <span class="text-[10px] font-semibold uppercase tracking-wide text-ember bg-ember/10 rounded-full px-2 py-0.5">Fuerte</span>}
-                </a>
-                <ul class="space-y-0.5">
-                  {frente.items.map((it) => (
-                    <li><a href={it.href} role="menuitem" class="menu-item block text-sm text-sand-700 px-3 py-2 rounded-lg hover:text-ink">{it.label}</a></li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <!-- Soluciones digitales -->
-      <div data-dropdown class="hidden md:block">
-        <button data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" class="nav-link inline-flex items-center gap-1.5">
-          Soluciones digitales
-          <svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
-        </button>
-        <div data-dropdown-menu role="menu" class="nav-menu absolute right-0 top-full mt-3 w-72 bg-white rounded-2xl shadow-2xl border border-sand-200 p-2">
-          {solucionesMenu.map((p) => (
-            <a href={p.href} role="menuitem" class="menu-item flex items-start gap-3 p-3 rounded-xl">
-              <span class="w-9 h-9 rounded-lg bg-ember/10 flex items-center justify-center flex-shrink-0 mt-0.5"><span class="w-2.5 h-2.5 rounded-full bg-ember"></span></span>
-              <span class="text-sm font-semibold block text-ink">{p.label}</span>
-            </a>
-          ))}
-        </div>
-      </div>
-
-      <a href="/nosotros" class="nav-link hidden md:inline-flex">Nosotros</a>
-      <a href={calLink} target="_blank" rel="noopener" class="nav-cta btn-arrow hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors ml-1">
+    <div class="flex items-center gap-1.5">
+      <a href={calLink} target="_blank" rel="noopener" class="nav-cta btn-arrow hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors">
         Conversemos
         <svg data-arrow class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
-
-      <button data-burger aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu" class="burger md:hidden flex flex-col gap-[5px] p-2.5">
-        <span class="burger-line"></span>
-        <span class="burger-line"></span>
-        <span class="burger-line"></span>
+      <button data-cmenu-toggle aria-haspopup="dialog" aria-controls="curva-menu" aria-expanded="false" class="cmenu-btn inline-flex items-center gap-2.5 pl-4 pr-2.5 py-2 rounded-full">
+        <span class="cmenu-btn-label">Menú</span>
+        <span class="cmenu-btn-ico" aria-hidden="true"><span></span><span></span></span>
       </button>
     </div>
   </nav>
 </div>
 
-<!-- Menú móvil -->
-<div id="mobile-menu" class="mobile-menu md:hidden">
-  <div class="flex flex-col h-full pt-24 px-7 pb-8 bg-sand-50 overflow-y-auto">
-    <p class="eyebrow text-sand-500 mb-3">Consultoría</p>
-    <nav class="flex flex-col" aria-label="Móvil">
-      {consultoria.map((frente) => (
-        <a href={frente.href} class="flex items-center gap-3 py-3 border-b border-sand-200 text-ink">
-          <span class="w-2 h-2 rounded-full flex-shrink-0 bg-ember"></span>
-          <span class="text-base font-semibold">{frente.label}</span>
-        </a>
-      ))}
-    </nav>
-    <p class="eyebrow text-sand-500 mb-3 mt-7">Soluciones digitales</p>
-    <nav class="flex flex-col">
-      {solucionesMenu.map((p) => (
-        <a href={p.href} class="flex items-center gap-3 py-3 border-b border-sand-200 text-ink">
-          <span class="w-2 h-2 rounded-full flex-shrink-0 bg-gold"></span>
-          <span class="text-base font-semibold">{p.label}</span>
-        </a>
-      ))}
-    </nav>
-    <div class="flex flex-col mt-6">
-      <a href="/nosotros" class="py-3.5 border-b border-sand-200 text-lg font-semibold text-sand-700">Nosotros</a>
+<!-- ===================== LA CURVA VIVA ===================== -->
+<div id="curva-menu" class="cmenu" role="dialog" aria-modal="true" aria-label="Menú principal" aria-hidden="true">
+  <div class="cmenu-bg" aria-hidden="true"></div>
+  <svg class="cmenu-curve" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="cmg" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#7c3aed"></stop>
+        <stop offset="0.5" stop-color="#2563eb"></stop>
+        <stop offset="1" stop-color="#38bdf8"></stop>
+      </linearGradient>
+    </defs>
+    <path class="cmenu-curve-ghost" d="M-80 860 C 360 860 420 300 760 300 S 1180 40 1560 40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"></path>
+    <path class="cmenu-curve-line" pathLength="1" d="M-80 860 C 360 860 420 300 760 300 S 1180 40 1560 40" fill="none" stroke="url(#cmg)" stroke-width="2.5" stroke-linecap="round"></path>
+    <circle class="cmenu-spark" r="5" fill="#fff"></circle>
+  </svg>
+
+  <div class="cmenu-frame">
+    <div class="cmenu-top">
+      <a href="/" class="cmenu-logo display" data-cmenu-link>
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv2)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv2" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#a78bfa"></stop><stop offset="0.5" stop-color="#60a5fa"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
+        curva
+      </a>
+      <button data-cmenu-close class="cmenu-close" aria-label="Cerrar menú">
+        <span>Cerrar</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
     </div>
-    <div class="mt-auto pt-8">
-      <a href={calLink} target="_blank" rel="noopener" class="block w-full text-center text-base font-semibold bg-ink text-sand-50 px-6 py-4 rounded-full">Conversemos</a>
+
+    <div class="cmenu-body">
+      <nav class="cmenu-list" aria-label="Destinos">
+        {destinos.map((d, i) => (
+          <div class="cmenu-item" data-cmenu-item data-key={d.key} data-kind={d.kind}>
+            <button class="cmenu-trigger" data-cmenu-trigger aria-expanded="false">
+              <span class="cmenu-idx">0{i + 1}</span>
+              <span class="cmenu-label">{d.label}</span>
+              <span class="cmenu-node" aria-hidden="true"></span>
+            </button>
+
+            <div class="cmenu-panel" data-cmenu-panel>
+              <p class="cmenu-word">{d.word}</p>
+              <p class="cmenu-tag">{d.tag}</p>
+
+              {d.kind === 'consultoria' && (
+                <div class="cmenu-frentes">
+                  {frentesData.map((f) => (
+                    <div class="cmenu-frente">
+                      <a href={f.href} class="cmenu-frente-head" data-cmenu-link>
+                        {f.label}
+                        {f.destacado && <span class="cmenu-badge">Empieza aquí</span>}
+                      </a>
+                      <ul>
+                        {f.pilares.map((p) => (
+                          <li><a href={p.href} class="cmenu-sublink" data-cmenu-link>{p.label}</a></li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {d.kind === 'soluciones' && (
+                <div class="cmenu-sols">
+                  {solData.map((s) => (
+                    <a href={s.href} class="cmenu-sol" data-cmenu-link>
+                      <span class="cmenu-sol-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" set:html={solIcon[s.icon]}></svg></span>
+                      <span class="cmenu-sol-label">{s.label}{s.destacado && <span class="cmenu-badge">Destacado</span>}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {d.kind === 'link' && (
+                <a href={d.href} class="cmenu-go" data-cmenu-link>{d.cta}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"></path></svg>
+                </a>
+              )}
+
+              {d.kind === 'cta' && (
+                <a href={d.href} target="_blank" rel="noopener" class="cmenu-go cmenu-go--solid" data-cmenu-link>{d.cta}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"></path></svg>
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </nav>
     </div>
   </div>
 </div>
 
 <style>
+  /* ---------------- Barra ---------------- */
   .nav-inner {
     transition: background-color .35s ease, border-color .35s ease, box-shadow .35s ease;
     -webkit-backdrop-filter: blur(14px);
@@ -124,33 +154,176 @@ const solucionesMenu = soluciones.map((s) => ({ label: s.titulo, href: `/solucio
     border: 1px solid rgba(255, 255, 255, 0.10);
   }
   .nav-bar .nav-logo { color: #fff; }
-  .nav-bar .nav-link {
-    color: rgba(255, 255, 255, 0.80);
-    font-size: 0.875rem; font-weight: 500;
-    padding: 0.5rem 0.85rem; border-radius: 9999px;
-    transition: background-color .2s ease, color .2s ease;
-  }
-  .nav-bar .nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
   .nav-bar .nav-cta { background: #fff; color: var(--color-ink); }
   .nav-bar .nav-cta:hover { background: rgba(255, 255, 255, 0.88); }
-  .nav-bar .burger-line { display: block; width: 20px; height: 2px; background: #fff; transition: transform .3s ease, opacity .3s ease, background-color .35s ease; }
+
+  .cmenu-btn {
+    color: #fff; font-size: .875rem; font-weight: 600;
+    background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255,255,255,0.14);
+    transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .cmenu-btn:hover { background: rgba(255,255,255,0.18); }
+  .cmenu-btn-ico { display: grid; gap: 4px; width: 20px; height: 20px; place-content: center; }
+  .cmenu-btn-ico span { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .3s var(--ease-curve), width .3s var(--ease-curve); }
+  .cmenu-btn-ico span:last-child { width: 12px; margin-left: auto; }
+  .cmenu-btn:hover .cmenu-btn-ico span:last-child { width: 18px; }
 
   /* Scrolled: barra clara */
   .nav-bar.scrolled .nav-inner { background: rgba(245, 248, 255, 0.88); border-color: var(--color-sand-200); box-shadow: 0 10px 34px rgba(15, 30, 61, 0.10); }
   .nav-bar.scrolled .nav-logo { color: var(--color-ink); }
-  .nav-bar.scrolled .nav-link { color: var(--color-sand-600); }
-  .nav-bar.scrolled .nav-link:hover { color: var(--color-ink); background: var(--color-sand-100); }
   .nav-bar.scrolled .nav-cta { background: var(--color-ink); color: var(--color-sand-50); }
   .nav-bar.scrolled .nav-cta:hover { background: #1b3a6b; }
-  .nav-bar.scrolled .burger-line { background: var(--color-ink); }
+  .nav-bar.scrolled .cmenu-btn { color: var(--color-ink); background: var(--color-sand-100); border-color: var(--color-sand-200); }
+  .nav-bar.scrolled .cmenu-btn:hover { background: var(--color-sand-200); }
 
-  /* visibility:hidden saca los enlaces del cerrado del orden de tabulación (a11y);
-     se retrasa hasta que termina el fade para no cortar la animación. */
-  .nav-menu, .nav-mega { opacity: 0; visibility: hidden; transform: translateY(-8px) scale(.98); pointer-events: none; transition: opacity .25s ease, transform .25s ease, visibility 0s .25s; transform-origin: top; }
-  .nav-menu.open, .nav-mega.open { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity .25s ease, transform .25s ease, visibility 0s; }
-  .menu-item { transition: background-color .15s ease, color .15s ease; }
-  .menu-item:hover { background-color: var(--color-sand-50); }
+  /* ---------------- La Curva Viva ---------------- */
+  /* Capa de vidrio SOBRE el home: se ve el sitio difuminado detrás (no es otra página) */
+  .cmenu {
+    position: fixed; inset: 0; z-index: 60;
+    color: #fff; overflow: hidden;
+    visibility: hidden; pointer-events: none;
+    transition: visibility 0s .5s;
+  }
+  .cmenu.open { visibility: visible; pointer-events: auto; transition: visibility 0s; }
 
-  .mobile-menu { position: fixed; inset: 0; z-index: 40; visibility: hidden; transform: translateX(100%); transition: transform .35s var(--ease-curve), visibility 0s .35s; }
-  .mobile-menu.open { visibility: visible; transform: translateX(0); transition: transform .35s var(--ease-curve), visibility 0s; }
+  /* IMPORTANTE: el velo+blur se anima por su cuenta. Si se anima la opacidad del
+     ancestro que contiene el backdrop-filter, Chrome/Safari lo renderizan mal
+     (parpadeo/fantasma) — esa era la sensación "rara" al abrir. */
+  .cmenu-bg {
+    position: absolute; inset: 0; opacity: 0;
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    backdrop-filter: blur(0px) saturate(100%);
+    background:
+      radial-gradient(1100px 720px at 82% 8%, rgba(56,189,248,0.16), transparent 60%),
+      radial-gradient(900px 700px at 12% 92%, rgba(124,58,237,0.20), transparent 60%),
+      rgba(8, 12, 30, 0.60);
+    transition: opacity .45s var(--ease-curve), backdrop-filter .55s var(--ease-curve), -webkit-backdrop-filter .55s var(--ease-curve);
+  }
+  .cmenu.open .cmenu-bg {
+    opacity: 1;
+    -webkit-backdrop-filter: blur(24px) saturate(125%);
+    backdrop-filter: blur(24px) saturate(125%);
+  }
+  .cmenu-bg::after {
+    content: ''; position: absolute; inset: 0; opacity: .18; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  }
+
+  .cmenu-curve { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .5s ease .1s; pointer-events: none; }
+  .cmenu.open .cmenu-curve { opacity: 1; }
+  .cmenu-curve-line { stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 10px rgba(56,189,248,0.35)); transition: stroke-dashoffset 1.2s var(--ease-curve) .18s; }
+  .cmenu.open .cmenu-curve-line { stroke-dashoffset: 0; }
+  .cmenu-spark { opacity: 0; filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)); offset-path: path('M-80 860 C 360 860 420 300 760 300 S 1180 40 1560 40'); }
+  .cmenu.open .cmenu-spark { animation: cmSpark 5.5s var(--ease-curve) 1.2s infinite; }
+  @keyframes cmSpark {
+    0% { offset-distance: 0%; opacity: 0; }
+    8% { opacity: .95; }
+    92% { opacity: .95; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+
+  .cmenu-frame {
+    position: relative; z-index: 2; height: 100%;
+    max-width: 78rem; margin: 0 auto; padding: 1.4rem clamp(1.25rem, 5vw, 4rem);
+    display: flex; flex-direction: column;
+    opacity: 0; transition: opacity .35s var(--ease-curve);
+  }
+  .cmenu.open .cmenu-frame { opacity: 1; transition: opacity .4s var(--ease-curve) .08s; }
+
+  .cmenu-top { display: flex; align-items: center; justify-content: space-between; }
+  .cmenu-logo { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-size: 1.25rem; font-weight: 600; letter-spacing: -.01em; }
+  .cmenu-close {
+    display: inline-flex; align-items: center; gap: .55rem;
+    color: rgba(255,255,255,0.75); font-size: .82rem; font-weight: 600;
+    padding: .5rem .9rem; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.16);
+    transition: color .2s ease, background-color .2s ease;
+  }
+  .cmenu-close:hover { color: #fff; background: rgba(255,255,255,0.10); }
+  .cmenu-close svg { width: 1.05rem; height: 1.05rem; transition: transform .3s var(--ease-curve); }
+  .cmenu-close:hover svg { transform: rotate(90deg); }
+
+  .cmenu-body { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; }
+  .cmenu-list { width: min(46%, 30rem); display: flex; flex-direction: column; gap: clamp(.15rem, 1.4vh, 1rem); }
+  .cmenu-item { position: static; }
+
+  .cmenu-trigger {
+    display: flex; align-items: baseline; gap: 1rem; width: 100%; text-align: left;
+    padding: .35rem 0; color: rgba(255,255,255,0.62);
+    opacity: 0; transform: translateY(18px);
+    transition: color .3s var(--ease-curve), transform .4s var(--ease-curve);
+  }
+  .cmenu.open .cmenu-trigger { opacity: 1; transform: none; transition: color .3s var(--ease-curve), transform .55s var(--ease-curve), opacity .55s var(--ease-curve); }
+  .cmenu.open .cmenu-item:nth-child(1) .cmenu-trigger { transition-delay: .08s; }
+  .cmenu.open .cmenu-item:nth-child(2) .cmenu-trigger { transition-delay: .15s; }
+  .cmenu.open .cmenu-item:nth-child(3) .cmenu-trigger { transition-delay: .22s; }
+  .cmenu.open .cmenu-item:nth-child(4) .cmenu-trigger { transition-delay: .29s; }
+
+  .cmenu-idx { font-family: var(--font-sans); font-size: .72rem; font-weight: 600; letter-spacing: .1em; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
+  .cmenu-label { font-family: var(--font-display); font-weight: 600; letter-spacing: -.02em; line-height: 1; font-size: clamp(1.9rem, 4.6vw, 3.6rem); }
+  .cmenu-node { width: .5rem; height: .5rem; border-radius: 9999px; background: #38bdf8; opacity: 0; transform: scale(.4); transition: opacity .3s ease, transform .3s var(--ease-curve); box-shadow: 0 0 14px rgba(56,189,248,0.9); align-self: center; }
+
+  .cmenu-trigger:hover, .cmenu-item.active .cmenu-trigger { color: #fff; transform: translateX(10px); }
+  .cmenu-item.active .cmenu-label { background: linear-gradient(90deg, #c4b5fd, #60a5fa 45%, #38bdf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .cmenu-item.active .cmenu-node { opacity: 1; transform: scale(1); }
+
+  /* Escenario (desktop: panel absoluto a la derecha; solo el activo visible) */
+  .cmenu-panel {
+    position: absolute; right: 0; top: 50%; width: min(52%, 34rem);
+    display: flex; flex-direction: column;
+    opacity: 0; transform: translateY(-50%) translateY(16px); pointer-events: none;
+    transition: opacity .4s var(--ease-curve), transform .5s var(--ease-curve);
+  }
+  .cmenu-panel.active { opacity: 1; transform: translateY(-50%); pointer-events: auto; }
+  .cmenu-word {
+    font-family: var(--font-display); font-weight: 700; letter-spacing: -.03em; line-height: .95;
+    font-size: clamp(2.2rem, 4.8vw, 3.8rem); margin-bottom: .5rem; overflow-wrap: break-word;
+    background: linear-gradient(100deg, #ede9fe, #93c5fd 40%, #38bdf8);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .cmenu-tag { color: rgba(255,255,255,0.66); font-size: clamp(.9rem, 1.3vw, 1.02rem); line-height: 1.5; max-width: 34ch; margin-bottom: 1.4rem; }
+
+  .cmenu-frentes { display: grid; grid-template-columns: 1fr 1fr; gap: 1.3rem 2rem; }
+  .cmenu-frente-head { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: #fff; margin-bottom: .5rem; transition: color .2s ease; }
+  .cmenu-frente-head:hover { color: #93c5fd; }
+  .cmenu-frente ul { display: flex; flex-direction: column; gap: .05rem; }
+  .cmenu-sublink { display: inline-block; color: rgba(255,255,255,0.6); font-size: .88rem; padding: .26rem 0; transition: color .18s ease, transform .18s ease; }
+  .cmenu-sublink:hover { color: #fff; transform: translateX(5px); }
+
+  .cmenu-sols { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem .6rem; }
+  .cmenu-sol { display: flex; align-items: center; gap: .65rem; padding: .45rem .5rem; border-radius: .7rem; color: rgba(255,255,255,0.82); transition: background-color .18s ease, color .18s ease; }
+  .cmenu-sol:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .cmenu-sol-ico { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .55rem; color: #7dd3fc; background: rgba(56,189,248,0.12); flex-shrink: 0; }
+  .cmenu-sol-ico svg { width: 1rem; height: 1rem; }
+  .cmenu-sol-label { display: inline-flex; align-items: center; gap: .45rem; font-size: .9rem; font-weight: 500; }
+
+  .cmenu-badge { font-size: .55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #0b1230; background: #7dd3fc; border-radius: 9999px; padding: .12rem .42rem; }
+
+  .cmenu-go { display: inline-flex; align-items: center; gap: .5rem; align-self: flex-start; font-weight: 600; font-size: 1rem; color: #fff; padding: .7rem 0; border-bottom: 1px solid rgba(255,255,255,0.3); transition: gap .2s ease, border-color .2s ease; }
+  .cmenu-go:hover { gap: .8rem; border-color: #38bdf8; }
+  .cmenu-go svg { width: 1.05rem; height: 1.05rem; }
+  .cmenu-go--solid { border: none; background: #fff; color: #0b1230; padding: .8rem 1.4rem; border-radius: 9999px; }
+  .cmenu-go--solid:hover { background: #dbeafe; }
+
+  /* ---------------- Móvil (acordeón) ---------------- */
+  @media (max-width: 860px) {
+    .cmenu-frame { overflow-y: auto; }
+    .cmenu-body { display: block; padding-top: 1rem; }
+    .cmenu-list { width: 100%; gap: 0; }
+    .cmenu-item { border-bottom: 1px solid rgba(255,255,255,0.10); }
+    .cmenu-trigger { padding: 1rem 0; }
+    .cmenu-node { margin-left: auto; }
+    .cmenu-panel { position: static; width: auto; display: none; transform: none; padding: 0 0 1.4rem; }
+    .cmenu-panel.active { display: flex; transform: none; }
+    .cmenu-word { font-size: clamp(2rem, 11vw, 3rem); }
+    .cmenu-tag { font-size: .9rem; margin-bottom: 1.1rem; }
+    .cmenu-frentes, .cmenu-sols { grid-template-columns: 1fr; gap: 1.1rem; }
+    .cmenu-curve { opacity: .45 !important; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cmenu, .cmenu-trigger, .cmenu-panel, .cmenu-curve, .cmenu-curve-line { transition: opacity .15s ease, visibility 0s !important; transform: none !important; }
+    .cmenu-panel { transform: translateY(-50%) !important; }
+    .cmenu-curve-line { stroke-dashoffset: 0 !important; }
+    .cmenu-spark { display: none; }
+  }
 </style>
