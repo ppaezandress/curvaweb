@@ -65,9 +65,6 @@ export function TopNav() {
 
           <Link href="/dashboard" className="text-xl text-fg">
             <Logo />
-            <span className="ml-2 align-middle text-xs font-medium text-muted">
-              tiempos
-            </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {links.map((l) => {
