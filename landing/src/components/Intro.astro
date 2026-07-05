@@ -1,35 +1,41 @@
 ---
-// Cortinilla: fondo BLANCO. Primero aparece el ISOTIPO arriba — una bolita
-// NARANJA recorre la onda llenándola de AZUL (y cae el punto). Después aparece
-// la palabra "curva" abajo. Luego abre el telón. 1ª visita/sesión; reduced-motion ok.
+// Cortinilla "Líquido + rebote": el isotipo se LLENA como líquido (de abajo hacia
+// arriba, superficie ondulante), el PUNTO BRINCA (rebota) a su lugar, y "curva"
+// entra con barrido. Al cerrar, el TELÓN se retira barriendo hacia la DERECHA con
+// un borde en forma de curva (la firma de la marca). Fondo blanco. 1ª visita/sesión.
 import logoAnim from '../svg/curva-logo-anim.svg?raw';
 
-// Línea central de la onda, INVERTIDA (empieza en la punta derecha) para que el
-// relleno se dibuje de DERECHA a IZQUIERDA, siguiendo al punto que entra por la derecha.
-const Drev = 'M 306 80 C 258 122, 226 190, 196 170 C 168 152, 140 96, 112 108 C 90 120, 66 170, 52 210';
+const isoGroupRaw = logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)[0];
+const trazoD = isoGroupRaw.match(/id="trazo" d="([^"]*)"/)[1];
+const isoGroup = isoGroupRaw.replace('id="trazo"', 'id="trazo" mask="url(#liquid)"');
 
-// Isotipo solo (recortado), con máscara de "dibujado".
-const isoGroup = logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)[0].replace('id="trazo"', 'id="trazo" mask="url(#trazomask)"');
 const isoSvg = `<svg viewBox="26 22 316 212" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
   <defs>
     <linearGradient id="isoGrad" x1="0" y1="1" x2="1" y2="0">
       <stop offset="0" stop-color="#1d4ed8"/><stop offset="0.5" stop-color="#2563eb"/><stop offset="1" stop-color="#38bdf8"/>
     </linearGradient>
-    <radialGradient id="ballGrad"><stop offset="0" stop-color="#fff5ec"/><stop offset="0.5" stop-color="#fb923c"/><stop offset="1" stop-color="#f97316"/></radialGradient>
-    <mask id="trazomask"><path id="maskline" d="${Drev}" fill="none" stroke="#fff" stroke-width="80" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></mask>
+    <mask id="liquid">
+      <g id="liquid-rise">
+        <g id="liquid-ripple">
+          <path d="M -180 40 q 30 -20 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 L 480 300 L -180 300 Z" fill="#fff"/>
+        </g>
+      </g>
+    </mask>
   </defs>
+  <path id="trazo-ghost" d="${trazoD}" fill="#e8f0ff"/>
   ${isoGroup}
 </svg>`;
 
-// Wordmark solo (recortado), con las letras para escalonarlas.
 const wmGroup = logoAnim.match(/<g id="wordmark">[\s\S]*?<\/g>/)[0];
 const wordSvg = `<svg viewBox="330 70 645 150" xmlns="http://www.w3.org/2000/svg" fill="currentColor">${wmGroup}</svg>`;
 ---
 <div id="intro" class="intro-overlay" role="presentation" aria-hidden="true">
-  <div class="intro-glow"></div>
+  <svg class="intro-curtain" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <path id="curtain" d="M 0 0 C 0 33, 0 67, 0 100 L 100 100 L 100 0 Z" fill="#ffffff"></path>
+  </svg>
   <div class="intro-lockup">
     <span class="intro-iso" set:html={isoSvg}></span>
-    <span class="intro-word" set:html={wordSvg}></span>
+    <span class="intro-word-wrap"><span class="intro-word" set:html={wordSvg}></span></span>
   </div>
 </div>
 
@@ -37,67 +43,61 @@ const wordSvg = `<svg viewBox="330 70 645 150" xmlns="http://www.w3.org/2000/svg
   .intro-overlay {
     position: fixed; inset: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
-    background: #ffffff; overflow: hidden;
-    opacity: 1;
-    transition: opacity .8s cubic-bezier(0.55, 0, 1, 0.45), transform .8s cubic-bezier(0.16, 1, 0.3, 1), filter .8s ease-in;
+    background: transparent; overflow: hidden;
   }
-  /* Cierre: destello naranja→azul + zoom/blur al hero */
-  .intro-overlay.intro-out { opacity: 0; transform: scale(1.22) translateY(-3%); filter: blur(14px); }
-
-  .intro-glow {
-    position: absolute; width: 44rem; height: 44rem; border-radius: 9999px;
-    background: radial-gradient(circle, rgba(249,115,22,0), transparent 70%);
-    filter: blur(20px);
-    transition: transform .55s cubic-bezier(0.7,0,0.2,1), background .45s ease;
-  }
-  .intro-out .intro-glow { transform: scale(2.2); background: radial-gradient(circle, rgba(249,115,22,0.5), rgba(37,99,235,0.18) 42%, transparent 74%); }
+  /* Telón: SVG blanco a pantalla completa; su borde izquierdo se transforma en
+     curva y barre hacia la derecha revelando el hero. */
+  .intro-curtain { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  .intro-overlay.intro-out #curtain { animation: sweep .9s cubic-bezier(0.7,0,0.25,1) forwards; }
+  .intro-overlay.intro-out .intro-lockup { animation: lockup-out .62s cubic-bezier(0.7,0,0.3,1) forwards; }
 
   .intro-lockup {
-    position: relative; display: flex; flex-direction: column; align-items: center;
+    position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;
     gap: clamp(.7rem, 1.8vw, 1.2rem);
-    transform: translateY(2px);
   }
-  .intro-out .intro-lockup { transform: scale(1.5) translateY(-14px); transition: transform .55s cubic-bezier(0.7, 0, 0.2, 1); }
 
-  /* ---- Isotipo (arriba) — la animación estrella ---- */
+  /* ---- Isotipo: se llena como líquido + el punto rebota ---- */
   .intro-iso { color: var(--color-ink); display: block; filter: drop-shadow(0 12px 28px rgba(37,99,235,0.16)); }
   .intro-iso :global(svg) { width: clamp(96px, 15vw, 148px); height: auto; display: block; overflow: visible; }
-  .intro-iso :global(#trazo), .intro-iso :global(#punto) { fill: url(#isoGrad); }
-  /* La curva se rellena de derecha a izquierda (sigue al punto que entra por la derecha) */
-  .intro-iso :global(#maskline) { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
-  /* El PUNTO real es la única bola: entra por la derecha, recorre la onda y se postra */
-  .intro-iso :global(#punto) {
-    transform-box: fill-box; transform-origin: center;
-    transform: translate(210px, 6px); opacity: 0;
-    filter: drop-shadow(0 0 12px rgba(249,115,22,.95));
-  }
+  .intro-iso :global(#trazo) { fill: url(#isoGrad); }
+  .intro-iso :global(#punto) { fill: url(#isoGrad); opacity: 0; transform-box: fill-box; transform-origin: center bottom; transform: translateY(-95px); }
 
-  /* ---- Wordmark "curva" (abajo, aparece después) ---- */
-  .intro-word { color: var(--color-ink); display: block; }
+  /* el líquido: sube (rise) mientras su superficie ondula (ripple) */
+  .intro-iso :global(#liquid-rise)   { transform: translateY(192px); }
+  .intro-iso :global(#liquid-ripple) { transform: translateX(0); }
+
+  /* ---- Wordmark "curva": barrido suave ---- */
+  .intro-word-wrap { display: block; }
+  .intro-word { color: var(--color-ink); display: block; clip-path: inset(-10% 102% -10% -2%); opacity: 0; transform: translateY(9px); }
   .intro-word :global(svg) { width: clamp(150px, 26vw, 268px); height: auto; display: block; }
-  .intro-word :global(#wordmark path) { opacity: 0; transform-box: fill-box; transform: translateY(28px); filter: blur(8px); }
 
-  /* ---- Timeline ---- */
-  .intro-play .intro-iso :global(#maskline) { animation: mask-draw 1.05s cubic-bezier(0.45,0,0.2,1) forwards .3s; }
-  .intro-play .intro-iso :global(#punto)    { animation: dot-journey 1.35s cubic-bezier(0.45,0,0.2,1) forwards .3s; }
-  .intro-play .intro-word :global(#letra-c) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.72s; }
-  .intro-play .intro-word :global(#letra-u) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.80s; }
-  .intro-play .intro-word :global(#letra-r) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.88s; }
-  .intro-play .intro-word :global(#letra-v) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.96s; }
-  .intro-play .intro-word :global(#letra-a) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 2.04s; }
+  /* ---- Timeline (entrada) ---- */
+  .intro-play .intro-iso :global(#liquid-rise)   { animation: liquid-rise 1.35s cubic-bezier(0.32,0.5,0.38,1) forwards .2s; }
+  .intro-play .intro-iso :global(#liquid-ripple) { animation: liquid-ripple 1.2s linear infinite; }
+  .intro-play .intro-iso :global(#punto)         { animation: bounce .95s forwards 1.2s; }
+  .intro-play .intro-word                        { animation: word-in .85s cubic-bezier(0.16,1,0.3,1) forwards 2.05s; }
 
-  @keyframes mask-draw { to { stroke-dashoffset: 0; } }
-  /* El punto entra por la derecha (210,6), baja al valle, sube a la cresta y se postra
-     en su lugar (0,0), apagando el glow naranja al asentarse. */
-  @keyframes dot-journey {
-    0%   { opacity: 0; transform: translate(210px, 6px); filter: drop-shadow(0 0 13px rgba(249,115,22,.95)); }
-    7%   { opacity: 1; }
-    34%  { transform: translate(84px, 108px); }
-    64%  { transform: translate(4px, 46px); }
-    82%  { transform: translate(-2px, 34px); }
-    100% { opacity: 1; transform: translate(0px, 0px); filter: drop-shadow(0 0 0 rgba(249,115,22,0)); }
+  @keyframes liquid-rise   { to { transform: translateY(-16px); } }
+  @keyframes liquid-ripple { to { transform: translateX(-120px); } }
+  /* el punto cae y REBOTA (2 botes decrecientes con squash sutil), glow naranja al impactar */
+  @keyframes bounce {
+    0%   { opacity: 0; transform: translateY(-95px) scale(1); filter: drop-shadow(0 0 0 rgba(249,115,22,0)); }
+    12%  { opacity: 1; }
+    40%  { transform: translateY(0) scale(1); filter: drop-shadow(0 0 11px rgba(249,115,22,.85)); }
+    49%  { transform: translateY(0) scale(1.18, .84); }
+    67%  { transform: translateY(-26px) scale(.96, 1.05); }
+    82%  { transform: translateY(0) scale(1.09, .93); }
+    92%  { transform: translateY(-7px) scale(1); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(249,115,22,0)); }
   }
-  @keyframes letter-in { from { opacity: 0; transform: translateY(28px); filter: blur(8px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+  @keyframes word-in { to { clip-path: inset(-10% -2% -10% -2%); opacity: 1; transform: translateY(0); } }
+
+  /* ---- Salida: telón barre a la derecha con borde en curva; el logo lo acompaña ---- */
+  @keyframes sweep {
+    0%   { d: path("M 0 0 C 0 33, 0 67, 0 100 L 100 100 L 100 0 Z"); }
+    100% { d: path("M 120 0 C 100 28, 140 72, 120 100 L 210 100 L 210 0 Z"); }
+  }
+  @keyframes lockup-out { to { transform: translateX(42vw) scale(.9); opacity: 0; } }
 
   @media (prefers-reduced-motion: reduce) { .intro-overlay { display: none; } }
 </style>

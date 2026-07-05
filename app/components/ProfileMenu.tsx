@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, LogOut, Loader2, Settings } from "lucide-react";
+import { Camera, LogOut, Loader2, Settings, FolderOpen } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -82,7 +82,7 @@ export function ProfileMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-line bg-surface shadow-float">
+        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-card border border-line bg-surface shadow-float">
           <div className="flex items-center gap-3 border-b border-line p-4">
             <Avatar member={me} src={photoUrl} size={48} />
             <div className="min-w-0">
@@ -99,6 +99,9 @@ export function ProfileMenu() {
             {uploading ? "Subiendo…" : "Cambiar foto de perfil"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+          <Link href="/recursos" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
+            <FolderOpen size={16} /> Recursos
+          </Link>
           <Link href="/ajustes" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
             <Settings size={16} /> Ajustes
           </Link>

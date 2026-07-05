@@ -4,8 +4,6 @@ import { Pause, Play, Clock } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
-import { Magnetic } from "@/components/anim/Magnetic";
-import { CursorGlow } from "@/components/anim/CursorGlow";
 
 export function NowHero({
   assignedCount,
@@ -22,7 +20,7 @@ export function NowHero({
     focusApp?.tone === "work"
       ? "bg-surface/20 text-white"
       : focusApp?.tone === "distraction"
-        ? "bg-curva-pink/90 text-white"
+        ? "bg-danger/90 text-white"
         : "bg-surface/10 text-white/80";
 
   if (active) {
@@ -33,8 +31,7 @@ export function NowHero({
     // Es el número que crece y nunca reinicia al pausar/reanudar.
     const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(active.taskId) + elapsed;
     return (
-      <div className="grain curva-gradient overflow-hidden rounded-3xl p-6 text-white sm:p-8">
-        <CursorGlow />
+      <div className="curva-gradient overflow-hidden rounded-3xl p-6 text-white sm:p-8">
         <div className="flex items-center gap-2 text-sm font-medium text-white/80">
           <span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" />
           Cronómetro corriendo
@@ -61,16 +58,14 @@ export function NowHero({
           </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Magnetic>
-            <button
-              onClick={stop}
-              className="inline-flex items-center gap-2 rounded-full bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90"
-            >
-              <Pause size={16} fill="currentColor" /> Detener y guardar
-            </button>
-          </Magnetic>
+          <button
+            onClick={stop}
+            className="focus-ring inline-flex items-center gap-2 rounded-control bg-surface px-5 py-2.5 text-sm font-bold text-fg transition hover:bg-surface/90 active:scale-[0.98]"
+          >
+            <Pause size={16} fill="currentColor" /> Detener y guardar
+          </button>
           {focusApp && (
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${focusStyle}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-chip px-3 py-1.5 text-caption font-medium ${focusStyle}`}>
               En foco: {focusApp.label}
               {focusApp.tone === "distraction" && " · ¿distracción?"}
             </span>

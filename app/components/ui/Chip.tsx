@@ -9,7 +9,7 @@ export function Chip({
   return (
     <button
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus-ring active:scale-[0.98]",
+        "inline-flex items-center gap-1.5 rounded-control border px-3 py-1.5 text-sm font-medium transition focus-ring active:scale-[0.98]",
         active
           ? "border-accent bg-accent/10 text-accent"
           : "border-line bg-surface text-muted hover:border-accent hover:text-fg",

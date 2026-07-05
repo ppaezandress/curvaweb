@@ -105,7 +105,7 @@ export default function LoginPage() {
     <main className="grid min-h-screen lg:grid-cols-2">
       {/* Panel de marca */}
       <section className="curva-gradient relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
-        <Logo className="text-3xl" />
+        <Logo mono className="text-3xl text-white" />
         <div className="rise">
           <h1 className="max-w-md font-display text-4xl font-bold leading-tight">Mide el tiempo. <br /> Decide con datos.</h1>
           <p className="mt-4 max-w-sm text-white/80">Tu espacio de tareas, tiempos y cultura — conectado a tu Notion y tu música.</p>

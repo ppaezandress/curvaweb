@@ -6,7 +6,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-chip px-2 py-0.5 text-caption font-medium",
         statusToneClass(status),
         className,
       )}
@@ -31,7 +31,7 @@ export function Badge({
     accent: "bg-accent/10 text-accent",
   };
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", tones[tone], className)}>
+    <span className={cn("inline-flex items-center rounded-chip px-2 py-0.5 text-caption font-medium", tones[tone], className)}>
       {children}
     </span>
   );

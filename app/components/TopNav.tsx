@@ -12,10 +12,10 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 
 export function TopNav() {
   const pathname = usePathname();
-  const { currentUserId } = useApp();
+  const { currentUserId, isAdmin, adminResolved } = useApp();
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
-  const links = navLinks();
+  const links = navLinks({ isAdmin: adminResolved && isAdmin });
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -36,14 +36,14 @@ export function TopNav() {
           <div ref={menuRef} className="relative md:hidden">
             <button
               onClick={() => setOpen((o) => !o)}
-              className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-surface text-fg transition hover:border-accent"
+              className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line bg-surface text-fg transition hover:border-accent"
               aria-label="Menú"
               aria-expanded={open}
             >
               {open ? <X size={18} /> : <Menu size={18} />}
             </button>
             {open && (
-              <nav className="absolute left-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-line bg-surface py-1.5 shadow-float">
+              <nav className="absolute left-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-card border border-line bg-surface py-1.5 shadow-float">
                 {links.map((l) => {
                   const activeLink = l.match(pathname);
                   const Icon = l.icon;
@@ -74,7 +74,7 @@ export function TopNav() {
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`focus-ring inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                  className={`focus-ring inline-flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm font-medium transition ${
                     activeLink
                       ? "bg-ink text-white"
                       : "text-muted hover:bg-surface-2"

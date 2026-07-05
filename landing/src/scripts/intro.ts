@@ -24,8 +24,8 @@ export function initIntro() {
 
   // Cierra en cuanto el wordmark ya se leyó (se recorta el settle final de ~350ms
   // para bajar el LCP en primera visita, sin cortar el dibujo ni el wordmark).
-  const OUT_AT = 2650;   // el punto traza el isotipo y se postra → "curva" → abre
-  const REMOVE_AT = 3450; // + transición de cierre (0.78s)
+  const OUT_AT = 2900;   // el logo se llena (líquido) + el punto rebota → "curva" → barre
+  const REMOVE_AT = 3850; // + barrido del telón en curva (0.9s)
   window.setTimeout(() => {
     overlay.classList.add('intro-out');
     // Avisa al hero que ya se ve → dispara el asentamiento de las líneas.

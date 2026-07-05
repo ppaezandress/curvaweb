@@ -1,18 +1,23 @@
-import { Home, ListTodo, MessageCircle, LineChart, FolderOpen, type LucideIcon } from "lucide-react";
+import { Home, ListTodo, MessageCircle, LineChart, Users, Sparkles, type LucideIcon } from "lucide-react";
 import { PILOT } from "@/lib/pilot-flags";
 
 export type NavLink = { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean };
 
-// Mismo destino para todos: Hoy · Tareas · Mensajes · Análisis. La diferencia por rol
-// vive DENTRO de Análisis: un miembro ve SU data (insights "Yo" + recap + rachas + momentos);
-// un admin ve la del equipo (toggle "Equipo", reportes, dashboard de equipo).
-export function navLinks(): NavLink[] {
+// UN solo modelo de navegación, con nombres coherentes (el mismo lugar = el mismo
+// nombre en nav, sub-tab y título). "Equipo" solo aparece para admins; Recursos y
+// Ajustes viven en el menú del avatar (destinos ligeros/ocasionales).
+export function navLinks({ isAdmin = false }: { isAdmin?: boolean } = {}): NavLink[] {
   const links: NavLink[] = [
     { href: "/dashboard", label: "Hoy", icon: Home, match: (p) => p === "/dashboard" },
     { href: "/tareas", label: "Tareas", icon: ListTodo, match: (p) => p === "/tareas" || p === "/timesheet" },
-    { href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" },
-    { href: "/insights", label: "Análisis", icon: LineChart, match: (p) => ["/insights", "/reportes", "/rachas", "/recap", "/equipo", "/momentos"].includes(p) },
-    { href: "/recursos", label: "Recursos", icon: FolderOpen, match: (p) => p === "/recursos" },
   ];
-  return links.filter((l) => PILOT.messages || l.href !== "/mensajes");
+  if (PILOT.messages) {
+    links.push({ href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" });
+  }
+  links.push({ href: "/insights", label: "Análisis", icon: LineChart, match: (p) => p === "/insights" });
+  if (isAdmin) {
+    links.push({ href: "/equipo", label: "Equipo", icon: Users, match: (p) => p === "/equipo" });
+  }
+  links.push({ href: "/momentos", label: "Momentos", icon: Sparkles, match: (p) => p === "/momentos" });
+  return links;
 }
