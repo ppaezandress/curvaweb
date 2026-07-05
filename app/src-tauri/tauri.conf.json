@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CURVA Tiempos",
+  "productName": "team tac",
   "version": "0.1.0",
   "identifier": "vc.curva.tiempos",
   "build": {
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "CURVA Tiempos",
+        "title": "team tac",
         "width": 460,
         "height": 820,
         "minWidth": 380,

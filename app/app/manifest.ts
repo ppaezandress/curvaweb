@@ -5,14 +5,14 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "CURVA · Tiempos",
-    short_name: "CURVA Tiempos",
+    name: "team tac",
+    short_name: "team tac",
     description:
-      "Mide el tiempo del equipo de CURVA, por tarea, persona y proyecto.",
+      "El tiempo del equipo, un tac a la vez — por tarea, persona y proyecto.",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#0b0b14",
-    theme_color: "#7c3aed",
+    theme_color: "#6C47F5",
     lang: "es",
     icons: [
       {

@@ -30,7 +30,7 @@ export function DesktopBridge() {
     const total = active
       ? (taskById[active.taskId]?.baselineSeconds ?? 0) + sessionSecondsForTask(active.taskId) + elapsed
       : 0;
-    const title = active ? `▶ ${formatClock(total)}` : "⏱ CURVA";
+    const title = active ? `▶ ${formatClock(total)}` : "⏱ team tac";
     if (title === lastTitle.current) return;
     lastTitle.current = title;
     import("@tauri-apps/api/core")

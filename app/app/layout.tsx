@@ -21,9 +21,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "CURVA · Tiempos",
+  title: "team tac",
   description:
-    "Medición de tiempos del equipo de CURVA — registra cuánto toma cada tarea, por persona y por proyecto.",
+    "El tiempo del equipo, un tac a la vez — registra cuánto toma cada tarea, por persona y por proyecto.",
 };
 
 // Aplica el tema ANTES del primer paint (evita flash de tema claro al recargar

@@ -1,14 +1,9 @@
-export function Logo({
-  className = "",
-  withDot = true,
-}: {
-  className?: string;
-  withDot?: boolean;
-}) {
+export function Logo({ className = "" }: { className?: string }) {
+  // "team tac" — las dos t iniciales en degradado = los dos tiempos, tic y tac.
   return (
     <span className={`font-brand font-bold tracking-tight lowercase ${className}`}>
-      curva
-      {withDot && <span className="curva-gradient-text">.</span>}
+      <span className="curva-gradient-text">t</span>eam{" "}
+      <span className="curva-gradient-text">t</span>ac
     </span>
   );
 }
