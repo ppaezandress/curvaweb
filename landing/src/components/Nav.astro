@@ -1,6 +1,7 @@
 ---
 import { frentes } from '../data/consultoria';
 import { soluciones } from '../data/soluciones';
+import logoSvg from '../svg/curva-logo.svg?raw';
 
 interface Props {
   overHero?: boolean;
@@ -36,9 +37,8 @@ const destinos = [
 
 <div id="site-nav" class="nav-bar fixed top-0 inset-x-0 z-50 px-3 sm:px-4 pt-3" data-over-hero={overHero ? '' : undefined}>
   <nav class="nav-inner mx-auto max-w-6xl flex items-center justify-between rounded-2xl pl-5 pr-2.5 py-2.5" aria-label="Principal">
-    <a href="/" class="nav-logo display text-xl font-semibold tracking-tight flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#7c3aed"></stop><stop offset="0.5" stop-color="#3b82f6"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
-      curva
+    <a href="/" class="nav-logo flex items-center" aria-label="curva — Inicio">
+      <span class="nav-logo-svg" set:html={logoSvg}></span>
     </a>
 
     <div class="flex items-center gap-1.5">
@@ -72,9 +72,8 @@ const destinos = [
 
   <div class="cmenu-frame">
     <div class="cmenu-top">
-      <a href="/" class="cmenu-logo display" data-cmenu-link>
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#nv2)" stroke-width="2.5" stroke-linecap="round"></path><defs><linearGradient id="nv2" x1="2" y1="0" x2="22" y2="0"><stop stop-color="#a78bfa"></stop><stop offset="0.5" stop-color="#60a5fa"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
-        curva
+      <a href="/" class="cmenu-logo" data-cmenu-link aria-label="curva — Inicio">
+        <span class="cmenu-logo-svg" set:html={logoSvg}></span>
       </a>
       <button data-cmenu-close class="cmenu-close" aria-label="Cerrar menú">
         <span>Cerrar</span>
@@ -154,6 +153,10 @@ const destinos = [
     border: 1px solid rgba(255, 255, 255, 0.10);
   }
   .nav-bar .nav-logo { color: #fff; }
+  .nav-logo-svg { display: block; }
+  .nav-logo-svg :global(svg) { height: 1.35rem; width: auto; display: block; }
+  .cmenu-logo { color: #fff; display: inline-flex; align-items: center; }
+  .cmenu-logo-svg :global(svg) { height: 1.5rem; width: auto; display: block; }
   .nav-bar .nav-cta { background: #fff; color: var(--color-ink); }
   .nav-bar .nav-cta:hover { background: rgba(255, 255, 255, 0.88); }
 

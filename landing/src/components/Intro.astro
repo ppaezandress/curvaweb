@@ -1,28 +1,35 @@
 ---
-// Cortinilla espectacular: el logo de CURVA se dibuja solo — la curva se traza
-// con un "cometa" naranja recorriéndola, luego aparece el wordmark, y el telón
-// se abre revelando el hero. Solo 1ª visita de sesión; respeta reduced-motion.
-// Timeline orquestada con CSS; scripts/intro.ts controla el gating y el cierre.
+// Cortinilla: fondo BLANCO. Primero aparece el ISOTIPO arriba — una bolita
+// NARANJA recorre la onda llenándola de AZUL (y cae el punto). Después aparece
+// la palabra "curva" abajo. Luego abre el telón. 1ª visita/sesión; reduced-motion ok.
+import logoAnim from '../svg/curva-logo-anim.svg?raw';
+
+// Línea central de la onda, INVERTIDA (empieza en la punta derecha) para que el
+// relleno se dibuje de DERECHA a IZQUIERDA, siguiendo al punto que entra por la derecha.
+const Drev = 'M 306 80 C 258 122, 226 190, 196 170 C 168 152, 140 96, 112 108 C 90 120, 66 170, 52 210';
+
+// Isotipo solo (recortado), con máscara de "dibujado".
+const isoGroup = logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)[0].replace('id="trazo"', 'id="trazo" mask="url(#trazomask)"');
+const isoSvg = `<svg viewBox="26 22 316 212" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+  <defs>
+    <linearGradient id="isoGrad" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1d4ed8"/><stop offset="0.5" stop-color="#2563eb"/><stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <radialGradient id="ballGrad"><stop offset="0" stop-color="#fff5ec"/><stop offset="0.5" stop-color="#fb923c"/><stop offset="1" stop-color="#f97316"/></radialGradient>
+    <mask id="trazomask"><path id="maskline" d="${Drev}" fill="none" stroke="#fff" stroke-width="80" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></mask>
+  </defs>
+  ${isoGroup}
+</svg>`;
+
+// Wordmark solo (recortado), con las letras para escalonarlas.
+const wmGroup = logoAnim.match(/<g id="wordmark">[\s\S]*?<\/g>/)[0];
+const wordSvg = `<svg viewBox="330 70 645 150" xmlns="http://www.w3.org/2000/svg" fill="currentColor">${wmGroup}</svg>`;
 ---
 <div id="intro" class="intro-overlay" role="presentation" aria-hidden="true">
   <div class="intro-glow"></div>
   <div class="intro-lockup">
-    <svg class="intro-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="intro-grad" x1="2" y1="0" x2="22" y2="0" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#2563eb"></stop>
-          <stop offset="0.5" stop-color="#3b82f6"></stop>
-          <stop offset="1" stop-color="#38bdf8"></stop>
-        </linearGradient>
-      </defs>
-      <!-- riel tenue -->
-      <path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#e2e8f0" stroke-width="2.2" stroke-linecap="round"></path>
-      <!-- trazo firma que se dibuja -->
-      <path class="intro-draw" d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="url(#intro-grad)" stroke-width="2.5" stroke-linecap="round" pathLength="1"></path>
-      <!-- cometa naranja que recorre la curva -->
-      <path class="intro-comet" d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#f97316" stroke-width="2.6" stroke-linecap="round" pathLength="1"></path>
-    </svg>
-    <div class="intro-word-wrap"><span class="intro-word display">curva</span></div>
+    <span class="intro-iso" set:html={isoSvg}></span>
+    <span class="intro-word" set:html={wordSvg}></span>
   </div>
 </div>
 
@@ -30,55 +37,67 @@
   .intro-overlay {
     position: fixed; inset: 0; z-index: 9999;
     display: flex; align-items: center; justify-content: center;
-    background: #f8fafc;
+    background: #ffffff; overflow: hidden;
     opacity: 1;
-    transition: opacity .78s cubic-bezier(0.55, 0, 1, 0.45), transform .78s cubic-bezier(0.16, 1, 0.3, 1), filter .78s ease-in;
+    transition: opacity .8s cubic-bezier(0.55, 0, 1, 0.45), transform .8s cubic-bezier(0.16, 1, 0.3, 1), filter .8s ease-in;
   }
-  /* Cierre impactante: destello naranja + el logo se lanza al frente + zoom/blur/lift al hero */
-  .intro-overlay.intro-out { opacity: 0; transform: scale(1.18) translateY(-3%); filter: blur(12px); }
+  /* Cierre: destello naranja→azul + zoom/blur al hero */
+  .intro-overlay.intro-out { opacity: 0; transform: scale(1.22) translateY(-3%); filter: blur(14px); }
+
   .intro-glow {
-    position: absolute; width: 42rem; height: 42rem; border-radius: 9999px;
-    background: radial-gradient(circle, rgba(37,99,235,0.12), transparent 70%);
+    position: absolute; width: 44rem; height: 44rem; border-radius: 9999px;
+    background: radial-gradient(circle, rgba(249,115,22,0), transparent 70%);
     filter: blur(20px);
-    transition: transform .55s cubic-bezier(0.7,0,0.2,1), background .45s ease, opacity .55s ease;
+    transition: transform .55s cubic-bezier(0.7,0,0.2,1), background .45s ease;
   }
-  .intro-out .intro-glow {
-    transform: scale(2.1);
-    background: radial-gradient(circle, rgba(249,115,22,0.52), rgba(37,99,235,0.18) 42%, transparent 74%);
-  }
+  .intro-out .intro-glow { transform: scale(2.2); background: radial-gradient(circle, rgba(249,115,22,0.5), rgba(37,99,235,0.18) 42%, transparent 74%); }
+
   .intro-lockup {
-    position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.1rem;
-    transform: translateY(4px);
-    transition: transform .55s cubic-bezier(0.7, 0, 0.2, 1);
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    gap: clamp(.7rem, 1.8vw, 1.2rem);
+    transform: translateY(2px);
   }
-  .intro-out .intro-lockup { animation: none; transform: scale(1.52) translateY(-16px); }
-  .intro-mark { width: clamp(88px, 16vw, 132px); height: auto; overflow: visible; filter: drop-shadow(0 8px 22px rgba(37,99,235,0.28)); }
+  .intro-out .intro-lockup { transform: scale(1.5) translateY(-14px); transition: transform .55s cubic-bezier(0.7, 0, 0.2, 1); }
 
-  .intro-draw  { stroke-dasharray: 1; stroke-dashoffset: 1; }
-  .intro-comet { stroke-dasharray: 0.07 0.93; stroke-dashoffset: 1.07; opacity: 0; filter: drop-shadow(0 0 6px rgba(249,115,22,0.9)); }
-
-  .intro-word-wrap { overflow: hidden; padding: 0 .1em; }
-  .intro-word {
-    display: inline-block; font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 700;
-    letter-spacing: -0.02em; color: var(--color-ink);
-    transform: translateY(110%);
+  /* ---- Isotipo (arriba) — la animación estrella ---- */
+  .intro-iso { color: var(--color-ink); display: block; filter: drop-shadow(0 12px 28px rgba(37,99,235,0.16)); }
+  .intro-iso :global(svg) { width: clamp(96px, 15vw, 148px); height: auto; display: block; overflow: visible; }
+  .intro-iso :global(#trazo), .intro-iso :global(#punto) { fill: url(#isoGrad); }
+  /* La curva se rellena de derecha a izquierda (sigue al punto que entra por la derecha) */
+  .intro-iso :global(#maskline) { stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+  /* El PUNTO real es la única bola: entra por la derecha, recorre la onda y se postra */
+  .intro-iso :global(#punto) {
+    transform-box: fill-box; transform-origin: center;
+    transform: translate(210px, 6px); opacity: 0;
+    filter: drop-shadow(0 0 12px rgba(249,115,22,.95));
   }
 
-  /* Timeline al reproducir */
-  .intro-play .intro-draw  { animation: intro-draw 1.05s cubic-bezier(0.65,0,0.35,1) forwards .15s; }
-  .intro-play .intro-comet { animation: intro-comet 1.05s cubic-bezier(0.65,0,0.35,1) forwards .15s; }
-  .intro-play .intro-word  { animation: intro-word 0.75s cubic-bezier(0.16,1,0.3,1) forwards .95s; }
-  .intro-play .intro-lockup { animation: intro-settle 0.7s cubic-bezier(0.16,1,0.3,1) forwards 1.25s; }
+  /* ---- Wordmark "curva" (abajo, aparece después) ---- */
+  .intro-word { color: var(--color-ink); display: block; }
+  .intro-word :global(svg) { width: clamp(150px, 26vw, 268px); height: auto; display: block; }
+  .intro-word :global(#wordmark path) { opacity: 0; transform-box: fill-box; transform: translateY(28px); filter: blur(8px); }
 
-  @keyframes intro-draw  { to { stroke-dashoffset: 0; } }
-  @keyframes intro-comet {
-    0% { stroke-dashoffset: 1.07; opacity: 0; }
-    12% { opacity: 1; }
-    88% { opacity: 1; }
-    100% { stroke-dashoffset: 0.07; opacity: 0; }
+  /* ---- Timeline ---- */
+  .intro-play .intro-iso :global(#maskline) { animation: mask-draw 1.05s cubic-bezier(0.45,0,0.2,1) forwards .3s; }
+  .intro-play .intro-iso :global(#punto)    { animation: dot-journey 1.35s cubic-bezier(0.45,0,0.2,1) forwards .3s; }
+  .intro-play .intro-word :global(#letra-c) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.72s; }
+  .intro-play .intro-word :global(#letra-u) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.80s; }
+  .intro-play .intro-word :global(#letra-r) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.88s; }
+  .intro-play .intro-word :global(#letra-v) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 1.96s; }
+  .intro-play .intro-word :global(#letra-a) { animation: letter-in .5s cubic-bezier(0.16,1,0.3,1) both 2.04s; }
+
+  @keyframes mask-draw { to { stroke-dashoffset: 0; } }
+  /* El punto entra por la derecha (210,6), baja al valle, sube a la cresta y se postra
+     en su lugar (0,0), apagando el glow naranja al asentarse. */
+  @keyframes dot-journey {
+    0%   { opacity: 0; transform: translate(210px, 6px); filter: drop-shadow(0 0 13px rgba(249,115,22,.95)); }
+    7%   { opacity: 1; }
+    34%  { transform: translate(84px, 108px); }
+    64%  { transform: translate(4px, 46px); }
+    82%  { transform: translate(-2px, 34px); }
+    100% { opacity: 1; transform: translate(0px, 0px); filter: drop-shadow(0 0 0 rgba(249,115,22,0)); }
   }
-  @keyframes intro-word   { to { transform: translateY(0); } }
-  @keyframes intro-settle { to { transform: translateY(-2px) scale(1.02); } }
+  @keyframes letter-in { from { opacity: 0; transform: translateY(28px); filter: blur(8px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
 
   @media (prefers-reduced-motion: reduce) { .intro-overlay { display: none; } }
 </style>

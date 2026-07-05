@@ -729,6 +729,40 @@ body {
 .hero-plus { color: var(--color-jade); font-weight: 800; }
 .hero-minus { color: rgba(255, 255, 255, 0.7); font-weight: 300; }
 .hero-faint { color: rgba(255, 255, 255, 0.52); font-weight: 300; letter-spacing: -0.01em; }
+/* "empresa" en degradado (mismo lenguaje que la palabra gigante del menú). */
+.hero-grad {
+  background: linear-gradient(100deg, #c4b5fd 0%, #93c5fd 44%, #38bdf8 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+/* "tu": itálica ligera — acento sereno contra el bold de "Construye"/"empresa". */
+.hero-tu {
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.82em;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.94);
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.94);
+  padding: 0 0.12em 0 0.02em;
+}
+
+/* "empresa": blanca + la curva firma que se DIBUJA sola al cargar (marca). */
+.hero-empresa { position: relative; display: inline-block; }
+.hero-underline {
+  position: absolute; left: -0.01em; right: -0.03em; bottom: -0.14em;
+  width: 104%; height: 0.3em; overflow: visible;
+  filter: drop-shadow(0 2px 12px rgba(56, 189, 248, 0.45));
+}
+/* linecap butt: sin remate redondo → la línea "escondida" no deja un puntito
+   en la punta (era el destello raro antes de arrancar el dibujo). */
+.hero-underline path { stroke-linecap: butt; stroke-dasharray: 1; stroke-dashoffset: 1; }
+/* Se dibuja cuando la cortinilla YA se abrió (la intro pone data-intro-seen en
+   <html> al terminar). Sin retardo: arranca justo al revelarse, sin pausa. */
+:root[data-intro-seen] .hero-underline path { animation: hero-underdraw 1.2s var(--ease-pitch) both; }
+@keyframes hero-underdraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-underline path { animation: none !important; stroke-dashoffset: 0 !important; }
+}
 .hero-ask-box {
   box-shadow: 0 24px 64px -28px rgba(15, 30, 61, 0.28), 0 2px 8px -2px rgba(15, 30, 61, 0.08);
 }
