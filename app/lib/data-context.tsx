@@ -16,6 +16,7 @@ import {
   tasks as mockTasks,
   taskTypes as mockTaskTypes,
 } from "@/lib/mock-data";
+import { supabaseConfigured } from "@/lib/supabase/client";
 
 type Data = {
   members: Member[];
@@ -52,6 +53,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [source, setSource] = useState("");
 
   const load = useCallback(() => {
+    // Modo demo (sin Supabase): no hay a quién pedirle datos — /api/data respondería
+    // 401 y dejaría el picker vacío. Usamos el respaldo local directo para que la app
+    // sea navegable (demo y QA visual) sin backend.
+    if (!supabaseConfigured()) {
+      setData({
+        members: mockMembers,
+        clients: mockClients,
+        projects: mockProjects,
+        tasks: mockTasks,
+        taskTypes: mockTaskTypes,
+      });
+      setSource("mock-local");
+      setReady(true);
+      return;
+    }
     // Timeout: si /api/data se cuelga (red lenta, Notion sin responder), no dejamos
     // la app en "Cargando…" para siempre — caemos a respaldo local y seguimos.
     const ctrl = new AbortController();
