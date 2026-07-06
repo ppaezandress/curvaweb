@@ -8,13 +8,11 @@ export function Bars({
   items,
   showCost,
   icon,
-  gradient,
   showAvg,
 }: {
   items: { key: string; label: string; minutes: number; cost: number; count?: number; color?: string }[];
   showCost: boolean;
   icon?: boolean;
-  gradient?: boolean;
   showAvg?: boolean;
 }) {
   const max = Math.max(...items.map((i) => i.minutes), 1);
@@ -37,7 +35,7 @@ export function Bars({
             </span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
-            <div className={`h-full rounded-full ${gradient ? "curva-gradient" : ""}`} style={{ width: `${(r.minutes / max) * 100}%`, background: gradient ? undefined : r.color || "var(--color-accent)" }} />
+            <div className="h-full rounded-full" style={{ width: `${(r.minutes / max) * 100}%`, background: r.color || "var(--color-accent)" }} />
           </div>
           {showAvg && (r.count ?? 0) > 0 && (
             <p className="mt-1 text-caption text-muted">
