@@ -5,7 +5,7 @@ import { Globe } from "lucide-react";
 // Identidad propia de los "Espacios" (en vez del "#" de Slack): el espacio del equipo
 // es un orbe con gradiente de CURVA; los demás son cuadros de color con su inicial,
 // con color estable derivado del nombre. Los Directos usan el avatar de la persona.
-const SPACE_COLORS = ["#10b981", "#3b82f6", "#7c3aed", "#6366f1", "#ec4899", "#f59e0b"];
+const SPACE_COLORS = ["var(--color-curva-teal)", "var(--color-curva-blue)", "var(--color-curva-purple)", "var(--color-curva-indigo)", "var(--color-curva-pink)"];
 
 function colorFor(s: string): string {
   let h = 0;

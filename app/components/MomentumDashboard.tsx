@@ -80,9 +80,8 @@ export function MomentumDashboard() {
           <svg width="150" height="150" className="-rotate-90">
             <defs>
               <linearGradient id="momentumGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#7c3aed" />
-                <stop offset="55%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#10b981" />
+                <stop offset="0" stopColor="color-mix(in srgb, var(--accent) 55%, white)" />
+                <stop offset="1" stopColor="var(--accent)" />
               </linearGradient>
             </defs>
             <circle cx="75" cy="75" r={R} fill="none" stroke="var(--surface-2)" strokeWidth="12" />

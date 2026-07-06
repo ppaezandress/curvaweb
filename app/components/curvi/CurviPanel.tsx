@@ -73,7 +73,7 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
   if (compact && !expanded) {
     return (
       <div className="flex items-center gap-3 rounded-card border border-accent/25 bg-surface px-4 py-2.5 shadow-soft">
-        <span className="curva-gradient breathe inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-white"><Sparkles size={15} /></span>
+        <span className="curva-gradient inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-white"><Sparkles size={15} /></span>
         <div className="min-w-0 flex-1">
           {top ? (
             <p className="truncate text-sm text-fg"><span className="font-semibold">Curvi:</span> {top.title.replace(/:.*/, "")} — {top.title.split(": ").slice(1).join(": ")} <span className="text-muted">· {top.reason.toLowerCase()}</span></p>
@@ -93,7 +93,7 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
   return (
     <section className="overflow-hidden rounded-hero border border-accent/25 bg-surface shadow-soft">
       <div className="flex items-center gap-3 border-b border-line/70 px-5 py-4">
-        <span className="curva-gradient breathe inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-card text-white shadow-sm"><Sparkles size={18} /></span>
+        <span className="curva-gradient inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-card text-white shadow-sm"><Sparkles size={18} /></span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 font-bold text-fg">
             <span className="font-brand text-[1.1rem] font-semibold">Curvi</span>
