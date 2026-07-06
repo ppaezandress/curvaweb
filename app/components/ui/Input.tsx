@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 
 /** Clases base del input — reutilizables por cualquier control tipo texto. */
 export const inputBase =
-  "w-full rounded-control border border-line bg-surface px-3 py-2.5 text-body text-fg placeholder:text-muted/70 transition focus-ring focus:border-accent disabled:opacity-50";
+  "w-full rounded-control border border-line bg-surface px-3 py-2.5 text-body text-fg placeholder:text-muted transition focus-ring focus:border-accent disabled:opacity-50";
 
 /** Input de texto. Soporta un ícono a la izquierda. */
 export function Input({

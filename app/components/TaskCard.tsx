@@ -98,8 +98,8 @@ export function TaskCard({ task }: { task: Task }) {
     const days = Math.round((ms - today0) / 86_400_000);
     const label = dueDateLabel(task.dueDate);
     const short = days < 0 ? `Venció ${label}` : days === 0 ? "Hoy" : days === 1 ? "Mañana" : label;
-    const tone = days < 0 ? "bg-rose-500/10 text-rose-500"
-      : days === 0 ? "bg-amber-500/10 text-amber-600"
+    const tone = days < 0 ? "bg-danger/10 text-danger"
+      : days === 0 ? "bg-warn/10 text-warn"
       : days <= 7 ? "bg-accent/10 text-accent"
       : "bg-surface-2 text-muted";
     return { label, short, tone };
@@ -107,17 +107,17 @@ export function TaskCard({ task }: { task: Task }) {
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-2xl border bg-surface p-4 transition ${
+      className={`flex items-center gap-4 rounded-card border p-4 transition ${
         isRunning
-          ? "border-accent shadow-lg shadow-accent/10"
+          ? "border-accent bg-accent/[0.04]"
           : onAI
-            ? "border-curva-indigo shadow-lg shadow-curva-indigo/10"
-            : "border-line hover:border-muted/40"
+            ? "border-accent ai-surface"
+            : "border-line bg-surface hover:border-muted/40"
       } ${autoResumed === task.id ? "curva-handoff" : ""}`}
     >
       {/* Ícono de tipo */}
       <span
-        className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white sm:flex"
+        className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-control text-white sm:flex"
         style={{ background: type?.color }}
       >
         <TypeIcon typeId={task.typeId} size={20} />
@@ -129,10 +129,10 @@ export function TaskCard({ task }: { task: Task }) {
           <span className="text-xs font-semibold text-muted">{type?.label}</span>
           <StatusPicker taskId={task.id} status={task.status} onChanged={reload} />
           {task.internal && (
-            <span className="rounded-full bg-curva-teal/10 px-2 py-0.5 text-[11px] font-semibold text-curva-teal">Interno</span>
+            <span className="rounded-full bg-success/10 px-2 py-0.5 text-caption font-semibold text-success">Interno</span>
           )}
           {task.weight && (
-            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">{task.weight}</span>
+            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-caption font-medium text-muted">{task.weight}</span>
           )}
         </div>
         <button onClick={() => setShowDetail(true)} className="block max-w-full truncate text-left font-display font-semibold text-fg transition hover:text-accent focus-ring rounded" title="Ver detalle e historial">{task.name}</button>
@@ -145,17 +145,17 @@ export function TaskCard({ task }: { task: Task }) {
             <Clock size={13} /> {formatDuration(total)}
           </span>
           {due && !done && (
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${due.tone}`} title={`Vence ${due.label}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${due.tone}`} title={`Vence ${due.label}`}>
               <CalendarClock size={11} /> {due.short}
             </span>
           )}
           {onAI ? (
-            <span className="ai-shimmer inline-flex items-center gap-1 rounded-full bg-curva-indigo/10 px-2 py-0.5 text-[11px] font-semibold text-curva-indigo">
+            <span className="ai-shimmer inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-caption font-semibold text-accent">
               <Sparkles size={11} className="curva-live-dot" /> IA · {formatClock(elapsed)}
             </span>
           ) : (
             isOpen && !isRunning && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-caption font-medium text-accent">
                 <Layers size={11} /> en pausa
               </span>
             )
@@ -188,7 +188,7 @@ export function TaskCard({ task }: { task: Task }) {
           <button
             onClick={markDone}
             disabled={marking}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-semibold text-muted transition hover:border-emerald-500 hover:text-emerald-500 disabled:opacity-40 focus-ring"
+            className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-sm font-semibold text-muted transition hover:border-success hover:text-success disabled:opacity-40 focus-ring"
             aria-label="Terminar tarea"
             title="Terminar (marcar como Done)"
           >
@@ -228,8 +228,8 @@ export function TaskCard({ task }: { task: Task }) {
             onClick={() => toggleAI(task.id)}
             className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition focus-ring ${
               onAI
-                ? "border-curva-indigo bg-curva-indigo text-white shadow-sm shadow-curva-indigo/20"
-                : "border-line bg-surface text-muted hover:border-curva-indigo hover:text-curva-indigo"
+                ? "border-accent bg-accent text-white shadow-sm shadow-accent/20"
+                : "border-line bg-surface text-muted hover:border-accent hover:text-accent"
             }`}
             aria-label={onAI ? "Detener IA" : "Pasar a la IA"}
             title={onAI ? "La IA está trabajando — toca para detener" : "Pásala a la IA y sigue a mano con la siguiente"}

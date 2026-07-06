@@ -22,10 +22,10 @@ export function AchievementsStrip() {
   if (reactions.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+    <section className="rounded-card border border-line bg-surface p-5 shadow-soft">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold text-fg">
-          <Trophy size={18} className="text-amber-500" /> Logros recientes
+          <Trophy size={18} className="text-warn" /> Logros recientes
         </h2>
         <Link href="/recap" className="inline-flex items-center gap-1 text-sm font-medium text-accent">
           Ver muro <ArrowRight size={14} />
@@ -34,7 +34,7 @@ export function AchievementsStrip() {
       <div className="flex gap-3 overflow-x-auto pb-1">
         {items.map(({ r, url }) => (
           <div key={r.id} className="w-28 shrink-0">
-            <div className="relative h-28 w-28 overflow-hidden rounded-2xl border border-line">
+            <div className="relative h-28 w-28 overflow-hidden rounded-card border border-line">
               {url ? (
                 <img src={url} alt="logro" className="h-full w-full object-cover" />
               ) : (

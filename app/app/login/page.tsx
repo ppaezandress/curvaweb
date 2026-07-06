@@ -123,8 +123,8 @@ export default function LoginPage() {
           ) : welcomeMode && remembered ? (
             // ----- Bienvenido de nuevo: solo contraseña -----
             <>
-              <h2 className="font-display text-2xl font-bold text-fg">Hola de nuevo 👋</h2>
-              <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-soft">
+              <h2 className="font-display text-2xl font-bold text-fg">Hola de nuevo</h2>
+              <div className="mt-5 flex items-center gap-3 rounded-card border border-line bg-surface p-3 shadow-soft">
                 <Avatar name={remembered.name || remembered.email} size={44} />
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-fg">{remembered.name || remembered.email}</p>
@@ -134,10 +134,10 @@ export default function LoginPage() {
               <div className="mt-4 space-y-3">
                 <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
                 {err && <p className="text-sm text-danger">{err}</p>}
-                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-card bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} Entrar
                 </button>
-                <button onClick={() => { setWelcomeMode(false); setRemembered(null); setPassword(""); setErr(""); }} className="w-full text-center text-xs text-muted transition hover:text-curva-pink">
+                <button onClick={() => { setWelcomeMode(false); setRemembered(null); setPassword(""); setErr(""); }} className="w-full text-center text-xs text-muted transition hover:text-accent">
                   No soy {(remembered.name || remembered.email).split(/[\s@]/)[0]} · usar otra cuenta
                 </button>
               </div>
@@ -152,10 +152,10 @@ export default function LoginPage() {
                 <Input icon={<AtSign size={16} />} value={email} onChange={setEmail} placeholder="Tu correo" type="email" />
                 <PasswordInput value={password} onChange={setPassword} show={showPw} toggle={() => setShowPw((s) => !s)} onEnter={signIn} />
                 {err && <p className="text-sm text-danger">{err}</p>}
-                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+                <button onClick={signIn} disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-card bg-accent px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
                   {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />} Entrar
                 </button>
-                <p className="text-center text-[11px] text-muted">Primera vez con tu correo → se crea tu cuenta automáticamente.</p>
+                <p className="text-center text-caption text-muted">Primera vez con tu correo → se crea tu cuenta automáticamente.</p>
               </div>
             </>
           )}
@@ -176,7 +176,7 @@ function Picker({ title, subtitle, list, onPick }: { title: string; subtitle: st
 }
 function PickRow({ m, onClick }: { m: { name: string; role?: string; color: string; short: string }; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface p-3 text-left transition hover:border-accent hover:shadow-sm">
+    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-card border border-line bg-surface p-3 text-left transition hover:border-accent hover:shadow-sm">
       {/* @ts-expect-error member shape compatible */}
       <Avatar member={m} size={42} />
       <span className="min-w-0"><span className="block font-semibold text-fg">{m.name}</span>{m.role && <span className="block truncate text-xs text-muted">{m.role}</span>}</span>
@@ -188,7 +188,7 @@ function Input({ icon, value, onChange, placeholder, type = "text" }: { icon: Re
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{icon}</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} type={type} aria-label={placeholder}
-        className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent" />
+        className="w-full rounded-card border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent" />
     </div>
   );
 }
@@ -198,7 +198,7 @@ function PasswordInput({ value, onChange, show, toggle, onEnter }: { value: stri
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"><Lock size={16} /></span>
       <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
         type={show ? "text" : "password"} placeholder="Contraseña" autoFocus aria-label="Contraseña"
-        className="w-full rounded-2xl border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none transition focus:border-accent" />
+        className="w-full rounded-card border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none transition focus:border-accent" />
       <button type="button" onClick={toggle} aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-fg">
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>

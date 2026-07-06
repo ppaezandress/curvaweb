@@ -90,14 +90,16 @@ export function computeStreak(days: Set<DayKey>, shields = 2): StreakResult {
   return { current, shieldsUsed: usedShields, longest, activeDays };
 }
 
-// Medallas por días de racha.
-export const STREAK_BADGES = [
-  { days: 3, label: "Arranque", emoji: "🌱" },
-  { days: 7, label: "Una semana", emoji: "🔥" },
-  { days: 14, label: "Constante", emoji: "⚡" },
-  { days: 30, label: "Imparable", emoji: "🚀" },
-  { days: 50, label: "Leyenda", emoji: "💎" },
-  { days: 100, label: "Centurión", emoji: "👑" },
+// Medallas por días de racha (iconografía Lucide, no emoji).
+import { Sprout, Flame, Zap, Rocket, Gem, Crown, type LucideIcon } from "lucide-react";
+
+export const STREAK_BADGES: { days: number; label: string; icon: LucideIcon }[] = [
+  { days: 3, label: "Arranque", icon: Sprout },
+  { days: 7, label: "Una semana", icon: Flame },
+  { days: 14, label: "Constante", icon: Zap },
+  { days: 30, label: "Imparable", icon: Rocket },
+  { days: 50, label: "Leyenda", icon: Gem },
+  { days: 100, label: "Centurión", icon: Crown },
 ];
 
 export function badgeFor(streak: number) {

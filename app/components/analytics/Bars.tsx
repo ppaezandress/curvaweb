@@ -33,16 +33,16 @@ export function Bars({
             </span>
             <span className="shrink-0 text-muted">
               <span className="tabular font-semibold text-fg">{formatHours(r.minutes * 60)}</span>
-              {showCost && <span className="tabular ml-2 text-curva-teal">{money(r.cost)}</span>}
+              {showCost && <span className="tabular ml-2 text-success">{money(r.cost)}</span>}
             </span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
             <div className={`h-full rounded-full ${gradient ? "curva-gradient" : ""}`} style={{ width: `${(r.minutes / max) * 100}%`, background: gradient ? undefined : r.color || "var(--color-accent)" }} />
           </div>
           {showAvg && (r.count ?? 0) > 0 && (
-            <p className="mt-1 text-[11px] text-muted">
+            <p className="mt-1 text-caption text-muted">
               ~<span className="font-semibold text-fg">{formatHours((r.minutes / r.count!) * 60)}</span> por entregable
-              {showCost && <> · <span className="text-curva-teal">{money(r.cost / r.count!)}</span></>}
+              {showCost && <> · <span className="text-success">{money(r.cost / r.count!)}</span></>}
               <span className="ml-1">({r.count} {r.count === 1 ? "tarea" : "tareas"})</span>
             </p>
           )}

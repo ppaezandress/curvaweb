@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -50,7 +51,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [source, setSource] = useState("");
 
-  const load = () => {
+  const load = useCallback(() => {
     // Timeout: si /api/data se cuelga (red lenta, Notion sin responder), no dejamos
     // la app en "Cargando…" para siempre — caemos a respaldo local y seguimos.
     const ctrl = new AbortController();
@@ -86,11 +87,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setReady(true);
       })
       .finally(() => clearTimeout(to));
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const maps = useMemo(
     () => ({
@@ -103,11 +104,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [data],
   );
 
-  return (
-    <DataContext.Provider value={{ ...data, ...maps, ready, source, reload: load }}>
-      {children}
-    </DataContext.Provider>
+  const value = useMemo(
+    () => ({ ...data, ...maps, ready, source, reload: load }),
+    [data, maps, ready, source, load],
   );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
 export function useData() {

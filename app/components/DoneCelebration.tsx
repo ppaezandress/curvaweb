@@ -105,7 +105,7 @@ export function DoneCelebration() {
         ))}
       </div>
 
-      <div className="relative w-full max-w-md rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-3xl">
+      <div className="relative w-full max-w-md rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-hero">
         <button onClick={dismiss} className="absolute right-4 top-4 rounded-full p-1.5 text-muted transition hover:bg-surface-2">
           <X size={18} />
         </button>
@@ -115,15 +115,15 @@ export function DoneCelebration() {
         <p className="mt-1 truncate text-sm text-muted">{celebrating.taskName}</p>
 
         {/* Tiempo total invertido en la tarea */}
-        <div className="mt-4 rounded-2xl bg-surface-2 px-4 py-3 text-center">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Tiempo total en esta tarea</p>
+        <div className="mt-4 rounded-card bg-surface-2 px-4 py-3 text-center">
+          <p className="text-xs font-medium text-muted">Tiempo total en esta tarea</p>
           <p className="tabular font-display text-3xl font-bold text-fg">{formatDuration(totalSec)}</p>
         </div>
 
         {/* Selfie */}
         <div className="mt-5">
           {photoURL ? (
-            <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-2xl">
+            <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-card">
               <img src={photoURL} alt="tu reacción" className="h-full w-full object-cover" />
               <button onClick={() => { setPhoto(null); if (photoURL) URL.revokeObjectURL(photoURL); setPhotoURL(null); startCam(); }} className="absolute bottom-1 right-1 rounded-full bg-ink/70 p-1.5 text-white">
                 <RefreshCw size={14} />
@@ -131,13 +131,13 @@ export function DoneCelebration() {
             </div>
           ) : camOn ? (
             <div className="mx-auto flex w-fit flex-col items-center gap-2">
-              <video ref={videoRef} className="h-40 w-40 -scale-x-100 rounded-2xl object-cover" muted playsInline />
+              <video ref={videoRef} className="h-40 w-40 -scale-x-100 rounded-card object-cover" muted playsInline />
               <button onClick={snap} className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white">
                 <Camera size={15} /> Capturar
               </button>
             </div>
           ) : (
-            <button onClick={startCam} className="mx-auto flex h-20 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line text-sm font-medium text-muted transition hover:border-accent hover:text-accent">
+            <button onClick={startCam} className="mx-auto flex h-20 w-full items-center justify-center gap-2 rounded-card border-2 border-dashed border-line text-sm font-medium text-muted transition hover:border-accent hover:text-accent">
               <Camera size={18} /> Tómate una selfie de tu reacción (opcional)
             </button>
           )}
@@ -147,7 +147,7 @@ export function DoneCelebration() {
         <p className="mt-5 mb-2 text-sm font-semibold text-muted">¿Cómo te sentiste?</p>
         <div className="flex flex-wrap gap-1.5">
           {EMOJIS.map((e) => (
-            <button key={e} onClick={() => setEmoji(e)} className={`rounded-xl px-3 py-2 text-xl transition ${emoji === e ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-surface-2"}`}>
+            <button key={e} onClick={() => setEmoji(e)} className={`rounded-control px-3 py-2 text-xl transition ${emoji === e ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-surface-2"}`}>
               {e}
             </button>
           ))}

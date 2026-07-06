@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -53,7 +54,7 @@ export function SupportButton() {
       ]);
       setShot(dataUrl);
     } catch {
-      alert("No se pudo capturar esta pantalla. Puedes subir una imagen en su lugar.");
+      toast("No se pudo capturar esta pantalla. Puedes subir una imagen en su lugar.", { tone: "error" });
     } finally {
       setCapturing(false);
     }
@@ -127,7 +128,7 @@ export function SupportButton() {
               <button
                 key={t.key}
                 onClick={() => setType(t.key)}
-                className={`flex flex-col items-center gap-1 rounded-2xl border px-2 py-3 text-xs font-semibold transition focus-ring ${on ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-accent/40"}`}
+                className={`flex flex-col items-center gap-1 rounded-card border px-2 py-3 text-xs font-semibold transition focus-ring ${on ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-accent/40"}`}
               >
                 <Icon size={18} /> {t.label}
               </button>
@@ -150,7 +151,7 @@ export function SupportButton() {
           {shot ? (
             <div className="relative inline-block">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={shot} alt="captura" className="max-h-44 rounded-xl border border-line" />
+              <img src={shot} alt="captura" className="max-h-44 rounded-control border border-line" />
               <button onClick={() => setShot(null)} className="absolute -right-2 -top-2 rounded-full bg-ink p-1 text-white shadow-soft focus-ring" aria-label="Quitar captura"><X size={13} /></button>
             </div>
           ) : (
@@ -158,12 +159,12 @@ export function SupportButton() {
               <button
                 onClick={captureScreen}
                 disabled={capturing}
-                className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm font-semibold text-fg transition hover:border-accent focus-ring disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-control border border-line bg-surface-2 px-4 py-3 text-sm font-semibold text-fg transition hover:border-accent focus-ring disabled:opacity-50"
               >
                 {capturing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} className="text-accent" />}
                 {capturing ? "Capturando…" : "Capturar esta pantalla"}
               </button>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-line bg-surface-2 px-4 py-3 text-sm text-muted transition hover:border-accent">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-control border border-dashed border-line bg-surface-2 px-4 py-3 text-sm text-muted transition hover:border-accent">
                 <ImagePlus size={16} /> Subir imagen
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
               </label>
@@ -171,7 +172,7 @@ export function SupportButton() {
           )}
         </Field>
 
-        <p className="text-[11px] text-muted">📸 "Capturar esta pantalla" toma una foto de lo que ves ahora (sin el recuadro de feedback). También adjuntamos en qué pantalla estás.</p>
+        <p className="text-caption text-muted">📸 "Capturar esta pantalla" toma una foto de lo que ves ahora (sin el recuadro de feedback). También adjuntamos en qué pantalla estás.</p>
       </Modal>
     </>
   );

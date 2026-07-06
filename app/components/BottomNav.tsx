@@ -23,7 +23,7 @@ export function BottomNav() {
               key={l.href}
               href={l.href}
               className={cn(
-                "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition active:scale-95",
+                "flex min-h-[56px] flex-1 flex-col items-center justify-center gap-0.5 text-caption font-medium transition active:scale-95",
                 active ? "text-accent" : "text-muted",
               )}
             >

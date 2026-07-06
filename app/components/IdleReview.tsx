@@ -17,7 +17,7 @@ export function IdleReview() {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-3xl">
+      <div className="w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-hero">
         <p className="text-sm font-medium text-accent">Revisión de tiempo</p>
         <h2 className="mt-1 font-display text-2xl font-bold text-fg">
           Detectamos {formatDuration(pr.inactiveSec)} sin actividad
@@ -28,14 +28,14 @@ export function IdleReview() {
 
         {/* Línea de tiempo: verde=activo, gris rayado=inactivo */}
         <div className="mt-5">
-          <div className="relative h-10 w-full overflow-hidden rounded-xl bg-curva-teal/25">
+          <div className="relative h-10 w-full overflow-hidden rounded-control bg-success/25">
             {pr.segments.map((s, i) => {
               const left = ((s.start - pr.startedAt) / span) * 100;
               const width = ((s.end - s.start) / span) * 100;
               return (
                 <div
                   key={i}
-                  className="absolute top-0 h-full bg-zinc-300"
+                  className="absolute top-0 h-full bg-surface-2"
                   style={{
                     left: `${left}%`,
                     width: `${Math.max(0.5, width)}%`,
@@ -47,11 +47,11 @@ export function IdleReview() {
               );
             })}
           </div>
-          <div className="mt-1.5 flex justify-between text-[11px] text-muted">
+          <div className="mt-1.5 flex justify-between text-caption text-muted">
             <span>{hhmm(pr.startedAt)}</span>
             <span className="flex items-center gap-3">
-              <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-curva-teal" /> Activo {formatDuration(pr.activeSec)}</span>
-              <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-zinc-300" /> Inactivo {formatDuration(pr.inactiveSec)}</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-success" /> Activo {formatDuration(pr.activeSec)}</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-surface-2" /> Inactivo {formatDuration(pr.inactiveSec)}</span>
             </span>
             <span>{hhmm(pr.endedAt)}</span>
           </div>
@@ -72,13 +72,13 @@ export function IdleReview() {
         <div className="mt-6 flex flex-col gap-2">
           <button
             onClick={() => resolveReview(true)}
-            className="w-full rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink-soft"
+            className="w-full rounded-card bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-ink-soft"
           >
             Descontar el tiempo inactivo ({formatDuration(pr.inactiveSec)})
           </button>
           <button
             onClick={() => resolveReview(false)}
-            className="w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent"
+            className="w-full rounded-card border border-line bg-surface px-4 py-3 text-sm font-semibold text-muted transition hover:border-accent hover:text-accent"
           >
             Mantener todo (marcado como {formatDuration(pr.inactiveSec)} sin actividad)
           </button>

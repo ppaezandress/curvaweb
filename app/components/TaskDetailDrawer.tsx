@@ -87,7 +87,7 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
             <div className="mb-1 flex items-center gap-2">
               <StatusPicker taskId={task.id} status={task.status} onChanged={reload} />
               <EsfuerzoPicker taskId={task.id} weight={task.weight} onChanged={reload} />
-              {task.priority && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted"><Flag size={11} /> {task.priority}</span>}
+              {task.priority && <span className="inline-flex items-center gap-1 text-caption font-semibold text-muted"><Flag size={11} /> {task.priority}</span>}
             </div>
             <h2 className="font-display text-lg font-bold leading-tight text-fg">{task.name}</h2>
           </div>
@@ -98,16 +98,16 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
           {/* Abrir en Notion (app de escritorio si la tienes, si no web) */}
           <button
             onClick={() => openInNotion(task.id)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface-2 py-2.5 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring"
+            className="flex w-full items-center justify-center gap-2 rounded-control border border-line bg-surface-2 py-2.5 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring"
           >
             <ExternalLink size={15} /> Abrir en Notion
           </button>
 
           {/* Tiempo total + benchmark */}
-          <div className="rounded-2xl border border-line bg-surface-2 p-4">
+          <div className="rounded-card border border-line bg-surface-2 p-4">
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Tiempo total</p>
+                <p className="text-xs font-semibold text-muted">Tiempo total</p>
                 <p className="tabular font-display text-2xl font-bold text-fg">{formatDuration(totalWithLive * 60)}</p>
               </div>
               <p className="text-xs text-muted">{stats.sessions} {stats.sessions === 1 ? "sesión" : "sesiones"}</p>
@@ -116,10 +116,10 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
               <div className="mt-3">
                 <div className="mb-1 flex items-center justify-between text-xs text-muted">
                   <span className="flex items-center gap-1"><Gauge size={12} /> Benchmark {task.weight.toLowerCase()}: ~{formatDuration(stats.bench * 60)}</span>
-                  <span className={`font-semibold ${benchPct > 120 ? "text-rose-500" : benchPct > 80 ? "text-amber-500" : "text-curva-teal"}`}>{benchPct}%</span>
+                  <span className={`font-semibold ${benchPct > 120 ? "text-danger" : benchPct > 80 ? "text-warn" : "text-success"}`}>{benchPct}%</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-surface">
-                  <div className={`h-full rounded-full ${benchPct > 120 ? "bg-rose-500" : "bg-curva-teal"}`} style={{ width: `${Math.min(100, benchPct)}%` }} />
+                  <div className={`h-full rounded-full ${benchPct > 120 ? "bg-danger" : "bg-success"}`} style={{ width: `${Math.min(100, benchPct)}%` }} />
                 </div>
               </div>
             )}
@@ -140,21 +140,21 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
 
           {/* Historial de sesiones */}
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted"><History size={13} /> Historial</p>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted"><History size={13} /> Historial</p>
             {stats.mine.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-line py-5 text-center text-xs text-muted">Sin sesiones registradas aún. Dale play para empezar a medirla.</p>
+              <p className="rounded-control border border-dashed border-line py-5 text-center text-xs text-muted">Sin sesiones registradas aún. Dale play para empezar a medirla.</p>
             ) : (
               <div className="space-y-1.5">
                 {stats.mine.slice(0, 30).map((r) => {
                   const m = memberById[Object.keys(memberById).find((id) => memberById[id]?.name === r.person) || ""];
                   return (
-                    <div key={r.id} className="flex items-center gap-2.5 rounded-xl border border-line px-3 py-2">
+                    <div key={r.id} className="flex items-center gap-2.5 rounded-control border border-line px-3 py-2">
                       {m ? <Avatar member={m} size={22} /> : <span className="h-[22px] w-[22px] rounded-full bg-surface-2" />}
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium text-fg">{r.person || "—"}</p>
-                        <p className="text-[11px] text-muted">{dayLabel(r.start)} · {hhmmFromISO(r.start)}</p>
+                        <p className="text-caption text-muted">{dayLabel(r.start)} · {hhmmFromISO(r.start)}</p>
                       </div>
-                      {r.mode === "ai" && <Sparkles size={12} className="text-curva-indigo" />}
+                      {r.mode === "ai" && <Sparkles size={12} className="text-accent" />}
                       <span className="tabular flex items-center gap-1 text-xs font-semibold text-fg"><Clock3 size={12} className="text-muted" /> {formatDuration((r.minutes || 0) * 60)}</span>
                     </div>
                   );

@@ -42,10 +42,10 @@ export function MessageItem({
             {msg.attachment_type === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
               <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
-                <img src={msg.attachment_url} alt="adjunto" className="max-h-72 max-w-[min(78vw,20rem)] rounded-2xl border border-line object-cover" />
+                <img src={msg.attachment_url} alt="adjunto" className="max-h-72 max-w-[min(78vw,20rem)] rounded-card border border-line object-cover" />
               </a>
             ) : msg.attachment_type === "video" ? (
-              <video src={msg.attachment_url} controls className="max-h-72 max-w-[min(78vw,20rem)] rounded-2xl border border-line" />
+              <video src={msg.attachment_url} controls className="max-h-72 max-w-[min(78vw,20rem)] rounded-card border border-line" />
             ) : (
               <audio src={msg.attachment_url} controls className="w-64 max-w-[78vw]" />
             )}
@@ -53,7 +53,7 @@ export function MessageItem({
         )}
 
         {msg.body.trim() && (
-        <div className={cn("mt-0.5 inline-block rounded-2xl px-3.5 py-2 text-left text-sm", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
+        <div className={cn("mt-0.5 inline-block rounded-card px-3.5 py-2 text-left text-sm", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
           {parts.map((p, i) =>
             p.type === "text" ? (
               <span key={i} className="whitespace-pre-wrap">{p.text}</span>
@@ -62,7 +62,7 @@ export function MessageItem({
                 key={i}
                 className={cn(
                   "mx-0.5 inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 align-middle text-xs font-semibold",
-                  mine ? "bg-surface/20" : "bg-curva-indigo/10 text-curva-indigo",
+                  mine ? "bg-surface/20" : "bg-accent/10 text-accent",
                 )}
               >
                 <AtSign size={10} />{p.name}
@@ -111,7 +111,7 @@ export function MessageItem({
             {pickerOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
-                <div className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-2xl border border-line bg-surface p-1.5 shadow-float", mine ? "right-0" : "left-0")}>
+                <div className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-surface p-1.5 shadow-float", mine ? "right-0" : "left-0")}>
                   {EMOJIS.map((e) => (
                     <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">
                       {e}

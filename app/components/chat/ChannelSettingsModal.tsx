@@ -40,7 +40,7 @@ export function ChannelSettingsModal({
       <Field label="Nombre del canal">
         <div className="flex gap-2">
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="nombre-del-canal" />
-          <button onClick={save} disabled={saving || !name.trim() || name.trim() === channel.name} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+          <button onClick={save} disabled={saving || !name.trim() || name.trim() === channel.name} className="inline-flex shrink-0 items-center gap-1.5 rounded-control bg-accent px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
             <Check size={15} /> Guardar
           </button>
         </div>
@@ -51,7 +51,7 @@ export function ChannelSettingsModal({
           <Field label="Miembros">
             <div className="space-y-1.5">
               {currentMembers.map((m) => (
-                <div key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-line px-2.5 py-1.5">
+                <div key={m.id} className="flex items-center justify-between gap-2 rounded-control border border-line px-2.5 py-1.5">
                   <span className="flex min-w-0 items-center gap-2">
                     <Avatar name={m.name} src={m.avatar_url} size={22} />
                     <span className="truncate text-sm text-fg">{m.name}</span>
@@ -77,12 +77,12 @@ export function ChannelSettingsModal({
             </Field>
           )}
 
-          <div className="mt-2 flex items-center justify-between rounded-2xl border border-line bg-surface-2/50 px-4 py-3">
+          <div className="mt-2 flex items-center justify-between rounded-card border border-line bg-surface-2/50 px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-fg">{channel.is_hidden ? "Canal oculto" : "Ocultar canal"}</p>
               <p className="text-xs text-muted">{channel.is_hidden ? "No aparece en la lista del equipo." : "Lo archiva: deja de aparecer en la lista."}</p>
             </div>
-            <button onClick={() => onToggleHidden(!channel.is_hidden)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus-ring ${channel.is_hidden ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"}`}>
+            <button onClick={() => onToggleHidden(!channel.is_hidden)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition focus-ring ${channel.is_hidden ? "bg-success/10 text-success hover:bg-success/20" : "bg-warn/10 text-warn hover:bg-warn/20"}`}>
               {channel.is_hidden ? <><Eye size={13} /> Mostrar</> : <><EyeOff size={13} /> Ocultar</>}
             </button>
           </div>

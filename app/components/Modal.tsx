@@ -68,7 +68,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float outline-none sm:rounded-3xl"
+        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float outline-none sm:rounded-hero"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
@@ -99,4 +99,4 @@ export function Field({ label, children }: { label: string; children: React.Reac
 }
 
 export const inputCls =
-  "w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-accent";
+  "w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-accent";

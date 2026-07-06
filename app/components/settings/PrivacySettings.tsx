@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useState } from "react";
 import { ShieldCheck, Download, Trash2, Eye, MonitorSmartphone, Check, EyeOff } from "lucide-react";
@@ -39,8 +40,8 @@ export function PrivacySettings() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start gap-3 rounded-2xl border border-curva-teal/30 bg-curva-teal/5 p-4">
-        <ShieldCheck size={20} className="mt-0.5 shrink-0 text-curva-teal" />
+      <div className="flex items-start gap-3 rounded-card border border-success/30 bg-success/5 p-4">
+        <ShieldCheck size={20} className="mt-0.5 shrink-0 text-success" />
         <div>
           <p className="font-semibold text-fg">Esto es para ti, no para vigilarte.</p>
           <p className="mt-0.5 text-sm text-muted">Tu detalle (horarios, tareas, tiempos) <b>solo lo ves tú</b>. El equipo solo ve datos <b>agregados</b>. Nada personal se comparte sin que tú lo actives.</p>
@@ -48,12 +49,12 @@ export function PrivacySettings() {
       </div>
 
       {/* Qué ve tu equipo de ti — el muro, en claro. La confianza se enseña, no se promete. */}
-      <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <div className="rounded-card border border-line bg-surface p-5 shadow-soft">
         <p className="font-display font-bold text-fg">Qué ve tu equipo de ti</p>
         <p className="mb-4 mt-0.5 text-sm text-muted">Sin letras chiquitas. Esto es exactamente lo que se expone — y lo que no.</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-curva-teal"><Check size={13} /> Tu equipo ve</p>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-success"><Check size={13} /> Tu equipo ve</p>
             <ul className="space-y-1.5 text-sm text-fg">
               <WallItem ok>Horas <b>agregadas</b> por cliente y proyecto</WallItem>
               <WallItem ok>Tendencias del equipo (totales, no tu detalle)</WallItem>
@@ -62,7 +63,7 @@ export function PrivacySettings() {
             </ul>
           </div>
           <div>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted"><EyeOff size={13} /> Tu equipo NO ve</p>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted"><EyeOff size={13} /> Tu equipo NO ve</p>
             <ul className="space-y-1.5 text-sm text-fg">
               <WallItem>En qué tarea estás <b>ahora mismo</b></WallItem>
               <WallItem>Tus <b>sesiones individuales</b> (cada bloque de tiempo)</WallItem>
@@ -71,10 +72,10 @@ export function PrivacySettings() {
             </ul>
           </div>
         </div>
-        <p className="mt-4 text-[11px] text-muted">No es una promesa de copy: tu data cruda es <b>dueño-solo</b> por diseño (RLS). Ni el equipo ni un manager pueden leerla, aunque lo intenten por la API.</p>
+        <p className="mt-4 text-caption text-muted">No es una promesa de copy: tu data cruda es <b>dueño-solo</b> por diseño (RLS). Ni el equipo ni un manager pueden leerla, aunque lo intenten por la API.</p>
       </div>
 
-      <div className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-soft">
+      <div className="divide-y divide-line rounded-card border border-line bg-surface shadow-soft">
         <Toggle
           icon={<Eye size={16} />}
           label="Compartir mi perfil detallado con el equipo"
@@ -96,13 +97,13 @@ export function PrivacySettings() {
           <Download size={15} /> Exportar mis datos (CSV)
         </button>
         <button
-          onClick={() => alert("Para borrar tus registros, escríbenos y lo procesamos. (Borrado self-service: próximamente.)")}
+          onClick={() => toast("Para borrar tus registros, escríbenos y lo procesamos. (Borrado self-service: próximamente.)")}
           className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-danger transition hover:border-danger/40 focus-ring"
         >
           <Trash2 size={15} /> Borrar mis registros
         </button>
       </div>
-      <p className="text-[11px] text-muted">Tus preferencias se guardan en este dispositivo (MVP). Con cuentas de empresa pasarán a tu perfil en la nube.</p>
+      <p className="text-caption text-muted">Tus preferencias se guardan en este dispositivo (MVP). Con cuentas de empresa pasarán a tu perfil en la nube.</p>
     </div>
   );
 }
@@ -110,7 +111,7 @@ export function PrivacySettings() {
 function WallItem({ children, ok }: { children: React.ReactNode; ok?: boolean }) {
   return (
     <li className="flex items-start gap-2">
-      <span className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${ok ? "bg-curva-teal/15 text-curva-teal" : "bg-surface-2 text-muted"}`}>
+      <span className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${ok ? "bg-success/15 text-success" : "bg-surface-2 text-muted"}`}>
         {ok ? <Check size={11} /> : <EyeOff size={10} />}
       </span>
       <span className="text-muted">{children}</span>

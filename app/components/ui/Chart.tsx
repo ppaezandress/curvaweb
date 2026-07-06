@@ -34,6 +34,8 @@ export function Chart({
   labels,
   height = 120,
   showArea = true,
+  bare = false,
+  label = "Gráfica de actividad en el tiempo",
   className,
 }: {
   series?: Series[];
@@ -41,6 +43,8 @@ export function Chart({
   labels?: string[];
   height?: number;
   showArea?: boolean;
+  bare?: boolean;
+  label?: string;
   className?: string;
 }) {
   const data: Series[] = series ?? (values ? [{ key: "v", color: "var(--accent)", values }] : []);
@@ -54,9 +58,9 @@ export function Chart({
 
   return (
     <div className={cn("w-full", className)}>
-      <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" width="100%" height={height} role="img">
+      <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" width="100%" height={height} role="img" aria-label={label}>
         {/* gridlines sutiles */}
-        {[0.25, 0.5, 0.75].map((g) => (
+        {!bare && [0.25, 0.5, 0.75].map((g) => (
           <line key={g} x1="0" x2={VW} y1={VH * g} y2={VH * g} stroke="var(--line)" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity="0.6" />
         ))}
         {data.map((s, si) => {

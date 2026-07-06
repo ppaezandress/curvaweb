@@ -32,7 +32,7 @@ export function Stat({
 }) {
   return (
     <div className={className}>
-      <p className="flex items-center gap-1.5 text-caption uppercase text-muted">
+      <p className="flex items-center gap-1.5 text-caption font-medium text-muted">
         {icon}
         {label}
       </p>

@@ -6,8 +6,10 @@
 //     V Volumen      = minutos de la semana vs tu típico
 //     F Foco         = qué tan poco tiempo quedó inactivo
 //     K Cumplimiento = tus tareas con fecha que NO están vencidas
-import type { TimeRecord } from "@/lib/notion/fetchers";
 import type { Task } from "@/lib/mock-data";
+
+// Mínimo estructural que necesita el Pulso (TimeRecord y Rec locales encajan).
+export type PulseRecord = { taskId: string; start: string; minutes: number; inactiveMinutes?: number };
 import { dayKey, computeStreak } from "@/lib/streaks";
 import { isDone } from "@/lib/task-status";
 import { mondayOf, dueDateMs } from "@/lib/date";
@@ -49,7 +51,7 @@ const isWeekday = (ms: number) => {
  * @param records  registros de tiempo de ESA persona (ventana amplia, para base + racha)
  * @param tasks    tareas de ESA persona (para cumplimiento)
  */
-export function computePulse(records: TimeRecord[], tasks: Task[], at?: number): Pulse {
+export function computePulse(records: PulseRecord[], tasks: Task[], at?: number): Pulse {
   const now = at ?? Date.now();
   const weekStart = mondayOf(new Date(now)).getTime();
 

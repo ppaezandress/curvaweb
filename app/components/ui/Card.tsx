@@ -13,7 +13,7 @@ export function Card({
       className={cn(
         "rounded-card border border-line bg-surface p-5 shadow-soft",
         interactive &&
-          "cursor-pointer transition duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-float",
+          "cursor-pointer transition duration-200 ease-curva hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-float active:scale-[0.99] active:translate-y-0",
         className,
       )}
       {...props}

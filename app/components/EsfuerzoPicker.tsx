@@ -59,7 +59,7 @@ export function EsfuerzoPicker({
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         disabled={saving}
-        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 focus-ring disabled:opacity-50 ${toneOf(weight)}`}
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-medium transition hover:opacity-80 focus-ring disabled:opacity-50 ${toneOf(weight)}`}
         title="Cambiar esfuerzo"
         aria-label="Cambiar esfuerzo de la tarea"
       >
@@ -67,14 +67,14 @@ export function EsfuerzoPicker({
         {weight || "Sin esfuerzo"} <ChevronDown size={11} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-40 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-float">
+        <div className="absolute left-0 top-full z-30 mt-1 w-40 overflow-hidden rounded-control border border-line bg-surface py-1 shadow-float">
           {WEIGHTS.map((w) => (
             <button
               key={w}
               onClick={(e) => { e.stopPropagation(); choose(w); }}
               className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition hover:bg-surface-2"
             >
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${toneOf(w)}`}>{w}</span>
+              <span className={`rounded-full px-2 py-0.5 text-caption font-medium ${toneOf(w)}`}>{w}</span>
               {w === weight && <Check size={14} className="text-accent" />}
             </button>
           ))}

@@ -115,8 +115,8 @@ export function MeetingWatcher() {
           <Button onClick={confirm} disabled={busy || picked.size === 0}>{busy ? "Registrando…" : `Registrar ${minutes} min`}</Button>
         </div>
       }>
-      <div className="mb-4 flex items-start gap-3 rounded-2xl bg-curva-blue/5 p-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-curva-blue/15 text-curva-blue">
+      <div className="mb-4 flex items-start gap-3 rounded-card bg-accent/5 p-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent/15 text-accent">
           {pending.hangoutLink ? <Video size={18} /> : <CalendarClock size={18} />}
         </span>
         <div className="min-w-0">
@@ -127,7 +127,7 @@ export function MeetingWatcher() {
 
       <label className="mb-1.5 block text-sm font-semibold text-muted">Proyecto</label>
       <select value={projectId} onChange={(e) => setProjectId(e.target.value)}
-        className="mb-1 w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent">
+        className="mb-1 w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent">
         <option value="">— Sin proyecto (solo cliente/área) —</option>
         {projects.map((p) => (
           <option key={p.id} value={p.id}>{clientById[p.clientId]?.name ? `${clientById[p.clientId].name} · ` : ""}{p.name}</option>
@@ -141,7 +141,7 @@ export function MeetingWatcher() {
           const on = picked.has(m.id);
           return (
             <button key={m.id} onClick={() => setPicked((s) => { const n = new Set(s); n.has(m.id) ? n.delete(m.id) : n.add(m.id); return n; })}
-              className={cn("flex w-full items-center gap-2.5 rounded-xl border p-2 text-left transition focus-ring", on ? "border-accent bg-accent/5" : "border-line")}>
+              className={cn("flex w-full items-center gap-2.5 rounded-control border p-2 text-left transition focus-ring", on ? "border-accent bg-accent/5" : "border-line")}>
               <Avatar member={m} size={28} />
               <span className="flex-1 text-sm text-fg">{m.name}{m.id === currentUserId ? " (tú)" : ""}</span>
               {on && <Check size={15} className="text-accent" />}
@@ -149,7 +149,7 @@ export function MeetingWatcher() {
           );
         })}
       </div>
-      <p className="mt-3 text-[11px] text-muted">Solo tú ves esto. El equipo nunca ve el título de tus juntas.</p>
+      <p className="mt-3 text-caption text-muted">Solo tú ves esto. El equipo nunca ve el título de tus juntas.</p>
     </Modal>
   );
 }

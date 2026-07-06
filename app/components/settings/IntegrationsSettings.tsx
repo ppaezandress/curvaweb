@@ -19,14 +19,14 @@ export function IntegrationsSettings() {
       {PILOT.aiTime && (
       <div>
         <h3 className="flex items-center gap-2 font-display font-bold text-fg">
-          <Sparkles size={16} className="text-curva-indigo" /> Tiempo con IA
+          <Sparkles size={16} className="text-accent" /> Tiempo con IA
         </h3>
         <p className="mb-3 mt-0.5 text-sm text-muted">
           Mide solo el tiempo que la IA trabaja por ti, sin que toques nada. Si no usas Claude, déjalo apagado y la app se queda en cronómetro a mano.
         </p>
-        <div className="rounded-2xl border border-curva-indigo/30 bg-surface shadow-soft">
+        <div className="rounded-card border border-accent/30 bg-surface shadow-soft">
           <Toggle
-            icon={<Sparkles size={16} className="text-curva-indigo" />}
+            icon={<Sparkles size={16} className="text-accent" />}
             label="Activar el tiempo con IA"
             hint="Muestra la tarjeta de IA, el botón ✨IA en las tareas y la captura automática."
             on={aiEnabled}
@@ -63,7 +63,7 @@ export function IntegrationsSettings() {
       {PILOT.devTools && (
       <div>
         <h3 className="flex items-center gap-2 font-display font-bold text-fg">
-          <Database size={16} className="text-accent" /> Datos <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted">beta</span>
+          <Database size={16} className="text-accent" /> Datos <span className="rounded-full bg-surface-2 px-2 py-0.5 text-caption font-bold text-muted">beta</span>
         </h3>
         <p className="mb-3 mt-0.5 text-sm text-muted">Sincroniza tus clientes, proyectos y tareas de Notion a la base propia (para analítica rápida y futuro SaaS). Aditivo: no cambia nada de tu Notion.</p>
         <SyncButton />
@@ -86,7 +86,7 @@ function SyncButton() {
     } catch (e) { setState("error"); setMsg(String(e)); }
   };
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4 shadow-soft">
+    <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
       <button
         onClick={run}
         disabled={state === "busy"}
@@ -95,9 +95,9 @@ function SyncButton() {
         {state === "busy" ? <Loader2 size={15} className="animate-spin" /> : state === "done" ? <Check size={15} /> : <RefreshCw size={15} />}
         {state === "busy" ? "Sincronizando…" : "Sincronizar a Postgres"}
       </button>
-      {msg && <p className={`mt-2 text-xs ${state === "error" ? "text-rose-500" : "text-curva-teal"}`}>{state === "error" ? `Aún no: ${msg}` : `Listo: ${msg}`}</p>}
+      {msg && <p className={`mt-2 text-xs ${state === "error" ? "text-danger" : "text-success"}`}>{state === "error" ? `Aún no: ${msg}` : `Listo: ${msg}`}</p>}
       {state === "error" && msg.includes("sin-org") && (
-        <p className="mt-1 text-[11px] text-muted">Primero corre <code>supabase/APLICAR-pendientes.sql</code> en Supabase (crea el esquema + la org).</p>
+        <p className="mt-1 text-caption text-muted">Primero corre <code>supabase/APLICAR-pendientes.sql</code> en Supabase (crea el esquema + la org).</p>
       )}
     </div>
   );

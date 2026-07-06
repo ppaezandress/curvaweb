@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -62,11 +63,11 @@ export function ProfileMenu() {
       if (!u.user) return;
       const path = `${u.user.id}/avatar-${Date.now()}.jpg`;
       const { error } = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-      if (error) { alert("No se pudo subir la foto: " + error.message); return; }
+      if (error) { toast("No se pudo subir la foto: " + error.message, { tone: "error" }); return; }
       const { data: pub } = sb.storage.from("avatars").getPublicUrl(path);
       const url = pub.publicUrl;
       const { error: upErr } = await sb.from("profiles").update({ avatar_url: url }).eq("id", u.user.id);
-      if (upErr) { alert("No se pudo guardar la foto en tu perfil: " + upErr.message); return; }
+      if (upErr) { toast("No se pudo guardar la foto en tu perfil: " + upErr.message, { tone: "error" }); return; }
       setPhotoUrl(url);
     } finally {
       setUploading(false);

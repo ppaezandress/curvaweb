@@ -50,10 +50,10 @@ export function PlanSettings() {
         {PLANS.map((p) => (
           <div
             key={p.name}
-            className={`relative flex flex-col rounded-2xl border p-5 shadow-soft ${p.featured ? "border-accent bg-accent/[0.03] ring-1 ring-accent/30" : "border-line bg-surface"}`}
+            className={`relative flex flex-col rounded-card border p-5 shadow-soft ${p.featured ? "border-accent bg-accent/[0.03] ring-1 ring-accent/30" : "border-line bg-surface"}`}
           >
             {p.featured && (
-              <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-bold text-white">
+              <span className="absolute -top-2.5 left-5 inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-caption font-bold text-white">
                 <Sparkles size={11} /> Más popular
               </span>
             )}
@@ -68,7 +68,7 @@ export function PlanSettings() {
             <ul className="mb-5 flex-1 space-y-2">
               {p.features.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-sm text-muted">
-                  <Check size={15} className={`mt-0.5 shrink-0 ${p.featured ? "text-accent" : "text-curva-teal"}`} /> {f}
+                  <Check size={15} className={`mt-0.5 shrink-0 ${p.featured ? "text-accent" : "text-success"}`} /> {f}
                 </li>
               ))}
             </ul>
@@ -87,7 +87,7 @@ export function PlanSettings() {
           </div>
         ))}
       </div>
-      <p className="text-center text-[11px] text-muted">Precios de referencia · facturación próximamente</p>
+      <p className="text-center text-caption text-muted">Precios de referencia · facturación próximamente</p>
     </div>
   );
 }

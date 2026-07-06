@@ -16,8 +16,10 @@
   --font-sans: var(--font-outfit);
   --font-brand: var(--font-fraunces); /* serif óptico — solo momentos de marca */
 
-  /* Curvas de movimiento */
-  --ease-curva: cubic-bezier(0.16, 1, 0.3, 1); /* estándar del producto */
+  /* Curvas de movimiento (ease-out fuertes; nunca ease-in en UI) */
+  --ease-curva: cubic-bezier(0.16, 1, 0.3, 1); /* estándar del producto (ease-out) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);  /* entrar/salir */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1); /* mover/morph en pantalla */
   --ease-pitch: cubic-bezier(0.6, 0, 0.05, 1); /* snap para reveals */
 
   /* Rampa de neutros PROPIA (tinte violeta muy leve, fija — no cambia con el tema).
@@ -41,12 +43,12 @@
   /* Marca externa (no es color de team tac) */
   --color-spotify: #1db954;
 
-  /* Compat: tokens curva-* remapeados a la paleta disciplinada mientras se
-     migran las clases a tokens semánticos (tarea "barrer legacy"). indigo/purple
-     colapsan al ACENTO; teal se conserva para dinero/positivo. A ELIMINAR luego. */
+  /* Paleta CATEGÓRICA — para distinguir entidades (avatares de miembros, íconos
+     de área/tipo). NO es acento semántico (ese es --accent). 5 hues distintos y
+     armónicos alrededor del violeta de marca. */
   --color-curva-purple: #6c47f5;
-  --color-curva-indigo: #6c47f5;
-  --color-curva-blue: #5b8bf5;
+  --color-curva-indigo: #4f6ef5;
+  --color-curva-blue: #22a7f0;
   --color-curva-teal: #10b981;
   --color-curva-pink: #ec4899;
 
@@ -56,6 +58,7 @@
   --radius-control: 10px; /* inputs, botones */
   --radius-tile: 14px;    /* tiles internos, thumbnails */
   --radius-card: 18px;    /* tarjetas (reemplaza rounded-2xl) */
+  --radius-hero: 22px;    /* superficies grandes (hero del cronómetro, score) */
 
   /* Escala tipográfica tokenizada — máx. 5 tamaños en pantalla.
      display = número/score hero (Fraunces) · el resto Outfit. */
@@ -93,8 +96,6 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-accent: var(--accent);
-  /* Compat: accent-2 era == success (#10b981). Alias mientras se migra. */
-  --color-accent-2: var(--success);
   --color-success: var(--success);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
@@ -119,9 +120,10 @@
   --dur-base: 280ms;
   --dur-slow: 520ms;
 
-  /* Sombras tokenizadas (light) */
-  --shadow-soft: 0 1px 2px rgba(20, 18, 30, 0.04), 0 8px 24px -14px rgba(20, 18, 30, 0.12);
-  --shadow-float: 0 2px 6px rgba(20, 18, 30, 0.05), 0 24px 48px -20px rgba(20, 18, 30, 0.16);
+  /* Sombras (light) — reposo NÍTIDO (blur < 16px, sin patrón ghost-card);
+     la elevación fuerte se reserva para hover/flotante. */
+  --shadow-soft: 0 1px 2px rgba(20, 18, 30, 0.05), 0 2px 6px -2px rgba(20, 18, 30, 0.06);
+  --shadow-float: 0 12px 32px -12px rgba(20, 18, 30, 0.18), 0 2px 8px -4px rgba(20, 18, 30, 0.08);
 
   /* Espaciado semántico (referencia; el padding de card lo fija el primitivo Card) */
   --space-tight: 0.5rem;
@@ -338,22 +340,22 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Respeta la preferencia de menos movimiento */
+/* Respeta la preferencia de menos movimiento — override UNIVERSAL (cubre
+   animate-ping/bounce/spin y todas las transiciones, no solo las nombradas). */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* El contenido revelado por scroll debe quedar visible (no gatear visibilidad). */
   .reveal,
   .rise,
-  .confetti,
-  .curva-live-dot,
-  .breathe,
-  .flow-in,
-  .modal-backdrop,
-  .modal-panel,
-  .ai-shimmer::after,
-  .curva-handoff,
-  .dock-in {
-    animation: none;
-    transition: none;
-    opacity: 1;
-    transform: none;
+  .flow-in {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

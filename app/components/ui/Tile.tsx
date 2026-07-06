@@ -39,12 +39,12 @@ export function Tile({
     <Link
       href={href}
       className={cn(
-        "focus-ring group flex flex-col rounded-card border border-line bg-surface p-5 shadow-soft transition duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-float",
+        "focus-ring group flex flex-col rounded-card border border-line bg-surface p-5 shadow-soft transition duration-200 ease-curva hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-float active:scale-[0.99] active:translate-y-0",
         className,
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-caption uppercase text-muted">
+        <span className="flex items-center gap-1.5 text-caption font-medium text-muted">
           {icon}
           {label}
         </span>

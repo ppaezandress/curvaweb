@@ -19,11 +19,11 @@ const INTERNAL = "__interno__";
 const DAY = 86_400_000;
 
 const URGENCY = [
-  { key: "vencidas", label: "Vencidas", bar: "bg-rose-500" },
+  { key: "vencidas", label: "Vencidas", bar: "bg-danger" },
   { key: "hoy", label: "Para hoy", bar: "bg-accent" },
-  { key: "semana", label: "Próximos 7 días", bar: "bg-curva-indigo" },
-  { key: "despues", label: "Más adelante", bar: "bg-curva-teal" },
-  { key: "nofecha", label: "Sin fecha", bar: "bg-zinc-400" },
+  { key: "semana", label: "Próximos 7 días", bar: "bg-accent" },
+  { key: "despues", label: "Más adelante", bar: "bg-success" },
+  { key: "nofecha", label: "Sin fecha", bar: "bg-surface-2" },
 ] as const;
 const STATUS_ORDER = ["DEMORADA", "EN CURSO", "SIN EMPEZAR", "POR VALIDAR", "EN ESPERA", "DONE"];
 const GROUPS: { key: Group; label: string; icon: React.ReactNode }[] = [
@@ -90,7 +90,7 @@ export default function TareasPage() {
     if (group === "estado") {
       const m = new Map<string, Task[]>();
       scoped.forEach((t) => { const s = (t.status || "—").toUpperCase(); (m.get(s) || m.set(s, []).get(s)!).push(t); });
-      return [...m.entries()].map(([s, items]) => ({ key: s, label: s, bar: isDone(s) ? "bg-emerald-500" : "bg-curva-indigo", items: [...items].sort(byUrg) }))
+      return [...m.entries()].map(([s, items]) => ({ key: s, label: s, bar: isDone(s) ? "bg-success" : "bg-accent", items: [...items].sort(byUrg) }))
         .sort((a, b) => { const ia = STATUS_ORDER.indexOf(a.key), ib = STATUS_ORDER.indexOf(b.key); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
     }
     // urgencia
@@ -98,7 +98,7 @@ export default function TareasPage() {
     const out: { key: string; label: string; bar: string; items: Task[] }[] = URGENCY
       .map((s) => ({ key: s.key as string, label: s.label as string, bar: s.bar as string, items: open.filter((t) => horizon(t) === s.key).sort((a, b) => prioRank(b) - prioRank(a)) }))
       .filter((s) => s.items.length > 0);
-    if (showDone) { const done = scoped.filter((t) => isDone(t.status)); if (done.length) out.push({ key: "hechas", label: "Hechas", bar: "bg-emerald-500", items: done }); }
+    if (showDone) { const done = scoped.filter((t) => isDone(t.status)); if (done.length) out.push({ key: "hechas", label: "Hechas", bar: "bg-success", items: done }); }
     return out;
   }, [group, scoped, showDone, projectById, clientById]);
 
@@ -119,10 +119,10 @@ export default function TareasPage() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cualquier tarea (incluye Done)…" className="w-full rounded-2xl border border-line bg-surface py-2.5 pl-11 pr-4 text-sm shadow-soft outline-none transition focus:border-accent" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cualquier tarea (incluye Done)…" className="w-full rounded-card border border-line bg-surface py-2.5 pl-11 pr-4 text-sm shadow-soft outline-none transition focus:border-accent" />
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1 text-xs text-muted shadow-soft">
-          <span className="font-semibold uppercase tracking-wide">Agrupar</span>
+          <span className="font-semibold">Agrupar</span>
           {GROUPS.map((g) => (
             <button key={g.key} onClick={() => setGroup(g.key)} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium transition focus-ring ${group === g.key ? "bg-ink text-white" : "text-muted hover:text-fg"}`}>{g.icon} {g.label}</button>
           ))}
@@ -133,9 +133,9 @@ export default function TareasPage() {
 
       {searchResults ? (
         <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted">{searchResults.length} resultado{searchResults.length === 1 ? "" : "s"}</p>
+          <p className="text-xs font-bold text-muted">{searchResults.length} resultado{searchResults.length === 1 ? "" : "s"}</p>
           {searchResults.map((t) => <TaskCard key={t.id} task={t} />)}
-          {searchResults.length === 0 && <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Nada coincide con «{search.trim()}».</div>}
+          {searchResults.length === 0 && <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">Nada coincide con «{search.trim()}».</div>}
         </div>
       ) : (
         <div className="flex gap-6">
@@ -143,7 +143,7 @@ export default function TareasPage() {
           <aside className="hidden w-52 shrink-0 lg:block">
             <div className="sticky top-20 space-y-0.5">
               <SidebarItem icon={<Inbox size={15} />} label="Todos" count={visible.length} active={!clientFilter} onClick={() => setClientFilter(null)} />
-              <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-muted">Clientes</p>
+              <p className="px-3 pb-1 pt-4 text-xs font-semibold text-muted">Clientes</p>
               <div className="max-h-[60vh] space-y-0.5 overflow-y-auto pr-1">
                 {clientsWithCounts.map((c) => <SidebarItem key={c.id} icon={<Building2 size={15} />} label={c.name} count={c.count} active={clientFilter === c.id} onClick={() => setClientFilter(c.id)} />)}
               </div>
@@ -152,20 +152,20 @@ export default function TareasPage() {
 
           <div className="min-w-0 flex-1 space-y-6">
             {/* Selector de cliente en móvil */}
-            <select value={clientFilter || ""} onChange={(e) => setClientFilter(e.target.value || null)} className="w-full rounded-2xl border border-line bg-surface px-4 py-2.5 text-sm lg:hidden">
+            <select value={clientFilter || ""} onChange={(e) => setClientFilter(e.target.value || null)} className="w-full rounded-card border border-line bg-surface px-4 py-2.5 text-sm lg:hidden">
               <option value="">Todos los clientes ({visible.length})</option>
               {clientsWithCounts.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.count})</option>)}
             </select>
 
             {groups.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">{showDone ? "No hay tareas aquí." : "Sin pendientes accionables 🎉 — muestra las Done o crea una desde la Home."}</div>
+              <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">{showDone ? "No hay tareas aquí." : "Sin pendientes accionables — muestra las Done o crea una desde la Home."}</div>
             ) : (
               groups.map((g) => (
                 <div key={g.key}>
                   <div className="mb-2 flex items-center gap-2">
-                    <span className={`h-4 w-1.5 rounded-full ${g.bar}`} />
+                    <span className={`h-2 w-2 rounded-full ${g.bar}`} />
                     <h2 className="font-display text-base font-bold text-fg">{g.label}</h2>
-                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted">{g.items.length}</span>
+                    <span className="rounded-chip bg-surface-2 px-2 py-0.5 text-caption font-semibold text-muted">{g.items.length}</span>
                     {secsOf(g.items) > 0 && <span className="tabular text-xs text-muted">· {formatDuration(secsOf(g.items))}</span>}
                   </div>
                   <div className="space-y-2">{g.items.slice(0, 80).map((t) => <TaskCard key={t.id} task={t} />)}</div>
@@ -183,7 +183,7 @@ export default function TareasPage() {
 
 function SidebarItem({ icon, label, count, active, onClick }: { icon: React.ReactNode; label: string; count: number; active: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition ${active ? "bg-accent/10 text-accent" : "text-fg hover:bg-surface-2"}`}>
+    <button onClick={onClick} className={`flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-sm transition ${active ? "bg-accent/10 text-accent" : "text-fg hover:bg-surface-2"}`}>
       <span className="shrink-0 opacity-80">{icon}</span>
       <span className="min-w-0 flex-1 truncate font-medium">{label}</span>
       <span className={`shrink-0 rounded-full px-1.5 text-xs font-semibold ${active ? "bg-accent/15" : "bg-surface-2 text-muted"}`}>{count}</span>

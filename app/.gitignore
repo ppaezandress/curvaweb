@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /.claude/skills/
+
+# skills instaladas por el CLI de skills (no commitear)
+/.agents/

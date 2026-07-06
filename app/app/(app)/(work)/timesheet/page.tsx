@@ -127,28 +127,28 @@ export default function TimesheetPage() {
       />
 
       {/* Navegación de semana */}
-      <div className="mb-4 flex items-center justify-between rounded-2xl border border-line bg-surface px-4 py-3 shadow-soft">
-        <button onClick={() => setWeekStart(new Date(weekStart.getTime() - 7 * DAY_MS))} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-surface-2">
+      <div className="mb-4 flex items-center justify-between rounded-card border border-line bg-surface px-4 py-3 shadow-soft">
+        <button aria-label="Semana anterior" onClick={() => setWeekStart(new Date(weekStart.getTime() - 7 * DAY_MS))} className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control text-muted transition hover:bg-surface-2 hover:text-fg">
           <ChevronLeft size={18} />
         </button>
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
           <CalendarDays size={16} className="text-muted" />
           {label}
-          <button onClick={() => setWeekStart(mondayOf(new Date()))} className="ml-2 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition hover:bg-surface-2">
+          <button onClick={() => setWeekStart(mondayOf(new Date()))} className="focus-ring ml-2 rounded-control bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition hover:bg-line hover:text-fg">
             Esta semana
           </button>
         </div>
-        <button onClick={() => setWeekStart(new Date(weekStart.getTime() + 7 * DAY_MS))} className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-surface-2">
+        <button aria-label="Semana siguiente" onClick={() => setWeekStart(new Date(weekStart.getTime() + 7 * DAY_MS))} className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control text-muted transition hover:bg-surface-2 hover:text-fg">
           <ChevronRight size={18} />
         </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-16 text-sm text-muted">
+        <div className="flex items-center justify-center gap-2 rounded-card border border-line bg-surface py-16 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" /> Cargando registros…
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-soft">
+        <div className="overflow-x-auto rounded-card border border-line bg-surface shadow-soft">
           <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-line">

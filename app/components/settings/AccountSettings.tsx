@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2, Mail, Briefcase, Users, Sun, Moon, Monitor } from "lucide-react";
@@ -46,10 +47,10 @@ export function AccountSettings() {
       if (!u.user) return;
       const path = `${u.user.id}/avatar-${Date.now()}.jpg`;
       const { error } = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-      if (error) { alert("No se pudo subir la foto: " + error.message); return; }
+      if (error) { toast("No se pudo subir la foto: " + error.message, { tone: "error" }); return; }
       const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
       const { error: upErr } = await sb.from("profiles").update({ avatar_url: url }).eq("id", u.user.id);
-      if (upErr) { alert("No se pudo guardar la foto en tu perfil: " + upErr.message); return; }
+      if (upErr) { toast("No se pudo guardar la foto en tu perfil: " + upErr.message, { tone: "error" }); return; }
       setPhotoUrl(url);
     } finally {
       setUploading(false);
@@ -60,7 +61,7 @@ export function AccountSettings() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <div className="flex items-center gap-4 rounded-card border border-line bg-surface p-5 shadow-soft">
         <div className="relative">
           <Avatar member={me} src={photoUrl} size={64} />
           <button
@@ -79,7 +80,7 @@ export function AccountSettings() {
         </div>
       </div>
 
-      <div className="divide-y divide-line rounded-2xl border border-line bg-surface shadow-soft">
+      <div className="divide-y divide-line rounded-card border border-line bg-surface shadow-soft">
         <Row icon={<Mail size={16} />} label="Correo" value={me.email || "—"} />
         <Row icon={<Briefcase size={16} />} label="Rol" value={me.role || "—"} />
         <Row icon={<Users size={16} />} label="Equipo" value="CURVA" />
@@ -108,7 +109,7 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: React.ReactNode }[] = [
 function ThemeSelector() {
   const { theme, setTheme } = useTheme();
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+    <div className="rounded-card border border-line bg-surface p-5 shadow-soft">
       <p className="text-sm font-medium text-fg">Apariencia</p>
       <p className="mt-0.5 text-xs text-muted">El tema se guarda en este dispositivo.</p>
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -120,7 +121,7 @@ function ThemeSelector() {
               onClick={() => setTheme(o.id)}
               role="radio"
               aria-checked={on}
-              className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition focus-ring ${
+              className={`flex items-center justify-center gap-1.5 rounded-control border px-3 py-2.5 text-sm font-medium transition focus-ring ${
                 on
                   ? "border-accent bg-accent/10 text-accent"
                   : "border-line bg-surface text-muted hover:border-accent/40 hover:text-fg"

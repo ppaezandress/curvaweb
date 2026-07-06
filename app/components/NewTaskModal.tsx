@@ -109,10 +109,10 @@ export function NewTaskModal({
       {/* ¿Trabajo interno? (sin cliente) */}
       <Field label="¿Para quién es?">
         <div className="flex gap-1.5">
-          <button onClick={() => setInternal(false)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition ${!internal ? "border-accent bg-accent/5 text-accent" : "border-line text-muted hover:border-muted/40"}`}>
+          <button onClick={() => setInternal(false)} className={`flex-1 rounded-control border px-3 py-2 text-sm font-semibold transition ${!internal ? "border-accent bg-accent/5 text-accent" : "border-line text-muted hover:border-muted/40"}`}>
             Para un cliente
           </button>
-          <button onClick={() => { setInternal(true); setClientId(""); setProjectId(""); }} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition ${internal ? "border-curva-teal bg-curva-teal/5 text-curva-teal" : "border-line text-muted hover:border-muted/40"}`}>
+          <button onClick={() => { setInternal(true); setClientId(""); setProjectId(""); }} className={`flex-1 rounded-control border px-3 py-2 text-sm font-semibold transition ${internal ? "border-success bg-success/5 text-success" : "border-line text-muted hover:border-muted/40"}`}>
             Interno (CURVA)
           </button>
         </div>
@@ -136,7 +136,7 @@ export function NewTaskModal({
       )}
 
       {suggested && (
-        <p className="-mt-1 flex items-center gap-1.5 text-xs text-curva-indigo">
+        <p className="-mt-1 flex items-center gap-1.5 text-xs text-accent">
           <Sparkles size={13} /> Te sugerimos prioridad, esfuerzo y fecha — ajústalos si quieres.
         </p>
       )}
@@ -146,7 +146,7 @@ export function NewTaskModal({
         <Field label="Prioridad">
           <div className="flex gap-1.5">
             {(["Baja", "Media", "Alta"] as const).map((p) => (
-              <button key={p} onClick={() => { setPriority(priority === p ? "" : p); setSuggested(false); }} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition ${priority === p ? "border-accent bg-accent text-white" : "border-line text-muted hover:border-muted/40"}`}>
+              <button key={p} onClick={() => { setPriority(priority === p ? "" : p); setSuggested(false); }} className={`flex-1 rounded-control border px-3 py-2 text-sm font-medium transition ${priority === p ? "border-accent bg-accent text-white" : "border-line text-muted hover:border-muted/40"}`}>
                 {p}
               </button>
             ))}
@@ -162,7 +162,7 @@ export function NewTaskModal({
       <Field label="¿Qué tan pesada es?">
         <div className="flex gap-1.5">
           {(["Ligera", "Media", "Pesada"] as const).map((w) => (
-            <button key={w} onClick={() => { setWeight(weight === w ? "" : w); setSuggested(false); }} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition ${weight === w ? "border-accent bg-accent text-white" : "border-line text-muted hover:border-muted/40"}`}>
+            <button key={w} onClick={() => { setWeight(weight === w ? "" : w); setSuggested(false); }} className={`flex-1 rounded-control border px-3 py-2 text-sm font-medium transition ${weight === w ? "border-accent bg-accent text-white" : "border-line text-muted hover:border-muted/40"}`}>
               {w}
             </button>
           ))}

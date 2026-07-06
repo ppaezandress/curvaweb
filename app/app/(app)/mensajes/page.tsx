@@ -230,10 +230,10 @@ export default function MensajesPage() {
   }, [reactions, myUid]);
 
   if (authed === false) {
-    return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Tu sesión expiró. Vuelve a iniciar sesión para ver los mensajes.</div>;
+    return <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">Tu sesión expiró. Vuelve a iniciar sesión para ver los mensajes.</div>;
   }
   if (authed === null) {
-    return <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">Cargando mensajes…</div>;
+    return <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">Cargando mensajes…</div>;
   }
 
   // Los canales ocultos solo los ve su creador o un admin (para poder mostrarlos de nuevo).
@@ -254,7 +254,7 @@ export default function MensajesPage() {
           <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin directos aún"
             action={<button onClick={() => setDmPickerOpen((o) => !o)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo directo"><MessageSquarePlus size={15} /></button>} />
           {dmPickerOpen && (
-            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-2xl border border-line bg-surface shadow-float">
+            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-card border border-line bg-surface shadow-float">
               {teammatesWithAccount.length === 0 && <p className="px-3 py-3 text-xs text-muted">Nadie más tiene cuenta aún.</p>}
               {teammatesWithAccount.map((m) => (
                 <button key={m.id} onClick={() => startDM(notionToProfile[m.id].id)} className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-surface-2 focus-ring">
@@ -280,7 +280,7 @@ export default function MensajesPage() {
         <div className="mb-3 flex items-center gap-2.5 border-b border-line pb-3">
           {activeChannel && renderChannelIcon(activeChannel, 34)}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}{activeChannel?.is_hidden && <span className="ml-2 rounded-full bg-amber-500/10 px-2 py-0.5 align-middle text-[10px] font-semibold text-amber-600">oculto</span>}</h1>
+            <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}{activeChannel?.is_hidden && <span className="ml-2 rounded-full bg-warn/10 px-2 py-0.5 align-middle text-caption font-semibold text-warn">oculto</span>}</h1>
             <p className="text-xs text-muted">
               {activeChannel?.kind === "team" ? "Todo el equipo · tiempo real"
                 : activeChannel?.kind === "dm" ? "Mensaje directo · privado"
@@ -303,7 +303,7 @@ export default function MensajesPage() {
                 {newDay && (
                   <div className="my-3 flex items-center gap-3">
                     <span className="h-px flex-1 bg-line" />
-                    <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] font-semibold text-muted">{daySepLabel(m.created_at)}</span>
+                    <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-caption font-semibold text-muted">{daySepLabel(m.created_at)}</span>
                     <span className="h-px flex-1 bg-line" />
                   </div>
                 )}
@@ -312,7 +312,7 @@ export default function MensajesPage() {
               </div>
             );
           })}
-          {messages.length === 0 && <p className="py-10 text-center text-sm text-muted">Sé el primero en escribir. 👋</p>}
+          {messages.length === 0 && <p className="py-10 text-center text-sm text-muted">Sé el primero en escribir.</p>}
           <div ref={endRef} />
         </div>
 
@@ -370,12 +370,12 @@ function ChannelList({
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between px-1">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
+        <span className="text-xs font-semibold text-muted">{label}</span>
         {action}
       </div>
       <div className="space-y-0.5">
         {items.map((c) => (
-          <button key={c.id} onClick={() => onSelect(c.id)} className={cn("flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm transition focus-ring", c.id === activeId ? "bg-accent/10 font-semibold text-accent" : "text-fg hover:bg-surface-2")}>
+          <button key={c.id} onClick={() => onSelect(c.id)} className={cn("flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm transition focus-ring", c.id === activeId ? "bg-accent/10 font-semibold text-accent" : "text-fg hover:bg-surface-2")}>
             <span className="shrink-0">{renderIcon(c)}</span>
             <span className="truncate">{labelOf(c)}</span>
           </button>

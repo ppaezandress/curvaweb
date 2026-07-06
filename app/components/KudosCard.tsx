@@ -79,16 +79,16 @@ export function KudosCard() {
   if (pending.length === 0 && received.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+    <section className="rounded-card border border-line bg-surface p-6 shadow-soft">
       <h2 className="flex items-center gap-2 font-display text-xl font-bold text-fg">
-        <Heart size={20} className="text-curva-pink" /> Compañeros de la semana
+        <Heart size={20} className="text-accent" /> Compañeros de la semana
       </h2>
       <p className="mb-4 text-sm text-muted">Trabajaron la misma tarea a la vez. Mándales buena onda — solo ellos lo verán.</p>
 
       {pending.length > 0 && (
         <div className="space-y-3">
           {pending.map((p) => (
-            <div key={p.uid} className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3">
+            <div key={p.uid} className="flex flex-wrap items-center gap-3 rounded-control border border-line p-3">
               <Avatar name={p.name} src={p.avatarUrl} size={32} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-fg">{p.name}</p>
@@ -104,7 +104,7 @@ export function KudosCard() {
               <button
                 onClick={() => send(p.uid)}
                 disabled={sending === p.uid}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-curva-pink px-3 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 focus-ring"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 focus-ring"
               >
                 <Send size={14} /> Buena onda
               </button>
@@ -116,11 +116,11 @@ export function KudosCard() {
       {received.length > 0 && (
         <div className="mt-5">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted">
-            <Sparkles size={14} className="text-curva-pink" /> Te mandaron buena onda
+            <Sparkles size={14} className="text-accent" /> Te mandaron buena onda
           </p>
           <div className="space-y-2">
             {received.map((r) => (
-              <div key={r.id} className="rounded-xl border border-curva-pink/20 bg-curva-pink/5 px-3 py-2">
+              <div key={r.id} className="rounded-control border border-accent/20 bg-accent/5 px-3 py-2">
                 <p className="text-sm text-fg">
                   <b>{r.fromName}</b> disfrutó trabajar contigo ✨
                 </p>

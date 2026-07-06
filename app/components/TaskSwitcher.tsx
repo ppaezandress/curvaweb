@@ -21,7 +21,7 @@ export function TaskSwitcher() {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(56px+env(safe-area-inset-bottom)+12px)] sm:pb-4">
-      <div className="pointer-events-auto mx-auto max-w-3xl overflow-hidden rounded-[20px] border border-line bg-surface/92 shadow-float backdrop-blur-xl">
+      <div className="pointer-events-auto mx-auto max-w-3xl overflow-hidden rounded-hero border border-line bg-surface/92 shadow-float backdrop-blur-xl">
         {/* ── Zona: A MANO (tu cronómetro, uno a la vez) ── */}
         <div className="p-1.5">
           {manualId ? (
@@ -35,9 +35,9 @@ export function TaskSwitcher() {
         {aiEnabled && aiIds.length > 0 && (
           <Lane
             label={
-              <span className="inline-flex items-center gap-1.5 text-curva-indigo">
+              <span className="inline-flex items-center gap-1.5 text-accent">
                 <Sparkles size={12} className="curva-live-dot" /> IA en paralelo
-                <span className="rounded-full bg-curva-indigo/10 px-1.5 py-px text-[10px] font-bold">
+                <span className="rounded-full bg-accent/10 px-1.5 py-px text-caption font-bold">
                   {aiIds.length}
                 </span>
               </span>
@@ -75,7 +75,7 @@ function Lane({
 }) {
   return (
     <div className={`flex items-center gap-2 border-t border-line/70 px-2.5 py-1.5 ${tint === "ai" ? "ai-surface" : ""}`}>
-      <p className="shrink-0 px-0.5 text-[10px] font-bold uppercase tracking-[0.14em]">{label}</p>
+      <p className="shrink-0 px-0.5 text-caption font-semibold text-muted">{label}</p>
       <div className="flex flex-1 gap-1.5 overflow-x-auto py-0.5">{children}</div>
     </div>
   );
@@ -109,11 +109,11 @@ function ManualRow({ taskId }: { taskId: string }) {
 
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-[18px] border border-accent/30 bg-accent/[0.06] px-3 py-2.5 ${
+      className={`flex items-center gap-2.5 rounded-card border border-accent/30 bg-accent/[0.06] px-3 py-2.5 ${
         justResumed ? "curva-handoff" : ""
       }`}
     >
-      <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-2.5 text-[10px] font-bold uppercase tracking-wide text-white">
+      <span className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-2.5 text-caption font-bold text-white">
         <Hand size={12} /> A mano
       </span>
       <div className="min-w-0 flex-1">
@@ -126,13 +126,13 @@ function ManualRow({ taskId }: { taskId: string }) {
       </div>
       {/* Co-working en vivo: quién más está en ESTA tarea ahora mismo */}
       {partners.length > 0 && (
-        <div className="hidden shrink-0 items-center gap-1.5 rounded-full bg-curva-teal/10 px-2.5 py-1 sm:flex" title={`Trabajando juntos: ${partners.map((p) => p.name).join(", ")}`}>
+        <div className="hidden shrink-0 items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 sm:flex" title={`Trabajando juntos: ${partners.map((p) => p.name).join(", ")}`}>
           <span className="flex -space-x-1.5">
             {partners.slice(0, 3).map((p) => (
               <Avatar key={p.uid} name={p.name} src={p.avatarUrl} size={20} />
             ))}
           </span>
-          <span className="text-[11px] font-semibold text-curva-teal">
+          <span className="text-caption font-semibold text-success">
             {partners.length === 1 ? `con ${partners[0].name.split(" ")[0]}` : `con ${partners.length}`}
           </span>
         </div>
@@ -141,7 +141,7 @@ function ManualRow({ taskId }: { taskId: string }) {
       {aiEnabled && (
         <button
           onClick={() => toggleAI(taskId)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-curva-indigo/30 bg-surface px-3 text-xs font-bold text-curva-indigo transition hover:bg-curva-indigo hover:text-white focus-ring"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-accent/30 bg-surface px-3 text-xs font-bold text-accent transition hover:bg-accent hover:text-white focus-ring"
           title="Pasarla a la IA y seguir a mano con la siguiente"
         >
           <Sparkles size={14} /> <span className="hidden sm:inline">A la IA</span>
@@ -178,13 +178,13 @@ function ManualRow({ taskId }: { taskId: string }) {
 /* Estado vacío de la zona "a mano" (cuando solo hay IA o pausa). */
 function IdleRow({ hasAI }: { hasAI: boolean }) {
   return (
-    <div className="flex items-center gap-2 rounded-2xl border border-dashed border-line px-2.5 py-1.5">
+    <div className="flex items-center gap-2 rounded-card border border-dashed border-line px-2.5 py-1.5">
       <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted">
         <Hand size={12} />
       </span>
       <p className="truncate text-xs text-muted">
         Nada a mano.{" "}
-        {hasAI ? "La IA sigue ✨ — toma una tarea." : "Toca ▶ en una tarea."}
+        {hasAI ? "La IA sigue — toma una tarea." : "Toca Iniciar en una tarea."}
       </p>
     </div>
   );
@@ -198,11 +198,11 @@ function AiChip({ taskId }: { taskId: string }) {
   const task = taskById[taskId];
 
   return (
-    <div className="dock-in ai-shimmer group flex min-w-[180px] shrink-0 items-center gap-2 rounded-xl border border-curva-indigo/30 bg-surface/70 px-2.5 py-2">
-      <Sparkles size={15} className="curva-live-dot shrink-0 text-curva-indigo" />
+    <div className="dock-in ai-shimmer group flex min-w-[180px] shrink-0 items-center gap-2 rounded-control border border-accent/30 bg-surface/70 px-2.5 py-2">
+      <Sparkles size={15} className="curva-live-dot shrink-0 text-accent" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-fg">{task?.name || "Tarea"}</p>
-        <p className="tabular text-xs font-semibold text-curva-indigo">{formatClock(elapsed)}</p>
+        <p className="tabular text-xs font-semibold text-accent">{formatClock(elapsed)}</p>
       </div>
       {/* Retomar a mano */}
       <button
@@ -216,7 +216,7 @@ function AiChip({ taskId }: { taskId: string }) {
       {/* Detener IA */}
       <button
         onClick={() => stopAI(taskId)}
-        className="shrink-0 rounded-md p-1 text-curva-indigo/60 opacity-100 transition hover:text-curva-indigo focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+        className="shrink-0 rounded-md p-1 text-accent/60 opacity-100 transition hover:text-accent focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         aria-label="Detener IA"
         title="Detener IA"
       >
@@ -248,7 +248,7 @@ function PausedChip({ taskId }: { taskId: string }) {
       {aiEnabled && (
         <button
           onClick={() => toggleAI(taskId)}
-          className="shrink-0 rounded-md p-1 text-muted/70 transition hover:text-curva-indigo"
+          className="shrink-0 rounded-md p-1 text-muted/70 transition hover:text-accent"
           aria-label="Pasar a la IA"
           title="Pasar a la IA"
         >

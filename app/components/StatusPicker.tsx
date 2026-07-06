@@ -49,7 +49,7 @@ export function StatusPicker({
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         disabled={saving}
-        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 focus-ring disabled:opacity-50 ${statusToneClass(status)}`}
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-medium transition hover:opacity-80 focus-ring disabled:opacity-50 ${statusToneClass(status)}`}
         title="Cambiar estado"
         aria-label="Cambiar estado de la tarea"
       >
@@ -57,14 +57,14 @@ export function StatusPicker({
         {status || "Sin estado"} <ChevronDown size={11} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-float">
+        <div className="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-control border border-line bg-surface py-1 shadow-float">
           {STATUSES.map((s) => (
             <button
               key={s}
               onClick={(e) => { e.stopPropagation(); choose(s); }}
               className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition hover:bg-surface-2"
             >
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${statusToneClass(s)}`}>{s}</span>
+              <span className={`rounded-full px-2 py-0.5 text-caption font-medium ${statusToneClass(s)}`}>{s}</span>
               {s === status && <Check size={14} className="text-accent" />}
             </button>
           ))}

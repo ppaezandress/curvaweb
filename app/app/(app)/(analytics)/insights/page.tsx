@@ -18,6 +18,7 @@ import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Chart } from "@/components/ui/Chart";
 import { Bars } from "@/components/analytics/Bars";
 import { Stat, toDelta } from "@/components/ui/Stat";
+import { Meter } from "@/components/ui/Meter";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function AnalisisPage() {
@@ -101,6 +102,13 @@ function Analisis() {
     [myRecords, range, taskById, projectById, clientById],
   );
 
+  // Serie total (para el sparkline del KPI de horas).
+  const totalSpark = useMemo(
+    () => bucketize(myRecords, { from: range.from, to: range.to, granularity: gran, groupBy: "none", maps }).series[0]?.values ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [myRecords, range, gran, taskById],
+  );
+
   const granLabel = gran === "day" ? "por día" : gran === "week" ? "por semana" : "por mes";
   const empty = !loading && cur.min === 0;
 
@@ -139,7 +147,7 @@ function Analisis() {
         <>
           {/* KPIs del rango */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard icon={<Clock size={14} />} label="Horas" value={formatHours(cur.min * 60)} curr={cur.min} prev={prv?.min ?? null} />
+            <KpiCard icon={<Clock size={14} />} label="Horas" value={formatHours(cur.min * 60)} curr={cur.min} prev={prv?.min ?? null} spark={totalSpark} />
             <KpiCard icon={<ListChecks size={14} />} label="Tareas" value={String(cur.tasks)} curr={cur.tasks} prev={prv?.tasks ?? null} />
             <KpiCard icon={<CalendarCheck size={14} />} label="Días activos" value={String(cur.days)} curr={cur.days} prev={prv?.days ?? null} />
             <KpiCard icon={<Gauge size={14} />} label="Horas / día" value={formatHours(cur.perDay * 60)} curr={Math.round(cur.perDay)} prev={prv ? Math.round(prv.perDay) : null} />
@@ -191,17 +199,16 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
         <span className="text-caption text-muted">{label}</span>
         <span className="tabular text-caption font-semibold text-fg">{pct}</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-        <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
-      </div>
+      <Meter value={pct} label={`${label}: ${pct} de 100`} height="h-1.5" />
     </div>
   );
 }
 
-function KpiCard({ icon, label, value, curr, prev }: { icon: React.ReactNode; label: string; value: string; curr: number; prev: number | null }) {
+function KpiCard({ icon, label, value, curr, prev, spark }: { icon: React.ReactNode; label: string; value: string; curr: number; prev: number | null; spark?: number[] }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5 shadow-soft">
       <Stat icon={icon} label={label} value={value} delta={toDelta(curr, prev)} />
+      {spark && spark.length > 1 && <Chart values={spark} height={34} bare className="mt-3" />}
     </div>
   );
 }

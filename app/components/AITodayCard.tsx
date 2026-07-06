@@ -48,9 +48,9 @@ export function AITodayCard() {
   const elapsed = live.live && live.startedAt ? Math.max(0, Math.round((now - live.startedAt) / 1000)) : 0;
 
   return (
-    <section className="flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-curva-indigo/30 bg-surface p-4 shadow-soft">
+    <section className="flex items-center justify-between gap-3 overflow-hidden rounded-card border border-accent/30 bg-surface p-4 shadow-soft">
       <div className="flex min-w-0 items-center gap-3">
-        <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${live.live ? "ai-shimmer bg-curva-indigo text-white" : "bg-curva-indigo/10 text-curva-indigo"}`}>
+        <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${live.live ? "ai-shimmer bg-accent text-white" : "bg-accent/10 text-accent"}`}>
           <Sparkles size={18} className={live.live ? "curva-live-dot" : ""} />
         </span>
         <div className="min-w-0">
@@ -62,11 +62,11 @@ export function AITodayCard() {
       </div>
       <div className="shrink-0 text-right">
         {live.live ? (
-          <p className="tabular font-display text-2xl font-bold text-curva-indigo">{formatClock(elapsed)}</p>
+          <p className="tabular font-display text-2xl font-bold text-accent">{formatClock(elapsed)}</p>
         ) : (
           <p className="tabular font-display text-xl font-bold text-fg">{formatHours(todayMin * 60)}</p>
         )}
-        <p className="text-[11px] text-muted">{live.live ? "en vivo" : "hoy con IA"}</p>
+        <p className="text-caption text-muted">{live.live ? "en vivo" : "hoy con IA"}</p>
       </div>
     </section>
   );

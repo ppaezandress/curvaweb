@@ -72,8 +72,8 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
   // ── Tira compacta (colapsada): orbe + brief + top move + expandir ──
   if (compact && !expanded) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-curva-indigo/25 bg-surface px-4 py-2.5 shadow-soft">
-        <span className="curva-gradient breathe inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white"><Sparkles size={15} /></span>
+      <div className="flex items-center gap-3 rounded-card border border-accent/25 bg-surface px-4 py-2.5 shadow-soft">
+        <span className="curva-gradient breathe inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-white"><Sparkles size={15} /></span>
         <div className="min-w-0 flex-1">
           {top ? (
             <p className="truncate text-sm text-fg"><span className="font-semibold">Curvi:</span> {top.title.replace(/:.*/, "")} — {top.title.split(": ").slice(1).join(": ")} <span className="text-muted">· {top.reason.toLowerCase()}</span></p>
@@ -91,13 +91,13 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
 
   // ── Panel completo ──
   return (
-    <section className="overflow-hidden rounded-3xl border border-curva-indigo/25 bg-surface shadow-soft">
+    <section className="overflow-hidden rounded-hero border border-accent/25 bg-surface shadow-soft">
       <div className="flex items-center gap-3 border-b border-line/70 px-5 py-4">
-        <span className="curva-gradient breathe inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm"><Sparkles size={18} /></span>
+        <span className="curva-gradient breathe inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-card text-white shadow-sm"><Sparkles size={18} /></span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 font-bold text-fg">
             <span className="font-brand text-[1.1rem] font-semibold">Curvi</span>
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${sug.energy.isPeak ? "bg-curva-teal/15 text-curva-teal" : "bg-surface-2 text-muted"}`}>{sug.energy.emoji} {sug.energy.label}</span>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-semibold ${sug.energy.isPeak ? "bg-success/15 text-success" : "bg-surface-2 text-muted"}`}>{sug.energy.emoji} {sug.energy.label}</span>
           </p>
           <p className="truncate text-sm text-muted">{ready ? sug.brief : "Leyendo tu día…"}</p>
         </div>
@@ -115,10 +115,10 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
 
         {sug.plan.length > 0 ? (
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Tu próxima hora</p>
+            <p className="text-xs font-bold text-muted">Tu próxima hora</p>
             {sug.plan.map((m) => (
-              <div key={m.taskId} className="group flex items-center gap-3 rounded-2xl border border-line p-3 transition hover:border-accent/40">
-                <span className={`mt-0.5 h-9 w-1.5 shrink-0 rounded-full ${m.tone === "urgent" ? "bg-rose-500" : m.tone === "normal" ? "bg-accent" : "bg-curva-teal"}`} />
+              <div key={m.taskId} className="group flex items-center gap-3 rounded-card border border-line p-3 transition hover:border-accent/40">
+                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${m.tone === "urgent" ? "bg-danger" : m.tone === "normal" ? "bg-accent" : "bg-success"}`} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-fg">{m.title}</p>
                   <p className="truncate text-xs text-muted">{m.reason} · ~{m.estMin} min</p>
@@ -128,15 +128,15 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
             ))}
           </div>
         ) : (
-          ready && <p className="rounded-2xl border border-dashed border-line py-6 text-center text-sm text-muted">Sin pendientes accionables. Crea una tarea arriba o toma un respiro 🌿</p>
+          ready && <p className="rounded-card border border-dashed border-line py-6 text-center text-sm text-muted">Sin pendientes accionables. Crea una tarea arriba o toma un respiro 🌿</p>
         )}
 
         {/* Q&A con Curvi — gateado off en el piloto (probamos si el equipo lo pide). */}
         {PILOT.curviChat && (
-          <div className="rounded-2xl bg-surface-2 p-3">
+          <div className="rounded-card bg-surface-2 p-3">
             {reply && (
-              <div className="mb-2 flex gap-2 rounded-xl bg-surface p-3 text-sm text-fg shadow-soft">
-                <Sparkles size={15} className="mt-0.5 shrink-0 text-curva-indigo" /><p>{reply}</p>
+              <div className="mb-2 flex gap-2 rounded-control bg-surface p-3 text-sm text-fg shadow-soft">
+                <Sparkles size={15} className="mt-0.5 shrink-0 text-accent" /><p>{reply}</p>
               </div>
             )}
             <div className="flex items-center gap-2">
@@ -156,6 +156,6 @@ export function CurviPanel({ compact = false }: { compact?: boolean }) {
 }
 
 function Nudge({ icon, label, tone }: { icon: React.ReactNode; label: string; tone: "rose" | "amber" | "indigo" }) {
-  const cls = tone === "rose" ? "bg-rose-500/10 text-rose-600" : tone === "amber" ? "bg-amber-500/10 text-amber-600" : "bg-curva-indigo/10 text-curva-indigo";
+  const cls = tone === "rose" ? "bg-danger/10 text-danger" : tone === "amber" ? "bg-warn/10 text-warn" : "bg-accent/10 text-accent";
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{icon}{label}</span>;
 }

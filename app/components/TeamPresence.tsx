@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Music } from "lucide-react";
+import { Music, Calendar, Clock } from "lucide-react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 
@@ -53,8 +53,8 @@ export function TeamPresence() {
   const sorted = [...rows].sort((a, b) => Number(onlineRecently(b.updated_at)) - Number(onlineRecently(a.updated_at)));
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4 shadow-soft">
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">Equipo</h3>
+    <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
+      <h3 className="mb-3 text-xs font-semibold text-muted">Equipo</h3>
       <div className="space-y-3">
         {sorted.map((r) => {
           const prof = profiles[r.user_id];
@@ -63,13 +63,13 @@ export function TeamPresence() {
             <div key={r.user_id} className="flex items-start gap-2.5">
               <div className="relative">
                 <Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={36} />
-                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface ${r.in_meeting ? "bg-danger" : r.is_active ? "bg-curva-teal" : online ? "bg-warn" : "bg-muted"}`} />
+                <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface ${r.in_meeting ? "bg-danger" : r.is_active ? "bg-success" : online ? "bg-warn" : "bg-muted"}`} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-fg">{prof?.name || "—"}</p>
-                <p className={`truncate text-xs ${r.in_meeting ? "font-medium text-rose-500" : "text-muted"}`}>
-                  {r.in_meeting ? "📅 En junta"
-                    : r.is_active ? (r.current_task ? `⏱ ${r.current_task}` : "trabajando")
+                <p className={`truncate text-xs ${r.in_meeting ? "font-medium text-danger" : "text-muted"}`}>
+                  {r.in_meeting ? <span className="inline-flex items-center gap-1"><Calendar size={11} /> En junta</span>
+                    : r.is_active ? (r.current_task ? <span className="inline-flex items-center gap-1"><Clock size={11} /> {r.current_task}</span> : "trabajando")
                     : online ? "en línea" : "desconectado"}
                 </p>
                 {r.track && (

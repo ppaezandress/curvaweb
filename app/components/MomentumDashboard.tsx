@@ -73,7 +73,7 @@ export function MomentumDashboard() {
   const R = 58, C = 2 * Math.PI * R;
 
   return (
-    <section className="grid gap-4 rounded-3xl border border-line bg-surface p-5 shadow-soft sm:grid-cols-[auto_1fr]">
+    <section className="grid gap-4 rounded-hero border border-line bg-surface p-5 shadow-soft sm:grid-cols-[auto_1fr]">
       {/* Anillo de momentum */}
       <div className="flex items-center justify-center">
         <div className="relative h-[150px] w-[150px]">
@@ -94,7 +94,7 @@ export function MomentumDashboard() {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p className="tabular font-display text-2xl font-bold text-fg">{formatDuration(dayMin * 60)}</p>
-            <p className="text-[11px] text-muted">{sel === null || idx === data.todayIdx ? "hoy" : DIAS_CORTOS[idx]} · {Math.round(pct * 100)}%</p>
+            <p className="text-caption text-muted">{sel === null || idx === data.todayIdx ? "hoy" : DIAS_CORTOS[idx]} · {Math.round(pct * 100)}%</p>
           </div>
         </div>
       </div>
@@ -103,17 +103,17 @@ export function MomentumDashboard() {
       <div className="flex flex-col justify-between gap-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">Esta semana</p>
+            <p className="text-xs font-bold text-muted">Esta semana</p>
             <p className="tabular font-display text-lg font-bold text-fg">{formatDuration(data.weekTotal * 60)}</p>
           </div>
           <div className="flex items-center gap-2">
             {data.streak > 1 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2.5 py-1 text-xs font-bold text-orange-500">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">
                 <Flame size={13} /> {data.streak}
               </span>
             )}
             {weekDelta !== null && (
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${weekDelta >= 0 ? "bg-curva-teal/15 text-curva-teal" : "bg-rose-500/10 text-rose-500"}`}>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${weekDelta >= 0 ? "bg-success/15 text-success" : "bg-danger/10 text-danger"}`}>
                 {weekDelta >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />} {Math.abs(weekDelta)}%
               </span>
             )}
@@ -131,12 +131,12 @@ export function MomentumDashboard() {
                   className={`w-full rounded-md transition-all ${on ? "curva-gradient" : isToday ? "bg-accent/40" : "bg-surface-2 group-hover:bg-accent/20"}`}
                   style={{ height: Math.max(h, m > 0 ? 4 : 2) }}
                 />
-                <span className={`text-[10px] font-semibold ${on ? "text-accent" : "text-muted"}`}>{DIAS_CORTOS[i]}</span>
+                <span className={`text-caption font-semibold ${on ? "text-accent" : "text-muted"}`}>{DIAS_CORTOS[i]}</span>
               </button>
             );
           })}
         </div>
-        <p className="text-[11px] text-muted">El anillo compara tu día con tu día típico (~{formatDuration(data.goal * 60)}). Pica un día para verlo.</p>
+        <p className="text-caption text-muted">El anillo compara tu día con tu día típico (~{formatDuration(data.goal * 60)}). Pica un día para verlo.</p>
       </div>
     </section>
   );

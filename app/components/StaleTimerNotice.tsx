@@ -18,8 +18,8 @@ export function StaleTimerNotice() {
 
   return (
     <div className="fixed inset-x-0 bottom-20 z-[55] flex justify-center px-4 sm:bottom-6" data-no-capture="1">
-      <div className="flex w-full max-w-md items-start gap-3 rounded-2xl border border-amber-500/30 bg-surface p-4 shadow-float">
-        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+      <div className="flex w-full max-w-md items-start gap-3 rounded-card border border-warn/30 bg-surface p-4 shadow-float">
+        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warn/10 text-warn">
           <AlertTriangle size={16} />
         </span>
         <div className="min-w-0 flex-1">
@@ -28,7 +28,7 @@ export function StaleTimerNotice() {
             {task?.name ? <>Dejaste corriendo <span className="font-medium text-fg">{task.name}</span> </> : "Dejaste un cronómetro corriendo "}
             desde {since} ({formatDuration(elapsed)}). No lo contamos automáticamente — si trabajaste, regístralo a mano con <span className="font-medium text-fg">Registrar tiempo</span>.
           </p>
-          <button onClick={dismissStaleTimer} className="mt-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 transition hover:bg-amber-500/20 focus-ring">
+          <button onClick={dismissStaleTimer} className="mt-2 rounded-full bg-warn/10 px-3 py-1 text-xs font-semibold text-warn transition hover:bg-warn/20 focus-ring">
             Entendido
           </button>
         </div>

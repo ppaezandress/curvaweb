@@ -31,7 +31,7 @@ export function NowHero({
     // Es el número que crece y nunca reinicia al pausar/reanudar.
     const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(active.taskId) + elapsed;
     return (
-      <div className="curva-gradient overflow-hidden rounded-3xl p-6 text-white sm:p-8">
+      <div className="curva-gradient overflow-hidden rounded-hero p-6 text-white sm:p-8">
         <div className="flex items-center gap-2 text-sm font-medium text-white/80">
           <span className="curva-live-dot inline-block h-2.5 w-2.5 rounded-full bg-surface" />
           Cronómetro corriendo
@@ -46,7 +46,7 @@ export function NowHero({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-white/60">
+            <p className="text-caption font-medium text-white/60">
               Total en esta tarea
             </p>
             <p className="tabular font-display text-4xl font-bold leading-none sm:text-5xl">
@@ -76,10 +76,10 @@ export function NowHero({
   }
 
   return (
-    <div className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
+    <div className="rounded-hero border border-line bg-surface p-6 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-card bg-accent/10 text-accent">
             <Play size={20} fill="currentColor" />
           </span>
           <div>
@@ -112,7 +112,7 @@ function Metric({
 }) {
   return (
     <div>
-      <p className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted">
+      <p className="flex items-center gap-1 text-caption font-medium text-muted">
         {icon}
         {label}
       </p>

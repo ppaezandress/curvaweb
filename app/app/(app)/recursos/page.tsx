@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useEffect, useState } from "react";
 import { FolderOpen, Plus, ExternalLink, Trash2, Loader2, Link2 } from "lucide-react";
@@ -48,7 +49,7 @@ export default function RecursosPage() {
     setSaving(true);
     try {
       const { error } = await sb.from("resources").insert({ title: title.trim(), url: clean, kind: "link", added_by: uid });
-      if (error) { alert("No se pudo agregar: " + error.message); return; }
+      if (error) { toast("No se pudo agregar: " + error.message, { tone: "error" }); return; }
       setTitle(""); setUrl("");
       await load();
     } finally {
@@ -61,7 +62,7 @@ export default function RecursosPage() {
     if (!sb) return;
     setItems((p) => p.filter((r) => r.id !== id)); // optimista
     const { error } = await sb.from("resources").delete().eq("id", id);
-    if (error) { alert("No se pudo borrar: " + error.message); load(); }
+    if (error) { toast("No se pudo borrar: " + error.message, { tone: "error" }); load(); }
   };
 
   return (
@@ -72,24 +73,24 @@ export default function RecursosPage() {
       />
 
       {/* Agregar */}
-      <section className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+      <section className="rounded-card border border-line bg-surface p-5 shadow-soft">
         <p className="mb-3 flex items-center gap-2 font-display font-bold text-fg"><Plus size={16} className="text-accent" /> Agregar un recurso</p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={title} onChange={(e) => setTitle(e.target.value)}
             placeholder="Nombre (ej. Brand book de Curva)"
-            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted focus-ring"
+            className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted focus-ring"
           />
           <input
             value={url} onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") add(); }}
             placeholder="Link (Notion, Drive, Figma…)"
-            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted focus-ring"
+            className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted focus-ring"
           />
           <button
             onClick={add}
             disabled={saving || !title.trim() || !url.trim()}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-control bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Agregar
           </button>
@@ -98,22 +99,22 @@ export default function RecursosPage() {
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface py-16 text-sm text-muted">
+        <div className="flex items-center justify-center gap-2 rounded-card border border-line bg-surface py-16 text-sm text-muted">
           <Loader2 size={16} className="animate-spin" /> Cargando recursos…
         </div>
       ) : !available ? (
-        <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">
+        <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">
           El espacio de recursos se está preparando. Vuelve en un momento.
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line p-10 text-center text-sm text-muted">
+        <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">
           Aún no hay recursos. Agrega el primero arriba — el brand book, una plantilla, lo que el equipo use seguido.
         </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {items.map((r) => (
-            <li key={r.id} className="group flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 shadow-soft transition hover:border-accent/40">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+            <li key={r.id} className="group flex items-center gap-3 rounded-card border border-line bg-surface p-4 shadow-soft transition hover:border-accent/40">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent/10 text-accent">
                 <Link2 size={18} />
               </span>
               <a href={r.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1">
@@ -133,7 +134,7 @@ export default function RecursosPage() {
         </ul>
       )}
 
-      <p className="flex items-center gap-1.5 text-[11px] text-muted"><FolderOpen size={12} /> Todos en el equipo ven estos recursos. Puedes borrar los que tú agregaste.</p>
+      <p className="flex items-center gap-1.5 text-caption text-muted"><FolderOpen size={12} /> Todos en el equipo ven estos recursos. Puedes borrar los que tú agregaste.</p>
     </div>
   );
 }

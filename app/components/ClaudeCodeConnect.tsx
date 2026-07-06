@@ -49,12 +49,12 @@ export function ClaudeCodeConnect() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 text-left text-fg shadow-soft transition focus-ring hover:border-curva-indigo active:scale-[0.99]">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-curva-indigo/10 text-curva-indigo"><Terminal size={20} /></span>
+      <button onClick={() => setOpen(true)} className="flex items-center gap-3 rounded-card border border-line bg-surface p-4 text-left text-fg shadow-soft transition focus-ring hover:border-accent active:scale-[0.99]">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-accent/10 text-accent"><Terminal size={20} /></span>
         <span className="min-w-0 flex-1">
           <span className="block font-semibold">Conectar Claude Code</span>
           <span className="block truncate text-xs text-muted">
-            {last ? <span className="text-curva-teal">✓ Señal {ago(last)}</span> : "Mide el tiempo de IA solo"}
+            {last ? <span className="text-success">✓ Señal {ago(last)}</span> : "Mide el tiempo de IA solo"}
           </span>
         </span>
       </button>
@@ -62,7 +62,7 @@ export function ClaudeCodeConnect() {
       <Modal open={open} onClose={() => setOpen(false)} title="Conectar Claude Code">
         <div className="space-y-4">
           <p className="flex items-start gap-2 text-sm text-muted">
-            <Sparkles size={16} className="mt-0.5 shrink-0 text-curva-indigo" />
+            <Sparkles size={16} className="mt-0.5 shrink-0 text-accent" />
             Mide <b className="text-fg">solo</b> el tiempo que la IA trabaja por ti — sin que toques nada. Lo configuras una vez y cada vez que uses Claude Code, el tiempo cae en tus métricas de IA, por proyecto.
           </p>
 
@@ -74,11 +74,11 @@ export function ClaudeCodeConnect() {
             <li>
               <p className="mb-1 flex items-center justify-between font-semibold text-fg">
                 2. Pega esto dentro
-                <button onClick={copy} className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted transition hover:border-curva-indigo hover:text-curva-indigo">
+                <button onClick={copy} className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted transition hover:border-accent hover:text-accent">
                   {copied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
                 </button>
               </p>
-              <pre className="max-h-56 overflow-auto rounded-lg bg-ink p-3 text-[11px] leading-relaxed text-zinc-100">{snippet}</pre>
+              <pre className="max-h-56 overflow-auto rounded-lg bg-ink p-3 text-caption leading-relaxed text-muted">{snippet}</pre>
             </li>
           </ol>
 
@@ -86,8 +86,8 @@ export function ClaudeCodeConnect() {
             <p className="rounded-lg bg-warn/10 px-3 py-2 text-xs text-warn">Tu correo no está en el equipo de Notion, así que el snippet trae un placeholder. Cámbialo por tu correo registrado.</p>
           )}
 
-          <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2/60 px-3 py-2.5 text-sm">
-            <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${last ? "bg-curva-teal" : "bg-zinc-300"}`} />
+          <div className="flex items-center gap-2 rounded-control border border-line bg-surface-2/60 px-3 py-2.5 text-sm">
+            <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${last ? "bg-success" : "bg-surface-2"}`} />
             <span className={last ? "text-fg" : "text-muted"}>
               {last ? `Última señal recibida ${ago(last)} ✓` : "Aún sin señal. Manda un mensaje en Claude Code para probar."}
             </span>

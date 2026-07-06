@@ -11,7 +11,7 @@ export function RecentSessions() {
   const recent = [...entries].reverse().slice(0, 6);
 
   return (
-    <section className="rounded-2xl border border-line bg-surface p-5">
+    <section className="rounded-card border border-line bg-surface p-5">
       <h2 className="mb-1 flex items-center gap-2 font-display text-lg font-bold text-fg">
         <Clock size={18} /> Lo que registraste hoy
       </h2>
@@ -20,7 +20,7 @@ export function RecentSessions() {
       </p>
 
       {recent.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-line py-8 text-center text-sm text-muted">
+        <div className="rounded-control border border-dashed border-line py-8 text-center text-sm text-muted">
           Aún no registras tiempo. Dale <span className="font-semibold text-muted">Iniciar</span> a una tarea.
         </div>
       ) : (

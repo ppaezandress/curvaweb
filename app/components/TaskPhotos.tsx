@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image as ImageIcon, Loader2, X, SwitchCamera, RotateCcw, Send } from "lucide-react";
@@ -84,13 +85,13 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
     setSending(true);
     try {
       const { data: u } = await sb.auth.getUser();
-      if (!u.user) { alert("Para subir fotos necesitas iniciar sesión con tu correo y contraseña (no el acceso rápido)."); return; }
+      if (!u.user) { toast("Para subir fotos necesitas iniciar sesión con tu correo y contraseña (no el acceso rápido).", { tone: "error" }); return; }
       const path = `${u.user.id}/${taskId}/${Date.now()}.${shot.ext}`;
       const { error } = await sb.storage.from("task-photos").upload(path, shot.blob, { upsert: true, contentType: shot.blob.type || "image/jpeg" });
-      if (error) { alert("No se pudo subir la foto: " + error.message); return; }
+      if (error) { toast("No se pudo subir la foto: " + error.message, { tone: "error" }); return; }
       const { data: pub } = sb.storage.from("task-photos").getPublicUrl(path);
       const { error: insErr } = await sb.from("task_photos").insert({ task_id: taskId, user_id: u.user.id, url: pub.publicUrl, caption: caption.trim() || null });
-      if (insErr) { alert("No se pudo guardar la foto: " + insErr.message); return; }
+      if (insErr) { toast("No se pudo guardar la foto: " + insErr.message, { tone: "error" }); return; }
       clearShot();
       onClose(); // enviada → aparece en el Recap del equipo
     } finally { setSending(false); }
@@ -101,19 +102,19 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
       <p className="-mt-1 mb-4 truncate text-sm text-muted">{taskName}</p>
 
       {!supabaseConfigured() ? (
-        <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">Conecta el backend para subir fotos.</p>
+        <p className="rounded-control border border-dashed border-line p-6 text-center text-sm text-muted">Conecta el backend para subir fotos.</p>
       ) : view === "preview" && shot ? (
         // Preview + comentario + emojis → Enviar
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shot.url} alt="Vista previa" className="aspect-[3/4] w-full rounded-2xl object-cover sm:aspect-video" />
+          <img src={shot.url} alt="Vista previa" className="aspect-[3/4] w-full rounded-card object-cover sm:aspect-video" />
           <input
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") send(); }}
             placeholder="Agrega un comentario (opcional)…"
             autoFocus
-            className="mt-3 w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
+            className="mt-3 w-full rounded-control border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
           />
           <div className="mt-2 flex flex-wrap gap-1">
             {EMOJIS.map((e) => (
@@ -127,7 +128,7 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
         </div>
       ) : view === "denied" ? (
         // Sin cámara → subir archivo
-        <div className="rounded-2xl border-2 border-dashed border-line p-6 text-center">
+        <div className="rounded-card border-2 border-dashed border-line p-6 text-center">
           <p className="text-sm text-muted">No pude abrir la cámara. Puedes subir un archivo o dar permiso e intentar de nuevo.</p>
           <div className="mt-3 flex justify-center gap-2">
             <Button variant="secondary" onClick={() => startCam("environment")}>Reintentar cámara</Button>
@@ -136,7 +137,7 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
         </div>
       ) : (
         // Cámara (automática) con ícono para subir archivo
-        <div className="relative overflow-hidden rounded-2xl bg-zinc-900">
+        <div className="relative overflow-hidden rounded-card bg-surface-2">
           <video ref={videoRef} playsInline muted className="aspect-[3/4] w-full object-cover sm:aspect-video" />
           <button onClick={onClose} aria-label="Cerrar" className="absolute left-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/60 focus-ring"><X size={18} /></button>
           <button onClick={() => startCam(facing === "user" ? "environment" : "user")} aria-label="Voltear cámara" className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/60 focus-ring"><SwitchCamera size={18} /></button>

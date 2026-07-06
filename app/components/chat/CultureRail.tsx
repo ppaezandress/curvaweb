@@ -33,8 +33,8 @@ function KudosReceived() {
 
   if (items.length === 0) return null;
   return (
-    <div className="rounded-2xl border border-curva-pink/20 bg-curva-pink/5 p-4">
-      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-curva-pink"><Heart size={13} /> Buena onda</h3>
+    <div className="rounded-card border border-accent/20 bg-accent/5 p-4">
+      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-accent"><Heart size={13} /> Buena onda</h3>
       <div className="space-y-2">
         {items.map((r) => (
           <div key={r.id} className="text-sm">

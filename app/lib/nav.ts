@@ -1,4 +1,4 @@
-import { Home, ListTodo, MessageCircle, LineChart, Users, Sparkles, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, ListTodo, MessageCircle, LineChart, Users, Sparkles, type LucideIcon } from "lucide-react";
 import { PILOT } from "@/lib/pilot-flags";
 
 export type NavLink = { href: string; label: string; icon: LucideIcon; match: (p: string) => boolean };
@@ -8,7 +8,7 @@ export type NavLink = { href: string; label: string; icon: LucideIcon; match: (p
 // Ajustes viven en el menú del avatar (destinos ligeros/ocasionales).
 export function navLinks({ isAdmin = false }: { isAdmin?: boolean } = {}): NavLink[] {
   const links: NavLink[] = [
-    { href: "/dashboard", label: "Hoy", icon: Home, match: (p) => p === "/dashboard" },
+    { href: "/dashboard", label: "Inicio", icon: LayoutDashboard, match: (p) => p === "/dashboard" },
     { href: "/tareas", label: "Tareas", icon: ListTodo, match: (p) => p === "/tareas" || p === "/timesheet" },
   ];
   if (PILOT.messages) {

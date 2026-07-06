@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { TopNav } from "@/components/TopNav";
+import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { TaskSwitcher } from "@/components/TaskSwitcher";
 import { IdleReview } from "@/components/IdleReview";
@@ -20,6 +21,7 @@ import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { MeetingWatcher } from "@/components/MeetingWatcher";
 import { AISync } from "@/components/AISync";
 import { SupportButton } from "@/components/SupportButton";
+import { Toaster } from "@/lib/toast";
 import { AILiveProvider } from "@/lib/use-ai-live";
 import { CoworkingProvider } from "@/lib/use-coworking";
 
@@ -49,20 +51,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AILiveProvider>
     <CoworkingProvider>
-    <div className="min-h-screen">
-      <TopNav />
-      <main
-        className={`mx-auto max-w-5xl px-4 py-6 sm:py-8 ${
-          hasDock ? "pb-[150px] sm:pb-[120px]" : "pb-[88px] sm:pb-8"
-        }`}
-      >
-        {(source === "mock" || source === "mock-local") && (
-          <div className="mb-5 rounded-2xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-fg">
-            ⚠️ Estás viendo <b>datos de prueba</b> — no se pudo conectar a Notion ahorita. Tu tiempo medido sí se guarda; recarga en un rato para ver tu info real.
-          </div>
-        )}
-        {children}
-      </main>
+    <div className="flex min-h-screen">
+      {/* Sidebar (desktop) — sensación de app */}
+      <Sidebar />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header solo en móvil/tablet; en desktop la nav vive en el sidebar */}
+        <div className="lg:hidden">
+          <TopNav />
+        </div>
+
+        <main
+          className={`mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 sm:px-6 lg:px-8 ${
+            hasDock ? "pb-[150px] sm:pb-[120px] lg:pb-[120px]" : "pb-[88px] lg:pb-10"
+          }`}
+        >
+          {(source === "mock" || source === "mock-local") && (
+            <div className="mb-5 flex items-center gap-2 rounded-card border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-fg">
+              <span className="text-warn">●</span> Estás viendo <b>datos de prueba</b> — no se pudo conectar a Notion ahorita. Tu tiempo medido sí se guarda; recarga en un rato para ver tu info real.
+            </div>
+          )}
+          {children}
+        </main>
+      </div>
+
       <TaskSwitcher />
       <BottomNav />
       <IdleReview />
@@ -76,6 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MeetingWatcher />
       <AISync />
       <SupportButton />
+      <Toaster />
     </div>
     </CoworkingProvider>
     </AILiveProvider>

@@ -37,12 +37,12 @@ export function IconButton({
   const tones = {
     neutral: "border border-line bg-surface text-fg hover:border-accent",
     primary: "bg-accent text-white hover:opacity-90",
-    success: "bg-accent-2 text-white hover:opacity-90",
+    success: "bg-success text-white hover:opacity-90",
   };
   return (
     <button
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-full transition focus-ring disabled:opacity-40 active:scale-95",
+        "inline-flex h-10 w-10 items-center justify-center rounded-control transition focus-ring disabled:opacity-40 active:scale-95",
         tones[tone],
         className,
       )}

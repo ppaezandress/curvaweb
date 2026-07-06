@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 
 import { useMemo, useRef, useState } from "react";
 import { Send, ListTodo, AtSign, X, Paperclip, Mic, Square, Loader2, ImageIcon, Film, Music } from "lucide-react";
@@ -58,10 +59,10 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
     setUploading(true);
     try {
       const { data: u } = await sb.auth.getUser();
-      if (!u.user) { alert("Inicia sesión con tu correo para adjuntar archivos."); return; }
+      if (!u.user) { toast("Inicia sesión con tu correo para adjuntar archivos.", { tone: "error" }); return; }
       const path = `${u.user.id}/${Date.now()}.${ext}`;
       const { error } = await sb.storage.from("chat-media").upload(path, blob, { contentType: blob.type || "application/octet-stream", upsert: true });
-      if (error) { alert("No se pudo subir el archivo: " + error.message); return; }
+      if (error) { toast("No se pudo subir el archivo: " + error.message, { tone: "error" }); return; }
       const url = sb.storage.from("chat-media").getPublicUrl(path).data.publicUrl;
       setAttach({ url, type: kindOf(blob.type || "") });
     } finally { setUploading(false); }
@@ -93,7 +94,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
       recRef.current = { rec, chunks };
       rec.start();
       setRecording(true);
-    } catch { alert("No se pudo acceder al micrófono."); }
+    } catch { toast("No se pudo acceder al micrófono.", { tone: "error" }); }
   };
 
   const submit = () => {
@@ -111,8 +112,8 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
     <div className="relative border-t border-line pt-3">
       {/* Dropdown de autocompletado */}
       {trigger && matches.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-2 max-h-64 w-full max-w-md overflow-y-auto rounded-2xl border border-line bg-surface shadow-float">
-          <p className="px-3 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+        <div className="absolute bottom-full left-0 mb-2 max-h-64 w-full max-w-md overflow-y-auto rounded-card border border-line bg-surface shadow-float">
+          <p className="px-3 pt-2 text-caption font-semibold text-muted">
             {trigger.kind === "user" ? "Mencionar persona" : "Mencionar tarea"}
           </p>
           {matches.map((it) =>
@@ -135,9 +136,9 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
       {(people.length > 0 || pendingTasks.length > 0) && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {people.map((m) => (
-            <span key={m.id} className="inline-flex items-center gap-1 rounded-full bg-curva-indigo/10 py-0.5 pl-2 pr-1 text-xs font-medium text-curva-indigo">
+            <span key={m.id} className="inline-flex items-center gap-1 rounded-full bg-accent/10 py-0.5 pl-2 pr-1 text-xs font-medium text-accent">
               <AtSign size={11} /> <span className="max-w-[140px] truncate">{m.name}</span>
-              <button onClick={() => setPeople((p) => p.filter((x) => x.id !== m.id))} className="rounded-full p-0.5 hover:bg-curva-indigo/20 focus-ring" aria-label="Quitar"><X size={11} /></button>
+              <button onClick={() => setPeople((p) => p.filter((x) => x.id !== m.id))} className="rounded-full p-0.5 hover:bg-accent/20 focus-ring" aria-label="Quitar"><X size={11} /></button>
             </span>
           ))}
           {pendingTasks.map((t) => (
@@ -151,7 +152,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
 
       {/* Preview del adjunto */}
       {(attach || uploading) && (
-        <div className="mb-2 inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-2.5 py-1.5">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-control border border-line bg-surface-2 px-2.5 py-1.5">
           {uploading ? <Loader2 size={14} className="animate-spin text-muted" /> : attach?.type === "image" ? <ImageIcon size={14} className="text-accent" /> : attach?.type === "video" ? <Film size={14} className="text-accent" /> : <Music size={14} className="text-accent" />}
           <span className="text-xs font-medium text-muted">{uploading ? "Subiendo…" : `${attach?.type === "image" ? "Imagen" : attach?.type === "video" ? "Video" : "Audio"} listo`}</span>
           {attach && !uploading && <button onClick={() => setAttach(null)} className="rounded-full p-0.5 text-muted hover:bg-surface focus-ring" aria-label="Quitar adjunto"><X size={12} /></button>}
@@ -163,7 +164,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
         <button onClick={() => fileRef.current?.click()} disabled={uploading || recording} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring disabled:opacity-40" aria-label="Adjuntar archivo" title="Adjuntar imagen, video o audio">
           <Paperclip size={16} />
         </button>
-        <button onClick={toggleRecord} disabled={uploading} className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition focus-ring disabled:opacity-40", recording ? "border-rose-500 bg-rose-500 text-white" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label={recording ? "Detener grabación" : "Grabar audio"} title={recording ? "Detener y enviar audio" : "Grabar un audio"}>
+        <button onClick={toggleRecord} disabled={uploading} className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition focus-ring disabled:opacity-40", recording ? "border-danger bg-danger text-white" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label={recording ? "Detener grabación" : "Grabar audio"} title={recording ? "Detener y enviar audio" : "Grabar un audio"}>
           {recording ? <Square size={15} fill="currentColor" /> : <Mic size={16} />}
         </button>
         <textarea
@@ -173,7 +174,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
           rows={1}
           placeholder={recording ? "Grabando audio… toca ⏹ para enviar" : "Escribe un mensaje…  (@ persona · / tarea · 📎 adjunta)"}
-          className="max-h-32 flex-1 resize-none rounded-2xl border border-line px-4 py-2.5 text-sm outline-none transition [field-sizing:content] focus:border-accent"
+          className="max-h-32 flex-1 resize-none rounded-card border border-line px-4 py-2.5 text-sm outline-none transition [field-sizing:content] focus:border-accent"
         />
         <button onClick={submit} disabled={uploading || (!text.trim() && people.length === 0 && pendingTasks.length === 0 && !attach)}
           className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}
