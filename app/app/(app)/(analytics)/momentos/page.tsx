@@ -47,6 +47,22 @@ export default function MomentosPage() {
       (profs || []).forEach((p: { id: string; name: string }) => (map[p.id] = p.name));
       setNames(map);
     })();
+
+    // Realtime: cuando alguien del equipo sube una foto, aparece en vivo (sin recargar).
+    const ch = sb
+      .channel("task-photos-feed")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "task_photos" },
+        (payload: { new: TeamPhoto }) => {
+          const nueva = payload.new;
+          setPhotos((prev) => (prev.some((p) => p.id === nueva.id) ? prev : [nueva, ...prev].slice(0, 60)));
+        },
+      )
+      .subscribe();
+    return () => {
+      sb.removeChannel(ch);
+    };
   }, []);
 
   const artistCount = useMemo(() => {
