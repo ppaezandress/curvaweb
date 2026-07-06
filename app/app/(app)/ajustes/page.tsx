@@ -41,7 +41,7 @@ export default function AjustesPage() {
         <div className="relative inline-flex gap-1 rounded-full border border-line bg-surface-2 p-1">
           <span
             aria-hidden
-            className="absolute bottom-1 top-1 rounded-full bg-surface shadow-soft transition-all duration-300"
+            className="absolute bottom-1 top-1 rounded-full bg-surface shadow-soft transition-[left,width] duration-[240ms]"
             style={{ left: pill.left, width: pill.width, transitionTimingFunction: "var(--ease-curva)" }}
           />
           {TABS.map((t) => {

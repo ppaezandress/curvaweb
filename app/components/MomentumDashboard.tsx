@@ -127,7 +127,7 @@ export function MomentumDashboard() {
             return (
               <button key={i} onClick={() => setSel(i === data.todayIdx ? null : i)} className="group flex flex-1 flex-col items-center justify-end gap-1 focus-ring rounded-lg" title={`${DIAS_CORTOS[i]}: ${formatDuration(m * 60)}`}>
                 <div
-                  className={`w-full rounded-md transition-all ${on ? "bg-accent" : isToday ? "bg-accent/40" : "bg-surface-2 group-hover:bg-accent/20"}`}
+                  className={`w-full rounded-md transition-colors ${on ? "bg-accent" : isToday ? "bg-accent/40" : "bg-surface-2 group-hover:bg-accent/20"}`}
                   style={{ height: Math.max(h, m > 0 ? 4 : 2) }}
                 />
                 <span className={`text-caption font-semibold ${on ? "text-accent" : "text-muted"}`}>{DIAS_CORTOS[i]}</span>

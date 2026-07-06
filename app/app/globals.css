@@ -213,6 +213,13 @@ body {
   color: transparent;
 }
 
+/* Spinners un poco más rápidos que el default de Tailwind (1s). Un spinner que gira
+   más rápido hace percibir la app como más ágil, sin cambiar el tiempo real de carga.
+   (principio de Emil Kowalski sobre rendimiento percibido) */
+.animate-spin {
+  animation-duration: 0.7s;
+}
+
 /* Punto "en vivo" del cronómetro */
 @keyframes curva-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }

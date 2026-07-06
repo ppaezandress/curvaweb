@@ -168,7 +168,7 @@ export function TaskCard({ task }: { task: Task }) {
         {/* Abrir en Notion (app de escritorio si la tienes, si no web) */}
         <button
           onClick={() => openInNotion(task.id)}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent focus-ring"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90"
           aria-label="Abrir en Notion"
           title="Abrir en Notion (app o web)"
         >
@@ -177,7 +177,7 @@ export function TaskCard({ task }: { task: Task }) {
         {/* Fotos de la tarea (en cualquier momento) */}
         <button
           onClick={() => setShowPhotos(true)}
-          className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent focus-ring sm:inline-flex"
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90 sm:inline-flex"
           aria-label="Fotos de la tarea"
           title="Fotos de la tarea"
         >
@@ -188,7 +188,7 @@ export function TaskCard({ task }: { task: Task }) {
           <button
             onClick={markDone}
             disabled={marking}
-            className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-sm font-semibold text-muted transition hover:border-success hover:text-success disabled:opacity-40 focus-ring"
+            className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-surface px-3 text-sm font-semibold text-muted transition hover:border-success hover:text-success disabled:opacity-40 focus-ring active:scale-95"
             aria-label="Terminar tarea"
             title="Terminar (marcar como Done)"
           >
@@ -241,7 +241,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!done && isRunning && (
           <button
             onClick={pause}
-            className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-ring"
+            className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-ring active:scale-95"
           >
             <span className="tabular tracking-tight">{formatClock(elapsed)}</span>
             <Pause size={14} fill="currentColor" />
@@ -250,7 +250,7 @@ export function TaskCard({ task }: { task: Task }) {
         {!done && !isRunning && (
           <button
             onClick={start}
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring"
+            className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring active:scale-95"
             aria-label={`Iniciar ${task.name}`}
           >
             <Play size={14} fill="currentColor" /> {isOpen ? "Reanudar" : "Iniciar"}
