@@ -10,3 +10,4 @@ app.zip
 # Playwright (artefactos de tests e2e)
 test-results/
 playwright-report/
+.gstack/
