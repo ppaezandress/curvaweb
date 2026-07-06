@@ -52,10 +52,11 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
   const pickPerson = (m: Member) => { stripTrigger(); setTrigger(null); setPeople((p) => (p.some((x) => x.id === m.id) ? p : [...p, m])); inputRef.current?.focus(); };
   const pickTask = (t: Task) => { stripTrigger(); setTrigger(null); setPendingTasks((p) => (p.some((x) => x.id === t.id) ? p : [...p, t])); inputRef.current?.focus(); };
 
-  // Sube un blob al bucket chat-media y deja el adjunto listo para enviar.
-  const uploadBlob = async (blob: Blob, ext: string) => {
+  // Sube un blob al bucket chat-media. Con `autoSend` (audio grabado) lo manda al
+  // instante — como WhatsApp — en vez de dejarlo esperando otro clic de enviar.
+  const uploadBlob = async (blob: Blob, ext: string, autoSend = false) => {
     const sb = getSupabase();
-    if (!sb) return;
+    if (!sb) { toast("No hay conexión para adjuntar. Intenta de nuevo.", { tone: "error" }); return; }
     setUploading(true);
     try {
       const { data: u } = await sb.auth.getUser();
@@ -64,7 +65,9 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
       const { error } = await sb.storage.from("chat-media").upload(path, blob, { contentType: blob.type || "application/octet-stream", upsert: true });
       if (error) { toast("No se pudo subir el archivo: " + error.message, { tone: "error" }); return; }
       const url = sb.storage.from("chat-media").getPublicUrl(path).data.publicUrl;
-      setAttach({ url, type: kindOf(blob.type || "") });
+      const at: Attachment = { url, type: kindOf(blob.type || "") };
+      if (autoSend) onSend("", at);      // el audio se manda solo al soltar
+      else setAttach(at);                 // imagen/video: se revisa y se envía con el mensaje
     } finally { setUploading(false); }
   };
 
@@ -74,7 +77,9 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
     uploadBlob(file, ext);
   };
 
-  // Grabar audio con el micrófono.
+  // Grabar audio con el micrófono. Safari es quisquilloso con MediaRecorder: hay que
+  // elegir un mimeType soportado y pedir chunks periódicos (timeslice), o el blob
+  // sale vacío y "no se manda nada". Elegimos mp4 (Safari) o webm/opus (Chrome/FF).
   const toggleRecord = async () => {
     if (recording) {
       recRef.current?.rec.stop();
@@ -82,19 +87,25 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      const canCheck = typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function";
+      const mimeType = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => canCheck && MediaRecorder.isTypeSupported(t));
+      const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       const chunks: Blob[] = [];
+      const cleanup = () => { stream.getTracks().forEach((t) => t.stop()); setRecording(false); };
       rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onerror = () => { cleanup(); toast("Se interrumpió la grabación. Intenta de nuevo.", { tone: "error" }); };
       rec.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setRecording(false);
-        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
-        uploadBlob(blob, "webm");
+        cleanup();
+        const type = rec.mimeType || mimeType || "audio/webm";
+        const blob = new Blob(chunks, { type });
+        if (blob.size === 0) { toast("No se grabó audio (revisa el permiso del micrófono).", { tone: "error" }); return; }
+        const ext = type.includes("mp4") || type.includes("mpeg") ? "m4a" : type.includes("webm") ? "webm" : "dat";
+        uploadBlob(blob, ext, true); // audio grabado → se manda solo
       };
       recRef.current = { rec, chunks };
-      rec.start();
+      rec.start(1000); // timeslice de 1s: Safari sí emite dataavailable
       setRecording(true);
-    } catch { toast("No se pudo acceder al micrófono.", { tone: "error" }); }
+    } catch { toast("No se pudo acceder al micrófono. Revisa el permiso del navegador.", { tone: "error" }); }
   };
 
   const submit = () => {
