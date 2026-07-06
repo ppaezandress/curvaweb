@@ -37,7 +37,7 @@ export const soluciones: Solucion[] = [
   {
     id: 'sistemas',
     titulo: 'Sistemas y apps a la medida',
-    subtitulo: 'Software hecho para tu operación, incluso sistemas complejos. De punta a punta, con un solo aliado — no necesitas a nadie más.',
+    subtitulo: 'Software hecho para tu operación, incluso sistemas complejos. De punta a punta, con un solo aliado. No necesitas a nadie más.',
     accent: 'gold',
     icon: 'cube',
     bullets: ['Sistemas y apps a la medida', 'Integrado a como ya trabajas', 'De la idea a producción, contigo'],

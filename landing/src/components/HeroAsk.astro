@@ -1,73 +1,98 @@
 ---
-// Composer IA inline del hero: se ve "AI-powered", es multilínea, graba voz y
-// TRANSCRIBE, y responde ahí mismo (mini-chat). Lógica en scripts/hero-ai.ts.
+// Composer IA inline del hero: se ve "AI-powered" (aura viva + orbe + placeholder
+// que se escribe solo), es multilínea, graba voz y TRANSCRIBE, y responde ahí mismo
+// enrutando a la parte útil del sitio. Lógica en scripts/hero-ai.ts.
 // El subtítulo del hero vive aquí, DEBAJO de la tarjeta.
 export interface Props { calLink?: string }
 const { calLink = 'https://cal.com/andres-paez/30min' } = Astro.props;
 
-const seeds = ['Mi equipo hace todo manual', 'Dependo de mí para todo', 'Quiero vender más en línea'];
+const seeds = [
+  'Pierdo horas registrando ventas a mano',
+  'Todo depende de mí, no puedo despegarme',
+  'Mi info vive regada en WhatsApp y Excel',
+];
 ---
 <div id="hero-ai" data-cal-link={calLink} data-load="5" class="mt-9 mx-auto max-w-2xl relative text-left">
-  <!-- Anillo con glow animado (señal IA, decorativo) -->
-  <span class="hero-ai-ring pointer-events-none absolute -inset-[3px] rounded-[1.65rem]" aria-hidden="true"></span>
+  <!-- Aura viva (señal AI-powered, decorativa) -->
+  <span class="hero-ai-ring pointer-events-none absolute -inset-[3px] rounded-[1.75rem]" aria-hidden="true"></span>
 
-  <div class="hero-ai-card relative rounded-3xl bg-white border border-sand-200 shadow-2xl overflow-hidden">
+  <div class="hero-ai-card relative rounded-[1.6rem] bg-white border border-sand-200 overflow-hidden">
     <!-- Header IA -->
-    <div class="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-sand-200">
-      <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style="background:var(--gradient-curve)">
-        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2zm6.5 10l.8 2.5 2.7.9-2.7.9-.8 2.7-.8-2.7-2.7-.9 2.7-.9.8-2.5z"/></svg>
+    <div class="flex items-center gap-2.5 px-4 sm:px-5 py-3 border-b border-sand-100">
+      <span class="hero-ai-orb" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 5.4L19 9l-5.3 1.6L12 16l-1.7-5.4L5 9l5.3-1.6L12 2z"/></svg>
       </span>
-      <p class="text-sm font-semibold text-ink leading-tight flex items-center gap-2">
-        Asistente IA · CURVA
-        <span class="hero-ai-live inline-block w-1.5 h-1.5 rounded-full bg-ai flex-shrink-0" aria-hidden="true"></span>
-      </p>
-      <span class="ml-auto text-[11px] text-sand-500 hidden sm:inline">Responde aquí mismo</span>
+      <span class="text-sm font-semibold text-ink leading-tight">curva · IA</span>
+      <span class="hero-ai-badge">Impulsado por IA</span>
+      <span class="ml-auto flex items-center gap-1.5 text-[11px] text-sand-500">
+        <span class="hero-ai-live inline-block w-1.5 h-1.5 rounded-full bg-jade" aria-hidden="true"></span>
+        <span class="hidden sm:inline">Responde al instante</span>
+      </span>
     </div>
 
     <!-- Conversación (oculta hasta el 1er turno) -->
     <div data-hero-log class="hero-ai-log px-4 sm:px-5 py-4 space-y-3 overflow-y-auto hidden" role="log" aria-live="polite" aria-relevant="additions"></div>
 
-    <!-- Chips de sugerencia (semilla; luego se reemplazan por opciones de la IA) -->
-    <div data-hero-chips class="px-4 sm:px-5 pt-3 flex flex-wrap gap-2">
-      {seeds.map((s) => (
-        <button type="button" data-hero-chip class="text-[13px] text-sand-600 border border-sand-300 rounded-full px-3.5 py-1.5 hover:border-ember hover:text-ember transition-colors">{s}</button>
-      ))}
-    </div>
-
     <!-- Paso de correo inline (oculto hasta que se necesita) -->
-    <form data-hero-email-form class="px-4 sm:px-5 py-3 border-t border-sand-200 hidden">
-      <label for="hero-ai-email" class="block text-[13px] text-sand-600 mb-2">Para responderte, déjame tu correo:</label>
+    <form data-hero-email-form class="hero-ai-email px-4 sm:px-5 py-3.5 hidden">
+      <p class="flex items-start gap-2 text-[13.5px] text-ink mb-2.5">
+        <svg class="w-4 h-4 mt-0.5 text-ember flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"></path></svg>
+        <span>Déjame tu correo y te respondo <strong>al instante</strong> — sin spam.</span>
+      </p>
       <div class="flex gap-2">
         <input id="hero-ai-email" data-hero-email type="email" required autocomplete="email" placeholder="tu@correo.com"
           class="flex-1 min-w-0 rounded-xl border border-sand-300 bg-white px-4 py-2.5 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors" />
-        <button type="submit" class="btn-pop bg-ember text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-ember-600 whitespace-nowrap">Enviar</button>
+        <button type="submit" class="btn-ai btn-pop text-white rounded-xl px-5 py-2.5 text-sm font-semibold whitespace-nowrap">Enviar</button>
       </div>
       <p data-hero-email-error class="hidden text-rose-500 text-[13px] mt-1.5" aria-live="polite"></p>
     </form>
 
     <!-- Composer -->
-    <form data-hero-form class="p-3 sm:p-4 flex items-end gap-2 border-t border-sand-200">
-      <label for="hero-ai-input" class="sr-only">Describe tu problema</label>
-      <textarea id="hero-ai-input" data-hero-input rows="1" maxlength="1500"
-        placeholder="Describe tu problema… o manda un audio"
-        class="flex-1 min-w-0 resize-none max-h-40 min-h-[52px] rounded-2xl border border-sand-300 bg-white px-4 py-3.5 text-ink placeholder:text-sand-400 focus:border-ember focus:outline-none transition-colors text-[15px] leading-relaxed"></textarea>
-      <button type="button" data-hero-mic aria-pressed="false" aria-label="Grabar audio"
-        class="hero-ai-mic btn-pop flex-shrink-0 w-12 h-12 rounded-full border border-sand-300 text-sand-600 hover:bg-sand-100 flex items-center justify-center transition-colors">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"></path></svg>
-      </button>
-      <button type="submit" data-hero-send aria-label="Preguntar a la IA"
-        class="btn-ai btn-pop btn-arrow flex-shrink-0 inline-flex items-center justify-center gap-2 h-12 px-5 rounded-full text-white text-sm font-semibold whitespace-nowrap">
-        Preguntar
-        <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6-6m6 6l-6 6"></path></svg>
-      </button>
-    </form>
+    <div class="p-3 sm:p-3.5">
+      <form data-hero-form class="hero-ai-field relative rounded-2xl border border-sand-300 bg-white transition-colors">
+        <label for="hero-ai-input" class="sr-only">Describe tu problema</label>
+        <textarea id="hero-ai-input" data-hero-input rows="1" maxlength="1500"
+          class="hero-ai-input block w-full resize-none max-h-40 min-h-[92px] bg-transparent px-4 pt-3.5 pb-14 text-ink placeholder:text-transparent focus:outline-none text-[15px] leading-relaxed"></textarea>
+
+        <!-- Placeholder animado (se escribe solo; se oculta al enfocar/escribir) -->
+        <div data-hero-ghost class="hero-ai-ghost" aria-hidden="true">
+          <span data-hero-ghost-text></span><span class="hero-ai-caret"></span>
+        </div>
+
+        <!-- Barra de acciones dentro del campo -->
+        <div class="hero-ai-actions">
+          <span class="hero-ai-tip">Enter para enviar</span>
+          <div class="flex items-center gap-2">
+            <button type="button" data-hero-mic aria-pressed="false" aria-label="Grabar audio"
+              class="hero-ai-mic btn-pop w-10 h-10 rounded-full border border-sand-300 text-sand-600 hover:bg-sand-100 flex items-center justify-center transition-colors">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"></path></svg>
+            </button>
+            <button type="submit" data-hero-send aria-label="Preguntar a la IA"
+              class="hero-ai-send btn-ai btn-pop inline-flex items-center justify-center gap-1.5 h-10 pl-4 pr-3.5 rounded-full text-white text-sm font-semibold whitespace-nowrap">
+              Preguntar
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6-6m6 6l-6 6"></path></svg>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Chips de sugerencia: qué puedes escribir aquí -->
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <span data-hero-chips-label class="text-[12px] text-sand-500 mr-0.5">¿No sabes por dónde? Prueba:</span>
+        <div data-hero-chips class="flex flex-wrap gap-2">
+          {seeds.map((s) => (
+            <button type="button" data-hero-chip class="hero-ai-chip">{s}</button>
+          ))}
+        </div>
+      </div>
+    </div>
 
     <!-- Estado para lectores de pantalla -->
     <p data-hero-status class="sr-only" aria-live="polite"></p>
   </div>
 </div>
 
-<!-- Subtítulo reubicado + reescrito, DEBAJO de la tarjeta -->
+<!-- Eslogan, DEBAJO de la tarjeta -->
 <p data-load="5" class="mt-6 text-lg sm:text-xl text-sand-100 leading-relaxed max-w-xl mx-auto text-balance">
-  Describe tu problema o mándanos un audio, y la IA te lleva directo a la solución —sin navegar el menú.
+  Todo cambio comienza por una curva.
 </p>

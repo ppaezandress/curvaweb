@@ -1,6 +1,5 @@
 ---
 import { frentes } from '../data/consultoria';
-import { soluciones } from '../data/soluciones';
 import logoSvg from '../svg/curva-logo.svg?raw';
 
 interface Props {
@@ -9,136 +8,105 @@ interface Props {
 }
 const { overHero = false, calLink } = Astro.props;
 
-// Datos para "La Curva Viva" (menú a pantalla completa).
-const frentesData = frentes.map((f) => ({
-  label: f.navLabel,
-  href: `/consultoria/${f.slug}`,
-  destacado: f.destacado,
-  pilares: f.pilares.map((p) => ({ label: p.titulo, href: `/consultoria/${f.slug}#${p.id}` })),
-}));
-const solData = soluciones.map((s) => ({ label: s.titulo, href: `/soluciones#${s.id}`, icon: s.icon, destacado: s.destacado }));
+// Los 2 frentes de Consultoría para el dropdown (única fuente: data/consultoria).
+const consultoriaItems = [...frentes]
+  .sort((a, b) => a.order - b.order)
+  .map((f) => ({
+    label: f.title,
+    href: `/consultoria/${f.slug}`,
+    desc: f.headline,
+    destacado: !!f.destacado,
+  }));
 
-const solIcon: Record<string, string> = {
-  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
-  cube: '<path d="M12 3l8 4.6v8.8L12 21l-8-4.6V7.6L12 3z"/><path d="M12 12v9M4 7.6l8 4.4 8-4.4"/>',
-  claude: '<path d="M12 3v18M4.8 7.5l14.4 9M19.2 7.5l-14.4 9"/>',
-  notion: '<rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M9 8.2v7.6M9 8.2l6 7.6M15 8.2v7.6"/>',
-  template: '<rect x="3.5" y="4" width="17" height="16" rx="2.2"/><path d="M3.5 9.2h17M9.2 9.2V20"/>',
+// Íconos de cada frente (trazo, 22×22).
+const frenteIcon: Record<string, string> = {
+  'transformacion-digital':
+    '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M8.5 11.5l2 2 4-4"/>',
+  'transformacion-de-negocio':
+    '<circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="M15.5 8.5l-2.5 4.5-3.5 1 2.5-4.5 3.5-1z"/>',
 };
-
-// Los 4 destinos que cuelgan de la curva. `kind` decide qué muestra el escenario.
-const destinos = [
-  { key: 'consultoria', label: 'Consultoría', word: 'Transformación', tag: 'Digitalizamos tu operación y transformamos tu negocio, de punta a punta.', kind: 'consultoria' as const, href: '' },
-  { key: 'soluciones', label: 'Soluciones digitales', word: 'A la medida', tag: 'Entregables que resuelven — sin meternos en tu infraestructura.', kind: 'soluciones' as const, href: '' },
-  { key: 'nosotros', label: 'Nosotros', word: 'Quiénes somos', tag: 'Cómo pensamos y por qué trabajamos pegados a tu operación.', kind: 'link' as const, href: '/nosotros', cta: 'Conocer al equipo' },
-  { key: 'conversemos', label: 'Conversemos', word: 'Hablemos', tag: 'Cuéntanos cómo trabajas hoy y te decimos por dónde empezar.', kind: 'cta' as const, href: calLink, cta: 'Agenda una llamada' },
-];
+const slugOf = (href: string) => href.split('/').pop() || '';
 ---
 
 <div id="site-nav" class="nav-bar fixed top-0 inset-x-0 z-50 px-3 sm:px-4 pt-3" data-over-hero={overHero ? '' : undefined}>
   <nav class="nav-inner mx-auto max-w-6xl flex items-center justify-between rounded-2xl pl-5 pr-2.5 py-2.5" aria-label="Principal">
-    <a href="/" class="nav-logo flex items-center" aria-label="curva — Inicio">
+    <a href="/" class="nav-logo flex items-center" aria-label="curva · Inicio">
       <span class="nav-logo-svg" set:html={logoSvg}></span>
     </a>
+
+    <!-- Links de escritorio: TODO vive aquí -->
+    <div class="nav-links hidden lg:flex items-center gap-0.5">
+      <a href="/#impacto" class="nav-toplink">Casos</a>
+
+      <!-- Consultoría: único con dropdown -->
+      <div class="nav-drop" data-nav-drop>
+        <button type="button" class="nav-toplink nav-drop-btn" data-nav-drop-btn aria-haspopup="true" aria-expanded="false" aria-controls="nav-drop-consultoria">
+          Consultoría
+          <svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+
+        <div id="nav-drop-consultoria" class="nav-drop-panel" data-nav-drop-panel role="menu">
+          <p class="nav-drop-eyebrow">Dos frentes de consultoría</p>
+          {consultoriaItems.map((c) => (
+            <a href={c.href} class:list={["nav-drop-item", c.destacado && "is-featured"]} role="menuitem">
+              <span class="nav-drop-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" set:html={frenteIcon[slugOf(c.href)]}></svg>
+              </span>
+              <span class="nav-drop-text">
+                <span class="nav-drop-item-title">
+                  {c.label}
+                  {c.destacado && <span class="nav-drop-tag">Empieza aquí</span>}
+                </span>
+                <span class="nav-drop-item-desc">{c.desc}</span>
+              </span>
+              <svg class="nav-drop-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"></path></svg>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <a href="/soluciones" class="nav-toplink">Soluciones</a>
+      <a href="/nosotros" class="nav-toplink">Nosotros</a>
+    </div>
 
     <div class="flex items-center gap-1.5">
       <a href={calLink} target="_blank" rel="noopener" class="nav-cta btn-arrow hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors">
         Conversemos
         <svg data-arrow class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
-      <button data-cmenu-toggle aria-haspopup="dialog" aria-controls="curva-menu" aria-expanded="false" class="cmenu-btn inline-flex items-center gap-2.5 pl-4 pr-2.5 py-2 rounded-full">
-        <span class="cmenu-btn-label">Menú</span>
-        <span class="cmenu-btn-ico" aria-hidden="true"><span></span><span></span></span>
+      <!-- Hamburguesa: solo móvil/tablet -->
+      <button type="button" class="nav-burger lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-full" data-nav-burger aria-expanded="false" aria-controls="nav-mobile" aria-label="Abrir menú">
+        <span class="nav-burger-ico" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
     </div>
   </nav>
-</div>
 
-<!-- ===================== LA CURVA VIVA ===================== -->
-<div id="curva-menu" class="cmenu" role="dialog" aria-modal="true" aria-label="Menú principal" aria-hidden="true">
-  <div class="cmenu-bg" aria-hidden="true"></div>
-  <svg class="cmenu-curve" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <defs>
-      <linearGradient id="cmg" x1="0" y1="1" x2="1" y2="0">
-        <stop offset="0" stop-color="#7c3aed"></stop>
-        <stop offset="0.5" stop-color="#2563eb"></stop>
-        <stop offset="1" stop-color="#38bdf8"></stop>
-      </linearGradient>
-    </defs>
-    <path class="cmenu-curve-ghost" d="M-80 860 C 360 860 420 300 760 300 S 1180 40 1560 40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"></path>
-    <path class="cmenu-curve-line" pathLength="1" d="M-80 860 C 360 860 420 300 760 300 S 1180 40 1560 40" fill="none" stroke="url(#cmg)" stroke-width="2.5" stroke-linecap="round"></path>
-    <circle class="cmenu-spark" r="5" fill="#fff"></circle>
-  </svg>
+  <!-- Panel móvil compacto (NO pantalla completa): baja desde la barra -->
+  <div id="nav-mobile" class="nav-mobile lg:hidden mx-auto max-w-6xl" data-nav-mobile aria-hidden="true">
+    <div class="nav-mobile-inner">
+      <a href="/#impacto" class="nav-m-link" data-nav-m-link>Casos</a>
 
-  <div class="cmenu-frame">
-    <div class="cmenu-top">
-      <a href="/" class="cmenu-logo" data-cmenu-link aria-label="curva — Inicio">
-        <span class="cmenu-logo-svg" set:html={logoSvg}></span>
+      <div class="nav-m-group" data-nav-m-group>
+        <button type="button" class="nav-m-link nav-m-acc" data-nav-m-acc aria-expanded="false">
+          Consultoría
+          <svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+        <div class="nav-m-sub" data-nav-m-sub>
+          {consultoriaItems.map((c) => (
+            <a href={c.href} class="nav-m-sublink" data-nav-m-link>
+              <span class="nav-m-sub-title">{c.label}</span>
+              <span class="nav-m-sub-desc">{c.desc}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <a href="/soluciones" class="nav-m-link" data-nav-m-link>Soluciones</a>
+      <a href="/nosotros" class="nav-m-link" data-nav-m-link>Nosotros</a>
+      <a href={calLink} target="_blank" rel="noopener" class="nav-m-cta" data-nav-m-link>
+        Conversemos
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"></path></svg>
       </a>
-      <button data-cmenu-close class="cmenu-close" aria-label="Cerrar menú">
-        <span>Cerrar</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
-      </button>
-    </div>
-
-    <div class="cmenu-body">
-      <nav class="cmenu-list" aria-label="Destinos">
-        {destinos.map((d, i) => (
-          <div class="cmenu-item" data-cmenu-item data-key={d.key} data-kind={d.kind}>
-            <button class="cmenu-trigger" data-cmenu-trigger aria-expanded="false">
-              <span class="cmenu-idx">0{i + 1}</span>
-              <span class="cmenu-label">{d.label}</span>
-              <span class="cmenu-node" aria-hidden="true"></span>
-            </button>
-
-            <div class="cmenu-panel" data-cmenu-panel>
-              <p class="cmenu-word">{d.word}</p>
-              <p class="cmenu-tag">{d.tag}</p>
-
-              {d.kind === 'consultoria' && (
-                <div class="cmenu-frentes">
-                  {frentesData.map((f) => (
-                    <div class="cmenu-frente">
-                      <a href={f.href} class="cmenu-frente-head" data-cmenu-link>
-                        {f.label}
-                        {f.destacado && <span class="cmenu-badge">Empieza aquí</span>}
-                      </a>
-                      <ul>
-                        {f.pilares.map((p) => (
-                          <li><a href={p.href} class="cmenu-sublink" data-cmenu-link>{p.label}</a></li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {d.kind === 'soluciones' && (
-                <div class="cmenu-sols">
-                  {solData.map((s) => (
-                    <a href={s.href} class="cmenu-sol" data-cmenu-link>
-                      <span class="cmenu-sol-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" set:html={solIcon[s.icon]}></svg></span>
-                      <span class="cmenu-sol-label">{s.label}{s.destacado && <span class="cmenu-badge">Destacado</span>}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {d.kind === 'link' && (
-                <a href={d.href} class="cmenu-go" data-cmenu-link>{d.cta}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"></path></svg>
-                </a>
-              )}
-
-              {d.kind === 'cta' && (
-                <a href={d.href} target="_blank" rel="noopener" class="cmenu-go cmenu-go--solid" data-cmenu-link>{d.cta}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"></path></svg>
-                </a>
-              )}
-            </div>
-          </div>
-        ))}
-      </nav>
     </div>
   </div>
 </div>
@@ -146,6 +114,7 @@ const destinos = [
 <style>
   /* ---------------- Barra ---------------- */
   .nav-inner {
+    position: relative;
     transition: background-color .35s ease, border-color .35s ease, box-shadow .35s ease;
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
@@ -155,178 +124,148 @@ const destinos = [
   .nav-bar .nav-logo { color: #fff; }
   .nav-logo-svg { display: block; }
   .nav-logo-svg :global(svg) { height: 1.35rem; width: auto; display: block; }
-  .cmenu-logo { color: #fff; display: inline-flex; align-items: center; }
-  .cmenu-logo-svg :global(svg) { height: 1.5rem; width: auto; display: block; }
   .nav-bar .nav-cta { background: #fff; color: var(--color-ink); }
   .nav-bar .nav-cta:hover { background: rgba(255, 255, 255, 0.88); }
 
-  .cmenu-btn {
-    color: #fff; font-size: .875rem; font-weight: 600;
-    background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255,255,255,0.14);
-    transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+  /* Links de nivel superior */
+  .nav-toplink {
+    display: inline-flex; align-items: center; gap: .3rem;
+    color: rgba(255, 255, 255, 0.82); font-size: .875rem; font-weight: 500; letter-spacing: .01em;
+    padding: .5rem .85rem; border-radius: 9999px; background: transparent; border: 0; cursor: pointer;
+    transition: color .2s ease, background-color .2s ease;
   }
-  .cmenu-btn:hover { background: rgba(255,255,255,0.18); }
-  .cmenu-btn-ico { display: grid; gap: 4px; width: 20px; height: 20px; place-content: center; }
-  .cmenu-btn-ico span { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .3s var(--ease-curve), width .3s var(--ease-curve); }
-  .cmenu-btn-ico span:last-child { width: 12px; margin-left: auto; }
-  .cmenu-btn:hover .cmenu-btn-ico span:last-child { width: 18px; }
+  .nav-toplink:hover { color: #fff; background: rgba(255,255,255,0.10); }
+  .nav-chev { width: .8rem; height: .8rem; transition: transform .28s var(--ease-curve); }
+  .nav-drop[data-open] .nav-drop-btn .nav-chev { transform: rotate(180deg); }
+
+  .nav-bar.scrolled .nav-toplink { color: var(--color-sand-600); }
+  .nav-bar.scrolled .nav-toplink:hover { color: var(--color-ink); background: var(--color-sand-100); }
 
   /* Scrolled: barra clara */
   .nav-bar.scrolled .nav-inner { background: rgba(245, 248, 255, 0.88); border-color: var(--color-sand-200); box-shadow: 0 10px 34px rgba(15, 30, 61, 0.10); }
   .nav-bar.scrolled .nav-logo { color: var(--color-ink); }
   .nav-bar.scrolled .nav-cta { background: var(--color-ink); color: var(--color-sand-50); }
   .nav-bar.scrolled .nav-cta:hover { background: #1b3a6b; }
-  .nav-bar.scrolled .cmenu-btn { color: var(--color-ink); background: var(--color-sand-100); border-color: var(--color-sand-200); }
-  .nav-bar.scrolled .cmenu-btn:hover { background: var(--color-sand-200); }
 
-  /* ---------------- La Curva Viva ---------------- */
-  /* Capa de vidrio SOBRE el home: se ve el sitio difuminado detrás (no es otra página) */
-  .cmenu {
-    position: fixed; inset: 0; z-index: 60;
-    color: #fff; overflow: hidden;
-    visibility: hidden; pointer-events: none;
-    transition: visibility 0s .5s;
+  /* ---------------- Dropdown Consultoría (desktop) ---------------- */
+  .nav-drop { position: relative; }
+  .nav-drop-panel {
+    position: absolute; top: calc(100% + .55rem); left: 50%;
+    width: 24rem; transform: translateX(-50%) translateY(8px) scale(.98);
+    transform-origin: top center;
+    background: #fff; border: 1px solid var(--color-sand-200);
+    border-radius: 1.15rem; padding: .85rem;
+    box-shadow: 0 24px 60px -18px rgba(15, 30, 61, 0.32), 0 6px 18px -12px rgba(15,30,61,.2);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .22s var(--ease-curve), transform .28s var(--ease-curve), visibility 0s .28s;
   }
-  .cmenu.open { visibility: visible; pointer-events: auto; transition: visibility 0s; }
-
-  /* IMPORTANTE: el velo+blur se anima por su cuenta. Si se anima la opacidad del
-     ancestro que contiene el backdrop-filter, Chrome/Safari lo renderizan mal
-     (parpadeo/fantasma) — esa era la sensación "rara" al abrir. */
-  .cmenu-bg {
-    position: absolute; inset: 0; opacity: 0;
-    -webkit-backdrop-filter: blur(0px) saturate(100%);
-    backdrop-filter: blur(0px) saturate(100%);
-    background:
-      radial-gradient(1100px 720px at 82% 8%, rgba(56,189,248,0.16), transparent 60%),
-      radial-gradient(900px 700px at 12% 92%, rgba(124,58,237,0.20), transparent 60%),
-      rgba(8, 12, 30, 0.60);
-    transition: opacity .45s var(--ease-curve), backdrop-filter .55s var(--ease-curve), -webkit-backdrop-filter .55s var(--ease-curve);
+  .nav-drop[data-open] .nav-drop-panel {
+    opacity: 1; visibility: visible; pointer-events: auto;
+    transform: translateX(-50%) translateY(0) scale(1);
+    transition: opacity .24s var(--ease-curve), transform .3s var(--ease-curve), visibility 0s;
   }
-  .cmenu.open .cmenu-bg {
-    opacity: 1;
-    -webkit-backdrop-filter: blur(24px) saturate(125%);
-    backdrop-filter: blur(24px) saturate(125%);
+  /* Puentecito invisible para que el hover no se corte entre botón y panel */
+  .nav-drop-panel::before { content: ''; position: absolute; top: -.7rem; left: 0; right: 0; height: .7rem; }
+  /* Flechita del tooltip */
+  .nav-drop-panel::after {
+    content: ''; position: absolute; top: -.42rem; left: 50%; width: .84rem; height: .84rem;
+    transform: translateX(-50%) rotate(45deg);
+    background: #fff; border-left: 1px solid var(--color-sand-200); border-top: 1px solid var(--color-sand-200);
+    border-top-left-radius: .2rem;
   }
-  .cmenu-bg::after {
-    content: ''; position: absolute; inset: 0; opacity: .18; mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  .nav-drop-eyebrow {
+    font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em;
+    color: var(--color-sand-400); padding: .35rem .6rem .55rem;
   }
-
-  .cmenu-curve { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .5s ease .1s; pointer-events: none; }
-  .cmenu.open .cmenu-curve { opacity: 1; }
-  .cmenu-curve-line { stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 10px rgba(56,189,248,0.35)); transition: stroke-dashoffset 1.2s var(--ease-curve) .18s; }
-  .cmenu.open .cmenu-curve-line { stroke-dashoffset: 0; }
-  .cmenu-spark { opacity: 0; filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)); offset-path: path('M-80 860 C 360 860 420 300 760 300 S 1180 40 1560 40'); }
-  .cmenu.open .cmenu-spark { animation: cmSpark 5.5s var(--ease-curve) 1.2s infinite; }
-  @keyframes cmSpark {
-    0% { offset-distance: 0%; opacity: 0; }
-    8% { opacity: .95; }
-    92% { opacity: .95; }
-    100% { offset-distance: 100%; opacity: 0; }
+  .nav-drop-item {
+    display: flex; align-items: flex-start; gap: .8rem;
+    padding: .8rem .7rem; border-radius: .85rem; position: relative;
+    transition: background-color .18s ease, transform .18s ease;
   }
-
-  .cmenu-frame {
-    position: relative; z-index: 2; height: 100%;
-    max-width: 78rem; margin: 0 auto; padding: 1.4rem clamp(1.25rem, 5vw, 4rem);
-    display: flex; flex-direction: column;
-    opacity: 0; transition: opacity .35s var(--ease-curve);
+  .nav-drop-item:hover { background: var(--color-sand-100); }
+  .nav-drop-ico {
+    flex-shrink: 0; display: grid; place-items: center; width: 2.35rem; height: 2.35rem; border-radius: .7rem;
+    background: color-mix(in srgb, var(--color-ember) 12%, #fff); color: var(--color-ember);
+    transition: background-color .18s ease, color .18s ease;
   }
-  .cmenu.open .cmenu-frame { opacity: 1; transition: opacity .4s var(--ease-curve) .08s; }
-
-  .cmenu-top { display: flex; align-items: center; justify-content: space-between; }
-  .cmenu-logo { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-size: 1.25rem; font-weight: 600; letter-spacing: -.01em; }
-  .cmenu-close {
-    display: inline-flex; align-items: center; gap: .55rem;
-    color: rgba(255,255,255,0.75); font-size: .82rem; font-weight: 600;
-    padding: .5rem .9rem; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.16);
-    transition: color .2s ease, background-color .2s ease;
+  .nav-drop-item.is-featured .nav-drop-ico { background: color-mix(in srgb, var(--color-ember) 14%, #fff); }
+  .nav-drop-item:not(.is-featured) .nav-drop-ico { background: color-mix(in srgb, var(--color-gold) 14%, #fff); color: #0284c7; }
+  .nav-drop-ico svg { width: 1.2rem; height: 1.2rem; }
+  .nav-drop-text { display: flex; flex-direction: column; gap: .18rem; min-width: 0; }
+  .nav-drop-item-title {
+    display: inline-flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    font-family: var(--font-display); font-weight: 600; font-size: .95rem; color: var(--color-ink); letter-spacing: -.01em;
   }
-  .cmenu-close:hover { color: #fff; background: rgba(255,255,255,0.10); }
-  .cmenu-close svg { width: 1.05rem; height: 1.05rem; transition: transform .3s var(--ease-curve); }
-  .cmenu-close:hover svg { transform: rotate(90deg); }
-
-  .cmenu-body { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; }
-  .cmenu-list { width: min(46%, 30rem); display: flex; flex-direction: column; gap: clamp(.15rem, 1.4vh, 1rem); }
-  .cmenu-item { position: static; }
-
-  .cmenu-trigger {
-    display: flex; align-items: baseline; gap: 1rem; width: 100%; text-align: left;
-    padding: .35rem 0; color: rgba(255,255,255,0.62);
-    opacity: 0; transform: translateY(18px);
-    transition: color .3s var(--ease-curve), transform .4s var(--ease-curve);
+  .nav-drop-tag {
+    font-size: .58rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: #fff; background: var(--color-ember); border-radius: 9999px; padding: .1rem .42rem;
   }
-  .cmenu.open .cmenu-trigger { opacity: 1; transform: none; transition: color .3s var(--ease-curve), transform .55s var(--ease-curve), opacity .55s var(--ease-curve); }
-  .cmenu.open .cmenu-item:nth-child(1) .cmenu-trigger { transition-delay: .08s; }
-  .cmenu.open .cmenu-item:nth-child(2) .cmenu-trigger { transition-delay: .15s; }
-  .cmenu.open .cmenu-item:nth-child(3) .cmenu-trigger { transition-delay: .22s; }
-  .cmenu.open .cmenu-item:nth-child(4) .cmenu-trigger { transition-delay: .29s; }
-
-  .cmenu-idx { font-family: var(--font-sans); font-size: .72rem; font-weight: 600; letter-spacing: .1em; color: rgba(255,255,255,0.35); font-variant-numeric: tabular-nums; }
-  .cmenu-label { font-family: var(--font-display); font-weight: 600; letter-spacing: -.02em; line-height: 1; font-size: clamp(1.9rem, 4.6vw, 3.6rem); }
-  .cmenu-node { width: .5rem; height: .5rem; border-radius: 9999px; background: #38bdf8; opacity: 0; transform: scale(.4); transition: opacity .3s ease, transform .3s var(--ease-curve); box-shadow: 0 0 14px rgba(56,189,248,0.9); align-self: center; }
-
-  .cmenu-trigger:hover, .cmenu-item.active .cmenu-trigger { color: #fff; transform: translateX(10px); }
-  .cmenu-item.active .cmenu-label { background: linear-gradient(90deg, #c4b5fd, #60a5fa 45%, #38bdf8); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-  .cmenu-item.active .cmenu-node { opacity: 1; transform: scale(1); }
-
-  /* Escenario (desktop: panel absoluto a la derecha; solo el activo visible) */
-  .cmenu-panel {
-    position: absolute; right: 0; top: 50%; width: min(52%, 34rem);
-    display: flex; flex-direction: column;
-    opacity: 0; transform: translateY(-50%) translateY(16px); pointer-events: none;
-    transition: opacity .4s var(--ease-curve), transform .5s var(--ease-curve);
+  .nav-drop-item-desc { font-size: .82rem; color: var(--color-sand-500); line-height: 1.4; }
+  .nav-drop-arrow {
+    width: 1.05rem; height: 1.05rem; color: var(--color-sand-300); align-self: center; flex-shrink: 0;
+    transition: transform .22s var(--ease-curve), color .18s ease;
   }
-  .cmenu-panel.active { opacity: 1; transform: translateY(-50%); pointer-events: auto; }
-  .cmenu-word {
-    font-family: var(--font-display); font-weight: 700; letter-spacing: -.03em; line-height: .95;
-    font-size: clamp(2.2rem, 4.8vw, 3.8rem); margin-bottom: .5rem; overflow-wrap: break-word;
-    background: linear-gradient(100deg, #ede9fe, #93c5fd 40%, #38bdf8);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  .nav-drop-item:hover .nav-drop-arrow { color: var(--color-ember); transform: translateX(3px); }
+
+  /* ---------------- Hamburguesa ---------------- */
+  .nav-burger { color: #fff; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.14); transition: background-color .2s ease; }
+  .nav-burger:hover { background: rgba(255,255,255,0.18); }
+  .nav-bar.scrolled .nav-burger { color: var(--color-ink); background: var(--color-sand-100); border-color: var(--color-sand-200); }
+  .nav-burger-ico { display: grid; gap: 4px; width: 20px; place-content: center; }
+  .nav-burger-ico span { display: block; width: 18px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .3s var(--ease-curve), opacity .2s ease; }
+  .nav-burger[aria-expanded="true"] .nav-burger-ico span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .nav-burger[aria-expanded="true"] .nav-burger-ico span:nth-child(2) { opacity: 0; }
+  .nav-burger[aria-expanded="true"] .nav-burger-ico span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+  /* ---------------- Panel móvil compacto ---------------- */
+  .nav-mobile {
+    padding: 0 .25rem; overflow: hidden;
+    max-height: 0; opacity: 0;
+    transition: max-height .38s var(--ease-curve), opacity .28s ease, margin-top .38s var(--ease-curve);
+    margin-top: 0;
   }
-  .cmenu-tag { color: rgba(255,255,255,0.66); font-size: clamp(.9rem, 1.3vw, 1.02rem); line-height: 1.5; max-width: 34ch; margin-bottom: 1.4rem; }
-
-  .cmenu-frentes { display: grid; grid-template-columns: 1fr 1fr; gap: 1.3rem 2rem; }
-  .cmenu-frente-head { display: inline-flex; align-items: center; gap: .5rem; font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: #fff; margin-bottom: .5rem; transition: color .2s ease; }
-  .cmenu-frente-head:hover { color: #93c5fd; }
-  .cmenu-frente ul { display: flex; flex-direction: column; gap: .05rem; }
-  .cmenu-sublink { display: inline-block; color: rgba(255,255,255,0.6); font-size: .88rem; padding: .26rem 0; transition: color .18s ease, transform .18s ease; }
-  .cmenu-sublink:hover { color: #fff; transform: translateX(5px); }
-
-  .cmenu-sols { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem .6rem; }
-  .cmenu-sol { display: flex; align-items: center; gap: .65rem; padding: .45rem .5rem; border-radius: .7rem; color: rgba(255,255,255,0.82); transition: background-color .18s ease, color .18s ease; }
-  .cmenu-sol:hover { background: rgba(255,255,255,0.07); color: #fff; }
-  .cmenu-sol-ico { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: .55rem; color: #7dd3fc; background: rgba(56,189,248,0.12); flex-shrink: 0; }
-  .cmenu-sol-ico svg { width: 1rem; height: 1rem; }
-  .cmenu-sol-label { display: inline-flex; align-items: center; gap: .45rem; font-size: .9rem; font-weight: 500; }
-
-  .cmenu-badge { font-size: .55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #0b1230; background: #7dd3fc; border-radius: 9999px; padding: .12rem .42rem; }
-
-  .cmenu-go { display: inline-flex; align-items: center; gap: .5rem; align-self: flex-start; font-weight: 600; font-size: 1rem; color: #fff; padding: .7rem 0; border-bottom: 1px solid rgba(255,255,255,0.3); transition: gap .2s ease, border-color .2s ease; }
-  .cmenu-go:hover { gap: .8rem; border-color: #38bdf8; }
-  .cmenu-go svg { width: 1.05rem; height: 1.05rem; }
-  .cmenu-go--solid { border: none; background: #fff; color: #0b1230; padding: .8rem 1.4rem; border-radius: 9999px; }
-  .cmenu-go--solid:hover { background: #dbeafe; }
-
-  /* ---------------- Móvil (acordeón) ---------------- */
-  @media (max-width: 860px) {
-    .cmenu-frame { overflow-y: auto; }
-    .cmenu-body { display: block; padding-top: 1rem; }
-    .cmenu-list { width: 100%; gap: 0; }
-    .cmenu-item { border-bottom: 1px solid rgba(255,255,255,0.10); }
-    .cmenu-trigger { padding: 1rem 0; }
-    .cmenu-node { margin-left: auto; }
-    .cmenu-panel { position: static; width: auto; display: none; transform: none; padding: 0 0 1.4rem; }
-    .cmenu-panel.active { display: flex; transform: none; }
-    .cmenu-word { font-size: clamp(2rem, 11vw, 3rem); }
-    .cmenu-tag { font-size: .9rem; margin-bottom: 1.1rem; }
-    .cmenu-frentes, .cmenu-sols { grid-template-columns: 1fr; gap: 1.1rem; }
-    .cmenu-curve { opacity: .45 !important; }
+  .nav-mobile[data-open] { max-height: 34rem; opacity: 1; margin-top: .5rem; }
+  .nav-mobile-inner {
+    background: rgba(245, 248, 255, 0.96); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border: 1px solid var(--color-sand-200); border-radius: 1.15rem; padding: .6rem;
+    box-shadow: 0 20px 50px -16px rgba(15, 30, 61, 0.28);
+    display: flex; flex-direction: column; gap: .1rem;
   }
+  .nav-m-link {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 1rem; font-weight: 600; color: var(--color-ink);
+    padding: .85rem .9rem; border-radius: .8rem; background: transparent; border: 0; width: 100%; text-align: left; cursor: pointer;
+    transition: background-color .18s ease;
+  }
+  .nav-m-link:hover, .nav-m-acc[aria-expanded="true"] { background: var(--color-sand-100); }
+  .nav-m-group { display: flex; flex-direction: column; }
+  .nav-m-acc .nav-chev { width: 1rem; height: 1rem; color: var(--color-sand-400); }
+  .nav-m-acc[aria-expanded="true"] .nav-chev { transform: rotate(180deg); }
+  .nav-m-sub {
+    display: grid; grid-template-rows: 0fr; overflow: hidden;
+    transition: grid-template-rows .32s var(--ease-curve);
+    padding: 0 .4rem;
+  }
+  .nav-m-group[data-open] .nav-m-sub { grid-template-rows: 1fr; }
+  .nav-m-sub > * { min-height: 0; }
+  .nav-m-sublink {
+    display: flex; flex-direction: column; gap: .1rem;
+    padding: .7rem .8rem; border-radius: .7rem; border-left: 2px solid var(--color-sand-200); margin: .15rem 0;
+    transition: background-color .18s ease, border-color .18s ease;
+  }
+  .nav-m-sublink:hover { background: var(--color-sand-100); border-color: var(--color-ember); }
+  .nav-m-sub-title { font-family: var(--font-display); font-weight: 600; font-size: .92rem; color: var(--color-ink); }
+  .nav-m-sub-desc { font-size: .8rem; color: var(--color-sand-500); line-height: 1.35; }
+  .nav-m-cta {
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    margin-top: .35rem; padding: .9rem 1rem; border-radius: .8rem;
+    background: var(--color-ink); color: var(--color-sand-50); font-weight: 600; font-size: .95rem;
+    transition: background-color .2s ease;
+  }
+  .nav-m-cta:hover { background: #1b3a6b; }
+  .nav-m-cta svg { width: 1.05rem; height: 1.05rem; }
 
   @media (prefers-reduced-motion: reduce) {
-    .cmenu, .cmenu-trigger, .cmenu-panel, .cmenu-curve, .cmenu-curve-line { transition: opacity .15s ease, visibility 0s !important; transform: none !important; }
-    .cmenu-panel { transform: translateY(-50%) !important; }
-    .cmenu-curve-line { stroke-dashoffset: 0 !important; }
-    .cmenu-spark { display: none; }
+    .nav-drop-panel, .nav-chev, .nav-mobile, .nav-m-sub, .nav-drop-arrow, .nav-burger-ico span { transition-duration: .01ms !important; }
   }
 </style>

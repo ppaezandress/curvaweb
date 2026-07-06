@@ -4,7 +4,8 @@
 // "Próximamente" y no enlazan a ningún lado (nada de links muertos). Cuando
 // tengas artículos reales, cambia `pronto` por su `href` y quita el badge.
 export interface Props { waLink?: string }
-const { waLink = 'https://wa.me/5215611846200' } = Astro.props;
+import { waLink as buildWa } from '../data/site';
+const { waLink = buildWa() } = Astro.props;
 
 const ideas = [
   {

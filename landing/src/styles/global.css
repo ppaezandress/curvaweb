@@ -205,6 +205,13 @@ body {
   outline-offset: 3px;
   border-radius: 4px;
 }
+/* Sobre superficies azules/oscuras el anillo cobalto se pierde: anillo blanco */
+.hero-blue :focus-visible,
+.zone-color :focus-visible,
+.zone-solid :focus-visible,
+.surface-ink :focus-visible {
+  outline-color: #fff;
+}
 
 /* Cursor glow ambiental (desktop) */
 .cursor-glow {
@@ -651,18 +658,30 @@ body {
 }
 .thread svg { width: 100%; height: 100%; display: block; }
 .thread-line { stroke-dasharray: 1; stroke-dashoffset: 1; }
+/* El compañero: un badge de vidrio con el isotipo que "baja contigo" por el hilo.
+   Se ve tanto sobre secciones claras como oscuras. thread.ts lo mueve por transform. */
 .thread-dot {
   position: absolute;
   top: 0; left: 0;
-  width: 13px; height: 13px;
+  width: 32px; height: 32px;
   border-radius: 9999px;
-  background: #fff;
-  box-shadow: 0 0 18px 5px rgba(37, 99, 235, 0.6), 0 0 6px 1px rgba(56, 189, 248, 0.9);
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35), 0 0 0 1px rgba(37, 99, 235, 0.14);
   opacity: 0;
-  transition: opacity .4s var(--ease-curve);
+  transition: opacity .45s var(--ease-curve);
   will-change: transform;
 }
-.thread.is-live .thread-dot { opacity: 1; }
+.thread-iso { display: block; line-height: 0; }
+.thread-iso svg { width: 20px; height: auto; display: block; color: var(--color-ember); }
+.thread.is-live .thread-dot { opacity: 1; animation: thread-glow 2.6s ease-in-out infinite; }
+@keyframes thread-glow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35), 0 0 0 1px rgba(37, 99, 235, 0.14); }
+  50%      { box-shadow: 0 5px 22px rgba(56, 189, 248, 0.55), 0 0 0 1px rgba(37, 99, 235, 0.2); }
+}
+@media (prefers-reduced-motion: reduce) { .thread.is-live .thread-dot { animation: none; } }
 
 /* ----- A3: Tipografía-tesis (antes torcida → se endereza | después nítida) ----- */
 .word-before, .word-after { display: inline-block; will-change: transform, filter, opacity; }
@@ -712,7 +731,7 @@ body {
 /* Titular grande. Acotado a "estructura" (10 car.) para que nunca se corte. */
 .hero-phrase { font-size: clamp(3rem, 12vw, 9rem); }
 /* Contraste de peso = diseño: "estructura" pesada (más), "esfuerzo" ligera (menos). */
-.hero-word-strong { font-weight: 800; letter-spacing: -0.045em; }
+.hero-word-strong { font-weight: 800; letter-spacing: -0.04em; }
 
 /* Fondo AZUL del hero (cobalto profundo → texto blanco pasa contraste AA holgado). */
 .hero-blue {
@@ -771,19 +790,21 @@ body {
 }
 
 /* ----------------------------- Composer IA del hero ----------------------------- */
-/* Anillo con glow que "respira" — señal AI-powered. Anima el ángulo del conic
-   (con @property) para que giren los colores sin mover la caja. */
+/* Aura viva — señal AI-powered. Anima el ángulo del conic (con @property) para que
+   giren los colores sin mover la caja. Se intensifica al enfocar el campo. */
 @property --hero-ring-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
 .hero-ai-ring {
   --hero-ring-a: 0deg;
   background: conic-gradient(from var(--hero-ring-a),
-    rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.55) 18%,
-    rgba(37, 99, 235, 0.6) 40%, rgba(249, 115, 22, 0.45) 62%,
-    rgba(56, 189, 248, 0.55) 82%, rgba(56, 189, 248, 0) 100%);
-  filter: blur(8px);
-  opacity: 0.8;
+    rgba(56, 189, 248, 0) 0%, rgba(56, 189, 248, 0.6) 16%,
+    rgba(37, 99, 235, 0.65) 38%, rgba(139, 92, 246, 0.5) 55%, rgba(249, 115, 22, 0.42) 68%,
+    rgba(56, 189, 248, 0.6) 86%, rgba(56, 189, 248, 0) 100%);
+  filter: blur(9px);
+  opacity: 0.75;
   animation: hero-ring-spin 7s linear infinite;
+  transition: opacity .4s ease, filter .4s ease;
 }
+#hero-ai:focus-within .hero-ai-ring { opacity: 1; filter: blur(12px); animation-duration: 4.5s; }
 @keyframes hero-ring-spin { to { --hero-ring-a: 360deg; } }
 /* Fallback si el navegador no soporta @property: glow estático suave. */
 @supports not (background: conic-gradient(from var(--hero-ring-a), red, blue)) {
@@ -793,11 +814,86 @@ body {
 .hero-ai-card { box-shadow: 0 30px 80px -32px rgba(15, 30, 61, 0.5); }
 .hero-ai-log { max-height: min(38vh, 22rem); scroll-behavior: smooth; }
 
+/* Orbe IA del header: esfera con gradiente + destello interno */
+.hero-ai-orb {
+  position: relative; flex-shrink: 0;
+  width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+  display: grid; place-items: center; color: #fff;
+  background: radial-gradient(120% 120% at 30% 25%, #93c5fd 0%, #2563eb 45%, #1d4ed8 100%);
+  box-shadow: 0 4px 14px -4px rgba(37, 99, 235, 0.7), inset 0 1px 2px rgba(255,255,255,0.5);
+}
+.hero-ai-orb svg { width: .9rem; height: .9rem; filter: drop-shadow(0 0 3px rgba(255,255,255,0.6)); animation: hero-orb-spark 3.4s ease-in-out infinite; }
+@keyframes hero-orb-spark { 0%, 100% { opacity: .85; transform: rotate(0) scale(1); } 50% { opacity: 1; transform: rotate(20deg) scale(1.12); } }
+
+/* Badge "Impulsado por IA" con brillo que barre */
+.hero-ai-badge {
+  font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  padding: .18rem .5rem; border-radius: 9999px; color: var(--color-ember-600);
+  background: color-mix(in srgb, var(--color-ember) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-ember) 22%, #fff);
+  background-image: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.85) 50%, transparent 80%), linear-gradient(color-mix(in srgb, var(--color-ember) 10%, #fff), color-mix(in srgb, var(--color-ember) 10%, #fff));
+  background-size: 220% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  animation: hero-badge-sheen 5.5s ease-in-out infinite;
+}
+@keyframes hero-badge-sheen { 0%, 65% { background-position: 200% 0, 0 0; } 100% { background-position: -60% 0, 0 0; } }
+
 .hero-ai-live { animation: hero-live 2.2s ease-in-out infinite; }
 @keyframes hero-live {
   0%, 100% { opacity: 0.35; transform: scale(0.85); }
   50%      { opacity: 1;    transform: scale(1.2); }
 }
+
+/* Campo unificado + placeholder fantasma que se escribe solo */
+.hero-ai-field { box-shadow: inset 0 1px 2px rgba(15,30,61,0.04); }
+.hero-ai-field:focus-within { border-color: var(--color-ember); box-shadow: inset 0 1px 2px rgba(15,30,61,0.04), 0 0 0 3px color-mix(in srgb, var(--color-ember) 14%, transparent); }
+.hero-ai-input { font-family: inherit; }
+.hero-ai-ghost {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: .875rem 1rem 0; pointer-events: none;
+  color: var(--color-sand-400); font-size: 15px; line-height: 1.625;
+  display: flex; align-items: baseline;
+  transition: opacity .25s ease;
+}
+.hero-ai-field.is-active .hero-ai-ghost { opacity: 0; }
+.hero-ai-caret {
+  display: inline-block; width: 2px; height: 1.05em; margin-left: 1px;
+  background: var(--color-ember); border-radius: 1px; transform: translateY(2px);
+  animation: hero-caret 1s step-end infinite;
+}
+@keyframes hero-caret { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+.hero-ai-actions {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .5rem .6rem .6rem;
+}
+.hero-ai-tip { font-size: 11px; color: var(--color-sand-400); padding-left: .4rem; }
+@media (max-width: 400px) { .hero-ai-tip { display: none; } }
+.hero-ai-send { box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--color-ai) 55%, transparent); }
+
+/* Chips de sugerencia */
+.hero-ai-chip {
+  font-size: 13px; color: var(--color-sand-600);
+  border: 1px solid var(--color-sand-300); border-radius: 9999px; padding: .35rem .8rem;
+  background: #fff; transition: border-color .2s ease, color .2s ease, background-color .2s ease, transform .2s ease;
+}
+.hero-ai-chip:hover { border-color: var(--color-ember); color: var(--color-ember); background: color-mix(in srgb, var(--color-ember) 6%, #fff); transform: translateY(-1px); }
+
+/* Rutas: la IA te lleva a una parte del sitio (link cards claras) */
+.hero-ai-route {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .7rem .85rem; border-radius: .9rem;
+  border: 1px solid color-mix(in srgb, var(--color-ember) 22%, #fff);
+  background: color-mix(in srgb, var(--color-ember) 6%, #fff);
+  color: var(--color-ink); font-weight: 600; font-size: 14px;
+  transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+}
+.hero-ai-route:hover { background: color-mix(in srgb, var(--color-ember) 12%, #fff); border-color: var(--color-ember); transform: translateX(2px); }
+.hero-ai-route-ico { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: .5rem; background: var(--color-ember); color: #fff; flex-shrink: 0; }
+.hero-ai-route-ico svg { width: .95rem; height: .95rem; }
+.hero-ai-route-arrow { margin-left: auto; color: var(--color-ember); transition: transform .18s ease; }
+.hero-ai-route:hover .hero-ai-route-arrow { transform: translateX(3px); }
 
 .hero-ai-mic.recording {
   background: #ef4444; color: #fff; border-color: #ef4444;
@@ -810,7 +906,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-ai-ring { animation: none; }
+  .hero-ai-orb svg, .hero-ai-badge { animation: none; }
   .hero-ai-live { animation: none; opacity: 0.8; }
+  .hero-ai-caret { animation: none; opacity: 1; }
   .hero-ai-mic.recording { animation: none; }
   .hero-ai-log { scroll-behavior: auto; }
 }
@@ -918,7 +1016,7 @@ body {
 .pg[data-pg-paused] .pg-progress { opacity: 0.35; }
 .pg-hint {
   display: inline-flex; align-items: center; gap: 0.4rem;
-  margin-top: 0.7rem; font-size: 0.75rem; color: var(--color-sand-400);
+  margin-top: 0.7rem; font-size: 0.75rem; color: var(--color-sand-500);
 }
 .pg-hint svg { flex-shrink: 0; }
 

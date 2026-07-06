@@ -8,13 +8,11 @@ import ImpactoCarrusel from '../components/ImpactoCarrusel.astro';
 import Caminos from '../components/Caminos.astro';
 import RedNodos from '../components/RedNodos.astro';
 import Intro from '../components/Intro.astro';
+import { waLink as buildWa } from '../data/site';
+import logoAnim from '../svg/curva-logo-anim.svg?raw';
 
 const calLink = 'https://cal.com/andres-paez/30min';
-const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
-
-const accentText = { ember: 'text-ember', gold: 'text-gold', jade: 'text-jade' } as const;
-const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-jade' } as const;
-const accentBorder = { ember: 'border-ember', gold: 'border-gold', jade: 'border-jade' } as const;
+const waLink = buildWa();
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -30,34 +28,34 @@ const jsonLd = {
 // Interruptor pains→gains (sección "¿Te suena algo de esto?"): el mismo punto,
 // "antes" (dolor) → "después" (con CURVA). Gains de la auditoría de Emiliano.
 const pares = [
-  { pain: 'El negocio depende de pocas personas para no detenerse.', gain: 'El negocio no depende de ti: puede funcionar solo.' },
-  { pain: 'Los procesos viven en la cabeza, no en un sistema.',       gain: 'El conocimiento se centraliza en un solo lugar, para todo el equipo.' },
-  { pain: 'Cada venta nueva trae más trabajo y desorden, no más claridad.', gain: 'Sostienes más ventas sin perder el orden, con una dirección clara.' },
-  { pain: 'Hay con qué crecer, pero falta la estructura para lograrlo.', gain: 'Tienes los cimientos y la estructura para crecer.' },
+  { pain: '«El negocio depende de pocas personas para no detenerse.»', gain: 'El negocio no depende de ti: puede funcionar solo.' },
+  { pain: '«Los procesos viven en la cabeza, no en un sistema.»',       gain: 'El conocimiento se centraliza en un solo lugar, para todo el equipo.' },
+  { pain: '«Cada venta nueva trae más trabajo y desorden, no más claridad.»', gain: 'Sostienes más ventas sin perder el orden, con una dirección clara.' },
+  { pain: '«Hay con qué crecer, pero falta la estructura para lograrlo.»', gain: 'Tienes los cimientos y la estructura para crecer.' },
 ];
 
-// Hitos sobre la curva (coords % sobre la Bézier del viewBox 1280x420).
-// `at` = fracción del recorrido en que se "enciende" (sincroniza con el trazo); `href` = su servicio.
-const hitosCurva = [
-  { n: '01', label: 'Exploración',    cap: 'Entendemos tu operación a fondo.',      left: 27.3, top: 79.8, at: 0.24, href: '/consultoria/transformacion-de-negocio' },
-  { n: '02', label: 'Diagnóstico',    cap: 'Vemos qué se traba y por qué.',          left: 51.6, top: 59.5, at: 0.50, href: '/consultoria/transformacion-de-negocio#procesos' },
-  { n: '03', label: 'Implementación', cap: 'Lo armamos y se queda funcionando solo.', left: 75.7, top: 31.9, at: 0.74, href: '/consultoria/transformacion-digital' },
+// El viaje por la curva (sección #viaje): las 5 fases como nodos SOBRE la curva.
+// `at` = fracción del recorrido (getPointAtLength) donde vive cada nodo; hitos.ts
+// lo posiciona exacto sobre el trazo y climb.ts lo enciende cuando el isotipo pasa.
+// left/top son solo aproximados de arranque (hitos.ts los corrige al cargar).
+const fases = [
+  { n: '01', chip: 'Escuchamos',   t: 'Escuchamos tu reto',  d: 'Nos cuentas qué te traba hoy en tu empresa.',        at: 0.1,  left: 12.7, top: 84.4 },
+  { n: '02', chip: 'Analizamos',   t: 'Analizamos a fondo',  d: 'Uno a dos meses dentro de tu operación, de verdad.', at: 0.3,  left: 30.6, top: 77.9 },
+  { n: '03', chip: 'Trazamos',     t: 'Trazamos el cambio',  d: 'Te decimos la mejor forma de transformarte.',        at: 0.5,  left: 49.3, top: 62.4 },
+  { n: '04', chip: 'Construimos',  t: 'Construimos contigo', d: 'Implementamos y te capacitamos, de la mano.',        at: 0.7,  left: 68.7, top: 43.7 },
+  { n: '05', chip: 'Nos quedamos', t: 'Nos quedamos',        d: 'Seguimos contigo hasta la empresa que quieres.',     at: 0.9,  left: 87.9, top: 25.6 },
 ];
 
-// Mismo viaje como timeline vertical para móvil (la gráfica horizontal se aplana en pantallas chicas).
-const paradas = [
-  { eyebrow: 'Hoy', label: 'Operación por sensación', accent: 'ember' as const },
-  { eyebrow: '01', label: 'Exploración', accent: 'ember' as const },
-  { eyebrow: '02', label: 'Diagnóstico', accent: 'ember' as const },
-  { eyebrow: '03', label: 'Implementación', accent: 'gold' as const },
-  { eyebrow: 'Con CURVA', label: 'Operación por sistema', accent: 'gold' as const },
-  { eyebrow: 'La cima', label: 'Cambio de vida', accent: 'gold' as const },
-];
+// Isotipo que escala la curva (climb.ts lo mueve por el path con el scroll).
+// Sin ids: el mismo grupo vive en la Intro y los ids del DOM deben ser únicos.
+const isoClimber = `<svg viewBox="26 22 316 212" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">${
+  logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)![0].replace(/\s?id="[^"]*"/g, '')
+}</svg>`;
 
 // Cinta animada representativa de lo que hace CURVA (sin logos — feedback de Pau).
-const capacidades = ['Diagnóstico operativo', 'Procesos y estructura', 'Automatización', 'Agentes con IA', 'ERPs implementados', 'Gobernanza', 'Capacitación', 'Acompañamiento'];
+const capacidades = ['Estructuremos tu negocio', 'Automatiza tu operación', 'Aprende de IA con nosotros', 'Agentes con IA', 'Diagnóstico operativo', 'Trabajamos tu sueño', 'Design thinking', 'Cambia la vida de tu equipo'];
 
-// Path firma de la sección "La curva" (coincide con offset-path de .curve-dot en global.css).
+// Path firma del viaje (coincide con offset-path de .curve-dot en global.css).
 const curvePath = 'M40,360 C320,360 380,330 660,250 C940,170 1010,80 1240,70';
 
 // Producto propio = prueba ("no entregamos PDFs, construimos software"). Curva Tiempos.
@@ -101,7 +99,7 @@ const producto = {
     </div>
 
     <div data-hero-scrollhint class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center" data-load="5">
-      <a href="#problema" aria-label="Bajar al contenido" class="animate-bounce"><svg class="w-5 h-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"></path></svg></a>
+      <a href="#problema" aria-label="Bajar al contenido" class="hint-drift inline-flex p-2 -m-2"><svg class="w-5 h-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"></path></svg></a>
     </div>
   </section>
 
@@ -113,9 +111,9 @@ const producto = {
           {Array.from({ length: 2 }).map(() => (
             <span class="inline-flex items-center">
               {row.map((c) => (
-                <span class="inline-flex items-center text-sand-600">
+                <span class={`inline-flex items-center ${r === 1 ? 'text-sand-500' : 'text-sand-600'}`}>
                   <span class="display text-lg sm:text-xl font-medium">{c}</span>
-                  <span class="mx-7 text-ember/50">·</span>
+                  <span class={`mx-7 ${r === 1 ? 'text-ember/30' : 'text-ember/50'}`}>·</span>
                 </span>
               ))}
             </span>
@@ -125,10 +123,169 @@ const producto = {
     ))}
   </div>
 
+  <!-- ============================== EL VIAJE POR LA CURVA (centerpiece) ==============================
+       Una sola escena: la curva se dibuja con el scroll, el ISOTIPO la escala de
+       "Hoy estás aquí" a la cima, y las 5 fases son nodos con ficha de diccionario
+       (hover/focus). Fusión de las antiguas secciones #como y #la-curva. -->
+  <section id="viaje" data-anim-gate class="surface-ink py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
+    <div class="mx-auto max-w-6xl relative z-10">
+      <div class="max-w-3xl">
+        <p class="reveal eyebrow-lead text-jade-300 mb-5">El viaje</p>
+        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-[1.08] tracking-tight text-balance text-white">
+          Hoy estás <span class="whitespace-nowrap"><span class="word-before text-jade-300">aquí</span>.</span>
+          Te llevamos a la empresa que <span class="whitespace-nowrap"><span class="word-after text-jade-300">quieres</span>.</span>
+        </h2>
+        <p data-wordfade class="mt-6 text-lg sm:text-xl text-sand-100 leading-relaxed max-w-xl">
+          Nos volvemos tu aliado de principio a fin: cada fase te quita un peso de encima, hasta que tu operación jala sola.
+        </p>
+      </div>
+
+      <!-- Escena (≥sm): curva dibujada por scroll + isotipo trepador (climb.ts) -->
+      <div class="viaje-scene reveal reveal-scale relative w-full mt-6 pt-16 pb-16 hidden sm:block" data-climb>
+        <!-- La cima -->
+        <div class="absolute top-0 right-0 max-w-[46%] text-right z-10 pointer-events-none">
+          <p class="eyebrow text-jade-300 mb-1.5 text-sm">La cima · Con Curva</p>
+          <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">La empresa que <span class="word-after">quieres</span></p>
+          <p class="mt-2 text-sm text-sand-100/90">Operación por sistema. Y con eso, un <span class="font-semibold text-jade-300">cambio de vida</span>.</p>
+        </div>
+
+        <div class="relative" data-climb-stage>
+          <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
+            <defs>
+              <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#60a5fa"></stop>
+                <stop offset="0.45" stop-color="#bae6fd"></stop>
+                <stop offset="1" stop-color="#ffffff"></stop>
+              </linearGradient>
+              <radialGradient id="summit-aura" cx="50%" cy="50%" r="50%">
+                <stop offset="0" stop-color="#bae6fd" stop-opacity="0.55"></stop>
+                <stop offset="55%" stop-color="#60a5fa" stop-opacity="0.18"></stop>
+                <stop offset="100%" stop-color="#2563eb" stop-opacity="0"></stop>
+              </radialGradient>
+              <linearGradient id="curve-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"></stop>
+                <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+              </linearGradient>
+              <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+                <path d="M48 0 H0 V48" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"></path>
+              </pattern>
+              <radialGradient id="grid-fade" cx="42%" cy="40%" r="70%">
+                <stop offset="0" stop-color="#fff"></stop>
+                <stop offset="100%" stop-color="#000"></stop>
+              </radialGradient>
+              <mask id="grid-mask"><rect width="1280" height="420" fill="url(#grid-fade)"></rect></mask>
+              <filter id="curve-glow" x="-20%" y="-60%" width="140%" height="220%">
+                <feGaussianBlur stdDeviation="7" result="b"></feGaussianBlur>
+                <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+              </filter>
+            </defs>
+
+            <!-- Aura de la cima (respira detrás del nodo final) -->
+            <ellipse class="summit-aura" cx="1240" cy="70" rx="220" ry="170" fill="url(#summit-aura)"></ellipse>
+            <!-- Plano técnico de fondo -->
+            <rect width="1280" height="420" fill="url(#grid)" mask="url(#grid-mask)"></rect>
+            <!-- Eje base -->
+            <line x1="40" y1="392" x2="1240" y2="392" stroke="rgba(255,255,255,0.18)" stroke-width="1"></line>
+
+            <!-- Partículas / puntos de dato -->
+            <circle cx="180" cy="300" r="2.5" fill="#93c5fd" class="twinkle"></circle>
+            <circle cx="520" cy="190" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-1.2s"></circle>
+            <circle cx="760" cy="320" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-2.1s"></circle>
+            <circle cx="1080" cy="150" r="2.5" fill="#60a5fa" class="twinkle" style="animation-delay:-0.6s"></circle>
+            <circle cx="340" cy="120" r="1.8" fill="#93c5fd" class="twinkle" style="animation-delay:-3s"></circle>
+            <circle cx="980" cy="300" r="1.8" fill="#60a5fa" class="twinkle" style="animation-delay:-1.8s"></circle>
+
+            <!-- Área de crecimiento bajo la curva -->
+            <path d={`${curvePath} L1240,392 L40,392 Z`} fill="url(#curve-area)"></path>
+            <!-- Riel tenue (el camino que falta) -->
+            <path d={curvePath} stroke="rgba(255,255,255,0.20)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10" data-hito-path></path>
+            <!-- Trazo firma: climb.ts lo dibuja con el scroll y lleva el isotipo en su punta -->
+            <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-climb-path style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
+
+            <!-- Nodos de fase (hitos.ts los clava EXACTO sobre el path) -->
+            {fases.map(() => <circle data-hito r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>)}
+
+            <!-- Nodo inicio (hoy) -->
+            <circle cx="40" cy="360" r="9" fill="#ffffff" stroke="rgba(255,255,255,0.35)" stroke-width="7"></circle>
+
+            <!-- Cima: bandera + anillos de celebración (se disparan al llegar el isotipo) -->
+            <g transform="translate(1240,70)">
+              <circle class="cima-ring" r="12" fill="none" stroke="#bae6fd" stroke-width="2"></circle>
+              <circle class="cima-ring cima-ring--2" r="12" fill="none" stroke="#bae6fd" stroke-width="2"></circle>
+              <g class="cima-flag">
+                <line x1="0" y1="-7" x2="0" y2="-44" stroke="#e0f2fe" stroke-width="2.5" stroke-linecap="round"></line>
+                <path class="cima-cloth" d="M0,-44 L28,-36.5 L0,-29 Z" fill="#f97316"></path>
+              </g>
+              <circle class="cima-node" r="10" fill="#ffffff" stroke="#7dd3fc" stroke-width="3"></circle>
+            </g>
+          </svg>
+
+          <!-- Fases: chips-nodo con ficha estilo diccionario (hover y foco, sin navegación) -->
+          <div role="list" aria-label="Las cinco fases del viaje con Curva" class="contents">
+            {fases.map((f, i) => (
+              <div role="listitem" class="milestone fase" data-at={f.at} style={`left:${f.left}%;top:${f.top}%`}>
+                <div class="fase-stack">
+                  <div role="tooltip" id={`fase-tip-${i}`} class="fase-tip">
+                    <p class="fase-tip-word display">{f.t}</p>
+                    <p class="fase-tip-tag">fase {f.n} · el viaje por la curva</p>
+                    <p class="fase-tip-def">{f.d}</p>
+                  </div>
+                  <button type="button" class="fase-chip" aria-describedby={`fase-tip-${i}`}>
+                    <span class="fase-num tabular-nums" aria-hidden="true">{f.n}</span>{f.chip}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <!-- El isotipo que escala la curva (climb.ts) -->
+          <div class="climber" data-climber aria-hidden="true" set:html={isoClimber}></div>
+        </div>
+
+        <!-- Hoy -->
+        <div class="absolute bottom-0 left-0 max-w-[40%] z-10 pointer-events-none">
+          <p class="eyebrow text-jade-300 mb-1.5 text-sm">Hoy estás aquí</p>
+          <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">Operación por <span class="word-before">sensación</span></p>
+        </div>
+      </div>
+
+      <!-- Móvil (<sm): el mismo viaje como timeline vertical -->
+      <ol class="viajem sm:hidden mt-10 relative" role="list">
+        <span class="viajem-rail" aria-hidden="true"></span>
+        <li class="viajem-item reveal" style="--i:0">
+          <span class="viajem-node viajem-node--hoy" aria-hidden="true"></span>
+          <p class="eyebrow text-jade-300 mb-1">Hoy estás aquí</p>
+          <p class="display text-lg font-semibold text-white leading-tight">Operación por sensación</p>
+        </li>
+        {fases.map((f, i) => (
+          <li class="viajem-item reveal" style={`--i:${i + 1}`}>
+            <span class="viajem-node" aria-hidden="true"><span class="viajem-num display tabular-nums">{f.n}</span></span>
+            <p class="display text-lg font-semibold text-white leading-tight">{f.t}</p>
+            <p class="mt-1 text-sm text-sand-200 leading-relaxed">{f.d}</p>
+          </li>
+        ))}
+        <li class="viajem-item reveal" style="--i:6">
+          <span class="viajem-node viajem-node--cima" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"></path><path d="M6 4h11l-3 3.5 3 3.5H6" fill="currentColor" stroke="none"></path></svg>
+          </span>
+          <p class="eyebrow text-jade-300 mb-1">La cima · Con Curva</p>
+          <p class="display text-lg font-semibold text-white leading-tight">La empresa que quieres</p>
+          <p class="mt-1 text-sm text-sand-200">Operación por sistema. Y un cambio de vida.</p>
+        </li>
+      </ol>
+
+      <p class="reveal mt-12 text-base">
+        <a href={calLink} target="_blank" rel="noopener" class="arrow-cta inline-flex items-center gap-2 font-semibold text-jade-300 link-underline">Conversemos y te decimos por dónde empezar
+          <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        </a>
+      </p>
+    </div>
+  </section>
+
   <!-- ============================== EL PROBLEMA ============================== -->
   <section id="problema" class="py-24 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
-    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-8rem;background:radial-gradient(circle,rgba(37, 99, 235,0.12),transparent 70%);mix-blend-mode:normal;opacity:0.8;"></div>
-    <div class="glow-orb" style="width:26rem;height:26rem;bottom:-8rem;left:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);mix-blend-mode:normal;opacity:0.8;animation-delay:-8s;"></div>
+    <div class="absolute inset-0 pointer-events-none" data-parallax="34" aria-hidden="true"><div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-8rem;background:radial-gradient(circle,rgba(37, 99, 235,0.12),transparent 70%);mix-blend-mode:normal;opacity:0.8;"></div></div>
+    <div class="absolute inset-0 pointer-events-none" data-parallax="18" aria-hidden="true"><div class="glow-orb" style="width:26rem;height:26rem;bottom:-8rem;left:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);mix-blend-mode:normal;opacity:0.8;animation-delay:-8s;"></div></div>
     <div class="mx-auto max-w-7xl grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-12 lg:gap-24 relative z-10">
       <div class="lg:sticky lg:top-28 self-start">
         <p class="reveal eyebrow-lead text-ember mb-5">Para quién es esto</p>
@@ -177,140 +334,6 @@ const producto = {
     </div>
   </section>
 
-  <!-- ============================== LA CURVA (transformación) ============================== -->
-  <section id="la-curva" data-anim-gate class="zone-solid py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden scroll-mt-24">
-    <div class="glow-orb" style="width:28rem;height:28rem;top:18%;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);"></div>
-    <div class="mx-auto max-w-6xl relative z-10">
-      <div class="max-w-2xl mb-4">
-        <p class="reveal eyebrow-lead text-jade-300 mb-5">La curva</p>
-        <h2 class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-balance text-white">Hoy estás <span class="whitespace-nowrap"><span class="word-before text-jade-300">aquí</span>.</span> Te llevamos <span class="whitespace-nowrap"><span class="word-after text-jade-300">acá</span>.</span></h2>
-        <p data-wordfade class="mt-5 text-lg sm:text-xl text-sand-100 leading-relaxed">Cada etapa te quita un peso de encima. Hasta que dejas de ser el cuello de botella de tu propia empresa.</p>
-      </div>
-
-      <!-- Escena horizontal (desktop): la curva se dibuja al hacer scroll -->
-      <div class="reveal reveal-scale relative w-full mt-8 pt-12 pb-16 hidden sm:block">
-        <!-- Con CURVA: arriba-derecha, junto al final ALTO de la curva (el éxito) -->
-        <div class="absolute top-0 right-0 max-w-[52%] text-right">
-          <p class="eyebrow text-jade-300 mb-1.5 text-sm">La cima · Con CURVA</p>
-          <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">Operación por <span class="word-after">sistema</span></p>
-          <p class="mt-2 text-sm text-sand-100/90">Y con eso, un <span class="font-semibold text-jade-300">cambio de vida</span>.</p>
-        </div>
-        <svg viewBox="0 0 1280 420" fill="none" class="w-full h-auto block overflow-visible parallax" data-parallax="10" aria-hidden="true">
-          <defs>
-            <linearGradient id="curve-stage-grad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#60a5fa"></stop>
-              <stop offset="0.45" stop-color="#bae6fd"></stop>
-              <stop offset="1" stop-color="#ffffff"></stop>
-            </linearGradient>
-            <linearGradient id="curve-comet-grad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#7dd3fc" stop-opacity="0"></stop>
-              <stop offset="1" stop-color="#ffffff"></stop>
-            </linearGradient>
-            <radialGradient id="summit-aura" cx="50%" cy="50%" r="50%">
-              <stop offset="0" stop-color="#bae6fd" stop-opacity="0.55"></stop>
-              <stop offset="55%" stop-color="#60a5fa" stop-opacity="0.18"></stop>
-              <stop offset="100%" stop-color="#2563eb" stop-opacity="0"></stop>
-            </radialGradient>
-            <linearGradient id="curve-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"></stop>
-              <stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
-            </linearGradient>
-            <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M48 0 H0 V48" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"></path>
-            </pattern>
-            <radialGradient id="grid-fade" cx="42%" cy="40%" r="70%">
-              <stop offset="0" stop-color="#fff"></stop>
-              <stop offset="100%" stop-color="#000"></stop>
-            </radialGradient>
-            <mask id="grid-mask"><rect width="1280" height="420" fill="url(#grid-fade)"></rect></mask>
-            <filter id="curve-glow" x="-20%" y="-60%" width="140%" height="220%">
-              <feGaussianBlur stdDeviation="7" result="b"></feGaussianBlur>
-              <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
-            </filter>
-          </defs>
-
-          <!-- Aura de la cima (respira detrás del nodo final) -->
-          <ellipse class="summit-aura" cx="1240" cy="70" rx="220" ry="170" fill="url(#summit-aura)"></ellipse>
-          <!-- Plano técnico de fondo -->
-          <rect width="1280" height="420" fill="url(#grid)" mask="url(#grid-mask)"></rect>
-          <!-- Eje base -->
-          <line x1="40" y1="392" x2="1240" y2="392" stroke="rgba(255,255,255,0.18)" stroke-width="1"></line>
-
-          <!-- Partículas / puntos de dato -->
-          <circle cx="180" cy="300" r="2.5" fill="#93c5fd" class="twinkle"></circle>
-          <circle cx="520" cy="190" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-1.2s"></circle>
-          <circle cx="760" cy="320" r="2" fill="#60a5fa" class="twinkle" style="animation-delay:-2.1s"></circle>
-          <circle cx="1080" cy="150" r="2.5" fill="#60a5fa" class="twinkle" style="animation-delay:-0.6s"></circle>
-          <circle cx="340" cy="120" r="1.8" fill="#93c5fd" class="twinkle" style="animation-delay:-3s"></circle>
-          <circle cx="980" cy="300" r="1.8" fill="#60a5fa" class="twinkle" style="animation-delay:-1.8s"></circle>
-
-          <!-- Área de crecimiento bajo la curva -->
-          <path d={`${curvePath} L1240,392 L40,392 Z`} fill="url(#curve-area)"></path>
-          <!-- Riel tenue -->
-          <path d={curvePath} stroke="rgba(255,255,255,0.20)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 10"></path>
-          <!-- Trazo firma: se dibuja con el scroll (curve-draw.ts) -->
-          <path d={curvePath} stroke="url(#curve-stage-grad)" stroke-width="3.5" stroke-linecap="round" filter="url(#curve-glow)" pathLength="1" data-curve-draw="scroll" data-hito-path style="stroke-dasharray:1;stroke-dashoffset:1;"></path>
-          <!-- Estela de energía que recorre la curva en bucle (ambient) -->
-          <path class="curve-streak" d={curvePath} stroke="url(#curve-comet-grad)" stroke-width="4" stroke-linecap="round" fill="none" filter="url(#curve-glow)" pathLength="100"></path>
-
-          <!-- Hitos sobre la curva (coords exactas las coloca hitos.ts con getPointAtLength) -->
-          <circle data-hito cx="350" cy="335" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
-          <circle data-hito cx="660" cy="250" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
-          <circle data-hito cx="969" cy="134" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="2.5"></circle>
-
-          <!-- Nodo inicio (hoy) -->
-          <circle cx="40" cy="360" r="9" fill="#ffffff" stroke="rgba(255,255,255,0.35)" stroke-width="7"></circle>
-
-          <!-- Cima (con CURVA): anillos que irradian + nodo que brilla -->
-          <circle class="summit-ring" cx="1240" cy="70" r="12" fill="none" stroke="#bae6fd" stroke-width="2"></circle>
-          <circle class="summit-ring summit-ring--2" cx="1240" cy="70" r="12" fill="none" stroke="#bae6fd" stroke-width="2"></circle>
-          <circle class="summit-node" cx="1240" cy="70" r="11" fill="#ffffff" stroke="#7dd3fc" stroke-width="3"></circle>
-
-          <!-- Cometa viajero: sube la curva en bucle (offset-path = curvePath) -->
-          <circle class="curve-comet curve-comet--t3" r="3" fill="#7dd3fc" style={`offset-path: path('${curvePath}');`}></circle>
-          <circle class="curve-comet curve-comet--t2" r="4" fill="#bae6fd" style={`offset-path: path('${curvePath}');`}></circle>
-          <circle class="curve-comet curve-comet--t1" r="5" fill="#e0f2fe" style={`offset-path: path('${curvePath}');`}></circle>
-          <circle class="curve-comet curve-comet--head" r="6" fill="#ffffff" filter="url(#curve-glow)" style={`offset-path: path('${curvePath}');`}></circle>
-        </svg>
-
-        <!-- Hitos: chip flotante clickeable que se "enciende" al pasar el trazo (solo desktop) -->
-        {hitosCurva.map((m) => (
-          <div class="milestone hidden sm:block" data-at={m.at} style={`left:${m.left}%;top:${m.top}%`}>
-            <a href={m.href} class="lm-chip group absolute left-1/2 -translate-x-1/2 bottom-full mb-4 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white border border-sand-200 px-3 py-1.5 text-[11px] font-semibold text-sand-700 shadow-lg transition-all hover:border-ember-300/50 hover:-translate-y-0.5">
-              <span class="lm-num text-ember tabular-nums transition-colors">{m.n}</span>{m.label}
-              <svg class="lm-arrow w-3 h-3 opacity-0 -ml-1 transition-all group-hover:opacity-100 group-hover:ml-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
-            </a>
-          </div>
-        ))}
-
-        <!-- Hoy: abajo-izquierda, junto al inicio BAJO de la curva (punto de partida) -->
-        <div class="absolute bottom-0 left-0 max-w-[46%]">
-          <p class="eyebrow text-jade-300 mb-1.5 text-sm">Hoy</p>
-          <p class="display text-2xl lg:text-3xl font-semibold text-white leading-[1.05]">Operación por <span class="word-before">sensación</span></p>
-        </div>
-      </div>
-
-      <!-- Escena vertical (móvil): mismo viaje como timeline -->
-      <div class="reveal sm:hidden mt-10 relative pl-9">
-        <span class="absolute left-[13px] top-3 bottom-3 w-px bg-gradient-to-b from-ember to-gold"></span>
-        <ul class="space-y-8">
-          {paradas.map((p) => (
-            <li class="relative">
-              <span class={`absolute -left-9 top-0.5 w-[26px] h-[26px] rounded-full border-2 ${accentBorder[p.accent]} bg-white flex items-center justify-center`}>
-                <span class={`w-2 h-2 rounded-full ${accentBar[p.accent]}`}></span>
-              </span>
-              <p class={`eyebrow ${accentText[p.accent]} mb-1`}>{p.eyebrow}</p>
-              <p class="display text-lg font-semibold text-ink leading-tight">{p.label}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <!-- (Los cuadritos "Dónde estás hoy / A dónde llegas" se quitaron — feedback de
-           Emiliano: darle más énfasis a la curva del proceso, menos texto redundante.) -->
-    </div>
-  </section>
-
   <!-- ============================== ÁREAS (cómo te ayudamos — mosaico claro) ============================== -->
   <Caminos calLink={calLink} />
 
@@ -322,7 +345,7 @@ const producto = {
 
   <!-- ============================== PRODUCTO (ventaja injusta) ============================== -->
   <section class="text-ink py-24 sm:py-32 px-6 sm:px-10 relative overflow-hidden">
-    <div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-6rem;background:radial-gradient(circle,rgba(37, 99, 235,0.10),transparent 70%);"></div>
+    <div class="absolute inset-0 pointer-events-none" data-parallax="28" aria-hidden="true"><div class="glow-orb" style="width:30rem;height:30rem;top:-6rem;right:-6rem;background:radial-gradient(circle,rgba(37, 99, 235,0.10),transparent 70%);"></div></div>
     <div class="mx-auto max-w-7xl relative z-10 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
       <div>
         <p class="reveal eyebrow-lead text-ember mb-5">Nuestra ventaja</p>
@@ -335,7 +358,7 @@ const producto = {
         <ul class="reveal reveal-d1 mt-8 space-y-3">
           {['Nos adaptamos a tu operación, no tú a nosotros', 'Capacitación y acompañamiento, no solo entregables', 'Cercanía real: estamos contigo durante el cambio'].map((p) => (
             <li class="flex gap-3 text-sand-700">
-              <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-[#0284c7]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
               <span>{p}</span>
             </li>
           ))}
@@ -386,7 +409,7 @@ const producto = {
         )}
           </div>
         </div>
-        {!producto.shot && <p class="text-[11px] text-sand-500 mt-3 text-center">Vista de muestra — sustituir por captura real de Curva Tiempos.</p>}
+        {!producto.shot && <p class="text-[11px] text-sand-500 mt-3 text-center">Vista de muestra de Curva Tiempos.</p>}
       </div>
     </div>
   </section>
@@ -395,7 +418,7 @@ const producto = {
   <section class="zone-color py-28 sm:py-36 px-6 sm:px-10 relative overflow-hidden">
     <Curve variant="band" draw="scroll" stroke={1.4} class="pointer-events-none absolute inset-x-0 top-0 w-full h-[18vh] opacity-25" />
     <div class="mx-auto max-w-3xl text-center relative z-10">
-      <p class="reveal eyebrow text-jade-300 mb-5">Tu empresa, por sistema. Menos esfuerzo, más estructura.</p>
+      <p class="reveal text-jade-300 mb-5 text-sm font-semibold">Tu empresa, por sistema.</p>
       <h2 class="reveal display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.04] text-balance text-white">Cuéntanos de tu empresa.</h2>
       <p class="reveal mt-6 text-lg text-sand-200 max-w-md mx-auto leading-relaxed">30 minutos. Nos cuentas cómo está la operación y te decimos derecho si te podemos ayudar o no.</p>
     </div>
@@ -410,7 +433,7 @@ const producto = {
     </div>
   </section>
 
-  <a href={waLink} target="_blank" rel="noopener" data-magnetic="0.2" class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all" aria-label="Contactar por WhatsApp">
+  <a href={waLink} target="_blank" rel="noopener" data-magnetic="0.2" class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95" aria-label="Contactar por WhatsApp">
     <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"></path></svg>
   </a>
 
@@ -430,4 +453,148 @@ const producto = {
   @media (max-width: 640px) { .marquee-track { animation-duration: 24s; } .marquee-track.marquee-rev { animation-duration: 20s; } }
   @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
   .text-balance { text-wrap: balance; }
+
+  /* Scroll-hint: deriva suave (sin rebote) con la curva de la marca */
+  .hint-drift { animation: hint-drift 2.4s var(--ease-curve) infinite; }
+  @keyframes hint-drift {
+    0%, 100% { transform: translateY(0);   opacity: 0.75; }
+    50%      { transform: translateY(7px); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hint-drift { animation: none; } }
+
+  /* ===================== El viaje por la curva (#viaje) =====================
+     Desktop (sm+): escena horizontal — la curva se dibuja con el scroll, el
+     isotipo la escala (climb.ts) y las 5 fases son chips-nodo con ficha estilo
+     diccionario en hover/focus. Móvil: timeline vertical (.viajem). */
+
+  /* --- El isotipo trepador --- */
+  .climber {
+    position: absolute; top: 0; left: 0;
+    width: clamp(26px, 2.7vw, 34px);
+    opacity: 0; pointer-events: none; z-index: 5;
+    will-change: transform;
+    transition: opacity 0.45s var(--ease-curve);
+  }
+  .climber.is-on { opacity: 1; }
+  .climber :global(svg) {
+    width: 100%; height: auto; display: block; color: #fff;
+    /* La sombra ink sutil mantiene legible el isotipo cuando cruza chips blancos */
+    filter: drop-shadow(0 1px 2px rgba(15, 30, 61, 0.55)) drop-shadow(0 0 6px rgba(125, 211, 252, 0.9)) drop-shadow(0 4px 16px rgba(56, 189, 248, 0.45));
+    transition: filter 0.6s var(--ease-curve);
+  }
+  .summit-reached .climber :global(svg) {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95)) drop-shadow(0 4px 22px rgba(125, 211, 252, 0.7));
+  }
+
+  /* --- Fases: chip-nodo + ficha diccionario --- */
+  .fase { display: none; }
+  @media (min-width: 640px) { .fase { display: block; } }
+  .fase:hover, .fase:focus-within { z-index: 20; }
+
+  .fase-stack {
+    position: absolute; left: 50%; bottom: 13px; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+  }
+  .fase-chip {
+    display: inline-flex; align-items: center; gap: 0.45rem; white-space: nowrap;
+    cursor: help; border-radius: 9999px;
+    background: #fff; color: var(--color-sand-700);
+    border: 1px solid var(--color-sand-200);
+    box-shadow: 0 12px 28px -14px rgba(2, 8, 23, 0.65);
+    padding: 0.42rem 0.85rem;
+    font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em;
+    font-family: var(--font-sans);
+    transition: opacity 0.5s var(--ease-curve), border-color 0.5s var(--ease-curve),
+      box-shadow 0.5s var(--ease-curve), transform 0.3s var(--ease-pitch);
+  }
+  .fase-chip:hover { transform: translateY(-2px); }
+  .fase-num { color: var(--color-ember); }
+  /* Con climb.ts armado, las fases aún no alcanzadas van tenues; .lit las enciende */
+  .is-armed .fase:not(.lit) .fase-chip { opacity: 0.45; }
+  .fase.lit .fase-chip {
+    border-color: color-mix(in srgb, var(--color-jade) 55%, #fff);
+    box-shadow: 0 0 26px -4px color-mix(in srgb, var(--color-jade) 80%, transparent);
+  }
+
+  /* Ficha estilo diccionario: palabra + etiqueta en itálica + definición */
+  .fase-tip {
+    width: 15.5rem; max-width: 58vw; text-align: left; position: relative;
+    background: #fff; border: 1px solid var(--color-sand-200); border-radius: 0.9rem;
+    padding: 0.85rem 1rem 0.9rem;
+    box-shadow: 0 24px 48px -18px rgba(2, 8, 23, 0.65);
+    opacity: 0; visibility: hidden; transform: translateY(7px) scale(0.97);
+    transform-origin: bottom center; pointer-events: none;
+    transition: opacity 0.35s var(--ease-pitch), transform 0.35s var(--ease-pitch),
+      visibility 0s linear 0.35s;
+  }
+  .fase-tip::after {
+    content: ""; position: absolute; left: 50%; top: 100%;
+    transform: translateX(-50%);
+    border: 7px solid transparent; border-top-color: #fff;
+  }
+  .fase:hover .fase-tip,
+  .fase:focus-within .fase-tip { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+  .fase-tip-word { font-size: 1rem; font-weight: 600; color: var(--color-ink); letter-spacing: -0.01em; }
+  .fase-tip-tag { margin-top: 0.1rem; font-size: 11px; font-style: italic; color: var(--color-sand-500); }
+  .fase-tip-def {
+    margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--color-sand-100);
+    font-size: 13px; line-height: 1.55; color: var(--color-sand-600);
+  }
+
+  /* --- La cima: bandera + anillos (celebración al llegar el isotipo) --- */
+  .cima-flag {
+    opacity: 0; transform: translateY(10px) scale(0.7);
+    transform-box: fill-box; transform-origin: bottom left;
+    transition: opacity 0.5s var(--ease-pitch), transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .summit-reached .cima-flag { opacity: 1; transform: none; }
+  .cima-cloth { transform-box: fill-box; transform-origin: left center; }
+  .summit-reached .cima-cloth { animation: cima-wave 2.6s ease-in-out infinite 0.55s; }
+  @keyframes cima-wave {
+    0%, 100% { transform: scaleX(1) skewY(0deg); }
+    50%      { transform: scaleX(0.9) skewY(-4deg); }
+  }
+  .cima-ring { transform-box: fill-box; transform-origin: center; opacity: 0; }
+  .summit-reached .cima-ring { animation: cima-ring 2.6s ease-out infinite; }
+  .summit-reached .cima-ring--2 { animation-delay: 1.3s; }
+  @keyframes cima-ring {
+    0%   { transform: scale(1);   opacity: 0.75; }
+    70%  { opacity: 0; }
+    100% { transform: scale(3.4); opacity: 0; }
+  }
+  .cima-node { transform-box: fill-box; transform-origin: center; transition: filter 0.5s var(--ease-curve); }
+  .summit-reached .cima-node { filter: drop-shadow(0 0 13px rgba(186, 230, 253, 0.95)); }
+
+  /* --- Móvil: timeline vertical del mismo viaje --- */
+  .viajem { padding-left: 2.6rem; }
+  .viajem-rail {
+    position: absolute; left: 12px; top: 12px; bottom: 12px; width: 2px; border-radius: 2px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.22), var(--color-jade));
+  }
+  .viajem-item { position: relative; transition-delay: calc(var(--i) * 70ms); }
+  .viajem-item + .viajem-item { margin-top: 1.9rem; }
+  .viajem-node {
+    position: absolute; top: 0.05rem; left: calc(-2.6rem + 0.5px);
+    width: 25px; height: 25px; border-radius: 9999px;
+    border: 2px solid var(--color-jade); background: var(--color-ink);
+    display: grid; place-items: center; color: #fff;
+  }
+  .viajem-num { font-size: 10px; font-weight: 700; color: var(--color-jade-300); }
+  .viajem-node--hoy { border-color: rgba(255, 255, 255, 0.45); }
+  .viajem-node--hoy::after { content: ""; width: 7px; height: 7px; border-radius: 9999px; background: #fff; }
+  .viajem-node--cima {
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--color-ember), var(--color-jade));
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.55);
+  }
+  .viajem-node--cima svg { width: 13px; height: 13px; color: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .climber { transition: none; }
+    .fase-tip { transition: none; }
+    .cima-flag, .cima-node { transition: none; }
+    .summit-reached .cima-cloth, .summit-reached .cima-ring { animation: none; }
+    .summit-reached .cima-ring { opacity: 0; }
+    .viajem-item { transition-delay: 0s; }
+  }
 </style>

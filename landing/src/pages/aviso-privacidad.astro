@@ -4,7 +4,8 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 
 const calLink = 'https://cal.com/andres-paez/30min';
-const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
+import { waLink as buildWa } from '../data/site';
+const waLink = buildWa();
 
 // ⚠️ ANDAMIAJE LEGAL — revisar/ajustar con el texto definitivo de CURVA (datos del responsable,
 // finalidades exactas, derechos ARCO, contacto). Esto cumple la estructura de la LFPDPPP.

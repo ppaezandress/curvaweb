@@ -5,7 +5,8 @@ import Footer from '../components/Footer.astro';
 import Curve from '../components/Curve.astro';
 
 const calLink = 'https://cal.com/andres-paez/30min';
-const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
+import { waLink as buildWa } from '../data/site';
+const waLink = buildWa();
 
 const siEs = [
   'Consultora de transformación digital y de negocio.',
@@ -23,12 +24,12 @@ const noEs = [
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
-  name: 'Nosotros — CURVA',
+  name: 'Nosotros · CURVA',
   description: 'Quiénes somos, en qué creemos y hacia dónde vamos.',
 };
 ---
 
-<BaseLayout title="Nosotros — CURVA" description="Quiénes somos, en qué creemos y hacia dónde vamos. Una consultora de transformación digital y de negocio para empresas en crecimiento." jsonLd={jsonLd}>
+<BaseLayout title="Nosotros · CURVA" description="Quiénes somos, en qué creemos y hacia dónde vamos. Una consultora de transformación digital y de negocio para empresas en crecimiento." jsonLd={jsonLd}>
   <Nav calLink={calLink} />
 
   <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
@@ -78,7 +79,7 @@ const jsonLd = {
       <div class="mt-20 grid md:grid-cols-2 gap-12 lg:gap-20 border-t border-white/12 pt-14">
         <div>
           <p class="eyebrow text-sand-400 mb-4">Misión</p>
-          <p class="text-lg sm:text-xl text-sand-300 leading-relaxed">Que el dueño recupere <span class="text-sand-50">claridad y control</span>, y que la empresa crezca sin depender de él. Con sistemas, automatización y acompañamiento de verdad —hasta que jala solo.</p>
+          <p class="text-lg sm:text-xl text-sand-300 leading-relaxed">Que el dueño recupere <span class="text-sand-50">claridad y control</span>, y que la empresa crezca sin depender de él. Con sistemas, automatización y acompañamiento de verdad, hasta que jala solo.</p>
         </div>
         <div>
           <p class="eyebrow text-sand-400 mb-4">Visión</p>

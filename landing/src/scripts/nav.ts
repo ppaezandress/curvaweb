@@ -1,12 +1,15 @@
-// Nav: estado scrolled (transparente sobre hero oscuro → sólido) + "La Curva Viva",
-// el menú a pantalla completa. Listeners globales con cleanup para no duplicar en swaps.
+// Nav: estado scrolled (transparente sobre hero oscuro → sólido) + dropdown de
+// Consultoría (desktop) + panel móvil compacto. Listeners globales con cleanup
+// para no duplicar en swaps de View Transitions.
 let onScroll: (() => void) | null = null;
+let onDocClick: ((e: MouseEvent) => void) | null = null;
 let onKeydown: ((e: KeyboardEvent) => void) | null = null;
 
 export function initNav(): void {
   if (onScroll) window.removeEventListener('scroll', onScroll);
+  if (onDocClick) document.removeEventListener('click', onDocClick);
   if (onKeydown) document.removeEventListener('keydown', onKeydown);
-  onScroll = onKeydown = null;
+  onScroll = onDocClick = onKeydown = null;
 
   const nav = document.getElementById('site-nav');
   if (!nav) return;
@@ -17,100 +20,92 @@ export function initNav(): void {
   onScroll();
   window.addEventListener('scroll', onScroll, { passive: true });
 
-  // ---- La Curva Viva (overlay a pantalla completa) ----
-  const overlay = document.getElementById('curva-menu');
-  const toggle = nav.querySelector<HTMLElement>('[data-cmenu-toggle]');
-  if (!overlay || !toggle) return;
-
-  const items = Array.from(overlay.querySelectorAll<HTMLElement>('[data-cmenu-item]'));
   const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const isDesktop = () => window.matchMedia('(min-width: 861px)').matches;
 
-  const setActive = (item: HTMLElement | null, exclusive = true) => {
-    items.forEach((it) => {
-      const on = it === item;
-      // En desktop el escenario es único (exclusivo); en móvil es acordeón (toggle).
-      if (exclusive) {
-        it.classList.toggle('active', on);
-        it.querySelector('[data-cmenu-panel]')?.classList.toggle('active', on);
-        it.querySelector('[data-cmenu-trigger]')?.setAttribute('aria-expanded', String(on));
-      }
-    });
+  // ---- Dropdown Consultoría (desktop) ----
+  const drop = nav.querySelector<HTMLElement>('[data-nav-drop]');
+  const dropBtn = nav.querySelector<HTMLButtonElement>('[data-nav-drop-btn]');
+  let hoverTimer = 0;
+
+  const openDrop = () => {
+    if (!drop) return;
+    drop.setAttribute('data-open', '');
+    dropBtn?.setAttribute('aria-expanded', 'true');
+  };
+  const closeDrop = () => {
+    if (!drop) return;
+    drop.removeAttribute('data-open');
+    dropBtn?.setAttribute('aria-expanded', 'false');
   };
 
-  const openMenu = () => {
-    overlay.classList.add('open');
-    overlay.setAttribute('aria-hidden', 'false');
-    toggle.setAttribute('aria-expanded', 'true');
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    // Escenario por defecto en desktop: el primer destino.
-    if (isDesktop()) setActive(items[0]);
-    else setActive(null);
-    window.setTimeout(() => overlay.querySelector<HTMLElement>('[data-cmenu-trigger]')?.focus(), 60);
-  };
-
-  const closeMenu = () => {
-    overlay.classList.remove('open');
-    overlay.setAttribute('aria-hidden', 'true');
-    toggle.setAttribute('aria-expanded', 'false');
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
-    toggle.focus();
-  };
-
-  toggle.addEventListener('click', () => {
-    overlay.classList.contains('open') ? closeMenu() : openMenu();
-  });
-  overlay.querySelector('[data-cmenu-close]')?.addEventListener('click', closeMenu);
-  // Cualquier link dentro del menú cierra el overlay (misma página o navegación).
-  overlay.querySelectorAll<HTMLElement>('[data-cmenu-link]').forEach((a) => a.addEventListener('click', closeMenu));
-
-  items.forEach((item) => {
-    const trigger = item.querySelector<HTMLElement>('[data-cmenu-trigger]');
-    // Desktop: hover/focus cambia el escenario (exclusivo).
+  if (drop && dropBtn) {
     if (canHover) {
-      item.addEventListener('mouseenter', () => { if (isDesktop()) setActive(item); });
+      drop.addEventListener('mouseenter', () => { window.clearTimeout(hoverTimer); openDrop(); });
+      drop.addEventListener('mouseleave', () => { hoverTimer = window.setTimeout(closeDrop, 120); });
     }
-    trigger?.addEventListener('focus', () => { if (isDesktop()) setActive(item); });
-    // Click en el destino:
-    trigger?.addEventListener('click', () => {
-      const kind = item.dataset.kind;
-      if (isDesktop()) {
-        // En desktop el escenario ya se muestra al hover; los destinos "directos"
-        // (Nosotros / Conversemos) navegan con su propio botón dentro del panel.
-        setActive(item);
-        return;
-      }
-      // Móvil: acordeón — toggle de este item.
-      const willOpen = !item.classList.contains('active');
-      items.forEach((it) => {
-        it.classList.remove('active');
-        it.querySelector('[data-cmenu-panel]')?.classList.remove('active');
-        it.querySelector('[data-cmenu-trigger]')?.setAttribute('aria-expanded', 'false');
-      });
-      if (willOpen) {
-        item.classList.add('active');
-        item.querySelector('[data-cmenu-panel]')?.classList.add('active');
-        trigger.setAttribute('aria-expanded', 'true');
-        void kind;
-      }
-    });
-  });
-
-  // Teclado global: Esc cierra; flechas mueven el escenario en desktop.
-  onKeydown = (e: KeyboardEvent) => {
-    if (!overlay.classList.contains('open')) return;
-    if (e.key === 'Escape') { closeMenu(); return; }
-    if (!isDesktop()) return;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    // Click/tap y teclado. En hover, el mouse-leave/Esc cierra → el click solo abre
+    // (evita que el click cierre lo que el hover acaba de abrir). En touch, alterna.
+    dropBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      const active = items.findIndex((it) => it.classList.contains('active'));
-      const dir = e.key === 'ArrowDown' ? 1 : -1;
-      const next = (active + dir + items.length) % items.length;
-      setActive(items[next]);
-      items[next].querySelector<HTMLElement>('[data-cmenu-trigger]')?.focus();
-    }
+      if (canHover) { openDrop(); return; }
+      drop.hasAttribute('data-open') ? closeDrop() : openDrop();
+    });
+    // Al elegir una opción, cierra.
+    drop.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeDrop));
+  }
+
+  // ---- Panel móvil compacto ----
+  const burger = nav.querySelector<HTMLButtonElement>('[data-nav-burger]');
+  const mobile = nav.querySelector<HTMLElement>('[data-nav-mobile]');
+  const mAcc = nav.querySelector<HTMLButtonElement>('[data-nav-m-acc]');
+  const mGroup = nav.querySelector<HTMLElement>('[data-nav-m-group]');
+
+  const openMobile = () => {
+    mobile?.setAttribute('data-open', '');
+    mobile?.setAttribute('aria-hidden', 'false');
+    burger?.setAttribute('aria-expanded', 'true');
+    burger?.setAttribute('aria-label', 'Cerrar menú');
+  };
+  const closeMobile = () => {
+    mobile?.removeAttribute('data-open');
+    mobile?.setAttribute('aria-hidden', 'true');
+    burger?.setAttribute('aria-expanded', 'false');
+    burger?.setAttribute('aria-label', 'Abrir menú');
+  };
+
+  if (burger && mobile) {
+    burger.addEventListener('click', () =>
+      mobile.hasAttribute('data-open') ? closeMobile() : openMobile()
+    );
+    mobile.querySelectorAll('[data-nav-m-link]').forEach((a) =>
+      a.addEventListener('click', closeMobile)
+    );
+  }
+  if (mAcc && mGroup) {
+    mAcc.addEventListener('click', () => {
+      const open = mGroup.hasAttribute('data-open');
+      if (open) { mGroup.removeAttribute('data-open'); mAcc.setAttribute('aria-expanded', 'false'); }
+      else { mGroup.setAttribute('data-open', ''); mAcc.setAttribute('aria-expanded', 'true'); }
+    });
+  }
+
+  // ---- Cierre global: click fuera + Esc ----
+  onDocClick = (e: MouseEvent) => {
+    const t = e.target as Node;
+    if (drop?.hasAttribute('data-open') && !drop.contains(t)) closeDrop();
+    if (mobile?.hasAttribute('data-open') && !mobile.contains(t) && !burger?.contains(t)) closeMobile();
+  };
+  document.addEventListener('click', onDocClick);
+
+  onKeydown = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return;
+    if (drop?.hasAttribute('data-open')) { closeDrop(); dropBtn?.focus(); }
+    if (mobile?.hasAttribute('data-open')) { closeMobile(); burger?.focus(); }
   };
   document.addEventListener('keydown', onKeydown);
+
+  // Cierra el móvil al pasar a desktop.
+  window.addEventListener('resize', () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) closeMobile();
+  }, { passive: true });
 }

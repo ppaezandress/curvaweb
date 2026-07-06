@@ -4,6 +4,15 @@
 // (sentirse · trabajar · vivir mejor). CURVA es el nodo central que transforma.
 // Desktop: grafo SVG con conectores que "fluyen". Móvil: versión apilada.
 // Idea de Emiliano. Motion con significado, respeta prefers-reduced-motion.
+// Isotipo real de CURVA (punto + trazo) para el hub — mismo mark del nav/footer.
+import logoAnim from '../svg/curva-logo-anim.svg?raw';
+const isoInner = logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)![0].replace(/\s?id="[^"]*"/g, '');
+
+// Color de marca por conexión: cada persona↔resultado tiene su propia "energía".
+// Fundadores→Sentirse = azul (ember) · Equipo→Trabajar = cian (jade) · Clientes→Vivir = naranja (flare)
+const pairColors = ['#2563eb', '#38bdf8', '#f97316'];
+const pairTints  = ['#e7effe', '#e2f4fe', '#fdeee0'];
+
 // Íconos (24×24, trazo). set:html los inyecta dentro de cada nodo.
 const icons: Record<string, string> = {
   founder: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
@@ -41,7 +50,7 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
       <h2 id="personas-title" class="reveal display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.08] text-ink text-balance">
         Al final, se trata de <span class="bg-gradient-to-r from-ember to-jade bg-clip-text text-transparent">personas</span>.
       </h2>
-      <p class="reveal mt-5 text-lg text-sand-600 leading-relaxed">
+      <p class="reveal mt-6 text-lg text-sand-600 leading-relaxed">
         Cuando la operación fluye, no gana solo el negocio. Gana quien lo dirige, quien lo trabaja y quien lo compra.
       </p>
     </div>
@@ -88,22 +97,22 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
         <!-- Halo del hub (respira detrás de CURVA) -->
         <circle class="rn-hub-halo" cx={hub.x} cy={hub.y} r="120" fill="url(#rn-hub-glow)"></circle>
 
-        <!-- Conectores base -->
-        <g fill="none" stroke="url(#rn-flow)" stroke-width="2" stroke-linecap="round">
-          {personas.map((p) => (
-            <path d={toHub(p.y)} class="rn-link" opacity="0.38"></path>
+        <!-- Conectores base: guiones tenues, un color de marca por conexión -->
+        <g fill="none" stroke-width="2" stroke-linecap="round">
+          {personas.map((p, i) => (
+            <path d={toHub(p.y)} class="rn-link" stroke={pairColors[i]} opacity="0.4"></path>
           ))}
-          {resultados.map((r) => (
-            <path d={fromHub(r.y)} class="rn-link rn-link--out" opacity="0.38"></path>
+          {resultados.map((r, i) => (
+            <path d={fromHub(r.y)} class="rn-link rn-link--out" stroke={pairColors[i]} opacity="0.4"></path>
           ))}
         </g>
 
-        <!-- Pulsos de energía: personas → CURVA → resultados -->
+        <!-- Pulsos de energía: personas → CURVA → resultados (en el color del par) -->
         {personas.map((p, i) => (
-          <circle class="rn-pulse" r="4.5" fill="#38bdf8" style={`offset-path:path('${toHub(p.y)}');--i:${i}`}></circle>
+          <circle class="rn-pulse" r="4.5" fill={pairColors[i]} style={`offset-path:path('${toHub(p.y)}');--i:${i};--glow:${pairColors[i]}`}></circle>
         ))}
         {resultados.map((r, i) => (
-          <circle class="rn-pulse rn-pulse--out" r="4.5" fill="#2563eb" style={`offset-path:path('${fromHub(r.y)}');--i:${i}`}></circle>
+          <circle class="rn-pulse rn-pulse--out" r="4.5" fill={pairColors[i]} style={`offset-path:path('${fromHub(r.y)}');--i:${i};--glow:${pairColors[i]}`}></circle>
         ))}
 
         <!-- Nodos: personas (izquierda) -->
@@ -111,8 +120,8 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
           <g class="rn-node" aria-label={p.label} style={`--i:${i}`}>
             <rect x={leftX} y={p.y - pillH / 2} width={pillW} height={pillH} rx={pillH / 2}
               fill="#ffffff" stroke="#dbe4f5" stroke-width="1.5" filter="url(#rn-shadow-soft)"></rect>
-            <circle cx={leftX + 40} cy={p.y} r="19" fill="#eaf1fd"></circle>
-            <g transform={`translate(${leftX + 40 - 11},${p.y - 11}) scale(0.92)`} fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[p.icon]} />
+            <circle cx={leftX + 40} cy={p.y} r="19" fill={pairTints[i]}></circle>
+            <g transform={`translate(${leftX + 40 - 11},${p.y - 11}) scale(0.92)`} fill="none" stroke={pairColors[i]} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[p.icon]} />
             <text x={leftX + 74} y={p.y} dominant-baseline="central" class="rn-title" fill="#12213f">{p.label}</text>
           </g>
         ))}
@@ -121,14 +130,12 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
         <circle class="rn-hub-ring" cx={hub.x} cy={hub.y} r={hub.r} fill="none" stroke="#38bdf8" stroke-width="2"></circle>
         <circle class="rn-hub-ring rn-hub-ring--2" cx={hub.x} cy={hub.y} r={hub.r} fill="none" stroke="#38bdf8" stroke-width="2"></circle>
 
-        <!-- Hub central: logo de CURVA -->
+        <!-- Hub central: isotipo real de CURVA + wordmark -->
         <g class="rn-hub">
           <circle cx={hub.x} cy={hub.y} r={hub.r} fill="url(#rn-hub)" filter="url(#rn-glow)"></circle>
           <circle cx={hub.x} cy={hub.y} r={hub.r} fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.5"></circle>
-          <svg x={hub.x - 30} y={hub.y - 34} width="60" height="60" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"></path>
-          </svg>
-          <text x={hub.x} y={hub.y + 20} text-anchor="middle" dominant-baseline="central"
+          <svg x={hub.x - 34} y={hub.y - 38} width="68" height="46" viewBox="26 22 316 212" fill="#ffffff" aria-hidden="true" set:html={isoInner} />
+          <text x={hub.x} y={hub.y + 26} text-anchor="middle" dominant-baseline="central"
             class="rn-hub-text" fill="#ffffff">curva</text>
         </g>
 
@@ -147,7 +154,7 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
             <circle cx={rightX + 40} cy={r.y} r="19" fill="#ffffff" fill-opacity="0.22"></circle>
             <g transform={`translate(${rightX + 40 - 11},${r.y - 11}) scale(0.92)`} fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[r.icon]} />
             <text x={rightX + 74} y={r.y - 10} dominant-baseline="central" class="rn-title" fill="#ffffff">{r.title}</text>
-            <text x={rightX + 74} y={r.y + 13} dominant-baseline="central" class="rn-sub" fill="#ffffff" fill-opacity="0.88">{r.sub}</text>
+            <text x={rightX + 74} y={r.y + 13} dominant-baseline="central" class="rn-sub" fill="#ffffff">{r.sub}</text>
           </g>
         ))}
       </svg>
@@ -164,7 +171,7 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
         <svg width="24" height="34" viewBox="0 0 24 34" fill="none"><path d="M12 2v22m0 0l-6-6m6 6l6-6" stroke="url(#rn-flow-m)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path><defs><linearGradient id="rn-flow-m" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#1d4ed8"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
       </div>
       <div class="mx-auto w-full rounded-2xl bg-[linear-gradient(120deg,#1d4ed8,#38bdf8)] px-5 py-3 flex items-center justify-center gap-2 text-white font-semibold display tracking-tight">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 18C6 18 7 6 12 6C17 6 18 18 22 18" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"></path></svg>
+        <svg class="h-4 w-6" viewBox="26 22 316 212" fill="#ffffff" aria-hidden="true" set:html={isoInner} />
         curva
       </div>
       <div class="flex justify-center py-2" aria-hidden="true">
@@ -189,14 +196,13 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
   /* Pulsos de energía que viajan por cada conector (offset-path en el markup) */
   .rn-pulse {
     offset-rotate: 0deg; offset-distance: 0%; opacity: 0;
-    filter: drop-shadow(0 0 5px #38bdf8);
+    filter: drop-shadow(0 0 5px var(--glow, #38bdf8));
     animation: rn-travel 2.8s cubic-bezier(0.5, 0, 0.3, 1) infinite;
     animation-delay: calc(var(--i) * 0.55s);
     will-change: offset-distance, opacity;
   }
   /* Los de salida arrancan después: energía entra → CURVA → sale transformada */
   .rn-pulse--out {
-    filter: drop-shadow(0 0 5px #2563eb);
     animation-delay: calc(1.1s + var(--i) * 0.55s);
   }
   @keyframes rn-travel {

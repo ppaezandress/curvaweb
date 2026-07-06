@@ -1,10 +1,21 @@
 // Composer IA inline del hero: responde ahí mismo (no baja al chat de #chat-lm).
 // Texto + voz (MediaRecorder → /api/transcribe) + gate de correo inline.
+// Placeholder "máquina de escribir" (ghost) que invita a escribir; al mandar,
+// pide correo; al responder, enruta a la parte útil del sitio.
 // Reutiliza el cliente compartido (lib/chat-client). Idempotente y re-armable.
 
 import { transcribeBlob, sendChat, getLeadEmail, setLeadEmail, type ChatMsg, type ChatLink } from '../lib/chat-client';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
+
+// Ejemplos que se escriben solos en el placeholder (guían "qué escribir aquí").
+const EXAMPLES = [
+  'Pierdo horas registrando mis ventas a mano…',
+  'Todo depende de mí, no puedo despegarme del negocio…',
+  'Mi información vive regada en WhatsApp y Excel…',
+  'Quiero automatizar mi operación pero no sé por dónde…',
+];
 
 function pickMime(): string | undefined {
   if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return undefined;
@@ -24,21 +35,66 @@ export function initHeroAI(): void {
 
   const log = $<HTMLElement>('[data-hero-log]');
   const chips = $<HTMLElement>('[data-hero-chips]');
+  const chipsRow = chips?.parentElement as HTMLElement | null;
   const emailForm = $<HTMLFormElement>('[data-hero-email-form]');
   const emailInput = $<HTMLInputElement>('[data-hero-email]');
   const emailError = $<HTMLElement>('[data-hero-email-error]');
   const form = $<HTMLFormElement>('[data-hero-form]');
+  const field = form; // el <form> ES el campo (.hero-ai-field)
   const input = $<HTMLTextAreaElement>('[data-hero-input]');
+  const ghost = $<HTMLElement>('[data-hero-ghost]');
+  const ghostText = $<HTMLElement>('[data-hero-ghost-text]');
   const mic = $<HTMLButtonElement>('[data-hero-mic]');
   const send = $<HTMLButtonElement>('[data-hero-send]');
   const status = $<HTMLElement>('[data-hero-status]');
   const scrollHint = document.querySelector<HTMLElement>('[data-hero-scrollhint]');
-  if (!log || !chips || !emailForm || !emailInput || !form || !input) return;
+  if (!log || !chips || !emailForm || !emailInput || !form || !field || !input || !ghost || !ghostText) return;
 
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let email = getLeadEmail();
   const messages: ChatMsg[] = [];
   let pending = '';
   let busy = false;
+  let voiceMode = false;
+  let alive = true; // corta bucles async si el nodo se reemplaza (View Transitions)
+
+  // ---------- Placeholder "ghost" (se escribe solo) ----------
+  const isActive = () => document.activeElement === input || input.value.trim().length > 0;
+  const refreshActive = () => field!.classList.toggle('is-active', isActive());
+  // Pausa el typewriter cuando el usuario está en el campo, hay conversación o grabando.
+  const twPaused = () => isActive() || voiceMode || !log!.classList.contains('hidden');
+  let twRunning = false;
+
+  async function typewriter(): Promise<void> {
+    if (twRunning) return;
+    twRunning = true;
+    if (reduce) { ghostText!.textContent = EXAMPLES[0]; twRunning = false; return; }
+    let idx = 0;
+    const waitUnpause = async () => { while (alive && twPaused()) { await sleep(220); } };
+    while (alive) {
+      await waitUnpause();
+      if (!alive) return;
+      const phrase = EXAMPLES[idx % EXAMPLES.length];
+      for (let i = 1; i <= phrase.length; i++) {
+        if (!alive) return;
+        if (twPaused()) { await waitUnpause(); }
+        ghostText!.textContent = phrase.slice(0, i);
+        await sleep(40);
+      }
+      await sleep(1600);
+      for (let i = phrase.length; i >= 0; i--) {
+        if (!alive) return;
+        if (twPaused()) { await waitUnpause(); break; }
+        ghostText!.textContent = phrase.slice(0, i);
+        await sleep(20);
+      }
+      idx++;
+      await sleep(260);
+    }
+  }
+
+  input.addEventListener('focus', refreshActive);
+  input.addEventListener('blur', refreshActive);
 
   // ---------- Helpers de render (mismo lenguaje que el chat de abajo) ----------
   const scroll = () => { log!.scrollTop = log!.scrollHeight; };
@@ -73,35 +129,47 @@ export function initHeroAI(): void {
   }
 
   function clearChips() { chips!.innerHTML = ''; }
+  function hideChipsRow() { chipsRow?.classList.add('hidden'); }
 
   function renderChips(options?: string[]) {
     clearChips();
-    if (!options?.length) return;
+    if (!options?.length) { hideChipsRow(); return; }
+    chipsRow?.classList.remove('hidden');
     for (const opt of options.slice(0, 4)) {
       const c = document.createElement('button');
       c.type = 'button';
-      c.className = 'text-[13px] font-medium text-sand-600 border border-sand-300 rounded-full px-3.5 py-1.5 hover:border-ember hover:text-ember transition-colors';
+      c.className = 'hero-ai-chip';
       c.textContent = opt;
       c.addEventListener('click', () => attemptSend(opt));
       chips!.appendChild(c);
     }
   }
 
+  // Rutas: la IA te LLEVA a la parte útil del sitio (tarjetas claras).
   function renderLinks(links?: ChatLink[]) {
-    if (!links?.length) return;
+    const valid = (links || []).filter((l) => l.href?.startsWith('/')).slice(0, 3);
+    if (!valid.length) return;
     const row = document.createElement('div');
     row.className = 'flex justify-start';
     const wrap = document.createElement('div');
-    wrap.className = 'max-w-[85%] flex flex-wrap gap-2';
-    for (const l of links.slice(0, 3)) {
-      if (!l.href?.startsWith('/')) continue; // sólo site-relative
+    wrap.className = 'max-w-[92%] w-full';
+    const lead = document.createElement('p');
+    lead.className = 'text-[12px] font-semibold text-sand-500 mb-1.5 ml-0.5';
+    lead.textContent = 'Te llevo aquí 👇';
+    wrap.appendChild(lead);
+    const list = document.createElement('div');
+    list.className = 'flex flex-col gap-1.5';
+    for (const l of valid) {
       const a = document.createElement('a');
       a.href = l.href;
-      a.className = 'inline-flex items-center gap-1.5 text-sm font-semibold text-ember border border-ember/30 bg-ember/10 rounded-full px-3.5 py-1.5 hover:bg-ember/20 transition-colors';
-      a.innerHTML = `${l.label} <span aria-hidden="true">→</span>`;
-      wrap.appendChild(a);
+      a.className = 'hero-ai-route';
+      a.innerHTML =
+        '<span class="hero-ai-route-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>' +
+        `<span>${l.label}</span>` +
+        '<svg class="hero-ai-route-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"/></svg>';
+      list.appendChild(a);
     }
-    if (!wrap.children.length) return;
+    wrap.appendChild(list);
     row.appendChild(wrap);
     log!.appendChild(row);
     scroll();
@@ -132,10 +200,12 @@ export function initHeroAI(): void {
     if (!clean || busy) return;
     setBusy(true);
     clearChips();
+    hideChipsRow();
     bubble('user', clean);
     messages.push({ role: 'user', content: clean });
     input!.value = '';
     input!.style.height = 'auto';
+    refreshActive();
     const t = typing();
     const data = await sendChat(email, messages.slice(-16));
     t.remove();
@@ -181,6 +251,7 @@ export function initHeroAI(): void {
   input.addEventListener('input', () => {
     input!.style.height = 'auto';
     input!.style.height = Math.min(input!.scrollHeight, 160) + 'px';
+    refreshActive();
   });
   root.querySelectorAll<HTMLElement>('[data-hero-chip]').forEach((c) =>
     c.addEventListener('click', () => attemptSend(c.textContent || ''))
@@ -193,10 +264,17 @@ export function initHeroAI(): void {
   let recording = false;
 
   const say = (msg: string) => { if (status) status.textContent = msg; };
+  // Muestra un estado en el ghost (placeholder) sin romper el typewriter.
+  function ghostStatus(msg: string) {
+    voiceMode = true;
+    field!.classList.remove('is-active');
+    ghostText!.textContent = msg;
+  }
+  function ghostStatusEnd() { voiceMode = false; ghostText!.textContent = ''; refreshActive(); }
   function notify(msg: string) {
     say(msg);
     if (!log!.classList.contains('hidden')) bubble('assistant', msg);
-    else { const prev = input!.placeholder; input!.placeholder = msg; window.setTimeout(() => { input!.placeholder = prev; }, 2600); }
+    else { ghostStatus(msg); window.setTimeout(ghostStatusEnd, 2600); }
   }
 
   async function toggleMic() {
@@ -224,16 +302,18 @@ export function initHeroAI(): void {
       mic!.setAttribute('aria-pressed', 'false');
       const blob = new Blob(chunks, { type: recorder?.mimeType || 'audio/webm' });
       say('Transcribiendo…');
-      input!.placeholder = 'Transcribiendo…';
+      ghostStatus('Transcribiendo…');
       const r = await transcribeBlob(blob);
-      input!.placeholder = 'Describe tu problema… o manda un audio';
       if (r.text) {
+        voiceMode = false;
         input!.value = r.text;
         input!.style.height = 'auto';
         input!.style.height = Math.min(input!.scrollHeight, 160) + 'px';
+        refreshActive();
         input!.focus();
         say('Listo, revisa el texto y pregunta.');
       } else {
+        ghostStatusEnd();
         notify(r.error || 'No te entendí el audio. ¿Lo escribes?');
       }
     };
@@ -241,13 +321,18 @@ export function initHeroAI(): void {
     recording = true;
     mic.classList.add('recording');
     mic.setAttribute('aria-pressed', 'true');
-    input!.placeholder = 'Grabando… toca de nuevo para terminar';
+    ghostStatus('Grabando… toca de nuevo para terminar');
     say('Grabando.');
   }
   mic?.addEventListener('click', toggleMic);
 
+  // ---------- Arranque ----------
+  refreshActive();
+  void typewriter();
+
   // ---------- Cleanup en navegación (View Transitions) ----------
   document.addEventListener('astro:before-swap', () => {
+    alive = false;
     try { if (recording && recorder) recorder.stop(); } catch { /* noop */ }
     stream?.getTracks().forEach((tr) => tr.stop());
   }, { once: true });

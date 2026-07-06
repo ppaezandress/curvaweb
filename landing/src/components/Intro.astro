@@ -5,8 +5,8 @@
 // un borde en forma de curva (la firma de la marca). Fondo blanco. 1ª visita/sesión.
 import logoAnim from '../svg/curva-logo-anim.svg?raw';
 
-const isoGroupRaw = logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)[0];
-const trazoD = isoGroupRaw.match(/id="trazo" d="([^"]*)"/)[1];
+const isoGroupRaw = logoAnim.match(/<g id="isotipo">[\s\S]*?<\/g>/)![0];
+const trazoD = isoGroupRaw.match(/id="trazo" d="([^"]*)"/)![1];
 const isoGroup = isoGroupRaw.replace('id="trazo"', 'id="trazo" mask="url(#liquid)"');
 
 const isoSvg = `<svg viewBox="26 22 316 212" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
@@ -26,7 +26,7 @@ const isoSvg = `<svg viewBox="26 22 316 212" xmlns="http://www.w3.org/2000/svg" 
   ${isoGroup}
 </svg>`;
 
-const wmGroup = logoAnim.match(/<g id="wordmark">[\s\S]*?<\/g>/)[0];
+const wmGroup = logoAnim.match(/<g id="wordmark">[\s\S]*?<\/g>/)![0];
 const wordSvg = `<svg viewBox="330 70 645 150" xmlns="http://www.w3.org/2000/svg" fill="currentColor">${wmGroup}</svg>`;
 ---
 <div id="intro" class="intro-overlay" role="presentation" aria-hidden="true">

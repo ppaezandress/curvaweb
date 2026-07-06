@@ -17,7 +17,8 @@ const otro = otroFrente(f.slug)!;
 const casos = casosDe(f.slug as any);
 
 const calLink = 'https://cal.com/andres-paez/30min';
-const waLink = 'https://wa.me/5215611846200?text=Hola%2C%20me%20interesa%20saber%20m%C3%A1s%20sobre%20CURVA';
+import { waLink as buildWa } from '../../data/site';
+const waLink = buildWa();
 
 // gold/jade (cian #38bdf8) NO pasan contraste como texto sobre fondo claro → azul (ember).
 const accentText = { ember: 'text-ember', gold: 'text-ember', jade: 'text-ember' } as const;

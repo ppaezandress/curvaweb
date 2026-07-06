@@ -43,7 +43,15 @@ export function scrollToEl(el: Element, offset = -80): void {
   else (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// El router resetea el scroll del DOM; hay que sincronizar el estado interno de Lenis.
+// Tras una navegación, sincroniza Lenis a la posición REAL del DOM.
+// Antes forzaba 0 en cada swap, lo que pisaba la restauración de scroll de Astro
+// al regresar (back/forward) y mandaba la página hasta arriba. Ahora lee
+// window.scrollY: en navegación hacia adelante Astro deja 0 (queda arriba); al
+// regresar restaura la posición y Lenis la respeta. Doble sync (ahora + próximo
+// frame) por si la restauración del router llega un frame después del swap.
 export function resetLenis(): void {
-  lenis?.scrollTo(0, { immediate: true });
+  if (!lenis) return;
+  const sync = () => lenis?.scrollTo(window.scrollY, { immediate: true });
+  sync();
+  requestAnimationFrame(sync);
 }
