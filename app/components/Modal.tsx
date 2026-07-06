@@ -25,10 +25,30 @@ export function Modal({
   const titleId = useId();
   useEffect(() => setMounted(true), []);
 
+  // Enfoque + scroll-lock: SOLO al abrir/cerrar. Antes esto vivía junto al listener
+  // de teclado en un efecto con dep `onClose`; como onClose llega como arrow inline
+  // (nueva identidad en cada render), el efecto se re-ejecutaba en CADA tecla y el
+  // requestAnimationFrame reenfocaba el panel, robándole el foco al textarea
+  // ("escribo y me saca del cursor"). Al depender solo de `open`, el panel se enfoca
+  // una vez al abrir y no vuelve a robar el foco mientras se escribe.
   useEffect(() => {
     if (!open) return;
     // Devuelve el foco a quien abrió el modal al cerrarlo.
     const opener = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    // Enfoca el panel al abrir (lectores de pantalla anuncian el diálogo).
+    const raf = requestAnimationFrame(() => panelRef.current?.focus());
+    return () => {
+      document.body.style.overflow = "";
+      cancelAnimationFrame(raf);
+      opener?.focus?.();
+    };
+  }, [open]);
+
+  // Listener de teclado (Escape + focus-trap con Tab). Puede re-ejecutarse en cada
+  // render sin efectos secundarios: solo re-adjunta el listener, no toca el foco.
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { onClose(); return; }
       // Focus-trap: Tab cicla dentro del panel, no se escapa al fondo.
@@ -42,15 +62,7 @@ export function Modal({
       }
     };
     window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    // Enfoca el panel al abrir (lectores de pantalla anuncian el diálogo).
-    const raf = requestAnimationFrame(() => panelRef.current?.focus());
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-      cancelAnimationFrame(raf);
-      opener?.focus?.();
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   if (!open || !mounted) return null;
