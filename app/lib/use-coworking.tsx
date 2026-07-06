@@ -105,11 +105,16 @@ export function CoworkingProvider({ children }: { children: React.ReactNode }) {
     sub = sb.channel("coworking-presence")
       .on("postgres_changes", { event: "*", schema: "public", table: "presence" }, () => evaluate())
       .subscribe();
-    timer = setInterval(evaluate, 20000);
+    // El poll periódico es solo un respaldo del realtime: con la pestaña oculta lo
+    // saltamos (los eventos realtime y el cambio de tarea siguen evaluando cuando toca).
+    timer = setInterval(() => { if (!document.hidden) evaluate(); }, 20000);
+    const onVisible = () => { if (!document.hidden) evaluate(); };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       if (sub) sb.removeChannel(sub);
       // Cierra solapes abiertos al desmontar (cambio de página interno no desmonta el layout).
       const now = Date.now();

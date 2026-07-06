@@ -27,6 +27,9 @@ export function PresenceHeartbeat() {
     let timer: ReturnType<typeof setInterval> | undefined;
 
     const beat = async () => {
+      // Con la pestaña oculta no hay nada que reportar (nadie está trabajando ahí):
+      // evitamos pegarle a Spotify/Gcal/Supabase en segundo plano. Se reanuda solo.
+      if (typeof document !== "undefined" && document.hidden) return;
       if (!uid) {
         const { data } = await sb.auth.getUser();
         uid = data.user?.id ?? null;
@@ -98,7 +101,13 @@ export function PresenceHeartbeat() {
 
     beat();
     timer = setInterval(beat, 20000);
-    return () => { if (timer) clearInterval(timer); };
+    // Al volver a la pestaña, reporta de inmediato (no esperar hasta 20s).
+    const onVisible = () => { if (!document.hidden) beat(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      if (timer) clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [taskById, memberById]);
 
   return null;

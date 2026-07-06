@@ -56,6 +56,7 @@ export function MeetingWatcher() {
     if (!currentUserId) return;
     let alive = true;
     const check = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
       try {
         const r = await fetch("/api/gcal/events").then((x) => x.json());
         if (!alive || !r.connected) return;

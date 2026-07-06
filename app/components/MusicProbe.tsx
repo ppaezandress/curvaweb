@@ -15,6 +15,7 @@ export function MusicProbe() {
     let cancelled = false;
 
     const poll = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
       try {
         const r = await fetch("/api/spotify/now");
         const d = await r.json();
