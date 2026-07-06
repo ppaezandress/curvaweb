@@ -17,6 +17,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { KpiDelta } from "@/components/ui/KpiDelta";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Bars } from "@/components/analytics/Bars";
+import { Meter } from "@/components/ui/Meter";
 import { TypeIcon } from "@/components/TypeIcon";
 import { Avatar } from "@/components/Avatar";
 import { TeamPresence } from "@/components/TeamPresence";
@@ -403,9 +404,8 @@ function EquipoView() {
                         )}
                       </div>
                     </div>
-                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-surface-2">
-                      <div className="h-full rounded-full bg-accent" style={{ width: `${(p.minutes / maxP) * 100}%` }} />
-                    </div>
+                    <Meter value={p.minutes} max={maxP} label={`${p.name}: ${formatHours(p.minutes * 60)}`} className="mt-3" />
+
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                       <span className="inline-flex items-center gap-1"><CheckSquare size={12} /> {p.tasks} {p.tasks === 1 ? "tarea" : "tareas"}</span>
                       <span className="inline-flex items-center gap-1"><Activity size={12} /> {p.days} {p.days === 1 ? "día" : "días"}</span>
@@ -452,9 +452,7 @@ function EquipoView() {
                         <span className="ml-2 text-xs">· {s.tasks} {s.tasks === 1 ? "tarea" : "tareas"}</span>
                       </span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
-                      <div className="h-full rounded-full bg-accent" style={{ width: `${(s.minutes / maxStatus) * 100}%` }} />
-                    </div>
+                    <Meter value={s.minutes} max={maxStatus} label={`${s.status}: ${formatHours(s.minutes * 60)}`} />
                   </div>
                 ))}
               </div>
@@ -483,9 +481,7 @@ function EquipoView() {
                         <span className="ml-2 text-xs">· {c.peopleCount} {c.peopleCount === 1 ? "persona" : "personas"}</span>
                       </span>
                     </div>
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
-                      <div className="h-full rounded-full bg-accent" style={{ width: `${(c.minutes / cmax) * 100}%` }} />
-                    </div>
+                    <Meter value={c.minutes} max={cmax} height="h-2.5" label={`${c.label}: ${formatHours(c.minutes * 60)}`} />
                   </div>
                 );
               })}

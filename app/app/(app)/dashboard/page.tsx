@@ -244,7 +244,7 @@ export default function HomePage() {
                 <span>Tu semana</span>
                 <span className="tabular">{formatDuration(week.total * 60)}</span>
               </div>
-              <div className="flex items-end gap-1.5">
+              <div className="flex items-end gap-1.5" role="img" aria-label={`Actividad de la semana, total ${formatDuration(week.total * 60)}`}>
                 {week.bars.map((v, i) => (
                   <div key={i} className="flex flex-1 flex-col items-center gap-1">
                     <div className="flex h-10 w-full items-end">
