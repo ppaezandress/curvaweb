@@ -174,7 +174,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
           rows={1}
           placeholder={recording ? "Grabando audio… toca ⏹ para enviar" : "Escribe un mensaje…  (@ persona · / tarea · 📎 adjunta)"}
-          className="max-h-32 flex-1 resize-none rounded-card border border-line px-4 py-2.5 text-sm outline-none transition [field-sizing:content] focus:border-accent"
+          className="max-h-32 flex-1 resize-none rounded-card border border-line px-4 py-2.5 text-sm outline-none focus-ring transition [field-sizing:content] focus:border-accent"
         />
         <button onClick={submit} disabled={uploading || (!text.trim() && people.length === 0 && pendingTasks.length === 0 && !attach)}
           className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}

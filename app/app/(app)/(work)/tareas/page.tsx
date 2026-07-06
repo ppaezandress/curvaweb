@@ -119,7 +119,7 @@ export default function TareasPage() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cualquier tarea (incluye Done)…" className="w-full rounded-card border border-line bg-surface py-2.5 pl-11 pr-4 text-sm shadow-soft outline-none transition focus:border-accent" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar cualquier tarea (incluye Done)…" className="w-full rounded-card border border-line bg-surface py-2.5 pl-11 pr-4 text-sm shadow-soft outline-none focus-ring transition focus:border-accent" />
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-1 text-xs text-muted shadow-soft">
           <span className="font-semibold">Agrupar</span>

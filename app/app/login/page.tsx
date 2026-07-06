@@ -188,7 +188,7 @@ function Input({ icon, value, onChange, placeholder, type = "text" }: { icon: Re
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">{icon}</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} type={type} aria-label={placeholder}
-        className="w-full rounded-card border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none transition focus:border-accent" />
+        className="w-full rounded-card border border-line bg-surface py-3 pl-10 pr-4 text-sm outline-none focus-ring transition focus:border-accent" />
     </div>
   );
 }
@@ -198,7 +198,7 @@ function PasswordInput({ value, onChange, show, toggle, onEnter }: { value: stri
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted"><Lock size={16} /></span>
       <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
         type={show ? "text" : "password"} placeholder="Contraseña" autoFocus aria-label="Contraseña"
-        className="w-full rounded-card border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none transition focus:border-accent" />
+        className="w-full rounded-card border border-line bg-surface py-3 pl-10 pr-11 text-sm outline-none focus-ring transition focus:border-accent" />
       <button type="button" onClick={toggle} aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted transition hover:text-fg">
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>

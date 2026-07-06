@@ -114,7 +114,7 @@ export function TaskPhotos({ taskId, taskName, open, onClose }: { taskId: string
             onKeyDown={(e) => { if (e.key === "Enter") send(); }}
             placeholder="Agrega un comentario (opcional)…"
             autoFocus
-            className="mt-3 w-full rounded-control border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
+            className="mt-3 w-full rounded-control border border-line px-3 py-2.5 text-sm outline-none focus-ring focus:border-accent"
           />
           <div className="mt-2 flex flex-wrap gap-1">
             {EMOJIS.map((e) => (

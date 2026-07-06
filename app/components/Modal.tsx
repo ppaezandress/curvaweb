@@ -98,5 +98,7 @@ export function Field({ label, children }: { label: string; children: React.Reac
   );
 }
 
-export const inputCls =
-  "w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-accent";
+// Un solo input en todo el producto: reexportamos las clases base del primitivo
+// (traen focus-ring accesible y el tamaño de cuerpo del token). Antes esto era una
+// copia que se había desincronizado (text-sm, sin focus-ring).
+export { inputBase as inputCls } from "@/components/ui/Input";

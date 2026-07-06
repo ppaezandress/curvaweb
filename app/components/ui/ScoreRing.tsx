@@ -48,8 +48,14 @@ export function ScoreRing({
   const track = onDark ? "rgba(255,255,255,0.22)" : "var(--surface-2)";
   const numCls = onDark ? "text-white" : "text-fg";
   const labelCls = onDark ? "text-white/75" : "text-muted";
+  const a11yLabel = `${typeof label === "string" && label ? label + ": " : ""}${Math.round(v)} de 100`;
   return (
-    <div className={cn("relative inline-flex items-center justify-center", className)} style={{ width: size, height: size }}>
+    <div
+      className={cn("relative inline-flex items-center justify-center", className)}
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={a11yLabel}
+    >
       <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <defs>
           <linearGradient id={`ring-${gid}`} x1="0" y1="0" x2="1" y2="1">

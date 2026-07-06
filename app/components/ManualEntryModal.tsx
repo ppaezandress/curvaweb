@@ -328,7 +328,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
                   <span className="text-muted">{name}</span>
                   {early ? (
                     <span className="inline-flex items-center gap-1">
-                      <input type="number" min={1} max={valid ? minutes : undefined} value={attendees[name] ?? (valid ? minutes : 0)} onChange={(e) => setAttendees((p) => ({ ...p, [name]: Number(e.target.value) }))} className="w-16 rounded-lg border border-line px-2 py-0.5 text-right tabular outline-none focus:border-accent" />
+                      <input type="number" min={1} max={valid ? minutes : undefined} value={attendees[name] ?? (valid ? minutes : 0)} onChange={(e) => setAttendees((p) => ({ ...p, [name]: Number(e.target.value) }))} className="w-16 rounded-lg border border-line px-2 py-0.5 text-right tabular outline-none focus-ring focus:border-accent" />
                       <span className="text-muted">min</span>
                       <button onClick={() => setEarlyFor((p) => { const n = new Set(p); n.delete(name); return n; })} className="text-muted hover:text-muted">↺</button>
                     </span>

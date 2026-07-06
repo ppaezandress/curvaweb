@@ -127,7 +127,7 @@ export function MeetingWatcher() {
 
       <label className="mb-1.5 block text-sm font-semibold text-muted">Proyecto</label>
       <select value={projectId} onChange={(e) => setProjectId(e.target.value)}
-        className="mb-1 w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent">
+        className="mb-1 w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm outline-none focus-ring focus:border-accent">
         <option value="">— Sin proyecto (solo cliente/área) —</option>
         {projects.map((p) => (
           <option key={p.id} value={p.id}>{clientById[p.clientId]?.name ? `${clientById[p.clientId].name} · ` : ""}{p.name}</option>

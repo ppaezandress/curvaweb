@@ -290,12 +290,12 @@ function EquipoView() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm">
               <span className="font-medium text-muted">Default</span>
-              <input type="number" min={0} value={rates.default || ""} onChange={(e) => setDefault(Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-accent" placeholder="0" />
+              <input type="number" min={0} value={rates.default || ""} onChange={(e) => setDefault(Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus-ring focus:border-accent" placeholder="0" />
             </label>
             {members.filter((m) => m.name && m.name !== "—").map((m) => (
               <label key={m.id} className="flex items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm">
                 <span className="truncate font-medium text-muted">{m.name}</span>
-                <input type="number" min={0} value={rates.byPerson[m.name] || ""} onChange={(e) => setPerson(m.name, Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus:border-accent" placeholder={String(rates.default || 0)} />
+                <input type="number" min={0} value={rates.byPerson[m.name] || ""} onChange={(e) => setPerson(m.name, Number(e.target.value))} className="w-24 rounded-lg border border-line px-2 py-1 text-right tabular outline-none focus-ring focus:border-accent" placeholder={String(rates.default || 0)} />
               </label>
             ))}
           </div>
