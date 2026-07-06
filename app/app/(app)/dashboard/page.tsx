@@ -7,6 +7,7 @@ import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
 import { dueDateMs, mondayOf, DIAS_CORTOS } from "@/lib/date";
+import { inDateRange } from "@/lib/task-filters";
 import { isDone, isActionable, isAssignedTo } from "@/lib/task-status";
 import { statusToneClass } from "@/lib/mock-data";
 import { computePulse } from "@/lib/pulse";
@@ -33,6 +34,7 @@ export default function HomePage() {
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [focusFilter, setFocusFilter] = useState<"foco" | "hoy" | "semana" | "todas">("foco");
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -94,11 +96,18 @@ export default function HomePage() {
       if (/curso|progress|haciendo/i.test(t.status)) s += 10;
       return s;
     };
-    return mine
-      .filter((t) => !isDone(t.status) && (active?.taskId === t.id || isActionable(t.status)))
-      .sort((a, b) => urg(b) - urg(a))
-      .slice(0, 6);
-  }, [mine, active]);
+    const actionable = mine.filter((t) => !isDone(t.status) && (active?.taskId === t.id || isActionable(t.status)));
+    // El filtro por fecha respeta la tarea activa (siempre visible mientras corre).
+    const ranged =
+      focusFilter === "hoy"
+        ? actionable.filter((t) => active?.taskId === t.id || inDateRange(t.dueDate, "hoy"))
+        : focusFilter === "semana"
+          ? actionable.filter((t) => active?.taskId === t.id || inDateRange(t.dueDate, "semana"))
+          : actionable;
+    const sorted = ranged.sort((a, b) => urg(b) - urg(a));
+    // "Foco" cura a las 6 más urgentes; los demás filtros muestran todo lo que cae en el rango.
+    return focusFilter === "foco" ? sorted.slice(0, 6) : sorted;
+  }, [mine, active, focusFilter]);
 
   const matches = useMemo(() => {
     if (!q.trim()) return [];
@@ -177,7 +186,15 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Cronómetro activo — claro: qué corre y qué pasa al pausar */}
+          {/* Cronómetro activo — claro: qué corre y qué pasa al pausar.
+              Estado de reposo cuando no hay nada corriendo, para que el tablero de abajo
+              no "salte" al iniciar/pausar (feedback #53: se sentía desordenado). */}
+          {!(active && activeTask) && (
+            <div className="rise rise-2 flex items-center gap-3 rounded-card border border-dashed border-line bg-surface-2/50 px-5 py-4 text-caption text-muted">
+              <Clock size={16} className="shrink-0 text-muted/70" />
+              <span>Ningún cronómetro corriendo. Dale <span className="font-semibold text-fg">▶ Iniciar</span> a una tarea de abajo para empezar a medir.</span>
+            </div>
+          )}
           {active && activeTask && (
             <section className="rise rise-2 overflow-hidden rounded-card border border-accent/40 bg-accent/[0.05] p-5">
               <div className="flex items-center justify-between gap-4">
@@ -206,12 +223,26 @@ export default function HomePage() {
 
           {/* Tus tareas — arrancar/pausar y ver el tiempo de cada una */}
           <section className="rise rise-2">
-            <div className="mb-3 flex items-end justify-between">
-              <div>
-                <h2 className="text-heading text-fg">Para hoy</h2>
-                <p className="text-caption text-muted">Dale ▶ Iniciar para medir. El tiempo se acumula por tarea.</p>
+            <div className="mb-3 space-y-2.5">
+              <div className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-heading text-fg">{focusFilter === "foco" ? "Para hoy" : "Tus tareas"}</h2>
+                  <p className="text-caption text-muted">Dale ▶ Iniciar para medir. El tiempo se acumula por tarea.</p>
+                </div>
+                <Link href="/tareas" className="focus-ring inline-flex items-center gap-1 rounded-control px-1 text-sm font-medium text-accent">Ver todas <ArrowRight size={14} /></Link>
               </div>
-              <Link href="/tareas" className="focus-ring inline-flex items-center gap-1 rounded-control px-1 text-sm font-medium text-accent">Ver todas <ArrowRight size={14} /></Link>
+              {/* Filtro del tablero (#43): no solo urgencia — filtra como quieras */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {([["foco", "Foco"], ["hoy", "Hoy"], ["semana", "Esta semana"], ["todas", "Todas"]] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setFocusFilter(key)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition focus-ring ${focusFilter === key ? "bg-ink text-white" : "border border-line bg-surface text-muted hover:border-accent/40 hover:text-fg"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             {focusList.length === 0 ? (
               <EmptyState

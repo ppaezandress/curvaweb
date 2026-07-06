@@ -56,11 +56,13 @@ export function ProfileMenu() {
   // Subir la foto YA recortada (cuadrada) que devuelve el modal.
   const uploadBlob = async (blob: Blob) => {
     const sb = getSupabase();
-    if (!sb) return;
+    if (!sb) { toast("No hay conexión para cambiar la foto. Intenta de nuevo en un momento.", { tone: "error" }); return; }
     setUploading(true);
     try {
       const { data: u } = await sb.auth.getUser();
-      if (!u.user) return;
+      // En Safari con cookies/rastreo bloqueado la sesión puede no cargar → antes fallaba
+      // en silencio ("no me deja"). Ahora avisamos qué hacer (#4).
+      if (!u.user) { toast("Tu sesión no está activa. Vuelve a iniciar sesión para cambiar la foto.", { tone: "error" }); return; }
       const path = `${u.user.id}/avatar-${Date.now()}.jpg`;
       const { error } = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (error) { toast("No se pudo subir la foto: " + error.message, { tone: "error" }); return; }

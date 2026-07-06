@@ -40,11 +40,11 @@ export function AccountSettings() {
 
   const uploadBlob = async (blob: Blob) => {
     const sb = getSupabase();
-    if (!sb) return;
+    if (!sb) { toast("No hay conexión para cambiar la foto. Intenta de nuevo en un momento.", { tone: "error" }); return; }
     setUploading(true);
     try {
       const { data: u } = await sb.auth.getUser();
-      if (!u.user) return;
+      if (!u.user) { toast("Tu sesión no está activa. Vuelve a iniciar sesión para cambiar la foto.", { tone: "error" }); return; }
       const path = `${u.user.id}/avatar-${Date.now()}.jpg`;
       const { error } = await sb.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (error) { toast("No se pudo subir la foto: " + error.message, { tone: "error" }); return; }

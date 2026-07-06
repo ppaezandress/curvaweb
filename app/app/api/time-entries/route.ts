@@ -23,6 +23,7 @@ const TimeEntrySchema = z.object({
   clientId: z.string().optional(),
   taskName: z.string().optional(),
   area: z.string().optional(),
+  pilar: z.string().optional(),
   userName: z.string().optional(),
   startedAt: z.number(),
   endedAt: z.number(),
@@ -68,6 +69,7 @@ async function createRow(props: {
   minutes: number;
   inactiveMinutes?: number;
   area?: string;
+  pilar?: string;
   mode?: "manual" | "ai";
 }) {
   const title = `${props.userName || "—"} · ${(props.taskName || props.area || "Tiempo").slice(0, 50)}`;
@@ -81,6 +83,9 @@ async function createRow(props: {
   if (props.taskId) properties["Tarea"] = { relation: [{ id: props.taskId }] };
   if (props.clientId) properties["Cliente"] = { relation: [{ id: props.clientId }] };
   if (props.area) properties["Área"] = { select: { name: props.area } };
+  // Pilar de negocio (Reclutamiento, Benchmark…) — feedback #47: medir tiempo por pilar,
+  // no solo por cliente. Notion crea la opción de select sola al escribir un valor nuevo.
+  if (props.pilar) properties["Pilar"] = { select: { name: props.pilar } };
   if (props.inactiveMinutes && props.inactiveMinutes > 0)
     properties["Min. inactivos"] = { number: Math.round(props.inactiveMinutes * 10) / 10 };
   // Modo (Manual / IA). Si la propiedad aún no existe en la DB, se reintenta sin ella.
@@ -95,10 +100,11 @@ async function createRow(props: {
   try {
     return (await post(properties)).id;
   } catch (e) {
-    // La propiedad "Modo" todavía no existe en Notion → registra sin ella (no perder el tiempo).
-    if (props.mode && /Modo|is not a property|does not exist|validation_error/i.test(String(e))) {
-      const { Modo, ...rest } = properties as { Modo?: unknown };
-      void Modo;
+    // Alguna propiedad opcional (Modo / Pilar) aún no existe en la DB → registra sin las
+    // opcionales para no perder el tiempo medido.
+    if ((props.mode || props.pilar) && /Modo|Pilar|is not a property|does not exist|validation_error/i.test(String(e))) {
+      const { Modo, Pilar, ...rest } = properties as { Modo?: unknown; Pilar?: unknown };
+      void Modo; void Pilar;
       return (await post(rest)).id;
     }
     throw e;
@@ -122,7 +128,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Datos inválidos", issues: valid.error.issues }, { status: 400 });
     }
     const b = valid.data;
-    const { taskId, clientId, taskName, area, startedAt, endedAt } = b;
+    const { taskId, clientId, taskName, area, pilar, startedAt, endedAt } = b;
 
     // Modo manual con asistentes
     if (Array.isArray(b.attendees) && b.attendees.length > 0) {
@@ -130,7 +136,7 @@ export async function POST(req: Request) {
       for (const a of b.attendees as Attendee[]) {
         if (!a.minutes || a.minutes <= 0) continue;
         const id = await createRow({
-          taskId, clientId, taskName, area,
+          taskId, clientId, taskName, area, pilar,
           userName: a.name,
           startedAt,
           endedAt: startedAt + a.minutes * 60000,

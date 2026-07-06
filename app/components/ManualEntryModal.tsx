@@ -43,11 +43,12 @@ const TICKS = [6, 9, 12, 15, 18, 21, 24].map((h) => h * 60);
 
 export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { currentUserId } = useApp();
-  const { tasks, clients, clientById, members, memberById, reload } = useData();
+  const { tasks, clients, clientById, members, memberById, taskTypes, taskTypeById, reload } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [area, setArea] = useState("Trabajo enfocado");
   const [clientId, setClientId] = useState("");
+  const [pilar, setPilar] = useState(""); // label del pilar (#47); "" = sin pilar
   const [taskId, setTaskId] = useState("");
   const [taskQuery, setTaskQuery] = useState("");
   const [taskFocused, setTaskFocused] = useState(false);
@@ -98,9 +99,11 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
 
   const selectedTask = taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
-  // Completitud: al elegir una tarea, hereda su cliente automáticamente (mata "Sin cliente").
+  // Completitud: al elegir una tarea, hereda su cliente y su pilar automáticamente
+  // (mata "Sin cliente" y presiembra el pilar del tipo de la tarea — #47).
   useEffect(() => {
     if (selectedTask && !selectedTask.internal && selectedTask.clientId) setClientId(selectedTask.clientId);
+    if (selectedTask?.typeId && taskTypeById[selectedTask.typeId]) setPilar(taskTypeById[selectedTask.typeId].label);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTask?.id]);
 
@@ -155,6 +158,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
           clientId: clientId || undefined,
           taskName: taskId ? undefined : area,
           area,
+          pilar: pilar || undefined,
           startedAt,
           endedAt,
           attendees: list,
@@ -259,7 +263,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
         </div>
       </Field>
 
-      {/* Cliente + tarea (buscador) */}
+      {/* Cliente + pilar (así se mide por cliente Y por pilar — #47) */}
       <div className="grid gap-0 sm:grid-cols-2 sm:gap-4">
         <Field label="Cliente">
           <select value={clientId} onChange={(e) => { setClientId(e.target.value); setTaskId(""); setTaskQuery(""); }} className={inputCls}>
@@ -267,6 +271,16 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
             {clients.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
           </select>
         </Field>
+        <Field label="Pilar / área">
+          <select value={pilar} onChange={(e) => setPilar(e.target.value)} className={inputCls}>
+            <option value="">— Sin pilar —</option>
+            {taskTypes.map((t) => (<option key={t.id} value={t.label}>{t.label}</option>))}
+          </select>
+        </Field>
+      </div>
+
+      {/* Tarea (buscador) — fila propia para que quepa el desplegable */}
+      <div>
         <Field label="Tarea (opcional)">
           {selectedTask ? (
             <button onClick={() => { setTaskId(""); setTaskQuery(""); }} className="flex w-full items-center justify-between rounded-control border border-accent/40 bg-accent/5 px-3 py-2.5 text-left text-sm">

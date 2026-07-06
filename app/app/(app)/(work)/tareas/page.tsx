@@ -11,6 +11,7 @@ import { NewTaskModal } from "@/components/NewTaskModal";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { isAssignedTo, isDone } from "@/lib/task-status";
 import { dueDateMs } from "@/lib/date";
+import { DATE_RANGES, inDateRange, type DateRange } from "@/lib/task-filters";
 
 type View = "mine" | "all";
 type Group = "cliente" | "urgencia" | "estado";
@@ -44,15 +45,22 @@ export default function TareasPage() {
   const [showDone, setShowDone] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>("todos");
 
   const clientOf = (t: Task) => (t.internal ? INTERNAL : t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT);
   const clientName = (id: string) => (id === INTERNAL ? "Interno (CURVA)" : id === NO_CLIENT ? "Sin cliente" : clientById[id]?.name || "Cliente");
   const secsOf = (items: Task[]) => items.reduce((a, t) => a + t.baselineSeconds + sessionSecondsForTask(t.id), 0);
 
   const base = useMemo(() => (view === "all" ? tasks : tasks.filter((t) => isAssignedTo(t, currentUserId))), [tasks, view, currentUserId]);
-  const visible = useMemo(() => base.filter((t) => showDone || !isDone(t.status)), [base, showDone]);
+  const visibleAll = useMemo(() => base.filter((t) => showDone || !isDone(t.status)), [base, showDone]);
+  // Filtro por rango de fecha (#51) — se aplica antes del filtro por cliente, para que
+  // el sidebar de clientes y sus conteos reflejen el "cuándo" seleccionado.
+  const visible = useMemo(
+    () => (dateRange === "todos" ? visibleAll : visibleAll.filter((t) => inDateRange(t.dueDate, dateRange))),
+    [visibleAll, dateRange],
+  );
 
-  // Sidebar de clientes (siempre visible) — cuenta sobre lo visible.
+  // Sidebar de clientes (siempre visible) — cuenta sobre lo visible (ya filtrado por fecha).
   const clientsWithCounts = useMemo(() => {
     const m = new Map<string, number>();
     visible.forEach((t) => { const c = clientOf(t); m.set(c, (m.get(c) || 0) + 1); });
@@ -130,6 +138,22 @@ export default function TareasPage() {
         <button onClick={() => setShowDone((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus-ring ${showDone ? "border-success/50 bg-success/10 text-success" : "border-line bg-surface text-muted hover:border-muted/40"}`}><Check size={15} /> Done</button>
         <button onClick={() => setShowNew(true)} className="btn-magnetic inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 focus-ring"><Plus size={15} /> Nueva tarea</button>
       </div>
+
+      {/* Filtro por cuándo vence (#51) — chips scrollables en móvil */}
+      {!searchResults && (
+        <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5">
+          <span className="shrink-0 pr-1 text-xs font-semibold text-muted">Cuándo</span>
+          {DATE_RANGES.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setDateRange(r.key)}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition focus-ring ${dateRange === r.key ? "bg-ink text-white" : "border border-line bg-surface text-muted hover:border-accent/40 hover:text-fg"}`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {searchResults ? (
         <div className="space-y-2">

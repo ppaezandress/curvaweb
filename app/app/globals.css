@@ -80,10 +80,18 @@
   --text-body: 0.9375rem;
   --text-body--line-height: 1.5;
 
-  --text-caption: 0.75rem;
-  --text-caption--line-height: 1.4;
-  --text-caption--letter-spacing: 0.01em;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.45;
+  --text-caption--letter-spacing: 0.005em;
   --text-caption--font-weight: 500;
+
+  /* Piso de legibilidad: la app usa masivamente los text-xs/text-sm por defecto de
+     Tailwind (no los tokens). Subimos el piso — feedback del equipo: "los textos
+     chicos deben estar más grandes". xs 12→13px (= caption), sm 14→14.5px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.45;
+  --text-sm: 0.90625rem;
+  --text-sm--line-height: 1.5;
 }
 
 /* Neutros SEMÁNTICOS — inline para que las utilidades lean la var de runtime
