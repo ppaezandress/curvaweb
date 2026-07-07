@@ -105,7 +105,19 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
       recRef.current = { rec, chunks };
       rec.start(1000); // timeslice de 1s: Safari sí emite dataavailable
       setRecording(true);
-    } catch { toast("No se pudo acceder al micrófono. Revisa el permiso del navegador.", { tone: "error" }); }
+    } catch (err) {
+      // Mensaje según la causa real, para no dejar al usuario adivinando.
+      const name = (err as { name?: string })?.name || "";
+      if (typeof window !== "undefined" && !window.isSecureContext) {
+        toast("Para grabar audio abre la app en https o en 127.0.0.1 (no la IP de red).", { tone: "error" });
+      } else if (name === "NotAllowedError" || name === "SecurityError") {
+        toast("Micrófono bloqueado. Permítelo en el navegador (y en Ajustes de macOS → Privacidad → Micrófono).", { tone: "error" });
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        toast("No se encontró un micrófono conectado.", { tone: "error" });
+      } else {
+        toast("No se pudo acceder al micrófono" + (name ? ` (${name}).` : "."), { tone: "error" });
+      }
+    }
   };
 
   const submit = () => {
