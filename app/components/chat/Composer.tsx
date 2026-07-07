@@ -2,11 +2,12 @@
 import { toast } from "@/lib/toast";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, ImageIcon, Film, Music, Trash2 } from "lucide-react";
+import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, Music, Trash2, Video } from "lucide-react";
 import type { Task, Member } from "@/lib/mock-data";
 import { taskToken, userToken } from "@/lib/notion-url";
 import { getSupabase } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
+import { VideoRecorder } from "@/components/chat/VideoRecorder";
 import { cn } from "@/lib/cn";
 
 type Trigger = { kind: "user" | "task"; query: string } | null;
@@ -26,6 +27,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
   const [uploading, setUploading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
+  const [showVideoRec, setShowVideoRec] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<{ rec: MediaRecorder; chunks: Blob[] } | null>(null);
@@ -193,12 +195,26 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
         </div>
       )}
 
-      {/* Preview del adjunto */}
+      {/* Preview del adjunto — miniatura real de foto/video antes de mandar */}
       {(attach || uploading) && (
-        <div className="mb-2 inline-flex items-center gap-2 rounded-control border border-line bg-surface-2 px-2.5 py-1.5">
-          {uploading ? <Loader2 size={14} className="animate-spin text-muted" /> : attach?.type === "image" ? <ImageIcon size={14} className="text-accent" /> : attach?.type === "video" ? <Film size={14} className="text-accent" /> : <Music size={14} className="text-accent" />}
-          <span className="text-xs font-medium text-muted">{uploading ? "Subiendo…" : `${attach?.type === "image" ? "Imagen" : attach?.type === "video" ? "Video" : "Audio"} listo`}</span>
-          {attach && !uploading && <button onClick={() => setAttach(null)} className="rounded-full p-0.5 text-muted hover:bg-surface focus-ring" aria-label="Quitar adjunto"><X size={12} /></button>}
+        <div className="mb-2">
+          {uploading ? (
+            <div className="inline-flex items-center gap-2 rounded-control border border-line bg-surface-2 px-3 py-2 text-xs font-medium text-muted">
+              <Loader2 size={14} className="animate-spin" /> Subiendo…
+            </div>
+          ) : attach ? (
+            <div className="relative inline-block">
+              {attach.type === "image" ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={attach.url} alt="Vista previa" className="max-h-32 rounded-control border border-line object-cover" />
+              ) : attach.type === "video" ? (
+                <video src={attach.url} muted playsInline className="max-h-32 rounded-control border border-line" />
+              ) : (
+                <div className="inline-flex items-center gap-2 rounded-control border border-line bg-surface-2 px-3 py-2 text-xs font-medium text-muted"><Music size={14} className="text-accent" /> Audio listo</div>
+              )}
+              <button onClick={() => setAttach(null)} className="absolute -right-2 -top-2 rounded-full bg-ink p-1 text-white shadow-soft transition focus-ring active:scale-90" aria-label="Quitar adjunto"><X size={12} /></button>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -224,6 +240,9 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
           <button onClick={toggleRecord} disabled={uploading} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90 disabled:opacity-40" aria-label="Grabar audio" title="Grabar un audio (se manda al soltar)">
             <Mic size={16} />
           </button>
+          <button onClick={() => setShowVideoRec(true)} disabled={uploading} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90 disabled:opacity-40" aria-label="Grabar video" title="Grabar un video con la cámara">
+            <Video size={16} />
+          </button>
           <textarea
             ref={inputRef}
             value={text}
@@ -240,6 +259,13 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
           </button>
         </div>
       )}
+
+      <VideoRecorder
+        open={showVideoRec}
+        uploading={uploading}
+        onClose={() => setShowVideoRec(false)}
+        onRecorded={(blob, ext) => { setShowVideoRec(false); uploadBlob(blob, ext, true); }}
+      />
     </div>
   );
 }
