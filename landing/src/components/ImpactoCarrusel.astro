@@ -115,6 +115,7 @@ const spark = 'M0,44 C40,42 70,30 120,18 C170,7 210,8 260,3';
   /* Voltea: hover (desktop) o checkbox marcado (toque/click) */
   @media (hover: hover) {
     .flip-card:hover .flip-inner { transform: rotateY(180deg); }
+    .flip-card:hover .flip-hint svg { transform: rotate(-180deg); }
   }
   .flip-cb:checked ~ .flip-inner { transform: rotateY(180deg); }
   /* Teclado: al enfocar el enlace "Ver caso" (u otro control del reverso) la tarjeta
@@ -123,7 +124,6 @@ const spark = 'M0,44 C40,42 70,30 120,18 C170,7 210,8 260,3';
   .flip-card:focus-within .flip-back a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 6px; }
   .flip-cb:focus-visible ~ .flip-inner .flip-front { outline: 2px solid var(--color-ember); outline-offset: 3px; border-radius: 1.5rem; }
   .flip-hint svg { transition: transform 0.4s var(--ease-pitch, ease); }
-  .flip-card:hover .flip-hint svg { transform: rotate(-180deg); }
 
   .accent-dot-ember { background: #2563eb; }
   .accent-dot-jade  { background: #0ea5b7; }

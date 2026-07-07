@@ -44,9 +44,12 @@ const {
     <meta name="theme-color" content="#0f1e3d" />
     <Seo title={title} description={description} image={image} type={type} jsonLd={jsonLd} />
     <ClientRouter />
-    <!-- Cortinilla: marca "ya vista" antes de pintar para no mostrar flash en visitas repetidas -->
+    <!-- Marca "JS activo" antes de pintar: sin esta clase, el contenido con
+         animación de entrada se muestra visible por defecto (no-JS / headless).
+         Cortinilla: marca "ya vista" para no mostrar flash en visitas repetidas. -->
     <script is:inline>
       (function () {
+        document.documentElement.classList.add('js');
         try {
           var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           if (reduce || sessionStorage.getItem('curva:intro-seen') === '1') {

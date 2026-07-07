@@ -507,7 +507,9 @@ const producto = {
     transition: opacity 0.5s var(--ease-curve), border-color 0.5s var(--ease-curve),
       box-shadow 0.5s var(--ease-curve), transform 0.3s var(--ease-pitch);
   }
-  .fase-chip:hover { transform: translateY(-2px); }
+  @media (hover: hover) and (pointer: fine) {
+    .fase-chip:hover { transform: translateY(-2px); }
+  }
   .fase-num { color: var(--color-ember); }
   /* Con climb.ts armado, las fases aún no alcanzadas van tenues; .lit las enciende */
   .is-armed .fase:not(.lit) .fase-chip { opacity: 0.45; }

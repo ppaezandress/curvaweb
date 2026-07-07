@@ -235,7 +235,10 @@ const fromHub = (y: number) => `M${hub.x + hub.r},${hub.y} C564,${hub.y} 575,${y
 
   /* Nodos (pastillas): el grupo entero se eleva (no cada hijo, para no romper el transform del ícono) */
   .rn-node { cursor: default; transition: transform 0.4s var(--ease-pitch, ease); }
-  .rn-node:hover, .rn-node:focus-visible { transform: translateY(-3px); outline: none; }
+  .rn-node:focus-visible { transform: translateY(-3px); outline: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .rn-node:hover { transform: translateY(-3px); }
+  }
   .rn-node:focus-visible rect:first-of-type { stroke: #2563eb; stroke-width: 2.5; }
   .rn-title { font: 700 17px/1 'Poppins', system-ui, sans-serif; letter-spacing: -0.01em; }
   .rn-sub { font: 500 13px/1 'Inter', system-ui, sans-serif; }

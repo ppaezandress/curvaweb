@@ -11,3 +11,6 @@ app.zip
 test-results/
 playwright-report/
 .gstack/
+
+# impeccable: estado de tooling / snapshots de critique (no es del sitio)
+.impeccable/

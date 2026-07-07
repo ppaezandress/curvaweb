@@ -290,6 +290,24 @@ body {
 .is-loaded [data-load="4"] { animation-delay: 0.40s; }
 .is-loaded [data-load="5"] { animation-delay: 0.54s; }
 
+/* Fallback sin JS (o pre-hidratación / headless / crawlers): el contenido que
+   normalmente entra con animación se muestra visible por defecto. El <script>
+   del <head> agrega .js antes de pintar, así que con JS todo anima como siempre.
+   Evita que el hero (incluido el H1 = elemento LCP) se envíe en blanco. */
+html:not(.js) .reveal,
+html:not(.js) [data-load],
+html:not(.js) .hero-line,
+html:not(.js) .word-before,
+html:not(.js) .word-after,
+html:not(.js) .num-rise,
+html:not(.js) .od-reel {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  clip-path: none !important;
+  animation: none !important;
+}
+
 /* Texto con gradiente animado (el degradado "respira"). */
 .curve-text-live {
   background: linear-gradient(110deg, #60a5fa, #38bdf8, #93c5fd, #60a5fa);
@@ -466,12 +484,19 @@ body {
 
 /* Hover-lift suave y consistente para tarjetas */
 .lift { transition: transform .45s var(--ease-pitch), box-shadow .45s var(--ease-pitch); }
-.lift:hover { transform: translateY(-6px); box-shadow: 0 28px 56px -28px rgba(11, 10, 20, 0.35); }
 
-/* "Pop" sutil en botones */
-.btn-pop { transition: transform .28s var(--ease-pitch), background-color .2s ease; }
-.btn-pop:hover { transform: translateY(-2px) scale(1.02); }
+/* "Pop" sutil en botones. El press (:active) es el feedback que SÍ queremos en
+   touch: se dispara al tocar y confirma que el botón "escuchó". Va con ease-out
+   rápido (var(--ease-curve)) para sentirse instantáneo. */
+.btn-pop { transition: transform .18s var(--ease-curve), background-color .2s ease; }
 .btn-pop:active { transform: scale(0.97); }
+
+/* El lift al hover solo aplica en punteros finos: en touch un hover con transform
+   se queda "pegado" tras el tap (Emil: gatear hovers que mueven). */
+@media (hover: hover) and (pointer: fine) {
+  .lift:hover { transform: translateY(-6px); box-shadow: 0 28px 56px -28px rgba(11, 10, 20, 0.35); }
+  .btn-pop:hover { transform: translateY(-2px) scale(1.02); }
+}
 
 /* Flecha firma (estilo BCG): al hover la flecha sale por la derecha y reentra
    por la izquierda. La marca es [data-arrow] en el <svg>. Se dispara desde el
@@ -851,7 +876,7 @@ body {
 .hero-ai-ghost {
   position: absolute; top: 0; left: 0; right: 0;
   padding: .875rem 1rem 0; pointer-events: none;
-  color: var(--color-sand-400); font-size: 15px; line-height: 1.625;
+  color: var(--color-sand-500); font-size: 15px; line-height: 1.625;
   display: flex; align-items: baseline;
   transition: opacity .25s ease;
 }
@@ -868,7 +893,7 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: .5rem .6rem .6rem;
 }
-.hero-ai-tip { font-size: 11px; color: var(--color-sand-400); padding-left: .4rem; }
+.hero-ai-tip { font-size: 11px; color: var(--color-sand-500); padding-left: .4rem; }
 @media (max-width: 400px) { .hero-ai-tip { display: none; } }
 .hero-ai-send { box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--color-ai) 55%, transparent); }
 
@@ -878,7 +903,9 @@ body {
   border: 1px solid var(--color-sand-300); border-radius: 9999px; padding: .35rem .8rem;
   background: #fff; transition: border-color .2s ease, color .2s ease, background-color .2s ease, transform .2s ease;
 }
-.hero-ai-chip:hover { border-color: var(--color-ember); color: var(--color-ember); background: color-mix(in srgb, var(--color-ember) 6%, #fff); transform: translateY(-1px); }
+@media (hover: hover) and (pointer: fine) {
+  .hero-ai-chip:hover { border-color: var(--color-ember); color: var(--color-ember); background: color-mix(in srgb, var(--color-ember) 6%, #fff); transform: translateY(-1px); }
+}
 
 /* Rutas: la IA te lleva a una parte del sitio (link cards claras) */
 .hero-ai-route {
@@ -889,11 +916,13 @@ body {
   color: var(--color-ink); font-weight: 600; font-size: 14px;
   transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
 }
-.hero-ai-route:hover { background: color-mix(in srgb, var(--color-ember) 12%, #fff); border-color: var(--color-ember); transform: translateX(2px); }
 .hero-ai-route-ico { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: .5rem; background: var(--color-ember); color: #fff; flex-shrink: 0; }
 .hero-ai-route-ico svg { width: .95rem; height: .95rem; }
 .hero-ai-route-arrow { margin-left: auto; color: var(--color-ember); transition: transform .18s ease; }
-.hero-ai-route:hover .hero-ai-route-arrow { transform: translateX(3px); }
+@media (hover: hover) and (pointer: fine) {
+  .hero-ai-route:hover { background: color-mix(in srgb, var(--color-ember) 12%, #fff); border-color: var(--color-ember); transform: translateX(2px); }
+  .hero-ai-route:hover .hero-ai-route-arrow { transform: translateX(3px); }
+}
 
 .hero-ai-mic.recording {
   background: #ef4444; color: #fff; border-color: #ef4444;
