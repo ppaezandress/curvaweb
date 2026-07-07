@@ -10,6 +10,7 @@ import { EsfuerzoPicker } from "@/components/EsfuerzoPicker";
 import { formatDuration, hhmmFromISO } from "@/lib/format";
 import { dueDateLabel } from "@/lib/date";
 import { openInNotion } from "@/lib/notion-url";
+import { useOverlay } from "@/lib/use-overlay";
 import { Avatar } from "@/components/Avatar";
 
 type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
@@ -29,25 +30,18 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
   const [shown, setShown] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Apertura + scroll-lock + fetch de sesiones: SOLO al abrir/cerrar. Antes este efecto
-  // dependía de `onClose` (callback inline que cambia cada render); como TaskCard
-  // re-renderiza cada segundo con el cronómetro activo, el efecto se re-ejecutaba cada
-  // segundo y volvía a hacer fetch(/api/time-entries) → la app se trababa.
+  // Escape + scroll-lock (patrón seguro compartido; ver lib/use-overlay.ts).
+  useOverlay(open, onClose);
+
+  // Animación de entrada + fetch del historial: SOLO al abrir/cerrar (deps [open]).
+  // Antes esto dependía de `onClose` inline → con TaskCard re-renderizando cada segundo
+  // por el cronómetro, re-hacía fetch(/api/time-entries) CADA SEGUNDO y trababa la app.
   useEffect(() => {
     if (!open) { setShown(false); return; }
     const id = requestAnimationFrame(() => setShown(true));
-    document.body.style.overflow = "hidden";
     fetch("/api/time-entries").then((r) => r.json()).then((d) => setRecords(d.records || [])).catch(() => {});
-    return () => { cancelAnimationFrame(id); document.body.style.overflow = ""; };
+    return () => cancelAnimationFrame(id);
   }, [open]);
-
-  // Escape para cerrar — efecto aparte; re-adjuntar el listener es inofensivo.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
 
   const task = taskById[taskId];
 
