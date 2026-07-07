@@ -1,8 +1,8 @@
 "use client";
 import { toast } from "@/lib/toast";
 
-import { useMemo, useRef, useState } from "react";
-import { Send, ListTodo, AtSign, X, Paperclip, Mic, Square, Loader2, ImageIcon, Film, Music } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, ImageIcon, Film, Music, Trash2 } from "lucide-react";
 import type { Task, Member } from "@/lib/mock-data";
 import { taskToken, userToken } from "@/lib/notion-url";
 import { getSupabase } from "@/lib/supabase/client";
@@ -25,10 +25,16 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
   const [attach, setAttach] = useState<Attachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<{ rec: MediaRecorder; chunks: Blob[] } | null>(null);
+  const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelledRef = useRef(false);
   const lastTyping = useRef(0);
+
+  useEffect(() => () => { if (recTimer.current) clearInterval(recTimer.current); }, []);
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const matches = useMemo(() => {
     if (!trigger) return [] as (Member | Task)[];
@@ -80,6 +86,12 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
   // Grabar audio con el micrófono. Safari es quisquilloso con MediaRecorder: hay que
   // elegir un mimeType soportado y pedir chunks periódicos (timeslice), o el blob
   // sale vacío y "no se manda nada". Elegimos mp4 (Safari) o webm/opus (Chrome/FF).
+  // Descarta la grabación sin enviarla.
+  const cancelRecord = () => {
+    cancelledRef.current = true;
+    recRef.current?.rec.stop();
+  };
+
   const toggleRecord = async () => {
     if (recording) {
       recRef.current?.rec.stop();
@@ -91,11 +103,16 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
       const mimeType = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find((t) => canCheck && MediaRecorder.isTypeSupported(t));
       const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       const chunks: Blob[] = [];
-      const cleanup = () => { stream.getTracks().forEach((t) => t.stop()); setRecording(false); };
+      const cleanup = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        if (recTimer.current) { clearInterval(recTimer.current); recTimer.current = null; }
+      };
       rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
       rec.onerror = () => { cleanup(); toast("Se interrumpió la grabación. Intenta de nuevo.", { tone: "error" }); };
       rec.onstop = () => {
         cleanup();
+        if (cancelledRef.current) return; // se descartó a propósito (botón cancelar)
         const type = rec.mimeType || mimeType || "audio/webm";
         const blob = new Blob(chunks, { type });
         if (blob.size === 0) { toast("No se grabó audio (revisa el permiso del micrófono).", { tone: "error" }); return; }
@@ -103,6 +120,9 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
         uploadBlob(blob, ext, true); // audio grabado → se manda solo
       };
       recRef.current = { rec, chunks };
+      cancelledRef.current = false;
+      setRecSecs(0);
+      recTimer.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
       rec.start(1000); // timeslice de 1s: Safari sí emite dataavailable
       setRecording(true);
     } catch (err) {
@@ -182,29 +202,44 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        <input ref={fileRef} type="file" accept="image/*,video/*,audio/*" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
-        <button onClick={() => fileRef.current?.click()} disabled={uploading || recording} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring disabled:opacity-40" aria-label="Adjuntar archivo" title="Adjuntar imagen, video o audio">
-          <Paperclip size={16} />
-        </button>
-        <button onClick={toggleRecord} disabled={uploading} className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition focus-ring disabled:opacity-40", recording ? "border-danger bg-danger text-white" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label={recording ? "Detener grabación" : "Grabar audio"} title={recording ? "Detener y enviar audio" : "Grabar un audio"}>
-          {recording ? <Square size={15} fill="currentColor" /> : <Mic size={16} />}
-        </button>
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
-          rows={1}
-          placeholder={recording ? "Grabando audio… toca ⏹ para enviar" : "Escribe un mensaje…  (@ persona · / tarea · 📎 adjunta)"}
-          className="max-h-32 flex-1 resize-none rounded-card border border-line px-4 py-2.5 text-sm outline-none focus-ring transition [field-sizing:content] focus:border-accent"
-        />
-        <button onClick={submit} disabled={uploading || (!text.trim() && people.length === 0 && pendingTasks.length === 0 && !attach)}
-          className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}
-          aria-label="Enviar">
-          <Send size={16} />
-        </button>
-      </div>
+      {recording ? (
+        // Barra de grabación tipo WhatsApp: latido + cronómetro + cancelar / enviar.
+        <div className="flex items-center gap-2 rounded-card border border-danger/40 bg-danger/[0.06] px-3 py-2">
+          <span className="curva-live-dot inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-danger" />
+          <span className="tabular text-sm font-bold text-danger">{mmss(recSecs)}</span>
+          <span className="min-w-0 flex-1 truncate text-sm text-muted">Grabando… suelta para enviar</span>
+          <button onClick={cancelRecord} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-medium text-muted transition hover:border-danger hover:text-danger focus-ring active:scale-95" aria-label="Cancelar grabación">
+            <Trash2 size={15} /> <span className="hidden sm:inline">Cancelar</span>
+          </button>
+          <button onClick={toggleRecord} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-accent px-4 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 focus-ring active:scale-95" aria-label="Enviar audio">
+            <Send size={15} /> Enviar
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-end gap-2">
+          <input ref={fileRef} type="file" accept="image/*,video/*,audio/*" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
+          <button onClick={() => fileRef.current?.click()} disabled={uploading} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90 disabled:opacity-40" aria-label="Adjuntar archivo" title="Adjuntar imagen, video o audio">
+            <Paperclip size={16} />
+          </button>
+          <button onClick={toggleRecord} disabled={uploading} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90 disabled:opacity-40" aria-label="Grabar audio" title="Grabar un audio (se manda al soltar)">
+            <Mic size={16} />
+          </button>
+          <textarea
+            ref={inputRef}
+            value={text}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
+            rows={1}
+            placeholder="Escribe un mensaje…  (@ persona · / tarea · 📎 adjunta)"
+            className="max-h-32 flex-1 resize-none rounded-card border border-line px-4 py-2.5 text-sm outline-none focus-ring transition [field-sizing:content] focus:border-accent"
+          />
+          <button onClick={submit} disabled={uploading || (!text.trim() && people.length === 0 && pendingTasks.length === 0 && !attach)}
+            className={cn("inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition focus-ring active:scale-95 disabled:opacity-40")}
+            aria-label="Enviar">
+            <Send size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { ListTodo, SmilePlus, AtSign } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { hhmmFromISO } from "@/lib/format";
 import { parseMessage, notionTaskUrl } from "@/lib/notion-url";
+import { VoiceBubble } from "@/components/chat/VoiceBubble";
 import { cn } from "@/lib/cn";
 
 export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null };
@@ -47,7 +48,7 @@ export function MessageItem({
             ) : msg.attachment_type === "video" ? (
               <video src={msg.attachment_url} controls className="max-h-72 max-w-[min(78vw,20rem)] rounded-card border border-line" />
             ) : (
-              <audio src={msg.attachment_url} controls className="w-64 max-w-[78vw]" />
+              <VoiceBubble src={msg.attachment_url} mine={mine} />
             )}
           </div>
         )}
