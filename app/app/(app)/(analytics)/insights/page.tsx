@@ -120,17 +120,18 @@ function Analisis() {
         action={<RangePicker />}
       />
 
-      {/* Pulso — métrica insignia (semanal) */}
+      {/* Pulso — métrica insignia (semanal). Sin tiempo medido esta semana el Pulso
+          va neutro (—) y los factores en 0, no el 25 ámbar + defaults inventados. */}
       <div className="rounded-card border border-line bg-surface p-5 shadow-soft sm:p-6">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
           <div className="flex shrink-0 justify-center">
-            <ScoreRing value={pulse.score} size={148} label="Pulso" sublabel="esta semana" />
+            <ScoreRing value={pulse.score} size={148} label="Pulso" sublabel="esta semana" empty={pulse.weekMinutes === 0} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-body text-fg">{pulse.headline}</p>
             <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
               {(Object.keys(pulse.components) as (keyof PulseComponents)[]).map((k) => (
-                <ComponentBar key={k} label={PULSE_LABELS[k]} value={pulse.components[k]} />
+                <ComponentBar key={k} label={PULSE_LABELS[k]} value={pulse.weekMinutes === 0 ? 0 : pulse.components[k]} />
               ))}
             </div>
           </div>
