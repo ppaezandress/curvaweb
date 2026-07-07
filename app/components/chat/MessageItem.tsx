@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { hhmmFromISO } from "@/lib/format";
 import { parseMessage, notionTaskUrl } from "@/lib/notion-url";
 import { VoiceBubble } from "@/components/chat/VoiceBubble";
+import { VideoBubble } from "@/components/chat/VideoBubble";
 import { cn } from "@/lib/cn";
 
 export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null };
@@ -46,7 +47,7 @@ export function MessageItem({
                 <img src={msg.attachment_url} alt="adjunto" className="max-h-72 max-w-[min(78vw,20rem)] rounded-card border border-line object-cover" />
               </a>
             ) : msg.attachment_type === "video" ? (
-              <video src={msg.attachment_url} controls className="max-h-72 max-w-[min(78vw,20rem)] rounded-card border border-line" />
+              <VideoBubble src={msg.attachment_url} mine={mine} />
             ) : (
               <VoiceBubble src={msg.attachment_url} mine={mine} />
             )}
