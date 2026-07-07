@@ -24,9 +24,22 @@ function greeting() {
   return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
 }
 
+// Reloj en vivo del cronómetro activo. Aislado en su propio componente para que el
+// tick de cada segundo (useLiveElapsed) re-renderice SOLO estas 2 líneas, no toda la
+// HomePage (antes el hook vivía en la raíz → toda la página + las TaskCards se
+// reconciliaban cada segundo con el cronómetro corriendo → la app se trababa).
+function ActiveTimerClock({ baseSeconds }: { baseSeconds: number }) {
+  const elapsed = useLiveElapsed();
+  return (
+    <>
+      <p className="tabular font-display text-3xl font-bold leading-none text-fg sm:text-4xl">{formatClock(baseSeconds + elapsed)}</p>
+      <p className="mt-1 text-caption text-muted">total · sesión {formatClock(elapsed)}</p>
+    </>
+  );
+}
+
 export default function HomePage() {
   const { currentUserId, active, stop, switchTo, sessionSecondsForTask } = useApp();
-  const elapsed = useLiveElapsed();
   const { tasks, taskById, clientById, memberById } = useData();
   const { records } = useTimeRecords();
   const me = currentUserId ? memberById[currentUserId] : undefined;
@@ -208,10 +221,7 @@ export default function HomePage() {
                   <p className="truncate text-caption text-muted">{activeClient?.name}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="tabular font-display text-3xl font-bold leading-none text-fg sm:text-4xl">
-                    {formatClock((activeTask.baselineSeconds ?? 0) + sessionSecondsForTask(activeTask.id) + elapsed)}
-                  </p>
-                  <p className="mt-1 text-caption text-muted">total · sesión {formatClock(elapsed)}</p>
+                  <ActiveTimerClock baseSeconds={(activeTask.baselineSeconds ?? 0) + sessionSecondsForTask(activeTask.id)} />
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-3">
