@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause, ChevronRight, Clock } from "lucide-react";
+import { Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause, ChevronRight, Clock, HelpCircle, CalendarCheck, Timer, Target, ListChecks } from "lucide-react";
+import { Modal } from "@/components/Modal";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatClock, formatDuration } from "@/lib/format";
@@ -35,6 +36,7 @@ export default function HomePage() {
   const [newName, setNewName] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [focusFilter, setFocusFilter] = useState<"foco" | "hoy" | "semana" | "todas">("foco");
+  const [showPulseInfo, setShowPulseInfo] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -258,21 +260,25 @@ export default function HomePage() {
 
         {/* ══ Columna de VISTAZO ══ */}
         <div className="space-y-4">
-          {/* Pulso compacto */}
-          <Link
-            href="/insights"
-            className="focus-ring group block rounded-card border border-line bg-surface p-5 shadow-soft transition hover:border-accent/40 hover:shadow-float"
-          >
-            <div className="flex items-center justify-between">
+          {/* Pulso compacto — con ayuda "¿qué es esto?" (fuera del Link, HTML válido) */}
+          <div className="rounded-card border border-line bg-surface p-5 shadow-soft transition hover:border-accent/40">
+            <div className="mb-1 flex items-center justify-between">
               <span className="text-caption font-medium text-muted">Pulso · esta semana</span>
-              <ChevronRight size={16} className="text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+              <button
+                onClick={() => setShowPulseInfo(true)}
+                aria-label="¿Qué es el Pulso?"
+                title="¿Qué es el Pulso?"
+                className="focus-ring -m-1 rounded-full p-1 text-muted/60 transition hover:text-accent active:scale-90"
+              >
+                <HelpCircle size={15} />
+              </button>
             </div>
-            <div className="flex justify-center py-3">
-              <ScoreRing value={pulse.score} size={128} label="Pulso" />
-            </div>
-            <div>
+            <Link href="/insights" className="focus-ring group block rounded-control">
+              <div className="flex justify-center py-3">
+                <ScoreRing value={pulse.score} size={128} label="Pulso" empty={pulse.weekMinutes === 0} />
+              </div>
               <div className="mb-1.5 flex items-center justify-between text-caption text-muted">
-                <span>Tu semana</span>
+                <span className="inline-flex items-center gap-1 transition group-hover:text-accent">Tu semana <ChevronRight size={13} className="text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-accent" /></span>
                 <span className="tabular">{formatDuration(week.total * 60)}</span>
               </div>
               <div className="flex items-end gap-1.5" role="img" aria-label={`Actividad de la semana, total ${formatDuration(week.total * 60)}`}>
@@ -285,8 +291,8 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
           {/* Stats rápidos */}
           <div className="grid grid-cols-2 gap-3">
@@ -312,6 +318,34 @@ export default function HomePage() {
 
       <NewTaskModal open={showNew} onClose={() => setShowNew(false)} initialName={newName} />
       <ManualEntryModal open={showManual} onClose={() => setShowManual(false)} />
+
+      {/* Explicación del Pulso — que deje de ser un número misterioso (feedback: nadie sabía qué era) */}
+      <Modal open={showPulseInfo} onClose={() => setShowPulseInfo(false)} title="¿Qué es el Pulso?">
+        <div className="space-y-4">
+          <p className="text-body text-fg">
+            El <b>Pulso</b> es un número del <b>0 al 100</b> que resume cómo va tu semana. Sube conforme mides tu tiempo y avanzas. <b>No es una calificación</b> — es un termómetro para acompañarte, no para juzgarte.
+          </p>
+          <div>
+            <p className="mb-2 text-caption font-semibold text-muted">Mezcla cuatro cosas:</p>
+            <ul className="space-y-2.5">
+              {[
+                { icon: CalendarCheck, t: "Constancia", d: "Cuántos días estuviste activo esta semana (y tu racha)." },
+                { icon: Timer, t: "Volumen", d: "Cuánto tiempo mediste, comparado con tu semana típica." },
+                { icon: Target, t: "Foco", d: "Qué tan poco tiempo quedó marcado como inactivo." },
+                { icon: ListChecks, t: "Cumplimiento", d: "Tus tareas con fecha que no están vencidas." },
+              ].map(({ icon: Icon, t, d }) => (
+                <li key={t} className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-tile bg-accent/10 text-accent"><Icon size={16} /></span>
+                  <span className="min-w-0"><span className="block text-sm font-semibold text-fg">{t}</span><span className="block text-caption text-muted">{d}</span></span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="rounded-control bg-surface-2 px-3 py-2.5 text-caption text-muted">
+            Si aún no mides nada esta semana, el Pulso se queda en blanco (—). Dale ▶ a una tarea y cobra vida.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

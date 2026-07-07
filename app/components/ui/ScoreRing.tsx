@@ -28,6 +28,7 @@ export function ScoreRing({
   label,
   sublabel,
   onDark = false,
+  empty = false,
   className,
 }: {
   value: number;
@@ -36,19 +37,24 @@ export function ScoreRing({
   label?: React.ReactNode;
   sublabel?: React.ReactNode;
   onDark?: boolean;
+  /** Sin datos aún: aro neutro y "—" al centro, sin nota ni banda de color.
+   *  Evita "calificar" (25 en ámbar) a quien todavía no ha medido nada. */
+  empty?: boolean;
   className?: string;
 }) {
   const v = Math.max(0, Math.min(100, value));
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const dash = (v / 100) * c;
+  const dash = empty ? 0 : (v / 100) * c;
   const band = scoreBand(v);
   const gid = useId().replace(/:/g, "");
-  const col = bandVar[band];
+  const col = empty ? (onDark ? "rgba(255,255,255,0.22)" : "var(--surface-2)") : bandVar[band];
   const track = onDark ? "rgba(255,255,255,0.22)" : "var(--surface-2)";
   const numCls = onDark ? "text-white" : "text-fg";
   const labelCls = onDark ? "text-white/75" : "text-muted";
-  const a11yLabel = `${typeof label === "string" && label ? label + ": " : ""}${Math.round(v)} de 100`;
+  const a11yLabel = empty
+    ? `${typeof label === "string" && label ? label + ": " : ""}sin datos aún`
+    : `${typeof label === "string" && label ? label + ": " : ""}${Math.round(v)} de 100`;
   return (
     <div
       className={cn("relative inline-flex items-center justify-center", className)}
@@ -86,7 +92,11 @@ export function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <CountUp value={Math.round(v)} className={cn("tabular font-display text-[2.75rem] font-semibold leading-none", numCls)} />
+        {empty ? (
+          <span className={cn("font-display text-[2.75rem] font-semibold leading-none", labelCls)} aria-hidden>—</span>
+        ) : (
+          <CountUp value={Math.round(v)} className={cn("tabular font-display text-[2.75rem] font-semibold leading-none", numCls)} />
+        )}
         {label && <span className={cn("mt-1 text-caption font-medium", labelCls)}>{label}</span>}
         {sublabel && <span className={cn("mt-0.5 text-caption", labelCls)}>{sublabel}</span>}
       </div>
