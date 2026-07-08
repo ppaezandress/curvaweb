@@ -1,16 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Check, Trash2, UserPlus, EyeOff, Eye, Palette, Sparkles, Grid3x3, Image as ImageIcon, Ban, Upload, Loader2 } from "lucide-react";
 import { Modal, Field, inputCls } from "@/components/Modal";
 import { Avatar } from "@/components/Avatar";
+import { ChatBackgroundPreview } from "@/components/chat/ChatBackground";
 import {
   SOLID_COLORS, GRADIENTS, PATTERNS, DEFAULT_PATTERN_COLOR,
-  backgroundStyle, type ChatBackground,
+  backgroundStyle, intensityOf, withIntensity, type ChatBackground,
 } from "@/lib/chat-backgrounds";
 
 type Person = { id: string; name: string; avatar_url: string | null };
 type BgTab = "none" | "color" | "gradient" | "pattern" | "image";
+
+// Marca de selección animada (reutilizada en todos los swatches).
+function SelectedMark() {
+  return (
+    <motion.span
+      initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 500, damping: 28 }}
+      className="absolute right-1 top-1 z-10 inline-flex h-4 w-4 items-center justify-center rounded-full bg-accent text-white shadow-soft"
+    >
+      <Check size={10} strokeWidth={3} />
+    </motion.span>
+  );
+}
 
 // Ajustes de un canal (solo creador o admin): renombrar, fondo del espacio,
 // ocultar/archivar, y agregar/quitar miembros. El canal "team" es global:
@@ -54,9 +69,12 @@ export function ChannelSettingsModal({
     try { await onRename(clean); } finally { setSaving(false); }
   };
 
+  // Aplica y persiste un fondo, conservando la intensidad elegida al cambiar de tipo.
   const applyBg = async (next: ChatBackground) => {
-    setBg(next);
-    await onSaveBackground?.(next);
+    const merged = next.kind !== "none" && bg.kind !== "none" && typeof bg.intensity === "number"
+      ? { ...next, intensity: bg.intensity } : next;
+    setBg(merged);
+    await onSaveBackground?.(merged);
   };
 
   const onPickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,6 +109,9 @@ export function ChannelSettingsModal({
 
       {/* ── Fondo del canal (aplica a todos, incluido Equipo) ───────────── */}
       <Field label="Fondo del canal">
+        {/* Preview en vivo: exactamente cómo se verá el chat del equipo */}
+        <ChatBackgroundPreview bg={bg} className="mb-3 h-28" />
+
         <div className="mb-2.5 flex flex-wrap gap-1.5">
           {tabs.map(({ id, label, Icon }) => (
             <button
@@ -109,46 +130,58 @@ export function ChannelSettingsModal({
 
         {bgTab === "color" && (
           <div className="flex flex-wrap items-center gap-2">
-            {SOLID_COLORS.map((c) => (
-              <button key={c} onClick={() => applyBg({ kind: "color", value: c })} aria-label={c}
-                className={`h-8 w-8 rounded-lg border transition ${bg.kind === "color" && bg.value === c ? "border-accent ring-2 ring-accent/40" : "border-line hover:scale-110"}`}
-                style={{ background: c }} />
-            ))}
-            <label className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-dashed border-line text-muted transition hover:border-accent hover:text-accent" title="Color libre">
-              <Palette size={14} />
+            {SOLID_COLORS.map((c) => {
+              const sel = bg.kind === "color" && bg.value === c;
+              return (
+                <button key={c} onClick={() => applyBg({ kind: "color", value: c })} aria-label={c} aria-pressed={sel}
+                  className={`relative h-9 w-9 rounded-control border transition active:scale-95 ${sel ? "border-accent ring-2 ring-accent/40" : "border-line hover:scale-110"}`}
+                  style={{ background: c }}>
+                  <AnimatePresence>{sel && <SelectedMark />}</AnimatePresence>
+                </button>
+              );
+            })}
+            <label className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-control border border-dashed border-line text-muted transition hover:border-accent hover:text-accent" title="Color libre">
+              <Palette size={15} />
               <input type="color" className="sr-only" onChange={(e) => applyBg({ kind: "color", value: e.target.value })} />
             </label>
           </div>
         )}
 
         {bgTab === "gradient" && (
-          <div className="grid grid-cols-3 gap-2">
-            {GRADIENTS.map((g) => (
-              <button key={g.id} onClick={() => applyBg({ kind: "gradient", value: g.id })}
-                className={`relative h-12 overflow-hidden rounded-lg border text-caption font-semibold text-white/90 transition ${bg.kind === "gradient" && bg.value === g.id ? "border-accent ring-2 ring-accent/40" : "border-line hover:scale-[1.03]"}`}
-                style={{ background: g.css }}>
-                <span className="absolute inset-x-0 bottom-0 bg-black/20 px-1 py-0.5 text-left">{g.label}</span>
-              </button>
-            ))}
+          <div className="grid grid-cols-4 gap-2">
+            {GRADIENTS.map((g) => {
+              const sel = bg.kind === "gradient" && bg.value === g.id;
+              return (
+                <button key={g.id} onClick={() => applyBg({ kind: "gradient", value: g.id })} title={g.label} aria-pressed={sel}
+                  className={`relative h-14 overflow-hidden rounded-tile border text-caption font-semibold text-white/95 transition active:scale-95 ${sel ? "border-accent ring-2 ring-accent/40" : "border-line hover:scale-[1.04]"}`}
+                  style={{ background: g.css }}>
+                  <span className="absolute inset-x-0 bottom-0 bg-black/25 px-1.5 py-0.5 text-left text-[11px]">{g.label}</span>
+                  <AnimatePresence>{sel && <SelectedMark />}</AnimatePresence>
+                </button>
+              );
+            })}
           </div>
         )}
 
         {bgTab === "pattern" && (
           <div className="space-y-2.5">
-            <div className="grid grid-cols-4 gap-2">
-              {PATTERNS.map((p) => (
-                <button key={p.id} onClick={() => applyBg({ kind: "pattern", value: p.id, color: patternColor })}
-                  className={`relative h-12 overflow-hidden rounded-lg border bg-surface-2 transition ${bg.kind === "pattern" && bg.value === p.id ? "border-accent ring-2 ring-accent/40" : "border-line hover:scale-[1.03]"}`}
-                  title={p.label}>
-                  <span className="absolute inset-0" style={backgroundStyle({ kind: "pattern", value: p.id, color: patternColor })} />
-                </button>
-              ))}
+            <div className="grid grid-cols-5 gap-2">
+              {PATTERNS.map((p) => {
+                const sel = bg.kind === "pattern" && bg.value === p.id;
+                return (
+                  <button key={p.id} onClick={() => applyBg({ kind: "pattern", value: p.id, color: patternColor })} title={p.label} aria-pressed={sel}
+                    className={`relative h-14 overflow-hidden rounded-tile border bg-surface-2 transition active:scale-95 ${sel ? "border-accent ring-2 ring-accent/40" : "border-line hover:scale-[1.04]"}`}>
+                    <span className="absolute inset-0" style={backgroundStyle({ kind: "pattern", value: p.id, color: patternColor })} />
+                    <AnimatePresence>{sel && <SelectedMark />}</AnimatePresence>
+                  </button>
+                );
+              })}
             </div>
             <label className="flex items-center gap-2 text-xs text-muted">
               Color del patrón
               <input type="color" value={patternColor}
                 onChange={(e) => { setPatternColor(e.target.value); if (bg.kind === "pattern") applyBg({ kind: "pattern", value: bg.value, color: e.target.value }); }}
-                className="h-6 w-8 cursor-pointer rounded border border-line bg-transparent" />
+                className="h-6 w-8 cursor-pointer rounded-control border border-line bg-transparent" />
             </label>
           </div>
         )}
@@ -156,13 +189,29 @@ export function ChannelSettingsModal({
         {bgTab === "image" && (
           <div className="flex items-center gap-3">
             {bg.kind === "image" && (
-              <span className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-line bg-cover bg-center" style={{ backgroundImage: `url(${bg.url})` }} />
+              <span className="h-14 w-20 shrink-0 overflow-hidden rounded-tile border border-line bg-cover bg-center" style={{ backgroundImage: `url(${bg.url})` }} />
             )}
             <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line px-3 py-2 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent">
               {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
               {uploading ? "Subiendo…" : bg.kind === "image" ? "Cambiar imagen" : "Subir imagen"}
               <input type="file" accept="image/*" className="sr-only" onChange={onPickImage} disabled={uploading} />
             </label>
+          </div>
+        )}
+
+        {/* Intensidad: cuánto pesa el fondo. Preview en vivo; guarda al soltar. */}
+        {bg.kind !== "none" && (
+          <div className="mt-3 flex items-center gap-3">
+            <span className="shrink-0 text-xs font-medium text-muted">Intensidad</span>
+            <input
+              type="range" min={35} max={100} value={Math.round(intensityOf(bg) * 100)}
+              onChange={(e) => setBg(withIntensity(bg, Number(e.target.value) / 100))}
+              onPointerUp={() => onSaveBackground?.(bg)}
+              onKeyUp={() => onSaveBackground?.(bg)}
+              className="h-1.5 flex-1 cursor-pointer" style={{ accentColor: "var(--accent)" }}
+              aria-label="Intensidad del fondo"
+            />
+            <span className="w-9 shrink-0 text-right text-xs tabular text-muted">{Math.round(intensityOf(bg) * 100)}%</span>
           </div>
         )}
 
