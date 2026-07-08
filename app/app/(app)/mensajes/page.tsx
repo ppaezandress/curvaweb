@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -12,6 +12,7 @@ import { Composer } from "@/components/chat/Composer";
 import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg } from "@/components/chat/MessageItem";
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
 import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
+import { ChannelFilesModal } from "@/components/chat/ChannelFilesModal";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { SpaceAvatar } from "@/components/chat/SpaceAvatar";
 import { CultureRail } from "@/components/chat/CultureRail";
@@ -44,6 +45,8 @@ export default function MensajesPage() {
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [filesOpen, setFilesOpen] = useState(false);
+  const [filesCount, setFilesCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
@@ -97,6 +100,12 @@ export default function MensajesPage() {
     if (!sb || activeId == null) { setPins([]); return; }
     const { data } = await sb.from("message_pins").select("message_id,channel_id").eq("channel_id", activeId);
     setPins((data as { message_id: number; channel_id: number }[]) || []);
+  }, [sb, activeId]);
+
+  const loadFilesCount = useCallback(async () => {
+    if (!sb || activeId == null) { setFilesCount(0); return; }
+    const { count } = await sb.from("channel_files").select("id", { count: "exact", head: true }).eq("channel_id", activeId);
+    setFilesCount(count || 0);
   }, [sb, activeId]);
 
   // No leídos: compara la última lectura por canal con el último mensaje (de otros).
@@ -184,6 +193,7 @@ export default function MensajesPage() {
         if (active) setReactions((rx as ReactionRow[]) || []);
       } else setReactions([]);
       loadPins();
+      loadFilesCount();
     })();
 
     setTyping({}); // limpia al cambiar de espacio
@@ -215,7 +225,7 @@ export default function MensajesPage() {
       .subscribe();
     chatChanRef.current = sub;
     return () => { active = false; sb.removeChannel(sub); chatChanRef.current = null; };
-  }, [sb, activeId, loadProfiles, myUid, loadPins]);
+  }, [sb, activeId, loadProfiles, myUid, loadPins, loadFilesCount]);
 
   // No leídos: carga inicial + escucha global de mensajes nuevos en otros canales.
   useEffect(() => {
@@ -466,6 +476,10 @@ export default function MensajesPage() {
           <button onClick={() => setShowSaved((s) => !s)} className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", showSaved ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Guardados" title="Mensajes guardados">
             <Bookmark size={16} fill={showSaved ? "currentColor" : "none"} />
           </button>
+          <button onClick={() => setFilesOpen(true)} className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Archivos del canal" title="Archivos del canal">
+            <FolderOpen size={16} />
+            {filesCount > 0 && <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">{filesCount}</span>}
+          </button>
           {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
             <button onClick={() => setSettingsOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Ajustes del canal" title="Ajustes del canal">
               <Settings size={16} />
@@ -579,6 +593,10 @@ export default function MensajesPage() {
           clientId={activeChannel.client_id ?? null}
           onSaveClient={(cid) => saveChannelClient(activeChannel.id, cid)}
         />
+      )}
+
+      {activeChannel && (
+        <ChannelFilesModal open={filesOpen} onClose={() => setFilesOpen(false)} channelId={activeChannel.id} myUid={myUid} isAdmin={isAdmin} profiles={profiles} onChange={loadFilesCount} />
       )}
     </div>
   );
