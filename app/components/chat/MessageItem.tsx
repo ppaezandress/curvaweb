@@ -39,11 +39,11 @@ export function MessageItem({
     <div className={cn("group flex gap-2.5", mine && "flex-row-reverse")}>
       <div className="mt-0.5"><Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={32} /></div>
       <div className={cn("max-w-[78%]", mine && "text-right")}>
-        <p className={cn("text-xs", mine && "text-right")}>
-          <span className={cn(
-            "inline-block text-muted",
-            onBg && "rounded-full bg-surface px-2 py-0.5 shadow-soft",
-          )}>{prof?.name || "—"} · {hhmmFromISO(msg.created_at)}</span>
+        <p className={cn("mb-0.5 text-xs", mine && "text-right")}>
+          <span
+            className={cn("inline-block", onBg ? "font-medium" : "text-muted")}
+            style={onBg ? { color: "var(--fg)", textShadow: "0 0 3px var(--background), 0 0 6px var(--background), 0 1px 2px var(--background)" } : undefined}
+          >{prof?.name || "—"} · {hhmmFromISO(msg.created_at)}</span>
         </p>
 
         {/* Adjunto: imagen / video / audio */}
