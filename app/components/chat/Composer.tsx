@@ -18,7 +18,7 @@ const kindOf = (mime: string): Attachment["type"] =>
 
 // Composer estilo Slack: "@" menciona personas, "/" menciona tareas (→ Notion).
 // Adjuntos: imagen / video / audio (subir archivo o grabar audio).
-export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void }) {
+export function Composer({ tasks, members, onSend, onTyping, chromeless = false }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean }) {
   const [text, setText] = useState("");
   const [trigger, setTrigger] = useState<Trigger>(null);
   const [people, setPeople] = useState<Member[]>([]);
@@ -154,7 +154,7 @@ export function Composer({ tasks, members, onSend, onTyping }: { tasks: Task[]; 
   };
 
   return (
-    <div className="relative border-t border-line pt-3">
+    <div className={chromeless ? "relative" : "relative border-t border-line pt-3"}>
       {/* Dropdown de autocompletado */}
       {trigger && matches.length > 0 && (
         <div className="absolute bottom-full left-0 mb-2 max-h-64 w-full max-w-md overflow-y-auto rounded-card border border-line bg-surface shadow-float">

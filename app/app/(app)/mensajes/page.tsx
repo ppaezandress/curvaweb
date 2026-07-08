@@ -29,7 +29,7 @@ function daySepLabel(iso: string): string {
 }
 
 export default function MensajesPage() {
-  const { currentUserId, isAdmin } = useApp();
+  const { currentUserId, isAdmin, openTasks } = useApp();
   const { members, tasks } = useData();
   const sb = getSupabase();
 
@@ -255,6 +255,8 @@ export default function MensajesPage() {
   const customCh = channels.filter((c) => c.kind === "channel" && canSeeHidden(c));
   const dmCh = channels.filter((c) => c.kind === "dm");
   const activeChannel = channels.find((c) => c.id === activeId);
+  const chatHasBg = hasBackground(activeChannel?.background);
+  const hasDock = openTasks.length > 0; // el dock (timer activo) ocupa espacio abajo
 
   return (
     <div className="flex gap-6">
@@ -280,9 +282,12 @@ export default function MensajesPage() {
       </aside>
 
       {/* Chat */}
-      <div className={cn("relative flex h-[calc(100vh-200px)] min-w-0 flex-1 flex-col overflow-hidden", hasBackground(activeChannel?.background) && "rounded-card")}>
+      <div className={cn(
+        "relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-line/60",
+        hasDock ? "h-[calc(100dvh-230px)] lg:h-[calc(100dvh-176px)]" : "h-[calc(100dvh-190px)] lg:h-[calc(100dvh-96px)]",
+      )}>
         <ChatBackground bg={activeChannel?.background} />
-        <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", hasBackground(activeChannel?.background) && "p-3")}>
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col p-2.5 sm:p-3">
         {/* Selector móvil de espacios */}
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
           {channels.map((c) => (
@@ -292,7 +297,7 @@ export default function MensajesPage() {
           ))}
         </div>
 
-        <div className="mb-3 flex items-center gap-2.5 border-b border-line pb-3">
+        <div className="mb-2.5 flex items-center gap-2.5 rounded-2xl border border-line bg-surface px-3 py-2.5 shadow-soft">
           {activeChannel && renderChannelIcon(activeChannel, 34)}
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}{activeChannel?.is_hidden && <span className="ml-2 rounded-full bg-warn/10 px-2 py-0.5 align-middle text-caption font-semibold text-warn">oculto</span>}</h1>
@@ -309,7 +314,7 @@ export default function MensajesPage() {
           )}
         </div>
 
-        <div className="flex-1 space-y-1.5 overflow-y-auto pr-1">
+        <div className="flex-1 space-y-2 overflow-y-auto px-1 py-1">
           <AnimatePresence initial={false}>
           {messages.map((m, i) => {
             const prev = i > 0 ? messages[i - 1] : null;
@@ -337,13 +342,17 @@ export default function MensajesPage() {
             );
           })}
           </AnimatePresence>
-          {messages.length === 0 && <p className="py-10 text-center text-sm text-muted">Sé el primero en escribir.</p>}
+          {messages.length === 0 && (
+            <div className="flex flex-1 items-center justify-center py-10">
+              <p className="rounded-full bg-surface px-4 py-2 text-sm text-muted shadow-soft">Sé el primero en escribir ✨</p>
+            </div>
+          )}
           <div ref={endRef} />
         </div>
 
         {/* Está escribiendo… (en vivo) */}
         {Object.keys(typing).length > 0 && (
-          <p className="flex items-center gap-1.5 px-2 pt-1.5 text-xs italic text-muted">
+          <p className="mt-1.5 flex w-fit items-center gap-1.5 rounded-full bg-surface px-3 py-1 text-xs italic text-muted shadow-soft">
             <span className="inline-flex gap-0.5">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-200ms]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted [animation-delay:-100ms]" />
@@ -353,7 +362,9 @@ export default function MensajesPage() {
           </p>
         )}
 
-        <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} />
+        <div className="mt-2.5 rounded-2xl border border-line bg-surface px-3 py-2 shadow-soft">
+          <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} chromeless />
+        </div>
         </div>
       </div>
 
