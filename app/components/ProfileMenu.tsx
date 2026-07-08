@@ -21,6 +21,7 @@ export function ProfileMenu() {
 
   const [open, setOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
+  const [alignLeft, setAlignLeft] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -86,7 +87,11 @@ export function ProfileMenu() {
     <div className="relative" ref={boxRef}>
       <button
         onClick={() => {
-          if (!open && boxRef.current) setDropUp(boxRef.current.getBoundingClientRect().top > window.innerHeight / 2);
+          if (!open && boxRef.current) {
+            const r = boxRef.current.getBoundingClientRect();
+            setDropUp(r.top > window.innerHeight / 2);
+            setAlignLeft(r.left < window.innerWidth / 2);
+          }
           setOpen((o) => !o);
         }}
         className="rounded-full ring-accent/40 transition hover:ring-2 focus-ring"
@@ -103,8 +108,10 @@ export function ProfileMenu() {
           animate="visible"
           exit="hidden"
           className={cn(
-            "absolute right-0 z-50 w-64 overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float",
-            dropUp ? "bottom-full mb-2 origin-bottom-right" : "mt-2 origin-top-right",
+            "absolute z-50 w-64 overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float",
+            dropUp ? "bottom-full mb-2" : "mt-2",
+            alignLeft ? "left-0" : "right-0",
+            dropUp && alignLeft ? "origin-bottom-left" : dropUp ? "origin-bottom-right" : alignLeft ? "origin-top-left" : "origin-top-right",
           )}
         >
           <div className="flex items-center gap-3 border-b border-line p-4">
