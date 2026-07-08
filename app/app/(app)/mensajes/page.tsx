@@ -12,11 +12,13 @@ import { Composer } from "@/components/chat/Composer";
 import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg } from "@/components/chat/MessageItem";
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
 import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
+import { ChatBackground } from "@/components/chat/ChatBackground";
 import { SpaceAvatar } from "@/components/chat/SpaceAvatar";
 import { CultureRail } from "@/components/chat/CultureRail";
+import { hasBackground, type ChatBackground as ChatBg } from "@/lib/chat-backgrounds";
 import { cn } from "@/lib/cn";
 
-type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean };
+type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean; background?: ChatBg | null };
 type ReactionRow = { id: number; message_id: number; user_id: string; emoji: string };
 
 function daySepLabel(iso: string): string {
@@ -182,6 +184,15 @@ export default function MensajesPage() {
   const setChannelHidden = async (id: number, hidden: boolean) => { if (!sb) return; await sb.from("channels").update({ is_hidden: hidden }).eq("id", id); await loadChannels(); };
   const addChannelMember = async (id: number, uid: string) => { if (!sb) return; await sb.from("channel_members").insert({ channel_id: id, user_id: uid }); await loadChannels(); };
   const removeChannelMember = async (id: number, uid: string) => { if (!sb) return; await sb.from("channel_members").delete().eq("channel_id", id).eq("user_id", uid); await loadChannels(); };
+  const saveChannelBackground = async (id: number, bg: ChatBg) => { if (!sb) return; await sb.from("channels").update({ background: bg }).eq("id", id); await loadChannels(); };
+  const uploadChannelBg = async (file: File): Promise<string | null> => {
+    if (!sb || !myUid) return null;
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${myUid}/${activeId ?? "ch"}-${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from("channel-backgrounds").upload(path, file, { upsert: true, cacheControl: "3600" });
+    if (error) return null;
+    return sb.storage.from("channel-backgrounds").getPublicUrl(path).data.publicUrl;
+  };
 
   const startDM = async (otherProfileId: string) => {
     if (!sb || !myUid) return;
@@ -269,7 +280,9 @@ export default function MensajesPage() {
       </aside>
 
       {/* Chat */}
-      <div className="flex h-[calc(100vh-200px)] min-w-0 flex-1 flex-col">
+      <div className={cn("relative flex h-[calc(100vh-200px)] min-w-0 flex-1 flex-col overflow-hidden", hasBackground(activeChannel?.background) && "rounded-card")}>
+        <ChatBackground bg={activeChannel?.background} />
+        <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", hasBackground(activeChannel?.background) && "p-3")}>
         {/* Selector móvil de espacios */}
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
           {channels.map((c) => (
@@ -341,6 +354,7 @@ export default function MensajesPage() {
         )}
 
         <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} />
+        </div>
       </div>
 
       {/* Cultura: buena onda recibida + presencia del equipo */}
@@ -350,6 +364,7 @@ export default function MensajesPage() {
 
       {activeChannel && (
         <ChannelSettingsModal
+          key={activeChannel.id}
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
           channel={activeChannel}
@@ -361,6 +376,9 @@ export default function MensajesPage() {
           onToggleHidden={(hidden) => setChannelHidden(activeChannel.id, hidden)}
           onAddMember={(uid) => addChannelMember(activeChannel.id, uid)}
           onRemoveMember={(uid) => removeChannelMember(activeChannel.id, uid)}
+          background={activeChannel.background ?? null}
+          onSaveBackground={(bg) => saveChannelBackground(activeChannel.id, bg)}
+          onUploadImage={uploadChannelBg}
         />
       )}
     </div>
