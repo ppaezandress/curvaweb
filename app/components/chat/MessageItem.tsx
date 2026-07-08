@@ -127,7 +127,7 @@ export function MessageItem({
                     initial="hidden"
                     animate="visible"
                     exit="hidden"
-                    className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-surface p-1.5 shadow-float", mine ? "right-0 origin-top-right" : "left-0 origin-top-left")}
+                    className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-[var(--surface-solid)] p-1.5 shadow-float", mine ? "right-0 origin-top-right" : "left-0 origin-top-left")}
                   >
                     {EMOJIS.map((e) => (
                       <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">

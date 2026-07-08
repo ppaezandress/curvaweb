@@ -157,7 +157,7 @@ export function Composer({ tasks, members, onSend, onTyping, chromeless = false 
     <div className={chromeless ? "relative" : "relative border-t border-line pt-3"}>
       {/* Dropdown de autocompletado */}
       {trigger && matches.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-2 max-h-64 w-full max-w-md overflow-y-auto rounded-card border border-line bg-surface shadow-float">
+        <div className="absolute bottom-full left-0 mb-2 max-h-64 w-full max-w-md overflow-y-auto rounded-card border border-line bg-[var(--surface-solid)] shadow-float">
           <p className="px-3 pt-2 text-caption font-semibold text-muted">
             {trigger.kind === "user" ? "Mencionar persona" : "Mencionar tarea"}
           </p>

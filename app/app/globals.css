@@ -120,6 +120,7 @@
      Alpha alta (0.80/0.62) para conservar legibilidad sobre el cosmos. */
   --surface: rgba(255, 255, 255, 0.66);
   --surface-2: rgba(248, 248, 253, 0.50);
+  --surface-solid: #ffffff; /* superficies que NO deben ser glass: modales, dropdowns, popovers */
   --line: rgba(150, 140, 200, 0.22);
   /* Acento ÚNICO — violeta team tac (mismo del logo) */
   --accent: #6c47f5;
@@ -167,6 +168,7 @@
   /* Paneles de vidrio flotando sobre el vacío — translúcidos + blur. */
   --surface: rgba(26, 24, 40, 0.55);
   --surface-2: rgba(16, 15, 28, 0.48);
+  --surface-solid: #17151f; /* superficies opacas (modales, dropdowns) en oscuro */
   --line: rgba(150, 140, 220, 0.16);
   /* En oscuro el acento sube un punto para respirar sobre el fondo profundo */
   --accent: #8b6bf8;

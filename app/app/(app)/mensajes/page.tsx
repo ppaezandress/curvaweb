@@ -212,7 +212,7 @@ export default function MensajesPage() {
 
   // Etiqueta de un espacio (Equipo / DM → nombre del otro)
   const channelLabel = useCallback((c: Channel): string => {
-    if (c.kind === "team") return "Equipo";
+    if (c.kind === "team") { const n = (c.name || "").trim(); return !n || /^(equipo|team)$/i.test(n) ? "Equipo" : n; }
     if (c.kind === "dm") {
       const other = memberships.find((m) => m.channel_id === c.id && m.user_id !== myUid);
       return other ? (profiles[other.user_id]?.name || "Directo") : "Directo";
@@ -269,7 +269,7 @@ export default function MensajesPage() {
           <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin directos aún"
             action={<button onClick={() => setDmPickerOpen((o) => !o)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo directo"><MessageSquarePlus size={15} /></button>} />
           {dmPickerOpen && (
-            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-card border border-line bg-surface shadow-float">
+            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float">
               {teammatesWithAccount.length === 0 && <p className="px-3 py-3 text-xs text-muted">Nadie más tiene cuenta aún.</p>}
               {teammatesWithAccount.map((m) => (
                 <button key={m.id} onClick={() => startDM(notionToProfile[m.id].id)} className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-surface-2 focus-ring">
