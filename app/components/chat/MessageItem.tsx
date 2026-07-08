@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ListTodo, SmilePlus, AtSign } from "lucide-react";
+import { ListTodo, SmilePlus, AtSign, Reply, Pencil, Trash2, Pin, PinOff, Check, X } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { popover } from "@/lib/motion";
 import { hhmmFromISO } from "@/lib/format";
@@ -11,14 +11,46 @@ import { VoiceBubble } from "@/components/chat/VoiceBubble";
 import { VideoBubble } from "@/components/chat/VideoBubble";
 import { cn } from "@/lib/cn";
 
-export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null };
+export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null; edited_at?: string | null; deleted_at?: string | null; parent_id?: number | null };
 export type ChatProfile = { id: string; name: string; avatar_url: string | null };
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
 const EMOJIS = ["👍", "❤️", "🎉", "🔥", "😂", "👀", "🙌", "💯", "🚀", "🤝", "🙏", "✅", "💪", "⚡", "😮", "🫶"];
 
+// Texto plano de un mensaje (para la cita de respuesta): sin tokens ni saltos.
+function plain(body: string): string {
+  return body.replace(/[@/]\[[^\]]+\]\([^)]+\)/g, (m) => m.replace(/^[@/]\[/, "").replace(/\]\([^)]+\)$/, "")).replace(/\s+/g, " ").trim();
+}
+
+// Editor inline (se monta al editar; su estado inicial es el cuerpo, sin efecto de sync).
+function MessageEditor({ initial, onSave, onCancel }: { initial: string; onSave: (body: string) => void; onCancel: () => void }) {
+  const [draft, setDraft] = useState(initial);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { const el = ref.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, []);
+  return (
+    <div className="mt-0.5 w-[min(78vw,26rem)]">
+      <textarea
+        ref={ref} value={draft} onChange={(e) => setDraft(e.target.value)} rows={2}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSave(draft); }
+          if (e.key === "Escape") onCancel();
+        }}
+        className="w-full resize-none rounded-card border border-accent/50 bg-[var(--surface-solid)] px-3 py-2 text-left text-sm text-fg outline-none focus-ring"
+      />
+      <div className="mt-1 flex items-center gap-2 text-xs">
+        <button onClick={() => onSave(draft)} className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 font-semibold text-white transition hover:opacity-90"><Check size={12} /> Guardar</button>
+        <button onClick={onCancel} className="rounded-full px-2 py-1 font-medium text-muted transition hover:text-fg">Cancelar</button>
+        <span className="hidden text-muted sm:inline">Esc cancela · Enter guarda</span>
+      </div>
+    </div>
+  );
+}
+
 export function MessageItem({
   msg, prof, mine, reactions, onToggleReaction, onBg = false,
+  grouped = false, pinned = false, canModify = false, editing = false,
+  parentMsg, parentProf,
+  onReply, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onTogglePin,
 }: {
   msg: ChatMsg;
   prof?: ChatProfile;
@@ -26,29 +58,66 @@ export function MessageItem({
   reactions: ReactionAgg[];
   onToggleReaction: (messageId: number, emoji: string) => void;
   onBg?: boolean;
+  grouped?: boolean;
+  pinned?: boolean;
+  canModify?: boolean;
+  editing?: boolean;
+  parentMsg?: ChatMsg | null;
+  parentProf?: ChatProfile;
+  onReply?: (msg: ChatMsg) => void;
+  onStartEdit?: (id: number) => void;
+  onCancelEdit?: () => void;
+  onSaveEdit?: (id: number, body: string) => void;
+  onDelete?: (id: number) => void;
+  onTogglePin?: (msg: ChatMsg) => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
 
   if (msg.kind === "system") {
     return <div className="py-1 text-center text-xs text-accent">🎵 {msg.body}</div>;
   }
 
+  // Mensaje eliminado: rastro discreto, sin acciones.
+  if (msg.deleted_at) {
+    return (
+      <div className={cn("flex gap-2.5", mine && "flex-row-reverse")}>
+        <div className="w-8 shrink-0" />
+        <p className="mt-0.5 text-xs italic text-muted">Mensaje eliminado</p>
+      </div>
+    );
+  }
+
   const parts = parseMessage(msg.body);
+  const nameHalo = onBg ? { color: "var(--fg)", textShadow: "0 0 3px var(--background), 0 0 6px var(--background), 0 1px 2px var(--background)" } : undefined;
 
   return (
-    <div className={cn("group flex gap-2.5", mine && "flex-row-reverse")}>
-      <div className="mt-0.5"><Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={32} /></div>
-      <div className={cn("max-w-[78%]", mine && "text-right")}>
-        <p className={cn("mb-0.5 text-xs", mine && "text-right")}>
-          <span
-            className={cn("inline-block", onBg ? "font-medium" : "text-muted")}
-            style={onBg ? { color: "var(--fg)", textShadow: "0 0 3px var(--background), 0 0 6px var(--background), 0 1px 2px var(--background)" } : undefined}
-          >{prof?.name || "—"} · {hhmmFromISO(msg.created_at)}</span>
-        </p>
+    <div className={cn("group relative flex gap-2.5", mine && "flex-row-reverse", grouped ? "mt-0.5" : "mt-1.5")}>
+      {grouped
+        ? <div className="w-8 shrink-0 text-center text-[10px] leading-8 text-transparent transition group-hover:text-muted" style={nameHalo}>{hhmmFromISO(msg.created_at)}</div>
+        : <div className="mt-0.5"><Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={32} /></div>}
 
-        {/* Adjunto: imagen / video / audio */}
-        {msg.attachment_url && (
-          <div className={cn("mt-1 inline-block overflow-hidden", mine && "text-right")}>
+      <div className={cn("relative max-w-[78%]", mine && "text-right")}>
+        {!grouped && (
+          <p className={cn("mb-0.5 text-xs", mine && "text-right")}>
+            <span className={cn("inline-block font-medium", !onBg && "text-muted")} style={nameHalo}>
+              {prof?.name || "—"} · {hhmmFromISO(msg.created_at)}
+            </span>
+            {pinned && <Pin size={11} className="ml-1 inline text-accent" fill="currentColor" />}
+          </p>
+        )}
+
+        {/* Cita del mensaje al que se responde */}
+        {parentMsg && (
+          <div className={cn("mb-1 inline-flex max-w-full items-center gap-1.5 rounded-lg border-l-2 border-accent/50 bg-surface-2/60 px-2 py-1 text-left text-xs", mine && "flex-row-reverse text-right")}>
+            <Reply size={11} className="shrink-0 text-accent" />
+            <span className="min-w-0 truncate text-muted"><b className="text-fg/80">{parentProf?.name?.split(" ")[0] || "—"}:</b> {parentMsg.deleted_at ? "mensaje eliminado" : (plain(parentMsg.body) || "adjunto")}</span>
+          </div>
+        )}
+
+        {/* Adjunto */}
+        {msg.attachment_url && !editing && (
+          <div className={cn("mt-0.5 inline-block overflow-hidden", mine && "text-right")}>
             {msg.attachment_type === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
               <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
@@ -62,84 +131,76 @@ export function MessageItem({
           </div>
         )}
 
-        {msg.body.trim() && (
-        <div className={cn("mt-0.5 inline-block rounded-card px-3.5 py-2 text-left text-sm", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
-          {parts.map((p, i) =>
-            p.type === "text" ? (
-              <span key={i} className="whitespace-pre-wrap">{p.text}</span>
-            ) : p.type === "user" ? (
-              <span
-                key={i}
-                className={cn(
-                  "mx-0.5 inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 align-middle text-xs font-semibold",
-                  mine ? "bg-surface/20" : "bg-accent/10 text-accent",
-                )}
-              >
-                <AtSign size={10} />{p.name}
-              </span>
-            ) : (
-              <a
-                key={i}
-                href={notionTaskUrl(p.id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "mx-0.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 align-middle text-xs font-medium transition",
-                  mine ? "bg-surface/20 hover:bg-surface/30" : "bg-accent/10 text-accent hover:bg-accent/20",
-                )}
-                title="Abrir en Notion"
-              >
-                <ListTodo size={11} /> {p.name}
-              </a>
-            ),
-          )}
-        </div>
+        {/* Cuerpo: editor inline o burbuja */}
+        {editing ? (
+          <MessageEditor initial={msg.body} onSave={(b) => onSaveEdit?.(msg.id, b)} onCancel={() => onCancelEdit?.()} />
+        ) : msg.body.trim() && (
+          <div className={cn("mt-0.5 inline-block rounded-card px-3.5 py-2 text-left text-sm", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
+            {parts.map((p, i) =>
+              p.type === "text" ? (
+                <span key={i} className="whitespace-pre-wrap">{p.text}</span>
+              ) : p.type === "user" ? (
+                <span key={i} className={cn("mx-0.5 inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 align-middle text-xs font-semibold", mine ? "bg-surface/20" : "bg-accent/10 text-accent")}>
+                  <AtSign size={10} />{p.name}
+                </span>
+              ) : (
+                <a key={i} href={notionTaskUrl(p.id)} target="_blank" rel="noopener noreferrer" className={cn("mx-0.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 align-middle text-xs font-medium transition", mine ? "bg-surface/20 hover:bg-surface/30" : "bg-accent/10 text-accent hover:bg-accent/20")} title="Abrir en Notion">
+                  <ListTodo size={11} /> {p.name}
+                </a>
+              ),
+            )}
+            {msg.edited_at && <span className={cn("ml-1.5 align-middle text-[10px]", mine ? "text-white/60" : "text-muted")}>(editado)</span>}
+          </div>
         )}
 
         {/* Reacciones */}
+        {!editing && (
         <div className={cn("mt-1 flex items-center gap-1", mine && "justify-end")}>
           {reactions.map((r) => (
-            <button
-              key={r.emoji}
-              onClick={() => onToggleReaction(msg.id, r.emoji)}
-              className={cn(
-                "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs transition focus-ring",
-                r.mine ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-muted/40",
-              )}
-            >
+            <button key={r.emoji} onClick={() => onToggleReaction(msg.id, r.emoji)} className={cn("inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs transition focus-ring", r.mine ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-muted/40")}>
               {r.emoji} {r.count}
             </button>
           ))}
-          <div className="relative">
-            <button
-              onClick={() => setPickerOpen((o) => !o)}
-              className="rounded-full p-1 text-muted/70 opacity-100 transition hover:bg-surface-2 hover:text-fg focus-ring focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-              aria-label="Reaccionar"
-            >
-              <SmilePlus size={14} />
-            </button>
-            <AnimatePresence>
-              {pickerOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
-                  <motion.div
-                    variants={popover}
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-[var(--surface-solid)] p-1.5 shadow-float", mine ? "right-0 origin-top-right" : "left-0 origin-top-left")}
-                  >
-                    {EMOJIS.map((e) => (
-                      <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">
-                        {e}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
+        )}
+
+        {/* Toolbar de acciones (hover) — estilo Slack */}
+        {!editing && (
+          <div className={cn("absolute -top-3 z-10 hidden items-center gap-0.5 rounded-full border border-line bg-[var(--surface-solid)] px-1 py-0.5 shadow-float group-hover:flex", mine ? "left-0" : "right-0")}>
+            <div className="relative">
+              <button onClick={() => setPickerOpen((o) => !o)} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring" aria-label="Reaccionar"><SmilePlus size={14} /></button>
+              <AnimatePresence>
+                {pickerOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
+                    <motion.div variants={popover} initial="hidden" animate="visible" exit="hidden" className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-[var(--surface-solid)] p-1.5 shadow-float", mine ? "left-0 origin-top-left" : "right-0 origin-top-right")}>
+                      {EMOJIS.map((e) => (
+                        <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">{e}</button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+            <button onClick={() => onReply?.(msg)} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring" aria-label="Responder" title="Responder"><Reply size={14} /></button>
+            <button onClick={() => onTogglePin?.(msg)} className={cn("rounded-full p-1.5 transition hover:bg-surface-2 focus-ring", pinned ? "text-accent" : "text-muted hover:text-fg")} aria-label={pinned ? "Quitar fijado" : "Fijar"} title={pinned ? "Quitar fijado" : "Fijar"}>
+              {pinned ? <PinOff size={14} /> : <Pin size={14} />}
+            </button>
+            {canModify && (
+              <>
+                <button onClick={() => onStartEdit?.(msg.id)} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring" aria-label="Editar" title="Editar"><Pencil size={14} /></button>
+                {confirmDel ? (
+                  <span className="flex items-center gap-0.5">
+                    <button onClick={() => { onDelete?.(msg.id); setConfirmDel(false); }} className="rounded-full px-2 py-1 text-xs font-semibold text-danger transition hover:bg-danger/10 focus-ring">Borrar</button>
+                    <button onClick={() => setConfirmDel(false)} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 focus-ring" aria-label="Cancelar"><X size={13} /></button>
+                  </span>
+                ) : (
+                  <button onClick={() => setConfirmDel(true)} className="rounded-full p-1.5 text-muted transition hover:bg-danger/10 hover:text-danger focus-ring" aria-label="Borrar" title="Borrar"><Trash2 size={14} /></button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

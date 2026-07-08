@@ -2,7 +2,7 @@
 import { toast } from "@/lib/toast";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, Music, Trash2, Video } from "lucide-react";
+import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, Music, Trash2, Video, Reply } from "lucide-react";
 import type { Task, Member } from "@/lib/mock-data";
 import { taskToken, userToken } from "@/lib/notion-url";
 import { getSupabase } from "@/lib/supabase/client";
@@ -18,7 +18,7 @@ const kindOf = (mime: string): Attachment["type"] =>
 
 // Composer estilo Slack: "@" menciona personas, "/" menciona tareas (→ Notion).
 // Adjuntos: imagen / video / audio (subir archivo o grabar audio).
-export function Composer({ tasks, members, onSend, onTyping, chromeless = false }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean }) {
+export function Composer({ tasks, members, onSend, onTyping, chromeless = false, replyingTo, onCancelReply }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean; replyingTo?: { name: string; preview: string } | null; onCancelReply?: () => void }) {
   const [text, setText] = useState("");
   const [trigger, setTrigger] = useState<Trigger>(null);
   const [people, setPeople] = useState<Member[]>([]);
@@ -155,6 +155,14 @@ export function Composer({ tasks, members, onSend, onTyping, chromeless = false 
 
   return (
     <div className={chromeless ? "relative" : "relative border-t border-line pt-3"}>
+      {/* Respondiendo a un mensaje (estilo Slack) */}
+      {replyingTo && (
+        <div className="mb-2 flex items-center gap-2 rounded-control border-l-2 border-accent bg-surface-2/60 px-3 py-1.5">
+          <Reply size={13} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1 truncate text-xs text-muted"><b className="text-fg">Respondiendo a {replyingTo.name.split(" ")[0]}</b> · {replyingTo.preview}</span>
+          <button onClick={onCancelReply} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring" aria-label="Cancelar respuesta"><X size={13} /></button>
+        </div>
+      )}
       {/* Dropdown de autocompletado */}
       {trigger && matches.length > 0 && (
         <div className="absolute bottom-full left-0 mb-2 max-h-64 w-full max-w-md overflow-y-auto rounded-card border border-line bg-[var(--surface-solid)] shadow-float">

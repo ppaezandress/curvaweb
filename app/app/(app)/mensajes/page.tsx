@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -44,6 +44,10 @@ export default function MensajesPage() {
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
+  const [query, setQuery] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const profilesRef = useRef(profiles); profilesRef.current = profiles;
   // "Está escribiendo…" en vivo (broadcast, sin tocar la BD).
@@ -82,6 +86,12 @@ export default function MensajesPage() {
     return (chs as Channel[]) || [];
   }, [sb]);
 
+  const loadPins = useCallback(async () => {
+    if (!sb || activeId == null) { setPins([]); return; }
+    const { data } = await sb.from("message_pins").select("message_id,channel_id").eq("channel_id", activeId);
+    setPins((data as { message_id: number; channel_id: number }[]) || []);
+  }, [sb, activeId]);
+
   // Init
   useEffect(() => {
     if (!supabaseConfigured() || !sb) { setAuthed(false); return; }
@@ -110,6 +120,7 @@ export default function MensajesPage() {
         const { data: rx } = await sb.from("message_reactions").select("id,message_id,user_id,emoji").in("message_id", ids);
         if (active) setReactions((rx as ReactionRow[]) || []);
       } else setReactions([]);
+      loadPins();
     })();
 
     setTyping({}); // limpia al cambiar de espacio
@@ -121,6 +132,13 @@ export default function MensajesPage() {
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
           if (m.user_id) setTyping((t) => { if (!t[m.user_id!]) return t; const n = { ...t }; delete n[m.user_id!]; return n; }); // dejó de escribir
         })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `channel_id=eq.${activeId}` },
+        (payload: { new: ChatMsg }) => {
+          const m = payload.new;
+          setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+        })
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_pins", filter: `channel_id=eq.${activeId}` },
+        () => loadPins())
       .on("postgres_changes", { event: "*", schema: "public", table: "message_reactions" },
         async () => {
           const { data: msgs } = await sb.from("messages").select("id").eq("channel_id", activeId);
@@ -134,7 +152,7 @@ export default function MensajesPage() {
       .subscribe();
     chatChanRef.current = sub;
     return () => { active = false; sb.removeChannel(sub); chatChanRef.current = null; };
-  }, [sb, activeId, loadProfiles, myUid]);
+  }, [sb, activeId, loadProfiles, myUid, loadPins]);
 
   // Expira a quien dejó de escribir (>3.5s sin señal).
   useEffect(() => {
@@ -159,7 +177,24 @@ export default function MensajesPage() {
     if (!sb || !myUid || activeId == null) return;
     const row: Record<string, unknown> = { channel_id: activeId, user_id: myUid, body, kind: "user" };
     if (attachment) { row.attachment_url = attachment.url; row.attachment_type = attachment.type; }
+    if (replyingTo) row.parent_id = replyingTo.id;
     await sb.from("messages").insert(row);
+    setReplyingTo(null);
+  };
+
+  const editMessage = async (id: number, body: string) => {
+    if (!sb || !body.trim()) return;
+    await sb.from("messages").update({ body: body.trim(), edited_at: new Date().toISOString() }).eq("id", id);
+    setEditingId(null);
+  };
+  const deleteMessage = async (id: number) => {
+    if (!sb) return;
+    await sb.from("messages").update({ deleted_at: new Date().toISOString(), body: "", attachment_url: null, attachment_type: null }).eq("id", id);
+  };
+  const togglePin = async (m: ChatMsg) => {
+    if (!sb || !myUid || activeId == null) return;
+    if (pins.some((p) => p.message_id === m.id)) await sb.from("message_pins").delete().eq("message_id", m.id);
+    else await sb.from("message_pins").insert({ message_id: m.id, channel_id: activeId, pinned_by: myUid });
   };
 
   const toggleReaction = async (messageId: number, emoji: string) => {
@@ -257,6 +292,12 @@ export default function MensajesPage() {
   const activeChannel = channels.find((c) => c.id === activeId);
   const chatHasBg = hasBackground(activeChannel?.background);
   const hasDock = openTasks.length > 0; // el dock (timer activo) ocupa espacio abajo
+  const pinnedSet = new Set(pins.map((p) => p.message_id));
+  const msgById = new Map(messages.map((m) => [m.id, m]));
+  const q = query.trim().toLowerCase();
+  const visibleMessages = q ? messages.filter((m) => !m.deleted_at && (m.body || "").toLowerCase().includes(q)) : messages;
+  const pinnedMessages = messages.filter((m) => pinnedSet.has(m.id) && !m.deleted_at);
+  const replyingProf = replyingTo?.user_id ? profiles[replyingTo.user_id] : undefined;
 
   return (
     <div className="flex gap-6">
@@ -307,6 +348,10 @@ export default function MensajesPage() {
                 : "Espacio privado · tiempo real"}
             </p>
           </div>
+          <div className="relative hidden sm:block">
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" className="w-32 rounded-full border border-line bg-surface-2/60 py-1.5 pl-8 pr-2 text-sm text-fg outline-none transition focus:w-44 focus:border-accent focus-ring" />
+          </div>
           {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
             <button onClick={() => setSettingsOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Ajustes del canal" title="Ajustes del canal">
               <Settings size={16} />
@@ -314,37 +359,53 @@ export default function MensajesPage() {
           )}
         </div>
 
-        <div className="flex-1 space-y-2 overflow-y-auto px-1 py-1">
+        {/* Barra de mensajes fijados */}
+        {pinnedMessages.length > 0 && !q && (
+          <div className="mb-2 flex items-start gap-2 rounded-xl border border-line bg-surface px-3 py-2 shadow-soft">
+            <Pin size={13} className="mt-0.5 shrink-0 text-accent" fill="currentColor" />
+            <div className="min-w-0 flex-1 space-y-1">
+              {pinnedMessages.slice(-3).map((m) => (
+                <button key={m.id} onClick={() => setQuery("")} className="block w-full truncate text-left text-xs text-muted transition hover:text-fg">
+                  <b className="text-fg/80">{(m.user_id ? profiles[m.user_id]?.name : "")?.split(" ")[0] || "—"}:</b> {(m.body || "adjunto").replace(/\s+/g, " ").slice(0, 90)}
+                </button>
+              ))}
+            </div>
+            <span className="shrink-0 rounded-full bg-accent/10 px-1.5 text-caption font-semibold text-accent">{pinnedMessages.length}</span>
+          </div>
+        )}
+
+        <div className="flex-1 space-y-0.5 overflow-y-auto px-1 py-1">
           <AnimatePresence initial={false}>
-          {messages.map((m, i) => {
-            const prev = i > 0 ? messages[i - 1] : null;
+          {visibleMessages.map((m, i) => {
+            const prev = i > 0 ? visibleMessages[i - 1] : null;
             const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
+            const grouped = !q && !newDay && !!prev && prev.user_id === m.user_id && prev.kind !== "system" && !prev.deleted_at && !m.parent_id
+              && (new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000);
+            const parent = m.parent_id ? msgById.get(m.parent_id) : null;
             return (
-              <motion.div
-                key={m.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: DUR_BASE, ease: EASE_CURVA }}
-                className="space-y-1.5"
-              >
-                {newDay && (
+              <motion.div key={m.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: DUR_BASE, ease: EASE_CURVA }}>
+                {newDay && !q && (
                   <div className="my-3 flex items-center gap-3">
                     <span className="h-px flex-1 bg-line" />
                     <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-caption font-semibold text-muted">{daySepLabel(m.created_at)}</span>
                     <span className="h-px flex-1 bg-line" />
                   </div>
                 )}
-                <MessageItem msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
-                  reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} onBg={chatHasBg} />
+                <MessageItem
+                  msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
+                  reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} onBg={chatHasBg}
+                  grouped={grouped} pinned={pinnedSet.has(m.id)} canModify={m.user_id === myUid} editing={editingId === m.id}
+                  parentMsg={parent} parentProf={parent?.user_id ? profiles[parent.user_id] : undefined}
+                  onReply={setReplyingTo} onStartEdit={setEditingId} onCancelEdit={() => setEditingId(null)}
+                  onSaveEdit={editMessage} onDelete={deleteMessage} onTogglePin={togglePin}
+                />
               </motion.div>
             );
           })}
           </AnimatePresence>
-          {messages.length === 0 && (
+          {visibleMessages.length === 0 && (
             <div className="flex flex-1 items-center justify-center py-10">
-              <p className="rounded-full bg-surface px-4 py-2 text-sm text-muted shadow-soft">Sé el primero en escribir ✨</p>
+              <p className="rounded-full bg-surface px-4 py-2 text-sm text-muted shadow-soft">{q ? "Sin resultados para tu búsqueda." : "Sé el primero en escribir ✨"}</p>
             </div>
           )}
           <div ref={endRef} />
@@ -363,7 +424,9 @@ export default function MensajesPage() {
         )}
 
         <div className="mt-2.5 rounded-2xl border border-line bg-surface px-3 py-2 shadow-soft">
-          <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} chromeless />
+          <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} chromeless
+            replyingTo={replyingTo ? { name: replyingProf?.name || "alguien", preview: (replyingTo.body || "adjunto").replace(/\s+/g, " ").slice(0, 60) } : null}
+            onCancelReply={() => setReplyingTo(null)} />
         </div>
         </div>
       </div>
