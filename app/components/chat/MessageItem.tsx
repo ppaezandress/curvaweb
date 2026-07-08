@@ -18,13 +18,14 @@ export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 const EMOJIS = ["👍", "❤️", "🎉", "🔥", "😂", "👀", "🙌", "💯", "🚀", "🤝", "🙏", "✅", "💪", "⚡", "😮", "🫶"];
 
 export function MessageItem({
-  msg, prof, mine, reactions, onToggleReaction,
+  msg, prof, mine, reactions, onToggleReaction, onBg = false,
 }: {
   msg: ChatMsg;
   prof?: ChatProfile;
   mine: boolean;
   reactions: ReactionAgg[];
   onToggleReaction: (messageId: number, emoji: string) => void;
+  onBg?: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -38,7 +39,12 @@ export function MessageItem({
     <div className={cn("group flex gap-2.5", mine && "flex-row-reverse")}>
       <div className="mt-0.5"><Avatar name={prof?.name || "?"} src={prof?.avatar_url} size={32} /></div>
       <div className={cn("max-w-[78%]", mine && "text-right")}>
-        <p className="text-xs text-muted">{prof?.name || "—"} · {hhmmFromISO(msg.created_at)}</p>
+        <p className={cn("text-xs", mine && "text-right")}>
+          <span className={cn(
+            "inline-block text-muted",
+            onBg && "rounded-full bg-surface px-2 py-0.5 shadow-soft",
+          )}>{prof?.name || "—"} · {hhmmFromISO(msg.created_at)}</span>
+        </p>
 
         {/* Adjunto: imagen / video / audio */}
         {msg.attachment_url && (

@@ -337,7 +337,7 @@ export default function MensajesPage() {
                   </div>
                 )}
                 <MessageItem msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
-                  reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} />
+                  reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} onBg={chatHasBg} />
               </motion.div>
             );
           })}
