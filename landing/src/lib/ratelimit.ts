@@ -15,17 +15,19 @@ async function upstash(key: string, windowSec: number): Promise<number | null> {
   const { url, token } = cfg();
   if (!url || !token) return null;
   try {
-    // INCR key ; si es el primer hit, EXPIRE key windowSec.
-    const incrRes = await fetch(`${url}/incr/${encodeURIComponent(key)}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    // INCR + EXPIRE(NX) en un pipeline ATÓMICO: el TTL se fija en la misma llamada
+    // que el INCR, así la key nunca queda sin expiración (evita el bloqueo permanente
+    // que ocurría si el proceso moría entre un INCR y un EXPIRE separados).
+    const res = await fetch(`${url.replace(/\/$/, '')}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        ['INCR', key],
+        ['EXPIRE', key, String(windowSec), 'NX'],
+      ]),
     });
-    const incr: any = await incrRes.json();
-    const count = Number(incr?.result ?? 0);
-    if (count === 1) {
-      await fetch(`${url}/expire/${encodeURIComponent(key)}/${windowSec}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    }
+    const out: any = await res.json();
+    const count = Number(out?.[0]?.result ?? 0);
     return count;
   } catch {
     return null;

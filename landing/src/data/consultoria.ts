@@ -51,18 +51,14 @@ export const frentes: FrenteConsultoria[] = [
     pilares: [
       {
         id: 'customers',
-        titulo: 'Clientes y marketing',
-        subtitulo: 'Cómo consigues, entiendes y conservas a tus clientes.',
+        titulo: 'Clientes y ventas',
+        subtitulo: 'Los sistemas para conseguir, entender y conservar a tus clientes — con datos, no a pulso.',
         bullets: [
-          'CRMs',
-          'Neuromarketing',
-          'Segmentación de audiencias',
-          'Contenido',
-          'GEO, SEO y ASO',
-          'SEM',
-          'UX y UI',
+          'CRM y gestión de clientes',
+          'Segmentación con datos',
           'Optimización de precios',
-          'Sistemas de gestión',
+          'Experiencia de compra (UX/UI)',
+          'Retención y seguimiento',
         ],
       },
       {
@@ -71,6 +67,7 @@ export const frentes: FrenteConsultoria[] = [
         subtitulo: 'Los sistemas de información que ordenan cómo trabajas por dentro. Un sistema de información es Odoo o Notion.',
         bullets: [
           'Sistemas de información (Odoo, Notion)',
+          'Agentes de IA (incluidos agentes de Notion)',
           'Agilidad en los procesos',
           'Modelos de negocio digitales',
         ],

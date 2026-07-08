@@ -11,7 +11,6 @@ const waLink = buildWa('Hola 👋, me interesa saber más sobre las soluciones d
 
 // gold/jade (cian #38bdf8) NO pasan contraste como texto sobre fondo claro → azul (ember).
 const accentText = { ember: 'text-ember', gold: 'text-ember', jade: 'text-ember' } as const;
-const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-gold' } as const;
 const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/15', jade: 'bg-gold/12' } as const;
 
 // Iconos por tipo de solución (trazo, coherentes con el resto del sitio).
@@ -22,6 +21,34 @@ const icons: Record<string, string> = {
   notion: 'M5 4h11l3 3v13H5V4zm3 5h8M8 12h8M8 15h5',
   template: 'M4 5h16v4H4V5zm0 8h7v6H4v-6zm11 0h5v6h-5v-6z',
 };
+
+// Punto de acento por producto (hilo cromático hero → escena).
+const dot: Record<string, string> = {
+  web: '#2563eb', sistemas: '#38bdf8', 'clases-claude': '#7c3aed',
+  'clases-notion': '#2563eb', plantillas: '#38bdf8',
+};
+// Halo atmosférico detrás de cada escena.
+const glow: Record<string, string> = {
+  web: 'rgba(37,99,235,0.24)', sistemas: 'rgba(56,189,248,0.26)',
+  'clases-claude': 'rgba(124,58,237,0.22)', 'clases-notion': 'rgba(37,99,235,0.20)',
+};
+// Etiqueta de categoría de la vitrina (no marketing: nombra el medio).
+const kicker: Record<string, string> = {
+  web: 'Sitio web', sistemas: 'Software a la medida',
+  'clases-claude': 'Formación · IA', 'clases-notion': 'Formación · Notion',
+};
+// Barra de dirección / etiqueta de ventana de cada escena (realismo).
+const sceneUrl: Record<string, string> = {
+  web: 'curva.mx', sistemas: 'app.operacion.mx',
+  'clases-claude': 'claude.ai', 'clases-notion': 'notion.so',
+};
+// Etiqueta del chip flotante (estado del producto).
+const chipLabel: Record<string, string> = {
+  web: 'Publicado', sistemas: 'En vivo',
+  'clases-claude': 'Claude · IA', 'clases-notion': 'Sincronizado',
+};
+
+const showroom = soluciones.filter((s) => !s.tienda);
 
 const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
 const jsonLd = [
@@ -42,104 +69,365 @@ const jsonLd = [
 ];
 ---
 
-<BaseLayout title="Soluciones digitales — CURVA" description="Páginas web, sistemas y apps a la medida, clases de Claude y Notion, y plantillas listas para comprar. Entregables que puedes tener con un solo aliado." jsonLd={jsonLd}>
+<BaseLayout title="Soluciones digitales — CURVA" description="Páginas web, sistemas y apps a la medida, clases de Claude y Notion, y plantillas listas para comprar. Entregables que puedes tener con un solo aliado." jsonLd={jsonLd} thread>
   <Nav calLink={calLink} />
 
   <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
 
   <main id="contenido" tabindex="-1">
 
-  <!-- ============== HERO ============== -->
-  <section class="surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-20 sm:pb-28 px-6 sm:px-10 overflow-hidden">
-    <div class="glow-orb" style="width:32rem;height:32rem;top:-8rem;right:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.5),transparent 70%);"></div>
-    <div class="glow-orb" style="width:26rem;height:26rem;bottom:-8rem;left:-6rem;background:radial-gradient(circle,rgba(56,189,248,0.4),transparent 70%);animation-delay:-7s;"></div>
+  <!-- ============== HERO — entrada al showroom ============== -->
+  <section class="sol-hero surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-24 sm:pb-32 px-6 sm:px-10 overflow-hidden">
+    <div class="glow-orb" style="width:34rem;height:34rem;top:-10rem;right:-8rem;background:radial-gradient(circle,rgba(37,99,235,0.5),transparent 70%);"></div>
+    <div class="glow-orb" style="width:28rem;height:28rem;bottom:-10rem;left:-7rem;background:radial-gradient(circle,rgba(56,189,248,0.42),transparent 70%);animation-delay:-7s;"></div>
+    <span aria-hidden="true" class="sol-ghost display">Showroom</span>
+
     <div class="mx-auto max-w-6xl relative z-10">
       <nav aria-label="Migas" class="reveal flex items-center gap-2 text-sm text-sand-400 mb-8">
         <a href="/" class="hover:text-sand-50 transition-colors">Inicio</a>
         <span class="text-sand-600">/</span>
         <span class="text-sand-100 font-medium">Soluciones digitales</span>
       </nav>
-      <p class="reveal eyebrow-lead text-ember-300 mb-5">Soluciones digitales</p>
-      <h1 class="reveal display text-4xl sm:text-5xl lg:text-[3.8rem] font-semibold tracking-tight leading-[1.04] max-w-4xl text-balance">Lo construimos nosotros. Tú solo lo usas.</h1>
-      <p class="reveal mt-6 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-2xl">Web, sistemas y apps a la medida, clases y plantillas. Desde algo que compras en un clic hasta un sistema complejo hecho de punta a punta — con un solo aliado.</p>
-      <div class="reveal mt-9 flex flex-wrap gap-2.5">
+      <p class="reveal eyebrow-lead text-ember-300 mb-6">Soluciones digitales</p>
+      <h1 data-wordfade class="reveal display text-[2.6rem] sm:text-6xl lg:text-[5.2rem] font-semibold tracking-[-0.03em] leading-[0.98] max-w-4xl text-balance">Lo construimos nosotros. Tú solo lo usas.</h1>
+      <p class="reveal reveal-d1 mt-7 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-2xl text-pretty">Web, sistemas y apps a la medida, clases y plantillas. Desde algo que compras en un clic hasta un sistema complejo hecho de punta a punta — con un solo aliado.</p>
+
+      <!-- Índice del showroom: cada pieza, con su color -->
+      <div class="reveal reveal-d2 mt-11 flex flex-wrap items-center gap-2.5">
+        <span class="sol-index-label mr-1 hidden sm:inline-flex">El índice</span>
         {soluciones.map((s) => (
-          <a href={`#${s.id}`} class="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm text-sand-200 hover:border-white/25 hover:bg-white/[0.08] transition-colors">{s.titulo}</a>
+          <a href={`#${s.id}`} class="sol-index group inline-flex items-center gap-2.5 rounded-full border border-white/12 bg-white/[0.04] pl-3 pr-3.5 py-2 text-sm text-sand-200 hover:text-white transition-colors">
+            <span class="sol-index-dot" style={`--d:${dot[s.id] ?? '#2563eb'}`}></span>
+            {s.titulo}
+            <svg class="sol-index-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+          </a>
         ))}
       </div>
     </div>
+
     <div class="parallax pointer-events-none absolute -bottom-2 inset-x-0" data-parallax="16">
       <Curve variant="divider" draw="scroll" class="w-full h-20 opacity-40" />
     </div>
   </section>
 
-  <!-- ============== SOLUCIONES ============== -->
-  <section class="py-20 sm:py-28 px-6 sm:px-10 bg-white">
-    <div class="mx-auto max-w-6xl space-y-6">
-      {soluciones.filter((s) => !s.tienda).map((s, i) => (
-        <div id={s.id} class={`scroll-mt-24 reveal reveal-d${Math.min(i + 1, 4)} lift rounded-3xl border border-sand-200 bg-sand-50 p-8 sm:p-10 grid sm:grid-cols-[auto_1fr] gap-6 items-start`}>
-          <div class={`w-14 h-14 rounded-2xl ${accentSoft[s.accent]} flex items-center justify-center flex-shrink-0`}>
-            <svg class={`w-7 h-7 ${accentText[s.accent]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d={icons[s.icon]}></path></svg>
-          </div>
-          <div>
-            <div class="flex flex-wrap items-center gap-3">
-              <h2 class="display text-2xl sm:text-3xl font-semibold text-ink">{s.titulo}</h2>
-              {s.destacado && <span class={`px-2.5 py-1 rounded-full ${accentSoft[s.accent]} ${accentText[s.accent]} text-[11px] font-semibold uppercase tracking-wide`}>De punta a punta</span>}
+  <!-- ============== SHOWROOM — cada producto es una escena ============== -->
+  <section class="sol-showroom grain py-24 sm:py-32 px-6 sm:px-10 bg-white relative overflow-hidden">
+    <div class="sol-amb" style="width:40rem;height:40rem;top:-6rem;left:-12rem;background:radial-gradient(circle,rgba(37,99,235,0.10),transparent 70%);"></div>
+    <div class="sol-amb" style="width:34rem;height:34rem;bottom:8rem;right:-14rem;background:radial-gradient(circle,rgba(56,189,248,0.10),transparent 70%);"></div>
+
+    <div class="mx-auto max-w-6xl relative z-10">
+      <div class="max-w-2xl mb-16 sm:mb-24">
+        <p class="reveal eyebrow-lead text-ember mb-5">El catálogo</p>
+        <h2 class="reveal display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.04] text-ink text-balance">Escoge lo que necesitas. Nosotros lo construimos.</h2>
+      </div>
+
+      <div class="space-y-28 sm:space-y-40">
+        {showroom.map((s, i) => (
+          <article
+            id={s.id}
+            class={`sol-stage scroll-mt-28 grid lg:grid-cols-12 gap-x-10 gap-y-12 items-center ${s.destacado ? 'is-featured' : ''}`}
+          >
+            {/* ---------- Columna de texto ---------- */}
+            <div class={`reveal lg:col-span-5 ${i % 2 === 1 ? 'lg:order-2 lg:pl-4' : 'lg:order-1'}`}>
+              <div class="flex items-center gap-3 mb-6">
+                <span class={`sol-ico w-11 h-11 rounded-2xl ${accentSoft[s.accent]} flex items-center justify-center flex-shrink-0`}>
+                  <svg class={`w-5 h-5 ${accentText[s.accent]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d={icons[s.icon]}></path></svg>
+                </span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.16em] text-sand-500">{kicker[s.id]}</span>
+                {s.destacado && <span class="ml-auto lg:ml-0 inline-flex items-center gap-1.5 rounded-full bg-ink text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5">De punta a punta</span>}
+              </div>
+
+              <h3 class="display text-3xl sm:text-[2.5rem] font-semibold text-ink leading-[1.03] tracking-[-0.025em]">{s.titulo}</h3>
+              <p class="mt-5 text-[17px] text-sand-600 leading-relaxed max-w-md text-pretty">{s.subtitulo}</p>
+
+              {s.bullets && (
+                <ul class="mt-7 flex flex-col gap-3">
+                  {s.bullets.map((b) => (
+                    <li class="flex items-start gap-3 text-[15px] text-sand-700">
+                      <span class="sol-check mt-0.5 flex-shrink-0"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"></path></svg></span>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {s.cta && s.cta.href === '#' ? (
+                <span class="mt-8 self-start inline-flex items-center gap-2 rounded-full bg-sand-100 border border-sand-200 px-4 py-2 text-xs font-semibold text-sand-500">
+                  <span class="w-1.5 h-1.5 rounded-full bg-sand-400"></span>Próximamente
+                </span>
+              ) : s.cta && (
+                <a href={s.cta.href} class={`mt-8 arrow-cta inline-flex items-center gap-2 text-sm font-semibold ${accentText[s.accent]} link-underline`}>{s.cta.label}<svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg></a>
+              )}
             </div>
-            <p class="mt-3 text-lg text-sand-600 leading-relaxed max-w-2xl">{s.subtitulo}</p>
-            {s.bullets && (
-              <ul class="mt-5 flex flex-wrap gap-2">
-                {s.bullets.map((b) => (<li class="text-[13px] font-medium text-sand-700 bg-white border border-sand-200 rounded-full px-3 py-1.5">{b}</li>))}
-              </ul>
-            )}
-            {s.cta && s.cta.href === '#' ? (
-              <span class="mt-6 inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/12 px-3.5 py-1.5 text-xs font-semibold text-sand-300">
-                Próximamente
-              </span>
-            ) : s.cta && (
-              <a href={s.cta.href} class={`mt-6 arrow-cta inline-flex items-center gap-2 text-sm font-semibold ${accentText[s.accent]} link-underline`}>
-                {s.cta.label}
-                <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
-              </a>
-            )}
-          </div>
-        </div>
-      ))}
+
+            {/* ---------- Columna de escena (mockup vivo) ---------- */}
+            <div class={`reveal reveal-scale reveal-d1 lg:col-span-7 ${i % 2 === 1 ? 'lg:order-1' : 'lg:order-2'}`}>
+              <div class="sol-scene relative mx-auto max-w-[560px]">
+                <div class="sol-orb" style={`--c:${glow[s.id] ?? 'rgba(37,99,235,0.2)'}`}></div>
+                <div class="sol-frame-back" aria-hidden="true"></div>
+                <div class="sol-frame" data-tilt="6" aria-hidden="true">
+
+                  {/* ===== Escena: Páginas web — navegador con landing viva ===== */}
+                  {s.icon === 'globe' && (
+                    <div class="sol-screen">
+                      <div class="sol-chrome">
+                        <span class="sol-dot"></span><span class="sol-dot"></span><span class="sol-dot"></span>
+                        <span class="sol-omni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0v4M6 11h12v9H6z"></path></svg>{sceneUrl[s.id]}</span>
+                        <span class="sol-chrome-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-14-3M4 15a8 8 0 0014 3"></path></svg></span>
+                      </div>
+                      <div class="p-5 sm:p-6">
+                        <div class="flex items-center justify-between mb-6">
+                          <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-md bg-gradient-to-br from-ember to-jade"></span><span class="text-[10px] font-semibold text-ink display">Estudio</span></span>
+                          <span class="hidden sm:flex items-center gap-3.5 text-[9px] font-medium text-sand-500">
+                            <span>Trabajo</span><span>Servicios</span><span>Contacto</span>
+                            <span class="rounded-full bg-ink text-white px-2.5 py-1 text-[8px] font-semibold">Cotizar</span>
+                          </span>
+                        </div>
+                        <div class="grid grid-cols-5 gap-4 items-center">
+                          <div class="col-span-3">
+                            <span class="inline-block text-[7px] font-bold uppercase tracking-[0.18em] text-ember mb-2">Estudio digital</span>
+                            <p class="display text-[15px] sm:text-[17px] font-semibold text-ink leading-[1.08] tracking-[-0.02em]">Tu marca, clara<br/>y lista para vender.</p>
+                            <div class="mt-2.5 space-y-1.5">
+                              <span class="block h-1.5 w-full rounded-full bg-sand-200"></span>
+                              <span class="block h-1.5 w-3/5 rounded-full bg-sand-200"></span>
+                            </div>
+                            <span class="mt-3.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-ember to-jade px-3 py-1.5 text-[9px] font-semibold text-white shadow-lg shadow-ember/25">Ver proyectos<svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6l6 6-6 6"></path></svg></span>
+                          </div>
+                          <div class="col-span-2 sol-pop sol-pop-1 aspect-square rounded-xl bg-gradient-to-br from-ember/25 via-jade/18 to-gold/18 border border-white/60 shadow-xl grid place-items-center relative overflow-hidden">
+                            <svg viewBox="0 0 40 40" class="w-2/3 h-2/3" fill="none"><path d="M4 30 C12 30 15 12 24 12 C31 12 34 8 36 6" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" class="sol-draw" pathLength="1"></path></svg>
+                            <span class="sol-badge-float"><span class="sol-badge-up">▲</span><span data-count="+38%">+38%</span></span>
+                          </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 mt-6">
+                          {['Diseño','Veloz','SEO'].map((f, k) => (
+                            <div class="rounded-lg border border-sand-100 bg-sand-50/70 p-2.5 space-y-1.5">
+                              <span class={`flex items-center justify-center w-5 h-5 rounded-lg ${k === 0 ? 'bg-ember/12 text-ember' : k === 1 ? 'bg-jade/15 text-ember' : 'bg-gold/12 text-ember'}`}><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d={k === 0 ? 'M12 3l7 4v10l-7 4-7-4V7z' : k === 1 ? 'M13 2L4 14h6l-1 8 9-12h-6z' : 'M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z'}></path></svg></span>
+                              <span class="block text-[8px] font-semibold text-ink">{f}</span>
+                              <span class="block h-1 w-2/3 rounded-full bg-sand-200"></span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===== Escena: Sistemas y apps — dashboard operativo ===== */}
+                  {s.icon === 'cube' && (
+                    <div class="sol-screen flex min-h-[320px]">
+                      <div class="w-[28%] bg-ink p-3.5 flex flex-col gap-2.5">
+                        <span class="flex items-center gap-1.5 mb-2"><span class="w-5 h-5 rounded-lg bg-gradient-to-br from-ember to-jade"></span><span class="text-[9px] font-semibold text-white display">Operación</span></span>
+                        {[['Inicio','M3 11l9-8 9 8M5 10v10h14V10'],['Pedidos','M6 6h15l-1.5 9h-13zM6 6L5 3H3'],['Clientes','M17 20a5 5 0 00-10 0M12 11a3 3 0 100-6 3 3 0 000 6'],['Reportes','M4 20V10M10 20V4M16 20v-8M22 20H2'],['Ajustes','M12 15a3 3 0 100-6 3 3 0 000 6M19 12l1.5 2.5-2 2-2.5-.5-1 2.5h-3l-1-2.5-2.5.5-2-2L4.5 12 3 9.5l2-2 2.5.5 1-2.5h3l1 2.5 2.5-.5 2 2z']].map(([label, d], r) => (
+                          <span class={`flex items-center gap-2 rounded-md px-1.5 py-1 ${r === 1 ? 'bg-white/10' : ''}`}>
+                            <svg class={`w-3 h-3 ${r === 1 ? 'text-jade' : 'text-white/45'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d={d}></path></svg>
+                            <span class={`text-[9px] font-medium ${r === 1 ? 'text-white' : 'text-white/45'}`}>{label}</span>
+                          </span>
+                        ))}
+                        <span class="mt-auto flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-2 py-1.5"><span class="w-4 h-4 rounded-full bg-gradient-to-br from-jade to-ember"></span><span class="h-1.5 w-10 rounded-full bg-white/25"></span></span>
+                      </div>
+                      <div class="flex-1 p-4 sm:p-5 space-y-3.5 bg-sand-50/40">
+                        <div class="flex items-center justify-between">
+                          <span class="text-[11px] font-semibold text-ink display">Pedidos</span>
+                          <span class="flex items-center gap-2"><span class="flex items-center gap-1 h-6 rounded-full bg-white border border-sand-200 px-2 text-[8px] text-sand-400"><svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z"></path></svg>Buscar</span><span class="w-6 h-6 rounded-full bg-gradient-to-br from-ember to-jade"></span></span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2.5">
+                          {[['Ingresos','$84.2k','from-ember/12','text-ember','+12%'],['Pedidos','1,240','from-jade/12','text-ember','+8%'],['Clientes','312','from-gold/12','text-ember','+5%']].map(([label, val, g, t, delta]) => (
+                            <div class={`rounded-xl bg-gradient-to-br ${g} to-transparent border border-sand-100 p-2.5`}>
+                              <span class="block text-[7px] font-medium uppercase tracking-wide text-sand-500 mb-1">{label}</span>
+                              <span class="block text-[13px] font-bold text-ink display tabular-nums leading-none" data-count={val}>{val}</span>
+                              <span class={`mt-1 inline-flex items-center gap-0.5 text-[7px] font-semibold ${t}`}><svg class="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 15l6-6 6 6"></path></svg>{delta}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div class="sol-pop sol-pop-1 rounded-xl border border-sand-100 bg-white p-3">
+                          <div class="flex items-center justify-between mb-2"><span class="text-[8px] font-semibold text-ink">Ventas · 30 días</span><span class="text-[7px] font-semibold text-ember">▲ 12.4%</span></div>
+                          <svg viewBox="0 0 260 66" class="w-full h-14" fill="none" preserveAspectRatio="none">
+                            <path d="M0,56 C50,56 70,20 130,26 C190,32 210,10 260,8 L260,66 L0,66 Z" fill="url(#solf-sys)" class="sol-fill"></path>
+                            <path d="M0,56 C50,56 70,20 130,26 C190,32 210,10 260,8" stroke="url(#solg-sys)" stroke-width="2.6" stroke-linecap="round" class="sol-draw" pathLength="1"></path>
+                            <defs>
+                              <linearGradient id="solg-sys" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2563eb"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient>
+                              <linearGradient id="solf-sys" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#2563eb" stop-opacity="0.2"></stop><stop offset="1" stop-color="#2563eb" stop-opacity="0"></stop></linearGradient>
+                            </defs>
+                          </svg>
+                        </div>
+                        <div class="space-y-1.5">
+                          {[['#1042','Ana Ruiz','Listo','bg-jade','text-ember','$2,400'],['#1043','Beto M.','En curso','bg-ember','text-ember','$1,150'],['#1044','Caro P.','Nuevo','bg-gold','text-ember','$980']].map(([id, name, st, c, tc, amt]) => (
+                            <span class="flex items-center gap-2 rounded-lg bg-white border border-sand-100 px-2 py-1.5">
+                              <span class={`w-1.5 h-1.5 rounded-full ${c}`}></span>
+                              <span class="text-[8px] font-semibold text-sand-500 tabular-nums">{id}</span>
+                              <span class="text-[8px] text-ink">{name}</span>
+                              <span class={`ml-auto rounded-full ${c}/15 ${tc} px-1.5 py-0.5 text-[7px] font-semibold`}>{st}</span>
+                              <span class="text-[8px] font-semibold text-ink tabular-nums">{amt}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===== Escena: Clases de Claude — Claude en acción ===== */}
+                  {s.icon === 'claude' && (
+                    <div class="sol-screen p-5 sm:p-6 min-h-[320px] flex flex-col bg-gradient-to-b from-white to-sand-50/60">
+                      <div class="flex items-center gap-2.5 pb-4 mb-4 border-b border-sand-100">
+                        <span class="sol-ai-orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v4m0 10v4m9-9h-4M7 12H3m13.5-6.5L14 8m-6 6l-2.5 2.5m0-11L8 8m6 6l2.5 2.5"></path></svg></span>
+                        <span class="text-[11px] font-semibold text-ink display">Claude</span>
+                        <span class="rounded-full bg-ai/10 text-ai px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide">Opus</span>
+                        <span class="ml-auto flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-wider text-ai"><span class="w-1.5 h-1.5 rounded-full bg-ai animate-pulse"></span>En vivo</span>
+                      </div>
+                      <div class="flex-1 flex flex-col gap-3">
+                        <div class="self-end max-w-[76%] rounded-2xl rounded-br-md accent-ai px-3.5 py-2.5 shadow-lg shadow-ai/20">
+                          <p class="text-[10px] leading-snug text-white">Resume mis ventas de la semana</p>
+                        </div>
+                        <div class="sol-pop sol-pop-1 self-start max-w-[82%] rounded-2xl rounded-bl-md bg-white border border-sand-200 px-3.5 py-3 shadow-sm space-y-2">
+                          <p class="text-[10px] leading-snug text-ink">Claro. Esta semana cerraste:</p>
+                          <span class="flex items-center gap-1.5 rounded-lg bg-ember/8 px-2 py-1"><span class="text-[9px] font-bold text-ember display tabular-nums">$84,200</span><span class="text-[7px] font-semibold text-ember">+12%</span></span>
+                          <span class="block h-1.5 w-11/12 rounded-full bg-sand-200"></span>
+                          <span class="block h-1.5 w-3/4 rounded-full bg-sand-200"></span>
+                        </div>
+                        <div class="self-start inline-flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-white border border-sand-200 px-3.5 py-2.5 shadow-sm">
+                          <span class="w-1.5 h-1.5 rounded-full bg-sand-400 animate-pulse"></span><span class="w-1.5 h-1.5 rounded-full bg-sand-400 animate-pulse" style="animation-delay:.2s"></span><span class="w-1.5 h-1.5 rounded-full bg-sand-400 animate-pulse" style="animation-delay:.4s"></span>
+                        </div>
+                      </div>
+                      <div class="mt-4 flex items-center gap-2 rounded-full border border-sand-200 bg-white px-3.5 py-2">
+                        <span class="flex-1 text-[9px] text-sand-400">Pregúntale lo que sea…</span>
+                        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-ai to-ai-600 grid place-items-center shadow-md shadow-ai/30"><svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6l6 6-6 6"></path></svg></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===== Escena: Clases de Notion — workspace ordenado ===== */}
+                  {s.icon === 'notion' && (
+                    <div class="sol-screen flex min-h-[320px]">
+                      <div class="w-[32%] bg-sand-50 border-r border-sand-100 p-3 space-y-1.5">
+                        <span class="flex items-center gap-1.5 mb-2.5"><span class="w-5 h-5 rounded-md bg-ink grid place-items-center text-[8px] text-white font-bold">M</span><span class="text-[9px] font-semibold text-ink">Mi equipo</span></span>
+                        {[['📥','Bandeja'],['✅','Tareas'],['👥','Clientes'],['📚','Wiki'],['🎯','Metas']].map(([emo, label], r) => (
+                          <span class={`flex items-center gap-1.5 rounded-md px-1.5 py-1 ${r === 1 ? 'bg-white shadow-sm' : ''}`}><span class="text-[10px] leading-none">{emo}</span><span class={`text-[9px] ${r === 1 ? 'font-semibold text-ink' : 'text-sand-500'}`}>{label}</span></span>
+                        ))}
+                      </div>
+                      <div class="flex-1 p-4 sm:p-5">
+                        <div class="flex items-center gap-2 mb-3.5"><span class="text-base leading-none">✅</span><span class="text-[12px] font-semibold text-ink display">Tareas de la semana</span></div>
+                        <div class="space-y-2 mb-4">
+                          {[['Enviar propuesta', true],['Llamada con cliente', true],['Cerrar cotización', false]].map(([task, done]) => (
+                            <span class="flex items-center gap-2">
+                              <span class={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${done ? 'bg-ember border-ember' : 'border-sand-300'}`}>{done && <svg class="w-2 h-2 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>}</span>
+                              <span class={`text-[9px] ${done ? 'text-sand-400 line-through' : 'text-ink'}`}>{task}</span>
+                            </span>
+                          ))}
+                        </div>
+                        <div class="sol-pop sol-pop-1 rounded-xl border border-sand-100 overflow-hidden shadow-sm">
+                          <div class="grid grid-cols-[1fr_auto_auto] gap-px bg-sand-100">
+                            {['Nombre','Estado','Fecha'].map((h) => <span class="bg-sand-50 px-2 py-1.5 text-[7px] font-semibold text-sand-500 uppercase tracking-wide">{h}</span>)}
+                            {[['Ana Ruiz','En curso','bg-ember/15 text-ember','12 jul'],['Beto M.','Listo','bg-jade/20 text-ember','10 jul'],['Caro P.','Nuevo','bg-gold/20 text-ember','14 jul']].map(([name, st, pill, date]) => [
+                              <span class="bg-white px-2 py-1.5 text-[8px] text-ink">{name}</span>,
+                              <span class="bg-white px-2 py-1.5"><span class={`inline-block rounded-full ${pill} px-1.5 py-0.5 text-[7px] font-semibold whitespace-nowrap`}>{st}</span></span>,
+                              <span class="bg-white px-2 py-1.5 text-[8px] text-sand-400 whitespace-nowrap">{date}</span>,
+                            ])}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Chip flotante que sube al hover (profundidad) */}
+                <span class="sol-chip sol-pop sol-pop-2" aria-hidden="true">
+                  <span class="sol-chip-dot" style={`--dot:${dot[s.id] ?? '#2563eb'}`}></span>
+                  {chipLabel[s.id]}
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   </section>
 
-  <!-- ============== TIENDA DE PLANTILLAS ============== -->
+  <Curve variant="band" draw="scroll" class="w-full h-16 sm:h-20 opacity-25 -mb-2" />
+
+  <!-- ============== TIENDA DE PLANTILLAS — vitrina en oscuro premium ============== -->
   {soluciones.filter((s) => s.tienda).map((s) => (
-    <section id={s.id} class="scroll-mt-24 surface-ink text-sand-50 py-20 sm:py-28 px-6 sm:px-10 border-t border-white/10">
-      <div class="mx-auto max-w-6xl">
-        <p class="reveal eyebrow-lead text-ember-300 mb-4">Tienda</p>
-        <h2 class="reveal display text-3xl sm:text-4xl font-semibold tracking-tight leading-[1.08] text-balance">{s.titulo}</h2>
-        <p class="reveal mt-4 text-lg text-sand-300 leading-relaxed max-w-2xl">{s.subtitulo}</p>
-        <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <section id={s.id} class="sol-shop scroll-mt-28 surface-ink grain text-sand-50 py-24 sm:py-32 px-6 sm:px-10 border-t border-white/10 relative overflow-hidden">
+      <div class="glow-orb" style="width:30rem;height:30rem;top:-8rem;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(37,99,235,0.4),transparent 70%);"></div>
+      <div class="mx-auto max-w-6xl relative z-10">
+        <div class="flex flex-wrap items-end justify-between gap-6 max-w-3xl">
+          <div>
+            <p class="reveal eyebrow-lead text-ember-300 mb-5">Tienda</p>
+            <h2 class="reveal display text-3xl sm:text-5xl font-semibold tracking-[-0.025em] leading-[1.04] text-balance">{s.titulo}</h2>
+            <p class="reveal reveal-d1 mt-5 text-lg text-sand-300 leading-relaxed max-w-xl text-pretty">{s.subtitulo}</p>
+          </div>
+          <p class="reveal reveal-d2 hidden sm:flex items-center gap-2 text-sm text-sand-400 pb-1.5">
+            <svg class="w-4 h-4 text-jade" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            Pago seguro · entrega al correo
+          </p>
+        </div>
+
+        <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {s.plantillas?.map((p, i) => (
-            <div class={`reveal reveal-d${Math.min(i + 1, 4)} flex flex-col rounded-3xl border border-white/10 bg-white/[0.04] p-7`}>
-              <div class="w-11 h-11 rounded-xl bg-ember/15 flex items-center justify-center mb-5">
-                <svg class="w-5 h-5 text-ember-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v4H4V5zm0 8h7v6H4v-6zm11 0h5v6h-5v-6z"></path></svg>
+            <article data-tilt="4" class={`sol-prod reveal reveal-scale reveal-d${Math.min(i + 1, 4)} group`}>
+              {/* Preview del producto (screenshot de la plantilla) */}
+              <div class="sol-prod-media">
+                <span class="sol-prod-tag">Notion</span>
+                <div class="sol-prod-shot sol-pop sol-pop-1">
+                  {p.id === 'crm-simple' && (
+                    <div class="space-y-1.5">
+                      <span class="flex items-center gap-1.5 mb-2"><span class="w-3.5 h-3.5 rounded-md bg-gradient-to-br from-ember to-jade"></span><span class="text-[8px] font-semibold text-ink display">Clientes</span><span class="ml-auto text-[7px] text-sand-400">3 activos</span></span>
+                      {[['Ana Ruiz','Cliente','bg-jade/20'],['Beto M.','Prospecto','bg-ember/15'],['Caro P.','Cierre','bg-gold/20']].map(([name, st, pill]) => (
+                        <span class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-full bg-gradient-to-br from-ember/30 to-jade/30"></span><span class="text-[7px] text-ink">{name}</span><span class={`ml-auto rounded-full ${pill} text-ember px-1.5 py-0.5 text-[6px] font-semibold`}>{st}</span></span>
+                      ))}
+                    </div>
+                  )}
+                  {p.id === 'operacion-pyme' && (
+                    <div class="grid grid-cols-3 gap-1.5">
+                      {['Por hacer','Haciendo','Listo'].map((col, k) => (
+                        <div class="space-y-1.5">
+                          <span class={`block text-[6px] font-semibold uppercase tracking-wide ${['text-sand-400','text-ember','text-jade'][k]}`}>{col}</span>
+                          {[0,1].map((c) => <span class={`block rounded bg-white border border-sand-100 shadow-sm ${c === 0 ? 'h-6' : 'h-4'} ${k === 1 && c === 0 ? 'ring-1 ring-ember/25' : ''}`}></span>)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {p.id === 'finanzas-negocio' && (
+                    <div class="space-y-2">
+                      <div class="flex gap-1.5">
+                        <span class="flex-1 rounded-lg bg-gradient-to-br from-ember/12 to-transparent border border-sand-100 p-1.5"><span class="block text-[9px] font-bold text-ink display leading-none">$84k</span><span class="block text-[6px] text-sand-400 mt-0.5">Ingresos</span></span>
+                        <span class="flex-1 rounded-lg bg-gradient-to-br from-jade/12 to-transparent border border-sand-100 p-1.5"><span class="block text-[9px] font-bold text-ember display leading-none">+12%</span><span class="block text-[6px] text-sand-400 mt-0.5">vs. mes</span></span>
+                      </div>
+                      <svg viewBox="0 0 200 42" class="w-full h-10" fill="none" preserveAspectRatio="none"><path d="M0,36 C40,36 55,12 100,16 C145,20 160,4 200,3" stroke="url(#solg-fin)" stroke-width="2.2" stroke-linecap="round"></path><defs><linearGradient id="solg-fin" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2563eb"></stop><stop offset="1" stop-color="#38bdf8"></stop></linearGradient></defs></svg>
+                    </div>
+                  )}
+                  {!['crm-simple','operacion-pyme','finanzas-negocio'].includes(p.id) && (
+                    <div class="space-y-2">{[0,1,2].map((r) => <span class={`block h-2 rounded-full bg-sand-200 ${r === 0 ? 'w-1/2' : r === 1 ? 'w-full' : 'w-2/3'}`}></span>)}</div>
+                  )}
+                </div>
               </div>
-              <p class="display font-semibold text-lg text-sand-50">{p.nombre}</p>
-              <p class="text-[15px] text-sand-300 leading-relaxed mt-2 flex-1">{p.desc}</p>
-              <div class="mt-6 flex items-center justify-between gap-3">
-                <span class="display text-xl font-semibold text-sand-50">{p.precio}</span>
-                <button
-                  type="button"
-                  data-comprar={p.id}
-                  data-nombre={p.nombre}
-                  data-monto={p.precioMXN}
-                  class="btn-pop inline-flex items-center gap-2 text-sm font-semibold bg-ember text-white px-5 py-2.5 rounded-full hover:bg-ember-600 whitespace-nowrap"
-                >
-                  Comprar
-                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.836L5.383 6m0 0l1.44 6.44a1.5 1.5 0 001.464 1.16h7.09a1.5 1.5 0 001.464-1.16L19.5 6H5.383zM9 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm8 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"></path></svg>
-                </button>
+
+              {/* Cuerpo */}
+              <div class="p-6 flex flex-col flex-1">
+                <p class="display font-semibold text-lg text-sand-50">{p.nombre}</p>
+                <p class="text-[14px] text-sand-300 leading-relaxed mt-2 flex-1">{p.desc}</p>
+                <div class="mt-6 flex items-end justify-between gap-3">
+                  <span>
+                    <span class="block text-[11px] uppercase tracking-wider text-sand-500 mb-0.5">Pago único</span>
+                    <span data-count={p.precio} class="sol-price display font-semibold text-sand-50 tabular-nums">{p.precio}</span>
+                  </span>
+                  <button
+                    type="button"
+                    data-comprar={p.id}
+                    data-nombre={p.nombre}
+                    data-monto={p.precioMXN}
+                    class="btn-pop group/btn inline-flex items-center gap-2.5 text-sm font-semibold bg-ember text-white pl-5 pr-2 py-2 rounded-full hover:bg-ember-600 whitespace-nowrap transition-colors"
+                  >
+                    Comprar
+                    <span class="w-8 h-8 rounded-full bg-white/20 grid place-items-center transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-px">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.836L5.383 6m0 0l1.44 6.44a1.5 1.5 0 001.464 1.16h7.09a1.5 1.5 0 001.464-1.16L19.5 6H5.383zM9 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm8 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"></path></svg>
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
-        <p class="mt-6 text-sm text-sand-400">Pagas aquí mismo, la plantilla te llega a tu correo y lista para usar.</p>
+        <p class="mt-8 text-sm text-sand-400">Pagas aquí mismo, la plantilla te llega a tu correo y lista para usar.</p>
       </div>
     </section>
   ))}
@@ -147,9 +435,9 @@ const jsonLd = [
   <!-- ============== CTA FINAL ============== -->
   <section class="py-24 sm:py-32 px-6 sm:px-10 bg-sand-50 border-t border-sand-200">
     <div class="reveal mx-auto max-w-3xl text-center">
-      <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.06] text-ink">¿Tienes algo más grande en mente?</h2>
-      <p class="mt-5 text-lg text-sand-600 max-w-md mx-auto">Cuéntanos qué necesitas construir y te decimos cómo lo hacemos.</p>
-      <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group mt-8 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
+      <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-[-0.025em] leading-[1.06] text-ink text-balance">¿Tienes algo más grande en mente?</h2>
+      <p class="mt-5 text-lg text-sand-600 max-w-md mx-auto text-pretty">Cuéntanos qué necesitas construir y te decimos cómo lo hacemos.</p>
+      <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group mt-9 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
         Agendar llamada
         <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
@@ -164,3 +452,289 @@ const jsonLd = [
 
   <Footer calLink={calLink} waLink={waLink} />
 </BaseLayout>
+
+<style>
+  /* ============ Palabra fantasma del hero ============ */
+  .sol-ghost {
+    position: absolute;
+    top: 4rem; right: -1rem;
+    font-size: clamp(6rem, 22vw, 19rem);
+    font-weight: 800;
+    line-height: 0.8;
+    letter-spacing: -0.045em;
+    color: #fff;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
+  }
+
+  /* ============ Índice del hero ============ */
+  .sol-index-label {
+    align-items: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-sand-500);
+  }
+  .sol-index {
+    transition: color 0.3s var(--ease-pitch), background-color 0.3s var(--ease-pitch),
+      border-color 0.3s var(--ease-pitch), transform 0.3s var(--ease-pitch);
+  }
+  .sol-index-dot {
+    width: 0.5rem; height: 0.5rem; border-radius: 9999px;
+    background: var(--d);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--d) 60%, transparent);
+    transition: transform 0.3s var(--ease-pitch), box-shadow 0.4s var(--ease-pitch);
+  }
+  .sol-index-arrow {
+    width: 0; height: 0.85rem; opacity: 0;
+    margin-left: -0.35rem;
+    transition: width 0.3s var(--ease-pitch), opacity 0.3s var(--ease-pitch), margin 0.3s var(--ease-pitch);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sol-index:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: color-mix(in srgb, var(--d, #2563eb) 45%, transparent);
+      transform: translateY(-2px);
+    }
+    .sol-index:hover .sol-index-dot { transform: scale(1.35); box-shadow: 0 0 12px 0 var(--d); }
+    .sol-index:hover .sol-index-arrow { width: 0.85rem; opacity: 1; margin-left: 0; }
+  }
+
+  /* ============ Atmósfera del showroom ============ */
+  .sol-amb { position: absolute; border-radius: 9999px; filter: blur(10px); pointer-events: none; z-index: 0; }
+
+  /* ============ Escena / mockup vivo ============ */
+  .sol-scene { perspective: 1600px; }
+  .sol-orb {
+    position: absolute; inset: 4% 2%;
+    border-radius: 9999px;
+    background: radial-gradient(circle, var(--c), transparent 70%);
+    filter: blur(48px);
+    z-index: -2;
+    opacity: 0.9;
+    transition: opacity 0.6s var(--ease-pitch), transform 0.6s var(--ease-pitch);
+  }
+  .sol-scene:hover .sol-orb { opacity: 1; transform: scale(1.08); }
+
+  /* Capa trasera: profundidad tipo cascada Z */
+  .sol-frame-back {
+    position: absolute; inset: 0;
+    border-radius: 1.35rem;
+    background: linear-gradient(180deg, #ffffff, #e9f0fb);
+    border: 1px solid var(--color-sand-200);
+    box-shadow: 0 30px 60px -42px rgba(15, 30, 61, 0.32);
+    transform: translate(20px, 24px) rotate(1.6deg) scale(0.965);
+    opacity: 0.5;
+    z-index: -1;
+    transition: transform 0.7s var(--ease-pitch), opacity 0.7s var(--ease-pitch);
+  }
+  .sol-scene:hover .sol-frame-back { transform: translate(30px, 34px) rotate(2.4deg) scale(0.955); opacity: 0.7; }
+
+  /* El marco (bandeja de aluminio con la pantalla dentro) */
+  .sol-frame {
+    position: relative;
+    border-radius: 1.35rem;
+    background: linear-gradient(155deg, #ffffff 0%, #eaf1fb 100%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
+      0 0 0 1px rgba(15, 30, 61, 0.06),
+      0 2px 6px -2px rgba(15, 30, 61, 0.12),
+      0 48px 96px -46px rgba(15, 30, 61, 0.5);
+    padding: 0.55rem;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .sol-screen {
+    position: relative;
+    border-radius: 1rem;
+    background: #fff;
+    border: 1px solid var(--color-sand-100);
+    overflow: hidden;
+  }
+  /* Barra superior del navegador (chrome) */
+  .sol-chrome {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid var(--color-sand-100);
+    background: linear-gradient(180deg, #fbfcfe, #f4f7fc);
+  }
+  .sol-dot { width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: var(--color-sand-300); }
+  .sol-dot:nth-child(1) { background: #f0b6b0; }
+  .sol-dot:nth-child(2) { background: #f3d59a; }
+  .sol-dot:nth-child(3) { background: #b3ddb0; }
+  .sol-omni {
+    margin-left: 0.6rem; flex: 1;
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    height: 1.15rem; padding: 0 0.6rem;
+    border-radius: 9999px;
+    background: #fff; border: 1px solid var(--color-sand-200);
+    font-size: 0.55rem; font-weight: 500; color: var(--color-sand-500);
+  }
+  .sol-omni svg { width: 0.55rem; height: 0.55rem; color: var(--color-sand-400); }
+  .sol-chrome-ico { display: grid; place-items: center; width: 0.9rem; height: 0.9rem; color: var(--color-sand-400); }
+  .sol-chrome-ico svg { width: 0.75rem; height: 0.75rem; }
+
+  /* Palomita de bullets (columna de texto) */
+  .sol-check {
+    display: inline-grid; place-items: center;
+    width: 1.15rem; height: 1.15rem; border-radius: 9999px;
+    color: var(--color-ember);
+    background: color-mix(in srgb, var(--color-ember) 12%, transparent);
+  }
+
+  /* Barra de estadística flotante en la escena web */
+  .sol-badge-float {
+    position: absolute; right: -0.35rem; bottom: -0.35rem;
+    display: inline-flex; align-items: center; gap: 0.2rem;
+    padding: 0.25rem 0.4rem; border-radius: 0.5rem;
+    background: #fff; border: 1px solid var(--color-sand-200);
+    box-shadow: 0 8px 18px -10px rgba(15, 30, 61, 0.4);
+    font-size: 0.55rem; font-weight: 700; color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .sol-badge-up { color: #16a34a; font-size: 0.45rem; }
+
+  /* Trazo que se dibuja al revelar la escena */
+  .sol-draw { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .sol-fill { opacity: 0; transition: opacity 0.9s var(--ease-pitch) 0.5s; }
+  .reveal.is-visible .sol-draw { animation: sol-draw 1.5s var(--ease-pitch) 0.3s forwards; }
+  .reveal.is-visible .sol-fill { opacity: 1; }
+  @keyframes sol-draw { to { stroke-dashoffset: 0; } }
+  :global(html:not(.js)) .sol-draw { stroke-dashoffset: 0; }
+  :global(html:not(.js)) .sol-fill { opacity: 1; }
+
+  /* Barrido de luz (sheen) al hover de la escena */
+  .sol-screen::after {
+    content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none;
+    background: linear-gradient(115deg, transparent 34%, rgba(255, 255, 255, 0.5) 48%, transparent 60%);
+    transform: translateX(-140%);
+    opacity: 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sol-scene:hover .sol-screen::after { animation: sol-sheen 0.95s var(--ease-pitch); }
+  }
+  @keyframes sol-sheen {
+    0% { transform: translateX(-140%); opacity: 0; }
+    24% { opacity: 0.6; }
+    100% { transform: translateX(140%); opacity: 0; }
+  }
+
+  /* Capas internas que "flotan" a distinta profundidad al hover */
+  .sol-pop { transition: transform 0.6s var(--ease-pitch), box-shadow 0.6s var(--ease-pitch); will-change: transform; }
+  .sol-scene:hover .sol-pop-1 { transform: translate3d(0, -9px, 34px) scale(1.02); }
+  .sol-scene:hover .sol-pop-2 { transform: translate3d(-7px, -14px, 60px); }
+
+  /* Chip flotante de la escena */
+  .sol-chip {
+    position: absolute;
+    left: -0.9rem; bottom: 1.75rem;
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--color-sand-200);
+    box-shadow: 0 18px 38px -18px rgba(15, 30, 61, 0.45);
+    font-size: 0.68rem; font-weight: 600; color: var(--color-ink);
+    z-index: 3;
+  }
+  .sol-chip-dot {
+    width: 0.5rem; height: 0.5rem; border-radius: 9999px;
+    background: var(--dot);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 18%, transparent);
+  }
+
+  /* Icono de la columna de texto (leve realce al hover del stage) */
+  .sol-ico { transition: transform 0.4s var(--ease-pitch); }
+  @media (hover: hover) and (pointer: fine) {
+    .sol-stage:hover .sol-ico { transform: translateY(-2px) rotate(-4deg); }
+  }
+
+  /* Orbe IA (encabezado de la escena de Claude) */
+  .sol-ai-orb {
+    width: 1.7rem; height: 1.7rem; border-radius: 9999px;
+    display: grid; place-items: center; color: #fff; flex-shrink: 0;
+    background: radial-gradient(120% 120% at 30% 25%, #c4b5fd 0%, #7c3aed 48%, #6d28d9 100%);
+    box-shadow: 0 4px 14px -4px rgba(124, 58, 237, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  }
+  .sol-ai-orb svg { width: 0.95rem; height: 0.95rem; }
+
+  /* ============ Tienda: tarjeta de producto premium ============ */
+  .sol-prod {
+    position: relative;
+    display: flex; flex-direction: column;
+    border-radius: 1.2rem;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: transform 0.45s var(--ease-pitch), box-shadow 0.45s var(--ease-pitch), border-color 0.45s var(--ease-pitch), background-color 0.45s var(--ease-pitch);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sol-prod:hover {
+      background: rgba(255, 255, 255, 0.075);
+      border-color: rgba(147, 197, 253, 0.45);
+      box-shadow: 0 46px 88px -46px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(56, 189, 248, 0.14);
+    }
+  }
+  .sol-prod-media {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    display: grid; place-items: center;
+    padding: 1.5rem;
+    background:
+      radial-gradient(90% 90% at 50% -10%, rgba(56, 189, 248, 0.18), transparent 65%),
+      radial-gradient(80% 80% at 50% 0%, rgba(37, 99, 235, 0.24), transparent 70%),
+      linear-gradient(165deg, #14264a 0%, #0f1e3d 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+  .sol-prod-media::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.4) 0.5px, transparent 0.5px);
+    background-size: 14px 14px;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+  .sol-prod-shot {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 15.5rem;
+    background: #fff;
+    border-radius: 0.7rem;
+    border: 1px solid var(--color-sand-200);
+    box-shadow: 0 26px 50px -24px rgba(0, 0, 0, 0.62);
+    padding: 0.85rem;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sol-prod:hover .sol-prod-shot { transform: translateY(-8px) scale(1.02); }
+  }
+  .sol-prod-tag {
+    position: absolute; top: 0.9rem; right: 0.9rem;
+    font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--color-ember-300);
+    background: rgba(37, 99, 235, 0.18);
+    border: 1px solid rgba(147, 197, 253, 0.32);
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    z-index: 2;
+  }
+  .sol-price { font-size: 1.65rem; line-height: 1; }
+
+  /* ============ Reduced motion ============ */
+  @media (prefers-reduced-motion: reduce) {
+    .sol-orb, .sol-frame-back, .sol-pop, .sol-index, .sol-ico, .sol-prod-shot { transition: none; }
+    .sol-scene:hover .sol-orb,
+    .sol-scene:hover .sol-frame-back,
+    .sol-scene:hover .sol-pop-1,
+    .sol-scene:hover .sol-pop-2 { transform: none; }
+    .sol-prod:hover, .sol-prod:hover .sol-prod-shot { transform: none; }
+    .sol-scene:hover .sol-screen::after { animation: none; }
+    .reveal.is-visible .sol-draw { animation: none; stroke-dashoffset: 0; }
+    .sol-fill { opacity: 1; transition: none; }
+  }
+</style>

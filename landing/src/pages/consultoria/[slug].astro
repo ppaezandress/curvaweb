@@ -5,7 +5,7 @@ import Footer from '../../components/Footer.astro';
 import Curve from '../../components/Curve.astro';
 import Credenciales from '../../components/Credenciales.astro';
 import CtaPilar from '../../components/CtaPilar.astro';
-import { frentes, getFrente, otroFrente } from '../../data/consultoria';
+import { frentes, otroFrente } from '../../data/consultoria';
 import { casosDe } from '../../data/casos';
 
 export function getStaticPaths() {
@@ -20,10 +20,43 @@ const calLink = 'https://cal.com/andres-paez/30min';
 import { waLink as buildWa } from '../../data/site';
 const waLink = buildWa();
 
-// gold/jade (cian #38bdf8) NO pasan contraste como texto sobre fondo claro → azul (ember).
+// ── DOS MUNDOS. Digital = red/sistemas, cobalto+cian (frío, tech). Negocio =
+// estructura/organización, violeta profundo (cálido, humano). Todo lo visual se
+// deriva de este flag; las CSS vars del mundo viven en el <style> scoped.
+const isEmber = f.accent === 'ember';
+const world = isEmber ? 'digital' : 'negocio';
+
+// Acento de texto por mundo (contraste verificado):
+//   sobre oscuro → cian-300 #7dd3fc / violeta-300 #c4b5fd
+//   sobre claro  → cobalto #2563eb / violeta #7c3aed  (ambos AA sobre blanco)
+const darkAccent = isEmber ? 'text-jade-300' : 'text-ai-300';
+const lightAccent = isEmber ? 'text-ember' : 'text-ai';
+const ctaBtn = isEmber ? 'bg-ember hover:bg-ember-600' : 'bg-ai hover:bg-ai-600';
+const skipBg = isEmber ? 'focus:bg-ember' : 'focus:bg-ai';
+const sceneLabel = isEmber ? 'Ver el sistema' : 'Ver la estructura';
+
+// Casos (solo el frente Digital los tiene): mapas por acento del caso.
 const accentText = { ember: 'text-ember', gold: 'text-ember', jade: 'text-ember' } as const;
-const accentBar = { ember: 'bg-ember', gold: 'bg-gold', jade: 'bg-gold' } as const;
 const accentSoft = { ember: 'bg-ember/12', gold: 'bg-gold/15', jade: 'bg-gold/12' } as const;
+
+const N = f.pilares.length;
+const totalLabel = String(N).padStart(2, '0');
+
+// ── Escena DIGITAL: malla de nodos (red que conecta la operación). viewBox fijo;
+// los nodos se atan a los pilares por índice y las chips se posicionan en %.
+const NET_VBW = 1200;
+const NET_VBH = 480;
+const netHub = { x: 560, y: 246 };
+const netNodes = [
+  { x: 232, y: 152 },
+  { x: 978, y: 128 },
+  { x: 820, y: 402 },
+];
+const netMinor = [
+  { x: 360, y: 320 }, { x: 700, y: 96 }, { x: 1088, y: 300 },
+  { x: 468, y: 428 }, { x: 128, y: 328 }, { x: 636, y: 402 },
+];
+const pct = (v: number, total: number) => ((v / total) * 100).toFixed(2);
 
 const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
 const jsonLd = [
@@ -36,17 +69,23 @@ const jsonLd = [
 ];
 ---
 
-<BaseLayout title={`${f.title} — CURVA`} description={f.description} jsonLd={jsonLd}>
+<BaseLayout title={`${f.title} — CURVA`} description={f.description} jsonLd={jsonLd} thread>
   <Nav calLink={calLink} />
 
-  <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-ember focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">Saltar al contenido</a>
+  <a href="#contenido" class={`sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] ${skipBg} focus:text-white focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold`}>Saltar al contenido</a>
 
-  <main id="contenido" tabindex="-1">
+  <main id="contenido" tabindex="-1" class="cst-world" data-world={world}>
 
-  <!-- ============== HERO (home de área — se entiende solo) ============== -->
-  <section class="surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-20 sm:pb-28 px-6 sm:px-10 overflow-hidden">
-    <div class="glow-orb" style="width:32rem;height:32rem;top:-8rem;left:-6rem;background:radial-gradient(circle,rgba(37,99,235,0.5),transparent 70%);"></div>
-    <div class="glow-orb" style="width:26rem;height:26rem;bottom:-8rem;right:-6rem;background:radial-gradient(circle,rgba(56,189,248,0.4),transparent 70%);animation-delay:-7s;"></div>
+  <!-- ============================================================
+       HERO — editorial-kinético. Atmósfera del MUNDO (cobalto vs violeta).
+       ============================================================ -->
+  <section class="cst-shell surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-24 sm:pb-32 px-6 sm:px-10 overflow-hidden">
+    <div class="cst-orb cst-orb-1" aria-hidden="true"></div>
+    <div class="cst-orb cst-orb-2" aria-hidden="true"></div>
+
+    <!-- Numeral de frente gigante, marca de agua detrás del titular -->
+    <span class="cst-ghost display" aria-hidden="true">{String(f.order).padStart(2, '0')}</span>
+
     <div class="mx-auto max-w-6xl relative z-10">
       <nav aria-label="Migas" class="reveal flex items-center gap-2 text-sm text-sand-400 mb-8">
         <a href="/" class="hover:text-sand-50 transition-colors">Inicio</a>
@@ -55,64 +94,265 @@ const jsonLd = [
         <span class="text-sand-600">/</span>
         <span class="text-sand-100 font-medium">{f.navLabel}</span>
       </nav>
-      {f.destacado && (
-        <p class="reveal inline-flex items-center gap-2 rounded-full border border-ember-300/30 bg-ember/10 px-3.5 py-1.5 text-[12px] font-semibold text-ember-300 mb-6">
-          <span class="w-1.5 h-1.5 rounded-full bg-ember-300"></span> Nuestro frente más fuerte
-        </p>
-      )}
-      <p class={`reveal eyebrow-lead mb-5 ${accentText[f.accent]}`}>{f.eyebrow}</p>
-      <h1 class="reveal display text-4xl sm:text-5xl lg:text-[3.8rem] font-semibold tracking-tight leading-[1.04] max-w-4xl text-balance">{f.headline}</h1>
-      <p class="reveal mt-6 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-2xl">{f.description}</p>
 
-      <div class="reveal mt-9 flex flex-col sm:flex-row gap-3">
-        <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group inline-flex items-center justify-center gap-2 text-base font-semibold bg-ember text-white px-7 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
-          Agendar llamada
-          <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
-        </a>
-        {casos.length > 0 && (
-          <a href="#casos-area" class="btn-pop inline-flex items-center justify-center gap-2 text-base font-semibold text-sand-100 border border-white/20 px-7 py-4 rounded-full hover:bg-white/10 transition-colors">Ver casos de éxito</a>
+      <div class="reveal flex flex-wrap items-center gap-3 mb-6">
+        <span class={`cst-kicker ${darkAccent}`}>
+          <span class="tabular-nums">{String(f.order).padStart(2, '0')}</span>
+          <span class="cst-kicker-sep" aria-hidden="true"></span>
+          Frente de consultoría
+        </span>
+        {f.destacado && (
+          <span class="inline-flex items-center gap-2 rounded-full border border-ember-300/30 bg-ember/10 px-3.5 py-1.5 text-[12px] font-semibold text-ember-300">
+            <span class="w-1.5 h-1.5 rounded-full bg-ember-300 node-pulse"></span> Nuestro frente más fuerte
+          </span>
         )}
       </div>
 
-      <!-- Índice de pilares (los mismos que el menú) -->
-      <div class="reveal mt-12 flex flex-wrap gap-2.5">
+      <h1 data-wordfade class="reveal cst-display cst-h1 font-semibold text-balance max-w-5xl">{f.headline}</h1>
+      <p class="reveal mt-7 text-lg sm:text-xl text-sand-300 leading-relaxed max-w-2xl text-pretty">{f.description}</p>
+
+      <div class="reveal mt-10 flex flex-col sm:flex-row gap-3">
+        <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class={`btn-shine btn-pop group inline-flex items-center justify-center gap-2 text-base font-semibold ${ctaBtn} text-white px-7 py-4 rounded-full hover:gap-3`}>
+          Agendar llamada
+          <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        </a>
+        <a href="#recorrido" class="btn-pop inline-flex items-center justify-center gap-2 text-base font-semibold text-sand-100 border border-white/20 px-7 py-4 rounded-full hover:bg-white/10 transition-colors">
+          {sceneLabel}
+        </a>
+      </div>
+
+      <!-- Índice de pilares (= mega-menú) -->
+      <div class="reveal mt-14 flex flex-wrap gap-2.5">
         {f.pilares.map((p, i) => (
-          <a href={`#${p.id}`} class="group inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm text-sand-200 hover:border-white/25 hover:bg-white/[0.08] transition-colors">
-            <span class={`tabular-nums text-xs font-semibold ${accentText[f.accent]}`}>0{i + 1}</span>
-            {p.titulo}
+          <a href={`#${p.id}`} class="cst-index group">
+            <span class={`cst-index-num tabular-nums ${darkAccent}`}>{String(i + 1).padStart(2, '0')}</span>
+            <span class="cst-index-label">{p.titulo}</span>
           </a>
         ))}
       </div>
     </div>
-    <div class="parallax pointer-events-none absolute -bottom-2 inset-x-0" data-parallax="16">
-      <Curve variant="divider" draw="scroll" class="w-full h-20 opacity-40" />
-    </div>
+
+    <!-- Firma inferior: la curva (Digital) o una estructura de estratos (Negocio) -->
+    {isEmber ? (
+      <div class="parallax pointer-events-none absolute -bottom-2 inset-x-0" data-parallax="16">
+        <Curve variant="divider" draw="scroll" class="w-full h-20 opacity-40" />
+      </div>
+    ) : (
+      <div class="cst-strata pointer-events-none absolute bottom-6 inset-x-0" aria-hidden="true">
+        <span class="cst-strata-bar" style="--w:34%"></span>
+        <span class="cst-strata-bar" style="--w:52%"></span>
+        <span class="cst-strata-bar" style="--w:70%"></span>
+      </div>
+    )}
   </section>
 
-  <!-- ============== PILARES (apilados, muy diferenciados) ============== -->
+  {isEmber ? (
+    <!-- ============================================================
+         ESCENA · DIGITAL — "La red que conecta tu operación".
+         Malla de nodos (SVG): los enlaces se dibujan, los nodos se
+         encienden y paquetes de dato viajan del hub a cada pilar.
+         Nada que ver con la curva-viaje del home.
+         ============================================================ -->
+    <section id="recorrido" data-anim-gate class="cst-shell surface-ink grain relative overflow-hidden text-sand-50 px-6 sm:px-10 py-20 sm:py-28 border-t border-white/10 scroll-mt-0">
+      <div class="cst-orb cst-orb-1" aria-hidden="true"></div>
+      <div class="cst-orb cst-orb-2" aria-hidden="true"></div>
+
+      <div class="mx-auto max-w-6xl relative z-10">
+        <div class="max-w-2xl">
+          <p class={`cst-eyebrow ${darkAccent} mb-4`}>El sistema · {f.navLabel}</p>
+          <h2 class="reveal cst-display cst-h2 font-semibold text-white text-balance">
+            Todo conectado. <span class="cst-accent-word">Nada suelto.</span>
+          </h2>
+          <p class="reveal mt-5 text-base sm:text-lg text-sand-300 leading-relaxed max-w-xl text-pretty">
+            Cada pieza de tu operación deja de vivir aparte. Los clientes, los sistemas y los procesos quedan cableados en una sola red — y la información fluye sola entre ellos.
+          </p>
+        </div>
+
+        <!-- Malla (≥sm) -->
+        <div class="cst-net reveal hidden sm:block">
+          <svg viewBox={`0 0 ${NET_VBW} ${NET_VBH}`} fill="none" class="w-full h-auto block overflow-visible" aria-hidden="true">
+            <defs>
+              <linearGradient id="cst-link" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#2563eb"></stop>
+                <stop offset="1" stop-color="#38bdf8"></stop>
+              </linearGradient>
+              <radialGradient id="cst-node-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0" stop-color="#bae6fd" stop-opacity="0.9"></stop>
+                <stop offset="55%" stop-color="#38bdf8" stop-opacity="0.35"></stop>
+                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"></stop>
+              </radialGradient>
+              <pattern id="cst-grid" width="46" height="46" patternUnits="userSpaceOnUse">
+                <path d="M46 0 H0 V46" fill="none" stroke="rgba(147,197,253,0.12)" stroke-width="1"></path>
+              </pattern>
+              <radialGradient id="cst-grid-fade" cx="42%" cy="46%" r="70%">
+                <stop offset="0" stop-color="#fff"></stop>
+                <stop offset="100%" stop-color="#000"></stop>
+              </radialGradient>
+              <mask id="cst-grid-mask"><rect width={NET_VBW} height={NET_VBH} fill="url(#cst-grid-fade)"></rect></mask>
+              <filter id="cst-soft" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="5" result="b"></feGaussianBlur>
+                <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+              </filter>
+            </defs>
+
+            <!-- Plano técnico (blueprint de la red) -->
+            <rect width={NET_VBW} height={NET_VBH} fill="url(#cst-grid)" mask="url(#cst-grid-mask)"></rect>
+
+            <!-- Enlaces: hub → cada pilar, y encadenado entre pilares -->
+            {netNodes.map((n, i) => (
+              <line class="cst-edge" style={`--d:${i}`} x1={netHub.x} y1={netHub.y} x2={n.x} y2={n.y} stroke="url(#cst-link)" stroke-width="2.5" stroke-linecap="round" pathLength="1" />
+            ))}
+            <line class="cst-edge" style="--d:3" x1={netNodes[0].x} y1={netNodes[0].y} x2={netNodes[1].x} y2={netNodes[1].y} stroke="rgba(125,211,252,0.5)" stroke-width="1.5" stroke-linecap="round" pathLength="1" />
+            <line class="cst-edge" style="--d:4" x1={netNodes[1].x} y1={netNodes[1].y} x2={netNodes[2].x} y2={netNodes[2].y} stroke="rgba(125,211,252,0.5)" stroke-width="1.5" stroke-linecap="round" pathLength="1" />
+
+            <!-- Nodos secundarios (textura de red) -->
+            {netMinor.map((m, i) => (
+              <circle cx={m.x} cy={m.y} r="2.6" fill="#93c5fd" class="twinkle" style={`animation-delay:-${(i * 0.7).toFixed(1)}s`}></circle>
+            ))}
+
+            <!-- Paquetes de dato viajando del hub a cada pilar -->
+            {netNodes.map((n, i) => (
+              <circle r="3.4" fill="#e0f2fe" class="cst-packet" style={`offset-path:path('M ${netHub.x} ${netHub.y} L ${n.x} ${n.y}'); animation-delay:-${(i * 0.9).toFixed(1)}s`}></circle>
+            ))}
+
+            <!-- Hub central -->
+            <g class="cst-node" style="--d:0">
+              <circle cx={netHub.x} cy={netHub.y} r="30" fill="url(#cst-node-glow)"></circle>
+              <circle cx={netHub.x} cy={netHub.y} r="13" fill="#0b1a36" stroke="#7dd3fc" stroke-width="2.5"></circle>
+              <circle cx={netHub.x} cy={netHub.y} r="4.5" fill="#e0f2fe"></circle>
+            </g>
+
+            <!-- Nodos de pilar -->
+            {netNodes.map((n, i) => (
+              <g class="cst-node" style={`--d:${i + 1}`}>
+                <circle cx={n.x} cy={n.y} r="20" fill="url(#cst-node-glow)"></circle>
+                <circle cx={n.x} cy={n.y} r="9" fill="#ffffff" filter="url(#cst-soft)"></circle>
+                <circle cx={n.x} cy={n.y} r="9" fill="none" stroke="#38bdf8" stroke-width="2.5"></circle>
+              </g>
+            ))}
+          </svg>
+
+          <!-- Chip del hub -->
+          <span class="cst-net-hub" style={`left:${pct(netHub.x, NET_VBW)}%;top:${pct(netHub.y, NET_VBH)}%`}>Tu operación</span>
+
+          <!-- Chips de pilar (anclas) -->
+          {f.pilares.map((p, i) => {
+            const n = netNodes[i];
+            const below = n.y < 200;
+            return (
+              <a href={`#${p.id}`} class:list={['cst-net-chip', below ? 'is-below' : 'is-above']} style={`left:${pct(n.x, NET_VBW)}%;top:${pct(n.y, NET_VBH)}%;--d:${i}`} aria-label={`Nodo ${i + 1}: ${p.titulo}`}>
+                <span class={`cst-net-num tabular-nums ${darkAccent}`}>{String(i + 1).padStart(2, '0')}</span>
+                <span class="cst-net-title">{p.titulo}</span>
+              </a>
+            );
+          })}
+        </div>
+
+        <!-- Móvil: la red como lista de nodos conectados -->
+        <ol class="cst-flow-m sm:hidden mt-10" role="list">
+          <li class="cst-flow-item reveal" style="--i:0">
+            <span class="cst-flow-node cst-flow-node--hub" aria-hidden="true"></span>
+            <p class="cst-flow-eyebrow">El centro</p>
+            <p class="display text-lg font-semibold text-white leading-tight">Tu operación</p>
+          </li>
+          {f.pilares.map((p, i) => (
+            <li class="cst-flow-item reveal" style={`--i:${i + 1}`}>
+              <a href={`#${p.id}`} class="cst-flow-link">
+                <span class="cst-flow-node" aria-hidden="true"><span class="cst-flow-num tabular-nums">{String(i + 1).padStart(2, '0')}</span></span>
+                <p class="display text-lg font-semibold text-white leading-tight">{p.titulo}</p>
+                <p class="mt-1 text-sm text-sand-300 leading-relaxed">{p.subtitulo}</p>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  ) : (
+    <!-- ============================================================
+         ESCENA · NEGOCIO — "La estructura que sostiene tu empresa".
+         Bloques (HTML) que se ensamblan de los cimientos hacia arriba:
+         columna vertical + keystone. Medio y motivo distintos a Digital.
+         ============================================================ -->
+    <section id="recorrido" data-anim-gate class="cst-shell surface-ink grain relative overflow-hidden text-sand-50 px-6 sm:px-10 py-20 sm:py-28 border-t border-white/10 scroll-mt-0">
+      <div class="cst-orb cst-orb-1" aria-hidden="true"></div>
+      <div class="cst-orb cst-orb-2" aria-hidden="true"></div>
+
+      <div class="mx-auto max-w-6xl relative z-10 grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-12 lg:gap-16 items-center">
+        <div class="max-w-xl">
+          <p class={`cst-eyebrow ${darkAccent} mb-4`}>La estructura · {f.navLabel}</p>
+          <h2 class="reveal cst-display cst-h2 font-semibold text-white text-balance">
+            Cimientos primero. <span class="cst-accent-word">Después se sostiene solo.</span>
+          </h2>
+          <p class="reveal mt-5 text-base sm:text-lg text-sand-300 leading-relaxed text-pretty">
+            No es un cambio suelto: es una estructura que se arma pieza por pieza. Desde cómo funciona tu empresa hoy hasta que cada nivel se sostiene sin depender de la memoria de nadie.
+          </p>
+        </div>
+
+        <!-- Ensamblaje (HTML): keystone + bloques + cimientos -->
+        <div class="cst-org reveal">
+          <div class="cst-org-cap-wrap">
+            <span class="cst-org-cap" style={`--d:${N + 2}`}>
+              <span class="cst-org-cap-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+              </span>
+              Tu empresa, por sistema
+            </span>
+          </div>
+
+          <div class="cst-org-stack">
+            <span class="cst-org-spine" aria-hidden="true"></span>
+            {f.pilares.map((p, i) => (
+              <a href={`#${p.id}`} class="cst-org-block" style={`--d:${N - i + 1}`}>
+                <span class="cst-org-num tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                <span class="cst-org-body">
+                  <span class="cst-org-title">{p.titulo}</span>
+                  <span class="cst-org-sub">{p.subtitulo}</span>
+                </span>
+                <span class="cst-org-arrow" aria-hidden="true">
+                  <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+                </span>
+              </a>
+            ))}
+            <div class="cst-org-base" style="--d:1">Hoy · tu operación como está</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ============================================================
+       ESTACIONES (pilares en detalle) — apiladas, alternando claro/oscuro.
+       ============================================================ -->
   {f.pilares.map((p, i) => {
-    const dark = i % 2 === 1; // alterna claro/oscuro para separarlos con fuerza
+    const dark = i % 2 === 1;
+    const nn = String(i + 1).padStart(2, '0');
     return (
-      <section id={p.id} class={`scroll-mt-24 py-20 sm:py-28 px-6 sm:px-10 border-t ${dark ? 'surface-ink text-sand-50 border-white/10' : 'bg-white border-sand-200'}`}>
-        <div class="mx-auto max-w-6xl">
-          <div class="grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-10 lg:gap-16">
-            <div class="lg:sticky lg:top-28 self-start">
-              <div class="flex items-baseline gap-4 mb-5">
-                <span class={`display text-5xl sm:text-6xl font-semibold tabular-nums ${dark ? 'curve-text' : accentText[f.accent]}`}>0{i + 1}</span>
-                <span class={`eyebrow ${dark ? 'text-ember-300' : accentText[f.accent]}`}>Pilar</span>
-              </div>
-              <h2 class={`display text-3xl sm:text-4xl font-semibold tracking-tight leading-[1.08] text-balance ${dark ? 'text-sand-50' : 'text-ink'}`}>{p.titulo}</h2>
-              <p class={`mt-5 text-lg leading-relaxed ${dark ? 'text-sand-300' : 'text-sand-600'}`}>{p.subtitulo}</p>
+      <section id={p.id} class:list={['cst-pilar cst-shell scroll-mt-24 relative overflow-hidden py-20 sm:py-28 px-6 sm:px-10 border-t', dark ? 'surface-ink grain text-sand-50 border-white/10' : 'bg-white border-sand-200']}>
+        {dark && <div class="cst-orb cst-orb-2" style="top:-8rem;right:-6rem;bottom:auto;left:auto" aria-hidden="true"></div>}
+        <div class="mx-auto max-w-6xl relative z-10">
+          <div class="reveal flex items-center gap-3 mb-8">
+            <span class={`cst-eyebrow ${dark ? darkAccent : lightAccent}`}>Pilar {nn} / {totalLabel}</span>
+            <span class={`cst-progress-rail ${dark ? 'cst-progress-rail--dark' : ''}`} aria-hidden="true">
+              <span class="cst-progress-fill" style={`width:${Math.round(((i + 1) / N) * 100)}%`}></span>
+            </span>
+          </div>
+
+          <div class="grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] gap-10 lg:gap-16">
+            <div class="reveal lg:sticky lg:top-28 self-start">
+              <span class:list={['cst-bignum display tabular-nums select-none', dark ? darkAccent : lightAccent]} aria-hidden="true">{nn}</span>
+              <h2 class:list={['cst-display cst-h2 font-semibold text-balance mt-3', dark ? 'text-sand-50' : 'text-ink']}>{p.titulo}</h2>
+              <p class:list={['mt-5 text-lg leading-relaxed text-pretty', dark ? 'text-sand-300' : 'text-sand-600']}>{p.subtitulo}</p>
               {p.ejemplo && (
-                <p class={`mt-4 text-[15px] italic leading-relaxed ${dark ? 'text-sand-400' : 'text-sand-500'}`}>{p.ejemplo}</p>
+                <p class:list={['cst-ejemplo mt-5', dark ? 'cst-ejemplo--dark' : '']}>{p.ejemplo}</p>
               )}
             </div>
+
             <div class="self-center">
-              <ul class={`grid sm:grid-cols-2 gap-3`}>
-                {p.bullets.map((b) => (
-                  <li class={`flex items-start gap-3 rounded-2xl border p-4 ${dark ? 'border-white/10 bg-white/[0.03]' : 'border-sand-200 bg-sand-50'}`}>
-                    <span class={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${accentBar[f.accent]}`}></span>
-                    <span class={`text-[15px] leading-snug ${dark ? 'text-sand-200' : 'text-sand-800'}`}>{b}</span>
+              <ul class="grid sm:grid-cols-2 gap-3">
+                {p.bullets.map((b, bi) => (
+                  <li class:list={[`reveal reveal-d${(bi % 4) + 1} lift cst-bullet`, dark ? 'cst-bullet--dark' : '']}>
+                    <span class="cst-bullet-idx tabular-nums" aria-hidden="true">{String(bi + 1).padStart(2, '0')}</span>
+                    <span class:list={['cst-bullet-text', dark ? 'text-sand-200' : 'text-sand-800']}>{b}</span>
                   </li>
                 ))}
               </ul>
@@ -124,27 +364,29 @@ const jsonLd = [
     );
   })}
 
-  <!-- ============== CASOS DE ÉXITO DEL ÁREA ============== -->
+  <!-- ============================================================
+       CASOS DE ÉXITO DEL ÁREA (solo Digital tiene casos)
+       ============================================================ -->
   {casos.length > 0 && (
     <section id="casos-area" class="scroll-mt-24 py-20 sm:py-28 px-6 sm:px-10 bg-sand-50 border-t border-sand-200">
       <div class="mx-auto max-w-6xl">
-        <p class="reveal eyebrow-lead text-ember mb-4">Casos de éxito</p>
-        <h2 class="reveal display text-3xl sm:text-4xl font-semibold tracking-tight leading-[1.08] text-ink mb-12 text-balance">Esto ya lo hicimos aquí.</h2>
+        <p class={`reveal cst-eyebrow ${lightAccent} mb-4`}>Casos de éxito</p>
+        <h2 class="reveal cst-display cst-h2 font-semibold text-ink mb-12 text-balance">Esto ya lo hicimos aquí.</h2>
         <div class="space-y-6">
           {casos.map((c) => (
-            <article class="reveal lift rounded-3xl border border-sand-200 bg-white overflow-hidden grid lg:grid-cols-[1.5fr_1fr]">
+            <article class="reveal lift cst-caso grid lg:grid-cols-[1.5fr_1fr]">
               <div class="p-8 sm:p-10 lg:border-r border-sand-200">
                 <span class={`px-3 py-1 rounded-full ${accentSoft[c.accent]} ${accentText[c.accent]} text-[11px] font-semibold uppercase tracking-wide`}>{c.categoria}</span>
-                <h3 class="display text-2xl sm:text-3xl font-semibold my-6 text-ink leading-tight">{c.title}</h3>
+                <h3 class="cst-display text-2xl sm:text-3xl font-semibold my-6 text-ink leading-tight">{c.title}</h3>
                 <dl class="space-y-5">
-                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>El reto</dt><dd class="text-sand-700 leading-relaxed">{c.reto}</dd></div>
-                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Qué hicimos</dt><dd class="text-sand-700 leading-relaxed">{c.hicimos}</dd></div>
-                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Resultado</dt><dd class="text-ink font-medium leading-relaxed">{c.resultado}</dd></div>
+                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 cst-eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>El reto</dt><dd class="text-sand-700 leading-relaxed">{c.reto}</dd></div>
+                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 cst-eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Qué hicimos</dt><dd class="text-sand-700 leading-relaxed">{c.hicimos}</dd></div>
+                  <div class="sm:flex gap-5"><dt class={`flex-shrink-0 w-28 cst-eyebrow ${accentText[c.accent]} pt-1 mb-1 sm:mb-0`}>Resultado</dt><dd class="text-ink font-medium leading-relaxed">{c.resultado}</dd></div>
                 </dl>
               </div>
-              <div class="p-8 sm:p-10 bg-sand-50 flex flex-col">
+              <div class="p-8 sm:p-10 bg-white flex flex-col">
                 <div class="grid grid-cols-2 gap-x-6 gap-y-7">
-                  {c.metrics.map((m) => (<div><p data-count={m.value} class="display text-3xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
+                  {c.metrics.map((m) => (<div><p data-count={m.value} class="cst-display text-3xl sm:text-4xl font-semibold text-ink tabular-nums">{m.value}</p><p class="text-xs text-sand-500 mt-1 leading-snug">{m.label}</p></div>))}
                 </div>
                 {c.quote && (
                   <blockquote class="mt-8 pt-7 border-t border-sand-200">
@@ -159,29 +401,49 @@ const jsonLd = [
     </section>
   )}
 
-  <!-- ============== CREDENCIALES (discreta, fancy) ============== -->
+  <!-- ============================================================
+       CREDENCIALES (componente compartido, sin tocar)
+       ============================================================ -->
   <Credenciales data={f.credenciales} />
 
-  <!-- ============== NAV ENTRE FRENTES ============== -->
-  <section class="px-6 sm:px-10 py-14 bg-sand-50 border-t border-sand-200">
+  <!-- ============================================================
+       NAV ENTRE FRENTES
+       ============================================================ -->
+  <section class="px-6 sm:px-10 py-16 bg-sand-50 border-t border-sand-200">
     <div class="mx-auto max-w-6xl">
-      <a href={`/consultoria/${otro.slug}`} class="lift group block rounded-3xl border border-sand-200 bg-white p-7 sm:p-9 hover:border-sand-400 sm:flex items-center justify-between gap-6">
+      <a href={`/consultoria/${otro.slug}`} class="lift group cst-otro block">
         <div>
-          <p class="eyebrow text-sand-600 mb-2">El otro frente de consultoría</p>
-          <p class="display text-2xl font-semibold text-ink">{otro.navLabel}</p>
-          <p class="text-sand-600 mt-2 text-[15px] leading-relaxed max-w-lg">{otro.description}</p>
+          <p class="cst-eyebrow text-sand-500 mb-3">El otro frente de consultoría</p>
+          <p class="cst-display text-2xl sm:text-3xl font-semibold text-ink">{otro.navLabel}</p>
+          <p class="text-sand-600 mt-2 text-[15px] leading-relaxed max-w-lg text-pretty">{otro.description}</p>
         </div>
-        <svg data-arrow class="w-6 h-6 flex-shrink-0 text-sand-600 mt-4 sm:mt-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        <span class="cst-otro-arrow" aria-hidden="true">
+          <svg data-arrow class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
+        </span>
       </a>
     </div>
   </section>
 
-  <!-- ============== CTA FINAL ============== -->
-  <section class="py-24 sm:py-32 px-6 sm:px-10 surface-ink text-sand-50">
-    <div class="reveal mx-auto max-w-3xl text-center">
-      <h2 class="display text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.06]">Cuéntanos de tu empresa.</h2>
-      <p class="mt-5 text-lg text-sand-300 max-w-md mx-auto">30 minutos. Te decimos derecho si te podemos ayudar o no.</p>
-      <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class="btn-shine btn-pop group mt-8 inline-flex items-center gap-2 text-base font-semibold bg-ember text-white px-8 py-4 rounded-full hover:bg-ember-600 hover:gap-3">
+  <!-- ============================================================
+       CTA FINAL
+       ============================================================ -->
+  <section class="cst-cta cst-shell surface-ink grain text-sand-50 relative overflow-hidden py-24 sm:py-32 px-6 sm:px-10">
+    <div class="cst-orb cst-orb-1" style="top:-8rem;left:50%;transform:translateX(-50%);right:auto" aria-hidden="true"></div>
+    <div class="reveal mx-auto max-w-3xl text-center relative z-10">
+      <div class="cst-cta-curve" aria-hidden="true">
+        {isEmber ? (
+          <Curve variant="hero" draw="scroll" class="w-full h-16 opacity-50" />
+        ) : (
+          <div class="cst-strata cst-strata--cta">
+            <span class="cst-strata-bar" style="--w:36%"></span>
+            <span class="cst-strata-bar" style="--w:56%"></span>
+            <span class="cst-strata-bar" style="--w:76%"></span>
+          </div>
+        )}
+      </div>
+      <h2 class="cst-display cst-h2 font-semibold text-white">Cuéntanos de tu empresa.</h2>
+      <p class="mt-5 text-lg text-sand-300 max-w-md mx-auto text-pretty">30 minutos. Te decimos derecho si te podemos ayudar o no.</p>
+      <a href={calLink} target="_blank" rel="noopener" data-magnetic="0.35" class={`btn-shine btn-pop group mt-9 inline-flex items-center gap-2 text-base font-semibold ${ctaBtn} text-white px-8 py-4 rounded-full hover:gap-3`}>
         Agendar llamada
         <svg data-arrow class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>
       </a>
@@ -196,3 +458,366 @@ const jsonLd = [
 
   <Footer calLink={calLink} waLink={waLink} />
 </BaseLayout>
+
+<style>
+  /* ============================================================
+     CONSULTORÍA — plantilla de frente, DOS MUNDOS.
+     El mundo (Digital cobalto / Negocio violeta) se selecciona con
+     [data-world] en .cst-world y solo cambia CSS vars.
+     ============================================================ */
+
+  /* ---------- Tokens del mundo ---------- */
+  .cst-world {
+    /* Blinda contra overflow horizontal del numeral fantasma / orbes en móvil
+       sin romper position:sticky (clip no crea contexto de scroll). */
+    overflow-x: clip;
+    --w1: #2563eb;   /* primario */
+    --w2: #38bdf8;   /* secundario */
+    --w-soft: #93c5fd;
+    --w-deep: #1d4ed8;
+    --w-grad: linear-gradient(110deg, #2563eb, #38bdf8);
+    --w-sky: transparent;
+  }
+  .cst-world[data-world="negocio"] {
+    --w1: #7c3aed;
+    --w2: #a855f7;
+    --w-soft: #c4b5fd;
+    --w-deep: #6d28d9;
+    --w-grad: linear-gradient(110deg, #6d28d9, #a855f7);
+    --w-sky:
+      radial-gradient(58% 72% at 6% -6%, rgba(124, 58, 237, 0.6), transparent 55%),
+      radial-gradient(50% 60% at 102% 6%, rgba(168, 85, 247, 0.42), transparent 58%),
+      radial-gradient(72% 82% at 14% 106%, rgba(109, 40, 217, 0.55), transparent 60%),
+      radial-gradient(60% 70% at 98% 100%, rgba(196, 181, 253, 0.2), transparent 60%),
+      linear-gradient(160deg, rgba(40, 14, 92, 0.55) 0%, rgba(24, 10, 58, 0.14) 62%);
+  }
+
+  /* Capa de atmósfera del mundo sobre surface-ink (para Negocio domina el violeta) */
+  .cst-shell { position: relative; isolation: isolate; }
+  .cst-world[data-world="negocio"] .cst-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: var(--w-sky);
+  }
+
+  /* Orbes de luz del mundo (reemplazan glow-orb con color por mundo) */
+  .cst-orb {
+    position: absolute;
+    z-index: 0;
+    border-radius: 9999px;
+    filter: blur(70px);
+    pointer-events: none;
+    opacity: 0.5;
+    animation: float-orb 18s ease-in-out infinite;
+  }
+  .cst-orb-1 {
+    width: 34rem; height: 34rem; top: -9rem; left: -7rem;
+    background: radial-gradient(circle, color-mix(in srgb, var(--w1) 58%, transparent), transparent 70%);
+  }
+  .cst-orb-2 {
+    width: 27rem; height: 27rem; bottom: -9rem; right: -7rem;
+    background: radial-gradient(circle, color-mix(in srgb, var(--w2) 46%, transparent), transparent 70%);
+    animation-delay: -7s;
+  }
+
+  /* ---------- Tipografía ---------- */
+  .cst-display { font-family: var(--font-display); letter-spacing: -0.03em; }
+  .cst-h1 { font-size: clamp(2.6rem, 6.4vw, 5.4rem); line-height: 0.98; }
+  .cst-h2 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.04; letter-spacing: -0.03em; }
+  .cst-accent-word { color: var(--w-soft); }
+
+  .cst-ghost {
+    position: absolute;
+    top: clamp(4rem, 12vh, 9rem);
+    right: -0.06em;
+    font-size: clamp(14rem, 42vw, 34rem);
+    font-weight: 800;
+    line-height: 0.7;
+    letter-spacing: -0.06em;
+    color: rgba(255, 255, 255, 0.04);
+    z-index: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .cst-kicker {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-family: var(--font-display); font-weight: 600; font-size: 0.9rem;
+    letter-spacing: -0.01em;
+  }
+  .cst-kicker-sep { width: 1.6rem; height: 1px; background: currentColor; opacity: 0.55; }
+
+  .cst-eyebrow {
+    display: inline-flex; align-items: center; gap: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.72rem; font-weight: 700;
+  }
+  .cst-eyebrow::before { content: ""; width: 1.7rem; height: 1px; background: currentColor; opacity: 0.5; flex: none; }
+
+  /* Índice de pilares del hero */
+  .cst-index {
+    display: inline-flex; align-items: center; gap: 0.65rem;
+    padding: 0.55rem 1rem 0.55rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-sand-200);
+    font-size: 0.9rem;
+    transition: border-color 0.3s var(--ease-pitch), background-color 0.3s var(--ease-pitch), transform 0.3s var(--ease-pitch);
+  }
+  .cst-index-num { font-family: var(--font-display); font-weight: 700; font-size: 0.78rem; }
+  @media (hover: hover) and (pointer: fine) {
+    .cst-index:hover { border-color: color-mix(in srgb, var(--w-soft) 45%, transparent); background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); }
+  }
+
+  /* ---------- Firma inferior de estratos (Negocio) ---------- */
+  .cst-strata { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+  .cst-strata-bar {
+    display: block; height: 6px; width: var(--w, 50%); max-width: 30rem;
+    border-radius: 999px; background: var(--w-grad); opacity: 0.5;
+  }
+  .cst-strata--cta { gap: 0.4rem; margin: 0 auto 1.2rem; max-width: 18rem; }
+  .cst-strata--cta .cst-strata-bar { height: 5px; opacity: 0.6; }
+
+  /* ============================================================
+     ESCENA DIGITAL — malla de nodos
+     ============================================================ */
+  .cst-net { position: relative; margin-top: 2.75rem; }
+
+  .cst-edge { stroke-dasharray: 1; stroke-dashoffset: 0; }
+  .cst-net.is-visible .cst-edge {
+    animation: cst-edge-draw 1s var(--ease-pitch) both;
+    animation-delay: calc(var(--d, 0) * 140ms);
+  }
+  @keyframes cst-edge-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+  .cst-node { transform-box: fill-box; transform-origin: center; }
+  .cst-net.is-visible .cst-node {
+    animation: cst-node-in 0.7s var(--ease-pitch) both;
+    animation-delay: calc(var(--d, 0) * 140ms + 0.28s);
+  }
+  @keyframes cst-node-in {
+    0% { transform: scale(0.2); opacity: 0; }
+    60% { transform: scale(1.16); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Paquetes de dato: viajan por el enlace (offset-path inline por paquete) */
+  .cst-packet {
+    offset-rotate: 0deg;
+    offset-distance: 0%;
+    filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.9));
+    animation: cst-packet 2.9s linear infinite;
+  }
+  @keyframes cst-packet {
+    0% { offset-distance: 0%; opacity: 0; }
+    12% { opacity: 1; }
+    82% { opacity: 1; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+
+  /* Chip del hub */
+  .cst-net-hub {
+    position: absolute;
+    transform: translate(-50%, calc(-50% + 3.4rem));
+    white-space: nowrap;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.82rem; font-weight: 600; letter-spacing: -0.01em;
+    color: var(--color-sand-100);
+    background: rgba(13, 26, 52, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+
+  /* Chips de pilar */
+  .cst-net-chip {
+    position: absolute;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    white-space: nowrap;
+    padding: 0.4rem 0.9rem 0.4rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(13, 26, 52, 0.85);
+    text-decoration: none;
+    transition: border-color 0.35s var(--ease-pitch), transform 0.35s var(--ease-pitch);
+  }
+  .cst-net-chip.is-below { transform: translate(-50%, 2.5rem); }
+  .cst-net-chip.is-above { transform: translate(-50%, calc(-100% - 1.6rem)); }
+  .cst-net-num {
+    display: inline-grid; place-items: center;
+    width: 1.5rem; height: 1.5rem; border-radius: 999px;
+    background: rgba(56, 189, 248, 0.14);
+    font-family: var(--font-display); font-weight: 700; font-size: 0.72rem;
+  }
+  .cst-net-title { font-size: 0.92rem; font-weight: 600; color: var(--color-sand-100); padding-right: 0.25rem; }
+  @media (hover: hover) and (pointer: fine) {
+    .cst-net-chip.is-below:hover { border-color: color-mix(in srgb, var(--w-soft) 60%, transparent); transform: translate(-50%, calc(2.5rem - 3px)); }
+    .cst-net-chip.is-above:hover { border-color: color-mix(in srgb, var(--w-soft) 60%, transparent); transform: translate(-50%, calc(-100% - 1.6rem - 3px)); }
+  }
+
+  /* Entrada de chips */
+  .cst-net.is-visible .cst-net-hub,
+  .cst-net.is-visible .cst-net-chip { animation: cst-fade-up 0.6s var(--ease-pitch) both; }
+  .cst-net.is-visible .cst-net-hub { animation-delay: 0.5s; }
+  .cst-net.is-visible .cst-net-chip { animation-delay: calc(var(--d, 0) * 140ms + 0.6s); }
+  @keyframes cst-fade-up { from { opacity: 0; transform: translate(-50%, calc(var(--from, 0px))); } }
+
+  /* ---------- Red móvil ---------- */
+  .cst-flow-m { position: relative; padding-left: 0.25rem; }
+  .cst-flow-m::before {
+    content: ""; position: absolute; left: 15px; top: 12px; bottom: 12px; width: 2px;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--w-soft) 20%, transparent), var(--w2), color-mix(in srgb, var(--w-soft) 20%, transparent));
+    border-radius: 2px;
+  }
+  .cst-flow-item { position: relative; padding-left: 3rem; padding-bottom: 1.6rem; }
+  .cst-flow-link { display: block; text-decoration: none; }
+  .cst-flow-node {
+    position: absolute; left: 4px; top: 2px; width: 24px; height: 24px;
+    border-radius: 999px; display: grid; place-items: center;
+    background: var(--w-grad);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--w1) 45%, transparent);
+  }
+  .cst-flow-node--hub { background: #0b1a36; border: 2px solid color-mix(in srgb, var(--w-soft) 55%, transparent); box-shadow: none; }
+  .cst-flow-num { font-family: var(--font-display); font-weight: 700; font-size: 0.7rem; color: #fff; }
+  .cst-flow-eyebrow { text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.66rem; font-weight: 700; color: var(--color-sand-400); margin-bottom: 0.25rem; }
+
+  /* ============================================================
+     ESCENA NEGOCIO — estructura que se ensambla
+     ============================================================ */
+  .cst-org { position: relative; }
+  .cst-org-cap-wrap { display: flex; justify-content: center; margin-bottom: 1rem; }
+  .cst-org-cap {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    padding: 0.6rem 1.15rem; border-radius: 999px;
+    background: var(--w-grad); color: #fff;
+    font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em;
+    box-shadow: 0 14px 34px -14px color-mix(in srgb, var(--w1) 70%, transparent);
+  }
+  .cst-org-cap-ico { display: grid; place-items: center; }
+
+  .cst-org-stack { position: relative; display: flex; flex-direction: column; gap: 0.7rem; }
+  .cst-org-spine {
+    position: absolute; left: 2.35rem; top: 0.4rem; bottom: 3.4rem; width: 2px;
+    background: var(--w-grad); border-radius: 2px;
+    box-shadow: 0 0 16px color-mix(in srgb, var(--w1) 50%, transparent);
+    transform-origin: bottom; z-index: 0;
+  }
+  .cst-org.is-visible .cst-org-spine { animation: cst-spine 1s var(--ease-pitch) both; }
+  @keyframes cst-spine { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+  .cst-org-block {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.15rem; border-radius: 1rem; text-decoration: none;
+    background: color-mix(in srgb, var(--w-deep) 30%, #0d0a22);
+    border: 1px solid color-mix(in srgb, var(--w-soft) 20%, transparent);
+    box-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: transform 0.4s var(--ease-pitch), border-color 0.4s var(--ease-pitch), box-shadow 0.4s var(--ease-pitch);
+  }
+  .cst-org-num {
+    flex: none; display: grid; place-items: center;
+    width: 2.4rem; height: 2.4rem; border-radius: 0.7rem;
+    background: var(--w-grad); color: #fff;
+    font-family: var(--font-display); font-weight: 700; font-size: 0.85rem;
+    box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--w1) 60%, transparent);
+  }
+  .cst-org-body { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+  .cst-org-title { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; color: #fff; letter-spacing: -0.01em; }
+  .cst-org-sub { font-size: 0.9rem; color: var(--color-sand-300); line-height: 1.4; }
+  .cst-org-arrow { flex: none; margin-left: auto; color: var(--w-soft); }
+  @media (hover: hover) and (pointer: fine) {
+    .cst-org-block:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--w-soft) 45%, transparent);
+      box-shadow: 0 24px 48px -26px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 24px -6px color-mix(in srgb, var(--w1) 55%, transparent);
+    }
+  }
+  .cst-org-base {
+    position: relative; z-index: 1; margin-top: 0.5rem;
+    padding: 0.85rem 1.15rem; border-radius: 1rem; text-align: center;
+    color: var(--w-soft); font-weight: 600; font-size: 0.9rem; letter-spacing: -0.01em;
+    background: color-mix(in srgb, var(--w-deep) 18%, #0b081c);
+    border: 1px dashed color-mix(in srgb, var(--w-soft) 30%, transparent);
+  }
+
+  .cst-org.is-visible .cst-org-cap,
+  .cst-org.is-visible .cst-org-block,
+  .cst-org.is-visible .cst-org-base {
+    animation: cst-block-in 0.8s var(--ease-pitch) both;
+    animation-delay: calc(var(--d, 0) * 90ms);
+  }
+  @keyframes cst-block-in {
+    0% { opacity: 0; transform: translateY(26px) scale(0.96); }
+    100% { opacity: 1; transform: none; }
+  }
+
+  /* ---------- Pilares en detalle ---------- */
+  .cst-bignum {
+    display: block; font-weight: 800; line-height: 0.74;
+    letter-spacing: -0.03em; font-size: clamp(5rem, 15vw, 9rem);
+  }
+
+  .cst-progress-rail {
+    position: relative; height: 3px; width: clamp(4rem, 18vw, 9rem);
+    border-radius: 999px; background: var(--color-sand-200); overflow: hidden;
+  }
+  .cst-progress-rail--dark { background: rgba(255, 255, 255, 0.12); }
+  .cst-progress-fill { display: block; height: 100%; border-radius: 999px; background: var(--w-grad); }
+
+  .cst-ejemplo {
+    font-size: 0.95rem; line-height: 1.55; color: var(--color-sand-500);
+    padding-left: 0.9rem; border-left: 2px solid var(--color-sand-300); font-style: italic;
+  }
+  .cst-ejemplo--dark { color: var(--color-sand-400); border-left-color: rgba(255, 255, 255, 0.2); }
+
+  .cst-bullet {
+    display: flex; align-items: flex-start; gap: 0.85rem;
+    border-radius: 1rem; border: 1px solid var(--color-sand-200);
+    background: var(--color-sand-50); padding: 1rem 1.1rem;
+  }
+  .cst-bullet--dark { border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03); }
+  .cst-bullet-idx {
+    flex: none; font-family: var(--font-display); font-weight: 700; font-size: 0.72rem;
+    line-height: 1.4; color: var(--w1); opacity: 0.75;
+  }
+  .cst-bullet--dark .cst-bullet-idx { color: var(--w-soft); opacity: 0.9; }
+  .cst-bullet-text { font-size: 0.95rem; line-height: 1.35; }
+
+  /* ---------- Casos ---------- */
+  .cst-caso { border-radius: 1.25rem; border: 1px solid var(--color-sand-200); background: #fff; overflow: hidden; }
+
+  /* ---------- Otro frente ---------- */
+  .cst-otro {
+    display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
+    border-radius: 1.25rem; border: 1px solid var(--color-sand-200); background: #fff;
+    padding: 1.75rem 2rem; transition: border-color 0.4s var(--ease-pitch);
+  }
+  .cst-otro-arrow {
+    flex: none; display: grid; place-items: center;
+    width: 3rem; height: 3rem; border-radius: 999px;
+    background: var(--color-sand-50); color: var(--w1);
+    transition: background 0.35s var(--ease-pitch), color 0.35s var(--ease-pitch);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .cst-otro:hover { border-color: var(--color-sand-400); }
+    .cst-otro:hover .cst-otro-arrow { background: var(--w1); color: #fff; }
+  }
+  @media (max-width: 640px) {
+    .cst-otro { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ---------- CTA final ---------- */
+  .cst-cta-curve { max-width: 22rem; margin: 0 auto 1.5rem; }
+
+  /* ---------- Reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    .cst-orb { display: none; }
+    .cst-edge { stroke-dashoffset: 0 !important; animation: none !important; }
+    .cst-node { animation: none !important; }
+    .cst-packet { animation: none !important; opacity: 0 !important; }
+    .cst-net-hub, .cst-net-chip, .cst-org-cap, .cst-org-block, .cst-org-base { animation: none !important; }
+    .cst-org-spine { animation: none !important; transform: none !important; }
+  }
+</style>
