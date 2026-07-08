@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { authorizeUrl, spotifyConfigured } from "@/lib/spotify";
+import { authorizeUrl, redirectFor, spotifyConfigured } from "@/lib/spotify";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!spotifyConfigured()) {
     return NextResponse.json({ ok: false, error: "Spotify no configurado" }, { status: 400 });
   }
@@ -14,5 +14,7 @@ export async function GET() {
   jar.set("sp_state", state, {
     httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 600,
   });
-  return NextResponse.redirect(authorizeUrl(state));
+  // Redirect al MISMO dominio desde donde se entra (kappa, tiempos-curva o local).
+  const redirect = redirectFor(new URL(req.url).origin);
+  return NextResponse.redirect(authorizeUrl(state, redirect));
 }

@@ -11,11 +11,18 @@ export function spotifyConfigured() {
   return !!ID && !!SECRET;
 }
 
-export function authorizeUrl(state: string) {
+// El redirect debe ser EXACTAMENTE el mismo en authorize y en el intercambio de token,
+// y vivir en el mismo dominio donde arrancó el flujo (si no, la cookie de state no viaja).
+// Por eso se deriva del dominio actual del request; SPOTIFY_REDIRECT queda como fallback.
+export function redirectFor(origin?: string) {
+  return origin ? `${origin.replace(/\/$/, "")}/api/spotify/callback` : SPOTIFY_REDIRECT;
+}
+
+export function authorizeUrl(state: string, redirect: string) {
   const p = new URLSearchParams({
     client_id: ID,
     response_type: "code",
-    redirect_uri: SPOTIFY_REDIRECT,
+    redirect_uri: redirect,
     scope: SPOTIFY_SCOPES,
     state,
   });
@@ -24,11 +31,11 @@ export function authorizeUrl(state: string) {
 
 const basic = () => Buffer.from(`${ID}:${SECRET}`).toString("base64");
 
-export async function exchangeCode(code: string) {
+export async function exchangeCode(code: string, redirect: string) {
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { Authorization: `Basic ${basic()}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: SPOTIFY_REDIRECT }),
+    body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirect }),
   });
   return res.json() as Promise<{ access_token?: string; refresh_token?: string; expires_in?: number }>;
 }

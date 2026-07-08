@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { exchangeCode } from "@/lib/spotify";
+import { exchangeCode, redirectFor } from "@/lib/spotify";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   }
   jar.delete("sp_state");
 
-  const tok = await exchangeCode(code);
+  const tok = await exchangeCode(code, redirectFor(url.origin));
   if (tok.refresh_token) {
     // Set vía el store de cookies (más confiable en Next 16 que en el redirect).
     jar.set("sp_refresh", tok.refresh_token, {
