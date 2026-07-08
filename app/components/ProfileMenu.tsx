@@ -11,6 +11,7 @@ import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { AvatarCropModal } from "@/components/AvatarCropModal";
+import { cn } from "@/lib/cn";
 
 // Avatar del nav que abre un menú: foto de perfil (subir) + cerrar sesión.
 export function ProfileMenu() {
@@ -19,6 +20,7 @@ export function ProfileMenu() {
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -82,7 +84,14 @@ export function ProfileMenu() {
 
   return (
     <div className="relative" ref={boxRef}>
-      <button onClick={() => setOpen((o) => !o)} className="rounded-full ring-accent/40 transition hover:ring-2 focus-ring" aria-label="Tu perfil">
+      <button
+        onClick={() => {
+          if (!open && boxRef.current) setDropUp(boxRef.current.getBoundingClientRect().top > window.innerHeight / 2);
+          setOpen((o) => !o);
+        }}
+        className="rounded-full ring-accent/40 transition hover:ring-2 focus-ring"
+        aria-label="Tu perfil"
+      >
         <Avatar member={me} src={photoUrl} size={38} />
       </button>
 
@@ -93,7 +102,10 @@ export function ProfileMenu() {
           initial="hidden"
           animate="visible"
           exit="hidden"
-          className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float"
+          className={cn(
+            "absolute right-0 z-50 w-64 overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float",
+            dropUp ? "bottom-full mb-2 origin-bottom-right" : "mt-2 origin-top-right",
+          )}
         >
           <div className="flex items-center gap-3 border-b border-line p-4">
             <Avatar member={me} src={photoUrl} size={48} />
