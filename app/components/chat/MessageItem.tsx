@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ListTodo, SmilePlus, AtSign } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { popover } from "@/lib/motion";
 import { hhmmFromISO } from "@/lib/format";
 import { parseMessage, notionTaskUrl } from "@/lib/notion-url";
 import { VoiceBubble } from "@/components/chat/VoiceBubble";
@@ -110,18 +112,26 @@ export function MessageItem({
             >
               <SmilePlus size={14} />
             </button>
-            {pickerOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
-                <div className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-surface p-1.5 shadow-float", mine ? "right-0" : "left-0")}>
-                  {EMOJIS.map((e) => (
-                    <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">
-                      {e}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <AnimatePresence>
+              {pickerOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
+                  <motion.div
+                    variants={popover}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-surface p-1.5 shadow-float", mine ? "right-0 origin-top-right" : "left-0 origin-top-left")}
+                  >
+                    {EMOJIS.map((e) => (
+                      <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">
+                        {e}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>

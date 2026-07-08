@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { ListTodo, Users, Building2, Search, Inbox, Check, Building, CalendarClock, CircleDot, Plus } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -158,7 +159,9 @@ export default function TareasPage() {
       {searchResults ? (
         <div className="space-y-2">
           <p className="text-xs font-bold text-muted">{searchResults.length} resultado{searchResults.length === 1 ? "" : "s"}</p>
-          {searchResults.map((t) => <TaskCard key={t.id} task={t} />)}
+          <AnimatePresence initial={false}>
+            {searchResults.map((t) => <TaskCard key={t.id} task={t} />)}
+          </AnimatePresence>
           {searchResults.length === 0 && <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">Nada coincide con «{search.trim()}».</div>}
         </div>
       ) : (
@@ -192,7 +195,11 @@ export default function TareasPage() {
                     <span className="rounded-chip bg-surface-2 px-2 py-0.5 text-caption font-semibold text-muted">{g.items.length}</span>
                     {secsOf(g.items) > 0 && <span className="tabular text-xs text-muted">· {formatDuration(secsOf(g.items))}</span>}
                   </div>
-                  <div className="space-y-2">{g.items.slice(0, 80).map((t) => <TaskCard key={t.id} task={t} />)}</div>
+                  <div className="space-y-2">
+                    <AnimatePresence initial={false}>
+                      {g.items.slice(0, 80).map((t) => <TaskCard key={t.id} task={t} />)}
+                    </AnimatePresence>
+                  </div>
                 </div>
               ))
             )}

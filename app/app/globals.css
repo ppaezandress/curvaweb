@@ -335,15 +335,6 @@ body {
   animation: curva-handoff 1.6s var(--ease-curva) 2;
 }
 
-/* Chip que entra al dock (manual→IA, o aparición). */
-@keyframes dock-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.94); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-.dock-in {
-  animation: dock-in 0.32s var(--ease-curva) both;
-}
-
 /* Foco accesible consistente (teclado) — un solo estilo en todo el producto */
 .focus-ring:focus-visible {
   outline: none;

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Plus, MessageSquarePlus, Settings } from "lucide-react";
+import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -295,11 +297,20 @@ export default function MensajesPage() {
         </div>
 
         <div className="flex-1 space-y-1.5 overflow-y-auto pr-1">
+          <AnimatePresence initial={false}>
           {messages.map((m, i) => {
             const prev = i > 0 ? messages[i - 1] : null;
             const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
             return (
-              <div key={m.id} className="space-y-1.5">
+              <motion.div
+                key={m.id}
+                layout
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: DUR_BASE, ease: EASE_CURVA }}
+                className="space-y-1.5"
+              >
                 {newDay && (
                   <div className="my-3 flex items-center gap-3">
                     <span className="h-px flex-1 bg-line" />
@@ -309,9 +320,10 @@ export default function MensajesPage() {
                 )}
                 <MessageItem msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
                   reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} />
-              </div>
+              </motion.div>
             );
           })}
+          </AnimatePresence>
           {messages.length === 0 && <p className="py-10 text-center text-sm text-muted">Sé el primero en escribir.</p>}
           <div ref={endRef} />
         </div>

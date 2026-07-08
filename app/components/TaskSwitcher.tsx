@@ -1,27 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Play, Pause, X, Sparkles, Hand, ArrowDownLeft, CircleCheck } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { useCoworking } from "@/lib/use-coworking";
 import { useCelebrate } from "@/lib/celebrate-context";
 import { formatClock } from "@/lib/format";
+import { dockChip, SPRING_SNAPPY } from "@/lib/motion";
 import { Avatar } from "@/components/Avatar";
 
 export function TaskSwitcher() {
   const { openTasks, active, aiActive, aiEnabled } = useApp();
-
-  if (openTasks.length === 0) return null;
 
   const manualId = active?.taskId ?? null;
   const aiIds = aiActive.map((a) => a.taskId);
   const aiSet = new Set(aiIds);
   const pausedIds = openTasks.filter((t) => t !== manualId && !aiSet.has(t));
 
+  // AnimatePresence vive siempre montado (el layout renderiza <TaskSwitcher/> fijo) para
+  // poder animar la aparición y la salida del dock cuando openTasks pasa de/hacia 0.
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(56px+env(safe-area-inset-bottom)+12px)] sm:pb-4">
-      <div className="pointer-events-auto mx-auto max-w-3xl overflow-hidden rounded-hero border border-line bg-surface/92 shadow-float backdrop-blur-xl">
+    <AnimatePresence>
+      {openTasks.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 24 }}
+          transition={SPRING_SNAPPY}
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(56px+env(safe-area-inset-bottom)+12px)] sm:pb-4"
+        >
+      <motion.div layout className="pointer-events-auto mx-auto max-w-3xl overflow-hidden rounded-hero border border-line bg-surface/92 shadow-float backdrop-blur-xl">
         {/* ── Zona: A MANO (tu cronómetro, uno a la vez) ── */}
         <div className="p-1.5">
           {manualId ? (
@@ -58,8 +68,10 @@ export function TaskSwitcher() {
             ))}
           </Lane>
         )}
-      </div>
-    </div>
+      </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -74,10 +86,12 @@ function Lane({
   tint?: "ai";
 }) {
   return (
-    <div className={`flex items-center gap-2 border-t border-line/70 px-2.5 py-1.5 ${tint === "ai" ? "ai-surface" : ""}`}>
+    <motion.div layout className={`flex items-center gap-2 border-t border-line/70 px-2.5 py-1.5 ${tint === "ai" ? "ai-surface" : ""}`}>
       <p className="shrink-0 px-0.5 text-caption font-semibold text-muted">{label}</p>
-      <div className="flex flex-1 gap-1.5 overflow-x-auto py-0.5">{children}</div>
-    </div>
+      <div className="flex flex-1 gap-1.5 overflow-x-auto py-0.5">
+        <AnimatePresence initial={false}>{children}</AnimatePresence>
+      </div>
+    </motion.div>
   );
 }
 
@@ -198,7 +212,14 @@ function AiChip({ taskId }: { taskId: string }) {
   const task = taskById[taskId];
 
   return (
-    <div className="dock-in ai-shimmer group flex min-w-[180px] shrink-0 items-center gap-2 rounded-control border border-accent/30 bg-surface/70 px-2.5 py-2">
+    <motion.div
+      layout
+      variants={dockChip}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="ai-shimmer group flex min-w-[180px] shrink-0 items-center gap-2 rounded-control border border-accent/30 bg-surface/70 px-2.5 py-2"
+    >
       <Sparkles size={15} className="curva-live-dot shrink-0 text-accent" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold text-fg">{task?.name || "Tarea"}</p>
@@ -222,7 +243,7 @@ function AiChip({ taskId }: { taskId: string }) {
       >
         <X size={14} />
       </button>
-    </div>
+    </motion.div>
   );
 }
 
@@ -233,7 +254,14 @@ function PausedChip({ taskId }: { taskId: string }) {
   const task = taskById[taskId];
 
   return (
-    <div className="group flex min-w-[128px] max-w-[220px] shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface py-1 pl-1 pr-1.5">
+    <motion.div
+      layout
+      variants={dockChip}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="group flex min-w-[128px] max-w-[220px] shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface py-1 pl-1 pr-1.5"
+    >
       <button
         onClick={() => switchTo(taskId)}
         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-ink text-white transition hover:bg-accent focus-ring"
@@ -262,6 +290,6 @@ function PausedChip({ taskId }: { taskId: string }) {
       >
         <X size={13} />
       </button>
-    </div>
+    </motion.div>
   );
 }

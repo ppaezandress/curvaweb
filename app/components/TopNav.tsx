@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
+import { popover } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { navLinks } from "@/lib/nav";
@@ -42,25 +44,33 @@ export function TopNav() {
             >
               {open ? <X size={18} /> : <Menu size={18} />}
             </button>
-            {open && (
-              <nav className="absolute left-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-card border border-line bg-surface py-1.5 shadow-float">
-                {links.map((l) => {
-                  const activeLink = l.match(pathname);
-                  const Icon = l.icon;
-                  return (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition ${
-                        activeLink ? "bg-ink text-white" : "text-fg hover:bg-surface-2"
-                      }`}
-                    >
-                      <Icon size={16} /> {l.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            )}
+            <AnimatePresence>
+              {open && (
+                <motion.nav
+                  variants={popover}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="absolute left-0 top-full z-50 mt-2 w-52 origin-top-left overflow-hidden rounded-card border border-line bg-surface py-1.5 shadow-float"
+                >
+                  {links.map((l) => {
+                    const activeLink = l.match(pathname);
+                    const Icon = l.icon;
+                    return (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition ${
+                          activeLink ? "bg-ink text-white" : "text-fg hover:bg-surface-2"
+                        }`}
+                      >
+                        <Icon size={16} /> {l.label}
+                      </Link>
+                    );
+                  })}
+                </motion.nav>
+              )}
+            </AnimatePresence>
           </div>
 
           <Link href="/dashboard" className="text-xl text-fg">

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "motion/react";
 import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, ExternalLink } from "lucide-react";
+import { backdrop, DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { StatusPicker } from "@/components/StatusPicker";
@@ -27,20 +29,18 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [mounted, setMounted] = useState(false);
-  const [shown, setShown] = useState(false);
   useEffect(() => setMounted(true), []);
 
   // Escape + scroll-lock (patrón seguro compartido; ver lib/use-overlay.ts).
   useOverlay(open, onClose);
 
-  // Animación de entrada + fetch del historial: SOLO al abrir/cerrar (deps [open]).
+  // Fetch del historial: SOLO al abrir (deps [open]). La animación de entrada/salida
+  // ahora la maneja Motion (AnimatePresence), ya no un estado `shown` + rAF.
   // Antes esto dependía de `onClose` inline → con TaskCard re-renderizando cada segundo
   // por el cronómetro, re-hacía fetch(/api/time-entries) CADA SEGUNDO y trababa la app.
   useEffect(() => {
-    if (!open) { setShown(false); return; }
-    const id = requestAnimationFrame(() => setShown(true));
+    if (!open) return;
     fetch("/api/time-entries").then((r) => r.json()).then((d) => setRecords(d.records || [])).catch(() => {});
-    return () => cancelAnimationFrame(id);
   }, [open]);
 
   const task = taskById[taskId];
@@ -66,7 +66,9 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
     return { mine, totalMin, sessions: mine.length, people, bench };
   }, [records, taskId, task, taskById, memberById, currentUserId, isAdmin]);
 
-  if (!open || !mounted || !task) return null;
+  // No cerramos con `!open` para que AnimatePresence pueda animar la SALIDA; el gate de
+  // `open` vive dentro del portal. `task` sigue definida durante el cierre (no se desmonta).
+  if (!mounted || !task) return null;
 
   const client = task.internal ? null : clientById[task.clientId] || clientById[projectById[task.projectId]?.clientId];
   const project = projectById[task.projectId];
@@ -79,12 +81,24 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
   const benchPct = stats.bench > 0 ? Math.round((totalWithLive / stats.bench) * 100) : 0;
 
   return createPortal(
-    <div className="modal-backdrop fixed inset-0 z-50 flex justify-end bg-ink/30" onClick={onClose}>
-      <div
-        className="flex h-full w-full max-w-md flex-col bg-surface shadow-float transition-transform duration-300"
-        style={{ transform: shown ? "translateX(0)" : "translateX(100%)", transitionTimingFunction: "var(--ease-curva)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          variants={backdrop}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          className="fixed inset-0 z-50 flex justify-end bg-ink/30"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: DUR_BASE, ease: EASE_CURVA }}
+            className="flex h-full w-full max-w-md flex-col bg-surface shadow-float"
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0">
@@ -167,8 +181,10 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
             )}
           </div>
         </div>
-      </div>
-    </div>,
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }

@@ -3,7 +3,9 @@ import { toast } from "@/lib/toast";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { Camera, LogOut, Loader2, Settings, FolderOpen } from "lucide-react";
+import { popover } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
@@ -84,8 +86,15 @@ export function ProfileMenu() {
         <Avatar member={me} src={photoUrl} size={38} />
       </button>
 
+      <AnimatePresence>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-card border border-line bg-surface shadow-float">
+        <motion.div
+          variants={popover}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-card border border-line bg-surface shadow-float"
+        >
           <div className="flex items-center gap-3 border-b border-line p-4">
             <Avatar member={me} src={photoUrl} size={48} />
             <div className="min-w-0">
@@ -111,8 +120,9 @@ export function ProfileMenu() {
           <button onClick={logout} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-danger transition hover:bg-danger/10">
             <LogOut size={16} /> Cerrar sesión
           </button>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
       {cropFile && (
         <AvatarCropModal
           file={cropFile}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion } from "motion/react";
 import { Clock, ListChecks, CalendarCheck, Gauge, TrendingUp } from "lucide-react";
+import { fadeUp, staggerContainer } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { useTimeRecords } from "@/lib/use-time-records";
@@ -147,12 +149,12 @@ function Analisis() {
       ) : (
         <>
           {/* KPIs del rango */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <KpiCard icon={<Clock size={14} />} label="Horas" value={formatHours(cur.min * 60)} curr={cur.min} prev={prv?.min ?? null} spark={totalSpark} />
             <KpiCard icon={<ListChecks size={14} />} label="Tareas" value={String(cur.tasks)} curr={cur.tasks} prev={prv?.tasks ?? null} />
             <KpiCard icon={<CalendarCheck size={14} />} label="Días activos" value={String(cur.days)} curr={cur.days} prev={prv?.days ?? null} />
             <KpiCard icon={<Gauge size={14} />} label="Horas / día" value={formatHours(cur.perDay * 60)} curr={Math.round(cur.perDay)} prev={prv ? Math.round(prv.perDay) : null} />
-          </div>
+          </motion.div>
 
           {/* Avance en el tiempo — la vista estrella */}
           <div className="rounded-card border border-line bg-surface p-5 shadow-soft sm:p-6">
@@ -207,10 +209,10 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
 
 function KpiCard({ icon, label, value, curr, prev, spark }: { icon: React.ReactNode; label: string; value: string; curr: number; prev: number | null; spark?: number[] }) {
   return (
-    <div className="rounded-card border border-line bg-surface p-5 shadow-soft">
+    <motion.div variants={fadeUp} className="rounded-card border border-line bg-surface p-5 shadow-soft">
       <Stat icon={icon} label={label} value={value} delta={toDelta(curr, prev)} />
       {spark && spark.length > 1 && <Chart values={spark} height={34} bare className="mt-3" />}
-    </div>
+    </motion.div>
   );
 }
 

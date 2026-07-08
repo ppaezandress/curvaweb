@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Camera, X, Check, RefreshCw } from "lucide-react";
 import { useCelebrate } from "@/lib/celebrate-context";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { formatDuration } from "@/lib/format";
 import { addReaction } from "@/lib/reactions";
+import { backdrop, fadeUp, staggerContainer } from "@/lib/motion";
+
+// Spring con un pelín de rebote — es el momento de celebración, sí queremos que "brinque".
+const CELEBRATE_SPRING = { type: "spring" as const, stiffness: 300, damping: 22 };
 
 const EMOJIS = ["🔥", "🎉", "😮‍💨", "💪", "🧠", "😴", "🙌", "😅"];
 const PHRASES = ["¡Tarea cerrada!", "¡Bien hecho!", "Una menos 💥", "¡A celebrar!", "¡Lo lograste!"];
@@ -88,14 +93,20 @@ export function DoneCelebration() {
     dismiss();
   };
 
-  if (!celebrating) return null;
-
   // Total REAL en la tarea: lo previo (Notion) + todas las sesiones (la recién cerrada ya entró).
-  const task = taskById[celebrating.taskId];
-  const totalSec = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(celebrating.taskId);
+  const task = celebrating ? taskById[celebrating.taskId] : undefined;
+  const totalSec = celebrating ? (task?.baselineSeconds ?? 0) + sessionSecondsForTask(celebrating.taskId) : 0;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+    <AnimatePresence>
+      {celebrating && (
+    <motion.div
+      variants={backdrop}
+      initial="hidden"
+      animate="visible"
+      exit="hidden"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+    >
       {/* confetti emoji simple */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {Array.from({ length: 14 }).map((_, i) => (
@@ -105,7 +116,13 @@ export function DoneCelebration() {
         ))}
       </div>
 
-      <div className="relative w-full max-w-md rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-hero">
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.94 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.96 }}
+        transition={CELEBRATE_SPRING}
+        className="relative w-full max-w-md rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-hero"
+      >
         <button onClick={dismiss} className="absolute right-4 top-4 rounded-full p-1.5 text-muted transition hover:bg-surface-2">
           <X size={18} />
         </button>
@@ -145,13 +162,13 @@ export function DoneCelebration() {
 
         {/* Emoji */}
         <p className="mt-5 mb-2 text-sm font-semibold text-muted">¿Cómo te sentiste?</p>
-        <div className="flex flex-wrap gap-1.5">
+        <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="flex flex-wrap gap-1.5">
           {EMOJIS.map((e) => (
-            <button key={e} onClick={() => setEmoji(e)} className={`rounded-control px-3 py-2 text-xl transition ${emoji === e ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-surface-2"}`}>
+            <motion.button variants={fadeUp} key={e} onClick={() => setEmoji(e)} whileTap={{ scale: 0.9 }} className={`rounded-control px-3 py-2 text-xl transition-colors ${emoji === e ? "bg-accent/10 ring-2 ring-accent" : "hover:bg-surface-2"}`}>
               {e}
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         <div className="mt-6 flex justify-end gap-2">
           <button onClick={dismiss} className="rounded-full px-4 py-2 text-sm font-medium text-muted transition hover:bg-surface-2">Saltar</button>
@@ -159,7 +176,9 @@ export function DoneCelebration() {
             <Check size={15} /> Guardar al muro
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

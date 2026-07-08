@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { MotionConfig } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useApp } from "@/lib/app-context";
@@ -49,6 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const hasDock = openTasks.length > 0;
 
   return (
+    <MotionConfig reducedMotion="user">
     <AILiveProvider>
     <CoworkingProvider>
     <div className="flex min-h-screen">
@@ -92,5 +94,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
     </CoworkingProvider>
     </AILiveProvider>
+    </MotionConfig>
   );
 }

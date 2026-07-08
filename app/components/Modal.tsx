@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
+import { backdrop, panel } from "@/lib/motion";
 
 const FOCUSABLE =
   'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])';
@@ -65,38 +67,54 @@ export function Modal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open || !mounted) return null;
+  if (!mounted) return null;
 
   // Portal a <body>: evita que un ancestro con transform (animaciones .rise)
   // "atrape" el backdrop fixed y lo recorte a un rectángulo.
+  // AnimatePresence mantiene montado el diálogo mientras corre su animación de salida;
+  // los efectos de foco/scroll-lock siguen con dep [open], así que al cerrar restauran
+  // el scroll y devuelven el foco de inmediato mientras el panel se desvanece.
   return createPortal(
-    <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-0 sm:items-center sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="modal-panel flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float outline-none sm:rounded-hero"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 id={titleId} className="font-display text-lg font-bold text-fg">{title}</h2>
-          <button
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="modal"
+          variants={backdrop}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-0 sm:items-center sm:p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            ref={panelRef}
+            variants={panel}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
+            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float outline-none sm:rounded-hero"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="border-t border-line px-5 py-3">{footer}</div>}
-      </div>
-    </div>,
+            <div className="flex items-center justify-between border-b border-line px-5 py-4">
+              <h2 id={titleId} className="font-display text-lg font-bold text-fg">{title}</h2>
+              <button
+                onClick={onClose}
+                aria-label="Cerrar"
+                className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+            {footer && <div className="border-t border-line px-5 py-3">{footer}</div>}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body,
   );
 }

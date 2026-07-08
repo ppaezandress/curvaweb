@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Play, Pause, Plus, Layers, Check, CircleCheck, Camera, Sparkles, ExternalLink, RotateCcw, Clock, CalendarClock } from "lucide-react";
+import { DUR_BASE, EASE_CURVA, SPRING_SNAPPY } from "@/lib/motion";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { type Task } from "@/lib/mock-data";
 import { useData } from "@/lib/data-context";
@@ -106,8 +108,13 @@ export function TaskCard({ task }: { task: Task }) {
   })();
 
   return (
-    <div
-      className={`flex items-center gap-4 rounded-card border p-4 transition ${
+    <motion.div
+      layout="position"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ layout: SPRING_SNAPPY, opacity: { duration: DUR_BASE }, y: { duration: DUR_BASE, ease: EASE_CURVA }, scale: { duration: DUR_BASE } }}
+      className={`flex items-center gap-4 rounded-card border p-4 transition-colors ${
         isRunning
           ? "border-accent bg-accent/[0.04]"
           : onAI
@@ -260,6 +267,6 @@ export function TaskCard({ task }: { task: Task }) {
 
       <TaskPhotos taskId={task.id} taskName={task.name} open={showPhotos} onClose={() => setShowPhotos(false)} />
       <TaskDetailDrawer taskId={task.id} open={showDetail} onClose={() => setShowDetail(false)} />
-    </div>
+    </motion.div>
   );
 }
