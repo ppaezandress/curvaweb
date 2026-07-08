@@ -33,11 +33,11 @@ function SelectedMark() {
 export function ChannelSettingsModal({
   open, onClose, channel, currentMembers, candidates,
   onRename, onToggleHidden, onAddMember, onRemoveMember,
-  background, onSaveBackground, onUploadImage,
+  background, onSaveBackground, onUploadImage, onSaveTopic,
 }: {
   open: boolean;
   onClose: () => void;
-  channel: { id: number; name: string; kind: string; is_hidden?: boolean } | null;
+  channel: { id: number; name: string; kind: string; is_hidden?: boolean; topic?: string | null } | null;
   currentMembers: Person[];
   candidates: Person[];
   onRename: (name: string) => Promise<void> | void;
@@ -47,8 +47,11 @@ export function ChannelSettingsModal({
   background?: ChatBackground | null;
   onSaveBackground?: (bg: ChatBackground) => Promise<void> | void;
   onUploadImage?: (file: File) => Promise<string | null>;
+  onSaveTopic?: (topic: string) => Promise<void> | void;
 }) {
   const [name, setName] = useState(channel?.name || "");
+  const [topic, setTopic] = useState(channel?.topic || "");
+  const [savingTopic, setSavingTopic] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bg, setBg] = useState<ChatBackground>(background ?? { kind: "none" });
   const [bgTab, setBgTab] = useState<BgTab>((background?.kind as BgTab) || "none");
@@ -102,6 +105,17 @@ export function ChannelSettingsModal({
         <div className="flex gap-2">
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="nombre-del-canal" />
           <button onClick={save} disabled={saving || !name.trim() || name.trim() === channel.name} className="inline-flex shrink-0 items-center gap-1.5 rounded-control bg-accent px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
+            <Check size={15} /> Guardar
+          </button>
+        </div>
+      </Field>
+
+      <Field label="Tema del canal">
+        <div className="flex gap-2">
+          <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputCls} placeholder="¿De qué se habla aquí?" maxLength={120} />
+          <button onClick={async () => { if (savingTopic) return; setSavingTopic(true); try { await onSaveTopic?.(topic); } finally { setSavingTopic(false); } }}
+            disabled={savingTopic || topic === (channel.topic || "")}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-control bg-accent px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40">
             <Check size={15} /> Guardar
           </button>
         </div>

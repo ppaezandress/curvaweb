@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ListTodo, SmilePlus, AtSign, Reply, Pencil, Trash2, Pin, PinOff, Check, X } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
@@ -16,6 +16,24 @@ export type ChatProfile = { id: string; name: string; avatar_url: string | null 
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
 const EMOJIS = ["👍", "❤️", "🎉", "🔥", "😂", "👀", "🙌", "💯", "🚀", "🤝", "🙏", "✅", "💪", "⚡", "😮", "🫶"];
+
+// Formato inline estilo Slack/markdown: **negrita** _cursiva_ ~~tachado~~ `código`.
+function renderRich(text: string): ReactNode[] {
+  const rx = /(\*\*[^*\n]+\*\*|__[^_\n]+__|~~[^~\n]+~~|`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
+  const out: ReactNode[] = [];
+  let last = 0, k = 0, m: RegExpExecArray | null;
+  while ((m = rx.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const t = m[0];
+    if (t.startsWith("**") || t.startsWith("__")) out.push(<strong key={k++} className="font-semibold">{t.slice(2, -2)}</strong>);
+    else if (t.startsWith("~~")) out.push(<s key={k++}>{t.slice(2, -2)}</s>);
+    else if (t.startsWith("`")) out.push(<code key={k++} className="rounded bg-black/10 px-1 py-0.5 font-mono text-[0.85em]">{t.slice(1, -1)}</code>);
+    else out.push(<em key={k++}>{t.slice(1, -1)}</em>);
+    last = m.index + t.length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
 
 // Texto plano de un mensaje (para la cita de respuesta): sin tokens ni saltos.
 function plain(body: string): string {
@@ -138,7 +156,7 @@ export function MessageItem({
           <div className={cn("mt-0.5 inline-block rounded-card px-3.5 py-2 text-left text-sm", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
             {parts.map((p, i) =>
               p.type === "text" ? (
-                <span key={i} className="whitespace-pre-wrap">{p.text}</span>
+                <span key={i} className="whitespace-pre-wrap">{renderRich(p.text)}</span>
               ) : p.type === "user" ? (
                 <span key={i} className={cn("mx-0.5 inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 align-middle text-xs font-semibold", mine ? "bg-surface/20" : "bg-accent/10 text-accent")}>
                   <AtSign size={10} />{p.name}

@@ -18,7 +18,7 @@ import { CultureRail } from "@/components/chat/CultureRail";
 import { hasBackground, type ChatBackground as ChatBg } from "@/lib/chat-backgrounds";
 import { cn } from "@/lib/cn";
 
-type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean; background?: ChatBg | null };
+type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean; background?: ChatBg | null; topic?: string | null };
 type ReactionRow = { id: number; message_id: number; user_id: string; emoji: string };
 
 function daySepLabel(iso: string): string {
@@ -48,6 +48,8 @@ export default function MensajesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
   const [query, setQuery] = useState("");
+  const [unread, setUnread] = useState<Set<number>>(new Set());
+  const activeIdRef = useRef<number | null>(null); activeIdRef.current = activeId;
   const endRef = useRef<HTMLDivElement>(null);
   const profilesRef = useRef(profiles); profilesRef.current = profiles;
   // "Está escribiendo…" en vivo (broadcast, sin tocar la BD).
@@ -91,6 +93,40 @@ export default function MensajesPage() {
     const { data } = await sb.from("message_pins").select("message_id,channel_id").eq("channel_id", activeId);
     setPins((data as { message_id: number; channel_id: number }[]) || []);
   }, [sb, activeId]);
+
+  // No leídos: compara la última lectura por canal con el último mensaje (de otros).
+  const loadUnreads = useCallback(async () => {
+    if (!sb || !myUid) return;
+    const [{ data: reads }, { data: recent }] = await Promise.all([
+      sb.from("channel_reads").select("channel_id,last_read_at").eq("user_id", myUid),
+      sb.from("messages").select("channel_id,created_at,user_id").order("created_at", { ascending: false }).limit(500),
+    ]);
+    const readRows = (reads as { channel_id: number; last_read_at: string }[] | null) || [];
+    const recentRows = (recent as { channel_id: number; created_at: string; user_id: string | null }[] | null) || [];
+    const readMap = new Map<number, string>();
+    readRows.forEach((r) => readMap.set(r.channel_id, r.last_read_at));
+    const lastByCh = new Map<number, { created_at: string; user_id: string | null }>();
+    recentRows.forEach((m) => { if (!lastByCh.has(m.channel_id)) lastByCh.set(m.channel_id, m); });
+    const uset = new Set<number>();
+    lastByCh.forEach((m, chId) => {
+      const lr = readMap.get(chId);
+      const lrTime = lr ? Date.parse(lr) : 0;
+      if (m.user_id !== myUid && Date.parse(m.created_at) > lrTime) uset.add(chId);
+    });
+    setUnread(uset);
+  }, [sb, myUid]);
+
+  const markRead = useCallback(async (chId: number) => {
+    if (!sb || !myUid) return;
+    setUnread((prev) => { if (!prev.has(chId)) return prev; const n = new Set(prev); n.delete(chId); return n; });
+    await sb.from("channel_reads").upsert({ user_id: myUid, channel_id: chId, last_read_at: new Date().toISOString() }, { onConflict: "user_id,channel_id" });
+  }, [sb, myUid]);
+
+  const saveChannelTopic = async (id: number, topic: string) => {
+    if (!sb) return;
+    await sb.from("channels").update({ topic: topic.trim() || null }).eq("id", id);
+    await loadChannels();
+  };
 
   // Init
   useEffect(() => {
@@ -153,6 +189,23 @@ export default function MensajesPage() {
     chatChanRef.current = sub;
     return () => { active = false; sb.removeChannel(sub); chatChanRef.current = null; };
   }, [sb, activeId, loadProfiles, myUid, loadPins]);
+
+  // No leídos: carga inicial + escucha global de mensajes nuevos en otros canales.
+  useEffect(() => {
+    if (!sb || !myUid) return;
+    loadUnreads();
+    const sub = sb.channel("chat-unreads")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload: { new: { channel_id: number; user_id: string | null } }) => {
+        const m = payload.new;
+        if (!m.user_id || m.user_id === myUid || m.channel_id === activeIdRef.current) return;
+        setUnread((prev) => (prev.has(m.channel_id) ? prev : new Set(prev).add(m.channel_id)));
+      })
+      .subscribe();
+    return () => { sb.removeChannel(sub); };
+  }, [sb, myUid, loadUnreads]);
+
+  // Marca el canal abierto como leído.
+  useEffect(() => { if (activeId != null) markRead(activeId); }, [activeId, markRead]);
 
   // Expira a quien dejó de escribir (>3.5s sin señal).
   useEffect(() => {
@@ -303,11 +356,11 @@ export default function MensajesPage() {
     <div className="flex gap-6">
       {/* Sidebar de espacios */}
       <aside className="hidden w-56 shrink-0 lg:block">
-        <ChannelList label="Espacios" items={[...teamCh, ...customCh]} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin espacios"
+        <ChannelList label="Espacios" items={[...teamCh, ...customCh]} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin espacios" unreadIds={unread}
           action={<button onClick={() => setShowNewChannel(true)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo espacio"><Plus size={15} /></button>} />
 
         <div className="relative mt-5">
-          <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin directos aún"
+          <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin directos aún" unreadIds={unread}
             action={<button onClick={() => setDmPickerOpen((o) => !o)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo directo"><MessageSquarePlus size={15} /></button>} />
           {dmPickerOpen && (
             <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float">
@@ -342,8 +395,10 @@ export default function MensajesPage() {
           {activeChannel && renderChannelIcon(activeChannel, 34)}
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display font-bold text-fg">{activeChannel ? channelLabel(activeChannel) : "—"}{activeChannel?.is_hidden && <span className="ml-2 rounded-full bg-warn/10 px-2 py-0.5 align-middle text-caption font-semibold text-warn">oculto</span>}</h1>
-            <p className="text-xs text-muted">
-              {activeChannel?.kind === "team" ? "Todo el equipo · tiempo real"
+            <p className="truncate text-xs text-muted">
+              {activeChannel?.topic?.trim()
+                ? activeChannel.topic
+                : activeChannel?.kind === "team" ? "Todo el equipo · tiempo real"
                 : activeChannel?.kind === "dm" ? "Mensaje directo · privado"
                 : "Espacio privado · tiempo real"}
             </p>
@@ -453,6 +508,7 @@ export default function MensajesPage() {
           background={activeChannel.background ?? null}
           onSaveBackground={(bg) => saveChannelBackground(activeChannel.id, bg)}
           onUploadImage={uploadChannelBg}
+          onSaveTopic={(t) => saveChannelTopic(activeChannel.id, t)}
         />
       )}
     </div>
@@ -460,7 +516,7 @@ export default function MensajesPage() {
 }
 
 function ChannelList({
-  label, items, activeId, onSelect, labelOf, renderIcon, action, emptyText,
+  label, items, activeId, onSelect, labelOf, renderIcon, action, emptyText, unreadIds,
 }: {
   label: string;
   items: Channel[];
@@ -470,6 +526,7 @@ function ChannelList({
   renderIcon: (c: Channel) => React.ReactNode;
   action?: React.ReactNode;
   emptyText: string;
+  unreadIds?: Set<number>;
 }) {
   return (
     <div>
@@ -478,12 +535,16 @@ function ChannelList({
         {action}
       </div>
       <div className="space-y-0.5">
-        {items.map((c) => (
-          <button key={c.id} onClick={() => onSelect(c.id)} className={cn("flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm transition focus-ring", c.id === activeId ? "bg-accent/10 font-semibold text-accent" : "text-fg hover:bg-surface-2")}>
-            <span className="shrink-0">{renderIcon(c)}</span>
-            <span className="truncate">{labelOf(c)}</span>
-          </button>
-        ))}
+        {items.map((c) => {
+          const unread = unreadIds?.has(c.id) && c.id !== activeId;
+          return (
+            <button key={c.id} onClick={() => onSelect(c.id)} className={cn("flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm transition focus-ring", c.id === activeId ? "bg-accent/10 font-semibold text-accent" : unread ? "font-semibold text-fg hover:bg-surface-2" : "text-fg hover:bg-surface-2")}>
+              <span className="shrink-0">{renderIcon(c)}</span>
+              <span className="truncate flex-1">{labelOf(c)}</span>
+              {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="No leídos" />}
+            </button>
+          );
+        })}
         {items.length === 0 && <p className="px-2 py-1 text-xs text-muted">{emptyText}</p>}
       </div>
     </div>
