@@ -52,7 +52,7 @@ export function MessageItem({
             {msg.attachment_type === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
               <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer">
-                <img src={msg.attachment_url} alt="adjunto" className="max-h-72 max-w-[min(78vw,20rem)] rounded-card border border-line object-cover" />
+                <img src={msg.attachment_url} alt="adjunto" className="max-h-64 max-w-[min(68vw,16rem)] rounded-card border border-line object-cover" />
               </a>
             ) : msg.attachment_type === "video" ? (
               <VideoBubble src={msg.attachment_url} mine={mine} />

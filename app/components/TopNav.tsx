@@ -51,7 +51,7 @@ export function TopNav() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="absolute left-0 top-full z-50 mt-2 w-52 origin-top-left overflow-hidden rounded-card border border-line bg-surface py-1.5 shadow-float"
+                  className="absolute left-0 top-full z-50 mt-2 w-52 origin-top-left overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] py-1.5 shadow-float"
                 >
                   {links.map((l) => {
                     const activeLink = l.match(pathname);

@@ -99,7 +99,7 @@ export function VideoRecorder({
   return (
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={cancel}>
       <div
-        className="modal-panel flex w-full max-w-sm flex-col items-center gap-4 rounded-hero bg-surface p-5 shadow-float"
+        className="modal-panel flex w-full max-w-sm flex-col items-center gap-4 rounded-hero bg-[var(--surface-solid)] p-5 shadow-float"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex w-full items-center justify-between">

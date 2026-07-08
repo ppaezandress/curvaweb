@@ -57,7 +57,7 @@ export function StatusPicker({
         {status || "Sin estado"} <ChevronDown size={11} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-control border border-line bg-surface py-1 shadow-float">
+        <div className="absolute left-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-control border border-line bg-[var(--surface-solid)] py-1 shadow-float">
           {STATUSES.map((s) => (
             <button
               key={s}

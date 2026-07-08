@@ -17,7 +17,7 @@ export function IdleReview() {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="w-full max-w-lg rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-hero">
+      <div className="w-full max-w-lg rounded-t-3xl bg-[var(--surface-solid)] p-6 shadow-float sm:rounded-hero">
         <p className="text-sm font-medium text-accent">Revisión de tiempo</p>
         <h2 className="mt-1 font-display text-2xl font-bold text-fg">
           Detectamos {formatDuration(pr.inactiveSec)} sin actividad

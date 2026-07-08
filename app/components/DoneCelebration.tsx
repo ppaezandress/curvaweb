@@ -121,7 +121,7 @@ export function DoneCelebration() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 16, scale: 0.96 }}
         transition={CELEBRATE_SPRING}
-        className="relative w-full max-w-md rounded-t-3xl bg-surface p-6 shadow-float sm:rounded-hero"
+        className="relative w-full max-w-md rounded-t-3xl bg-[var(--surface-solid)] p-6 shadow-float sm:rounded-hero"
       >
         <button onClick={dismiss} className="absolute right-4 top-4 rounded-full p-1.5 text-muted transition hover:bg-surface-2">
           <X size={18} />

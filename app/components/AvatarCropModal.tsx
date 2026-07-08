@@ -89,7 +89,7 @@ export function AvatarCropModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" data-no-capture>
-      <div className="modal-panel w-full max-w-sm rounded-hero bg-surface p-5 shadow-float">
+      <div className="modal-panel w-full max-w-sm rounded-hero bg-[var(--surface-solid)] p-5 shadow-float">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold text-fg">Ajusta tu foto</h3>
           <button onClick={onCancel} className="text-muted transition hover:text-fg focus-ring rounded-full" aria-label="Cerrar">

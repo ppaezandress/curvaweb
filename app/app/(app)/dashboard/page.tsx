@@ -179,7 +179,7 @@ export default function HomePage() {
               className="focus-ring w-full rounded-card border border-line bg-surface py-3.5 pl-12 pr-4 text-body shadow-soft outline-none transition focus:border-accent"
             />
             {q.trim() && (
-              <div className="absolute z-50 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-card border border-line bg-surface shadow-float">
+              <div className="absolute z-50 mt-2 max-h-[60vh] w-full overflow-y-auto rounded-card border border-line bg-[var(--surface-solid)] shadow-float">
                 {matches.map((t) => {
                   const c = clientById[t.clientId];
                   return (

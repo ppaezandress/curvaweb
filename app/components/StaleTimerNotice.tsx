@@ -31,7 +31,7 @@ export function StaleTimerNotice() {
           className="fixed inset-x-0 bottom-20 z-[55] flex justify-center px-4 sm:bottom-6"
           data-no-capture="1"
         >
-          <div className="flex w-full max-w-md items-start gap-3 rounded-card border border-warn/30 bg-surface p-4 shadow-float">
+          <div className="flex w-full max-w-md items-start gap-3 rounded-card border border-warn/30 bg-[var(--surface-solid)] p-4 shadow-float">
         <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warn/10 text-warn">
           <AlertTriangle size={16} />
         </span>

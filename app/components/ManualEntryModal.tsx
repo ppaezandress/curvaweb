@@ -298,7 +298,7 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
                 className={inputCls}
               />
               {(taskFocused || taskQuery) && taskMatches.length > 0 && (
-                <div className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-control border border-line bg-surface shadow-float">
+                <div className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-control border border-line bg-[var(--surface-solid)] shadow-float">
                   {!taskQuery && <p className="px-3 pt-2 pb-1 text-caption font-semibold text-muted">Recientes</p>}
                   {taskMatches.map((t) => {
                     const cl = clientById[t.clientId];

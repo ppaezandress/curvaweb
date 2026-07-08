@@ -93,7 +93,7 @@ export function ProfileMenu() {
           initial="hidden"
           animate="visible"
           exit="hidden"
-          className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-card border border-line bg-surface shadow-float"
+          className="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float"
         >
           <div className="flex items-center gap-3 border-b border-line p-4">
             <Avatar member={me} src={photoUrl} size={48} />

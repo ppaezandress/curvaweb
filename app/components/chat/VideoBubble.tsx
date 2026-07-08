@@ -71,7 +71,7 @@ export function VideoBubble({ src, mine }: { src: string; mine: boolean }) {
   const progress = Number.isFinite(dur) && dur > 0 ? cur / dur : 0;
 
   return (
-    <div className={cn("group/vid relative w-60 max-w-[78vw] overflow-hidden rounded-hero bg-ink shadow-soft", mine && "ring-1 ring-accent/30")}>
+    <div className={cn("group/vid relative w-48 max-w-[68vw] overflow-hidden rounded-hero bg-ink shadow-soft", mine && "ring-1 ring-accent/30")}>
       <video
         ref={videoRef}
         src={src}

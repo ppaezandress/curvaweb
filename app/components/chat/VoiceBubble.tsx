@@ -94,7 +94,7 @@ export function VoiceBubble({ src, mine }: { src: string; mine: boolean }) {
   const label = playing || cur > 0 ? cur : dur; // duración en reposo, transcurrido al reproducir
 
   return (
-    <div className={cn("flex w-64 max-w-[78vw] items-center gap-3 rounded-hero px-3 py-2.5", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
+    <div className={cn("flex w-56 max-w-[72vw] items-center gap-3 rounded-hero px-3 py-2.5", mine ? "bg-accent text-white" : "bg-surface text-fg shadow-soft")}>
       <audio ref={audioRef} src={src} preload="metadata" />
       <button
         onClick={toggle}

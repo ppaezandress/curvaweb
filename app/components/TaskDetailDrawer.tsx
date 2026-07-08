@@ -96,7 +96,7 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: DUR_BASE, ease: EASE_CURVA }}
-            className="flex h-full w-full max-w-md flex-col bg-surface shadow-float"
+            className="flex h-full w-full max-w-md flex-col bg-[var(--surface-solid)] shadow-float"
             onClick={(e) => e.stopPropagation()}
           >
         {/* Header */}
