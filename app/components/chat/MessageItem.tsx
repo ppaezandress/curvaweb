@@ -2,20 +2,20 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ListTodo, SmilePlus, AtSign, Reply, Pencil, Trash2, Pin, PinOff, Check, X } from "lucide-react";
+import { ListTodo, SmilePlus, AtSign, Reply, Pencil, Trash2, Pin, PinOff, Check, X, Bookmark } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { popover } from "@/lib/motion";
 import { hhmmFromISO } from "@/lib/format";
 import { parseMessage, notionTaskUrl } from "@/lib/notion-url";
 import { VoiceBubble } from "@/components/chat/VoiceBubble";
 import { VideoBubble } from "@/components/chat/VideoBubble";
+import { EMOJI_LIST } from "@/lib/emojis";
 import { cn } from "@/lib/cn";
 
 export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null; edited_at?: string | null; deleted_at?: string | null; parent_id?: number | null };
 export type ChatProfile = { id: string; name: string; avatar_url: string | null };
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
-const EMOJIS = ["👍", "❤️", "🎉", "🔥", "😂", "👀", "🙌", "💯", "🚀", "🤝", "🙏", "✅", "💪", "⚡", "😮", "🫶"];
 
 // Formato inline estilo Slack/markdown: **negrita** _cursiva_ ~~tachado~~ `código`.
 function renderRich(text: string): ReactNode[] {
@@ -66,9 +66,9 @@ function MessageEditor({ initial, onSave, onCancel }: { initial: string; onSave:
 
 export function MessageItem({
   msg, prof, mine, reactions, onToggleReaction, onBg = false,
-  grouped = false, pinned = false, canModify = false, editing = false,
+  grouped = false, pinned = false, saved = false, canModify = false, editing = false,
   parentMsg, parentProf,
-  onReply, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onTogglePin,
+  onReply, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onTogglePin, onToggleSave,
 }: {
   msg: ChatMsg;
   prof?: ChatProfile;
@@ -78,6 +78,7 @@ export function MessageItem({
   onBg?: boolean;
   grouped?: boolean;
   pinned?: boolean;
+  saved?: boolean;
   canModify?: boolean;
   editing?: boolean;
   parentMsg?: ChatMsg | null;
@@ -88,9 +89,11 @@ export function MessageItem({
   onSaveEdit?: (id: number, body: string) => void;
   onDelete?: (id: number) => void;
   onTogglePin?: (msg: ChatMsg) => void;
+  onToggleSave?: (msg: ChatMsg) => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
+  const [emojiQ, setEmojiQ] = useState("");
 
   if (msg.kind === "system") {
     return <div className="py-1 text-center text-xs text-accent">🎵 {msg.body}</div>;
@@ -191,10 +194,13 @@ export function MessageItem({
                 {pickerOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setPickerOpen(false)} />
-                    <motion.div variants={popover} initial="hidden" animate="visible" exit="hidden" className={cn("absolute z-20 mt-1 grid w-[13.5rem] grid-cols-8 gap-0.5 rounded-card border border-line bg-[var(--surface-solid)] p-1.5 shadow-float", mine ? "left-0 origin-top-left" : "right-0 origin-top-right")}>
-                      {EMOJIS.map((e) => (
-                        <button key={e} onClick={() => { onToggleReaction(msg.id, e); setPickerOpen(false); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">{e}</button>
-                      ))}
+                    <motion.div variants={popover} initial="hidden" animate="visible" exit="hidden" className={cn("absolute z-20 mt-1 w-64 rounded-card border border-line bg-[var(--surface-solid)] p-2 shadow-float", mine ? "left-0 origin-top-left" : "right-0 origin-top-right")}>
+                      <input autoFocus value={emojiQ} onChange={(e) => setEmojiQ(e.target.value)} placeholder="Buscar emoji…" className="mb-1.5 w-full rounded-control border border-line bg-surface-2/60 px-2.5 py-1.5 text-xs text-fg outline-none focus-ring" />
+                      <div className="grid max-h-40 grid-cols-8 gap-0.5 overflow-y-auto">
+                        {EMOJI_LIST.filter((e) => !emojiQ.trim() || e.k.includes(emojiQ.toLowerCase()) || e.c === emojiQ).map((e) => (
+                          <button key={e.c} onClick={() => { onToggleReaction(msg.id, e.c); setPickerOpen(false); setEmojiQ(""); }} className="rounded-lg py-1 text-base transition hover:bg-surface-2 focus-ring">{e.c}</button>
+                        ))}
+                      </div>
                     </motion.div>
                   </>
                 )}
@@ -203,6 +209,9 @@ export function MessageItem({
             <button onClick={() => onReply?.(msg)} className="rounded-full p-1.5 text-muted transition hover:bg-surface-2 hover:text-fg focus-ring" aria-label="Responder" title="Responder"><Reply size={14} /></button>
             <button onClick={() => onTogglePin?.(msg)} className={cn("rounded-full p-1.5 transition hover:bg-surface-2 focus-ring", pinned ? "text-accent" : "text-muted hover:text-fg")} aria-label={pinned ? "Quitar fijado" : "Fijar"} title={pinned ? "Quitar fijado" : "Fijar"}>
               {pinned ? <PinOff size={14} /> : <Pin size={14} />}
+            </button>
+            <button onClick={() => onToggleSave?.(msg)} className={cn("rounded-full p-1.5 transition hover:bg-surface-2 focus-ring", saved ? "text-accent" : "text-muted hover:text-fg")} aria-label={saved ? "Quitar de guardados" : "Guardar"} title={saved ? "Quitar de guardados" : "Guardar"}>
+              <Bookmark size={14} fill={saved ? "currentColor" : "none"} />
             </button>
             {canModify && (
               <>

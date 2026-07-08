@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -49,7 +49,11 @@ export default function MensajesPage() {
   const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
   const [query, setQuery] = useState("");
   const [unread, setUnread] = useState<Set<number>>(new Set());
+  const [unreadSince, setUnreadSince] = useState<number>(0);
+  const [saved, setSaved] = useState<Set<number>>(new Set());
+  const [showSaved, setShowSaved] = useState(false);
   const activeIdRef = useRef<number | null>(null); activeIdRef.current = activeId;
+  const readsRef = useRef<Map<number, string>>(new Map());
   const endRef = useRef<HTMLDivElement>(null);
   const profilesRef = useRef(profiles); profilesRef.current = profiles;
   // "Está escribiendo…" en vivo (broadcast, sin tocar la BD).
@@ -105,6 +109,7 @@ export default function MensajesPage() {
     const recentRows = (recent as { channel_id: number; created_at: string; user_id: string | null }[] | null) || [];
     const readMap = new Map<number, string>();
     readRows.forEach((r) => readMap.set(r.channel_id, r.last_read_at));
+    readsRef.current = readMap;
     const lastByCh = new Map<number, { created_at: string; user_id: string | null }>();
     recentRows.forEach((m) => { if (!lastByCh.has(m.channel_id)) lastByCh.set(m.channel_id, m); });
     const uset = new Set<number>();
@@ -119,13 +124,29 @@ export default function MensajesPage() {
   const markRead = useCallback(async (chId: number) => {
     if (!sb || !myUid) return;
     setUnread((prev) => { if (!prev.has(chId)) return prev; const n = new Set(prev); n.delete(chId); return n; });
-    await sb.from("channel_reads").upsert({ user_id: myUid, channel_id: chId, last_read_at: new Date().toISOString() }, { onConflict: "user_id,channel_id" });
+    const now = new Date().toISOString();
+    readsRef.current.set(chId, now);
+    await sb.from("channel_reads").upsert({ user_id: myUid, channel_id: chId, last_read_at: now }, { onConflict: "user_id,channel_id" });
   }, [sb, myUid]);
 
   const saveChannelTopic = async (id: number, topic: string) => {
     if (!sb) return;
     await sb.from("channels").update({ topic: topic.trim() || null }).eq("id", id);
     await loadChannels();
+  };
+
+  const loadSaved = useCallback(async () => {
+    if (!sb || !myUid) return;
+    const { data } = await sb.from("message_saved").select("message_id").eq("user_id", myUid);
+    setSaved(new Set(((data as { message_id: number }[]) || []).map((r) => r.message_id)));
+  }, [sb, myUid]);
+
+  const toggleSave = async (m: ChatMsg) => {
+    if (!sb || !myUid) return;
+    const has = saved.has(m.id);
+    setSaved((prev) => { const n = new Set(prev); if (has) n.delete(m.id); else n.add(m.id); return n; });
+    if (has) await sb.from("message_saved").delete().eq("user_id", myUid).eq("message_id", m.id);
+    else await sb.from("message_saved").insert({ user_id: myUid, message_id: m.id });
   };
 
   // Init
@@ -194,6 +215,7 @@ export default function MensajesPage() {
   useEffect(() => {
     if (!sb || !myUid) return;
     loadUnreads();
+    loadSaved();
     const sub = sb.channel("chat-unreads")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload: { new: { channel_id: number; user_id: string | null } }) => {
         const m = payload.new;
@@ -202,10 +224,15 @@ export default function MensajesPage() {
       })
       .subscribe();
     return () => { sb.removeChannel(sub); };
-  }, [sb, myUid, loadUnreads]);
+  }, [sb, myUid, loadUnreads, loadSaved]);
 
-  // Marca el canal abierto como leído.
-  useEffect(() => { if (activeId != null) markRead(activeId); }, [activeId, markRead]);
+  // Al abrir un canal: recuerda hasta dónde habías leído (para el separador) y marca leído.
+  useEffect(() => {
+    if (activeId == null) return;
+    const prev = readsRef.current.get(activeId);
+    setUnreadSince(prev ? Date.parse(prev) : 0);
+    markRead(activeId);
+  }, [activeId, markRead]);
 
   // Expira a quien dejó de escribir (>3.5s sin señal).
   useEffect(() => {
@@ -348,9 +375,16 @@ export default function MensajesPage() {
   const pinnedSet = new Set(pins.map((p) => p.message_id));
   const msgById = new Map(messages.map((m) => [m.id, m]));
   const q = query.trim().toLowerCase();
-  const visibleMessages = q ? messages.filter((m) => !m.deleted_at && (m.body || "").toLowerCase().includes(q)) : messages;
+  const visibleMessages = q
+    ? messages.filter((m) => !m.deleted_at && (m.body || "").toLowerCase().includes(q))
+    : showSaved
+    ? messages.filter((m) => saved.has(m.id) && !m.deleted_at)
+    : messages;
   const pinnedMessages = messages.filter((m) => pinnedSet.has(m.id) && !m.deleted_at);
   const replyingProf = replyingTo?.user_id ? profiles[replyingTo.user_id] : undefined;
+  const firstUnreadId = unreadSince > 0 && !q
+    ? visibleMessages.find((m) => m.user_id !== myUid && Date.parse(m.created_at) > unreadSince)?.id
+    : undefined;
 
   return (
     <div className="flex gap-6">
@@ -407,6 +441,9 @@ export default function MensajesPage() {
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" className="w-32 rounded-full border border-line bg-surface-2/60 py-1.5 pl-8 pr-2 text-sm text-fg outline-none transition focus:w-44 focus:border-accent focus-ring" />
           </div>
+          <button onClick={() => setShowSaved((s) => !s)} className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", showSaved ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Guardados" title="Mensajes guardados">
+            <Bookmark size={16} fill={showSaved ? "currentColor" : "none"} />
+          </button>
           {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
             <button onClick={() => setSettingsOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Ajustes del canal" title="Ajustes del canal">
               <Settings size={16} />
@@ -446,13 +483,20 @@ export default function MensajesPage() {
                     <span className="h-px flex-1 bg-line" />
                   </div>
                 )}
+                {m.id === firstUnreadId && (
+                  <div className="my-2 flex items-center gap-3">
+                    <span className="h-px flex-1 bg-accent/40" />
+                    <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-caption font-semibold text-accent">Nuevos mensajes</span>
+                    <span className="h-px flex-1 bg-accent/40" />
+                  </div>
+                )}
                 <MessageItem
                   msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
                   reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} onBg={chatHasBg}
-                  grouped={grouped} pinned={pinnedSet.has(m.id)} canModify={m.user_id === myUid} editing={editingId === m.id}
+                  grouped={grouped} pinned={pinnedSet.has(m.id)} saved={saved.has(m.id)} canModify={m.user_id === myUid} editing={editingId === m.id}
                   parentMsg={parent} parentProf={parent?.user_id ? profiles[parent.user_id] : undefined}
                   onReply={setReplyingTo} onStartEdit={setEditingId} onCancelEdit={() => setEditingId(null)}
-                  onSaveEdit={editMessage} onDelete={deleteMessage} onTogglePin={togglePin}
+                  onSaveEdit={editMessage} onDelete={deleteMessage} onTogglePin={togglePin} onToggleSave={toggleSave}
                 />
               </motion.div>
             );
@@ -460,7 +504,7 @@ export default function MensajesPage() {
           </AnimatePresence>
           {visibleMessages.length === 0 && (
             <div className="flex flex-1 items-center justify-center py-10">
-              <p className="rounded-full bg-surface px-4 py-2 text-sm text-muted shadow-soft">{q ? "Sin resultados para tu búsqueda." : "Sé el primero en escribir ✨"}</p>
+              <p className="rounded-full bg-surface px-4 py-2 text-sm text-muted shadow-soft">{q ? "Sin resultados para tu búsqueda." : showSaved ? "No tienes mensajes guardados en este canal." : "Sé el primero en escribir ✨"}</p>
             </div>
           )}
           <div ref={endRef} />
