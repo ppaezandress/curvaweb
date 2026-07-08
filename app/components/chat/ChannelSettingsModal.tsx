@@ -36,7 +36,7 @@ export function ChannelSettingsModal({
   const [name, setName] = useState(channel?.name || "");
   const [saving, setSaving] = useState(false);
   const [bg, setBg] = useState<ChatBackground>(background ?? { kind: "none" });
-  const [bgTab, setBgTab] = useState<BgTab>((background?.kind as BgTab) || "color");
+  const [bgTab, setBgTab] = useState<BgTab>((background?.kind as BgTab) || "none");
   const [patternColor, setPatternColor] = useState(
     background?.kind === "pattern" ? background.color : DEFAULT_PATTERN_COLOR,
   );
@@ -95,9 +95,9 @@ export function ChannelSettingsModal({
           {tabs.map(({ id, label, Icon }) => (
             <button
               key={id}
-              onClick={() => (id === "none" ? applyBg({ kind: "none" }) : setBgTab(id))}
+              onClick={() => { if (id === "none") { applyBg({ kind: "none" }); setBgTab("none"); } else setBgTab(id); }}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition focus-ring ${
-                (id === "none" ? bg.kind === "none" : bgTab === id && bg.kind !== "none")
+                bgTab === id
                   ? "border-accent bg-accent/10 text-accent"
                   : "border-line text-muted hover:border-accent hover:text-accent"
               }`}
@@ -107,7 +107,7 @@ export function ChannelSettingsModal({
           ))}
         </div>
 
-        {bg.kind !== "none" && bgTab === "color" && (
+        {bgTab === "color" && (
           <div className="flex flex-wrap items-center gap-2">
             {SOLID_COLORS.map((c) => (
               <button key={c} onClick={() => applyBg({ kind: "color", value: c })} aria-label={c}
@@ -121,7 +121,7 @@ export function ChannelSettingsModal({
           </div>
         )}
 
-        {bg.kind !== "none" && bgTab === "gradient" && (
+        {bgTab === "gradient" && (
           <div className="grid grid-cols-3 gap-2">
             {GRADIENTS.map((g) => (
               <button key={g.id} onClick={() => applyBg({ kind: "gradient", value: g.id })}
@@ -133,7 +133,7 @@ export function ChannelSettingsModal({
           </div>
         )}
 
-        {bg.kind !== "none" && bgTab === "pattern" && (
+        {bgTab === "pattern" && (
           <div className="space-y-2.5">
             <div className="grid grid-cols-4 gap-2">
               {PATTERNS.map((p) => (
@@ -153,7 +153,7 @@ export function ChannelSettingsModal({
           </div>
         )}
 
-        {bg.kind !== "none" && bgTab === "image" && (
+        {bgTab === "image" && (
           <div className="flex items-center gap-3">
             {bg.kind === "image" && (
               <span className="h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-line bg-cover bg-center" style={{ backgroundImage: `url(${bg.url})` }} />
