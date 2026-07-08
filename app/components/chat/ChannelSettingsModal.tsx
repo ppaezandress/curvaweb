@@ -34,6 +34,7 @@ export function ChannelSettingsModal({
   open, onClose, channel, currentMembers, candidates,
   onRename, onToggleHidden, onAddMember, onRemoveMember,
   background, onSaveBackground, onUploadImage, onSaveTopic,
+  clients, clientId, onSaveClient,
 }: {
   open: boolean;
   onClose: () => void;
@@ -48,6 +49,9 @@ export function ChannelSettingsModal({
   onSaveBackground?: (bg: ChatBackground) => Promise<void> | void;
   onUploadImage?: (file: File) => Promise<string | null>;
   onSaveTopic?: (topic: string) => Promise<void> | void;
+  clients?: { id: string; name: string }[];
+  clientId?: string | null;
+  onSaveClient?: (clientId: string | null) => Promise<void> | void;
 }) {
   const [name, setName] = useState(channel?.name || "");
   const [topic, setTopic] = useState(channel?.topic || "");
@@ -109,6 +113,16 @@ export function ChannelSettingsModal({
           </button>
         </div>
       </Field>
+
+      {!isTeam && clients && clients.length > 0 && (
+        <Field label="Cliente">
+          <select value={clientId || ""} onChange={(e) => onSaveClient?.(e.target.value || null)} className={inputCls}>
+            <option value="">General / Interno</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <p className="mt-1 text-caption text-muted">Agrupa este canal bajo el cliente en la lista de espacios.</p>
+        </Field>
+      )}
 
       <Field label="Tema del canal">
         <div className="flex gap-2">

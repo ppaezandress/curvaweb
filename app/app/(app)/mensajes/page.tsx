@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -18,7 +18,7 @@ import { CultureRail } from "@/components/chat/CultureRail";
 import { hasBackground, type ChatBackground as ChatBg } from "@/lib/chat-backgrounds";
 import { cn } from "@/lib/cn";
 
-type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean; background?: ChatBg | null; topic?: string | null };
+type Channel = { id: number; name: string; kind: string; created_by: string | null; is_hidden?: boolean; background?: ChatBg | null; topic?: string | null; client_id?: string | null };
 type ReactionRow = { id: number; message_id: number; user_id: string; emoji: string };
 
 function daySepLabel(iso: string): string {
@@ -30,7 +30,7 @@ function daySepLabel(iso: string): string {
 
 export default function MensajesPage() {
   const { currentUserId, isAdmin, openTasks } = useApp();
-  const { members, tasks } = useData();
+  const { members, tasks, clients } = useData();
   const sb = getSupabase();
 
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -52,6 +52,7 @@ export default function MensajesPage() {
   const [unreadSince, setUnreadSince] = useState<number>(0);
   const [saved, setSaved] = useState<Set<number>>(new Set());
   const [showSaved, setShowSaved] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const activeIdRef = useRef<number | null>(null); activeIdRef.current = activeId;
   const readsRef = useRef<Map<number, string>>(new Map());
   const endRef = useRef<HTMLDivElement>(null);
@@ -132,6 +133,11 @@ export default function MensajesPage() {
   const saveChannelTopic = async (id: number, topic: string) => {
     if (!sb) return;
     await sb.from("channels").update({ topic: topic.trim() || null }).eq("id", id);
+    await loadChannels();
+  };
+  const saveChannelClient = async (id: number, clientId: string | null) => {
+    if (!sb) return;
+    await sb.from("channels").update({ client_id: clientId }).eq("id", id);
     await loadChannels();
   };
 
@@ -370,6 +376,15 @@ export default function MensajesPage() {
   const customCh = channels.filter((c) => c.kind === "channel" && canSeeHidden(c));
   const dmCh = channels.filter((c) => c.kind === "dm");
   const activeChannel = channels.find((c) => c.id === activeId);
+  // Agrupa canales por cliente (de Notion). Sin cliente → "General" (con el canal Equipo).
+  const clientNameOf = (id: string | null | undefined) => (id ? clients.find((c) => c.id === id)?.name : undefined);
+  const general = [...teamCh, ...customCh.filter((c) => !clientNameOf(c.client_id))];
+  const clientGroups = (() => {
+    const map = new Map<string, Channel[]>();
+    customCh.forEach((c) => { const n = clientNameOf(c.client_id); if (!n) return; if (!map.has(n)) map.set(n, []); map.get(n)!.push(c); });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  })();
+  const toggleCollapse = (k: string) => setCollapsed((prev) => { const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const chatHasBg = hasBackground(activeChannel?.background);
   const hasDock = openTasks.length > 0; // el dock (timer activo) ocupa espacio abajo
   const pinnedSet = new Set(pins.map((p) => p.message_id));
@@ -388,10 +403,17 @@ export default function MensajesPage() {
 
   return (
     <div className="flex gap-6">
-      {/* Sidebar de espacios */}
-      <aside className="hidden w-56 shrink-0 lg:block">
-        <ChannelList label="Espacios" items={[...teamCh, ...customCh]} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin espacios" unreadIds={unread}
+      {/* Sidebar de espacios — agrupados por cliente */}
+      <aside className="hidden w-56 shrink-0 overflow-y-auto lg:block">
+        <ChannelList label="General" items={general} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin espacios" unreadIds={unread}
           action={<button onClick={() => setShowNewChannel(true)} className="rounded-full p-1 text-muted transition hover:bg-surface-2 hover:text-accent focus-ring" aria-label="Nuevo espacio"><Plus size={15} /></button>} />
+
+        {clientGroups.map(([name, items]) => (
+          <div key={name} className="mt-4">
+            <ChannelList label={name} items={items} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="" unreadIds={unread}
+              collapsible collapsed={collapsed.has(name)} onToggleCollapse={() => toggleCollapse(name)} />
+          </div>
+        ))}
 
         <div className="relative mt-5">
           <ChannelList label="Directos" items={dmCh} activeId={activeId} onSelect={setActiveId} labelOf={channelLabel} renderIcon={renderChannelIcon} emptyText="Sin directos aún" unreadIds={unread}
@@ -553,6 +575,9 @@ export default function MensajesPage() {
           onSaveBackground={(bg) => saveChannelBackground(activeChannel.id, bg)}
           onUploadImage={uploadChannelBg}
           onSaveTopic={(t) => saveChannelTopic(activeChannel.id, t)}
+          clients={clients}
+          clientId={activeChannel.client_id ?? null}
+          onSaveClient={(cid) => saveChannelClient(activeChannel.id, cid)}
         />
       )}
     </div>
@@ -561,6 +586,7 @@ export default function MensajesPage() {
 
 function ChannelList({
   label, items, activeId, onSelect, labelOf, renderIcon, action, emptyText, unreadIds,
+  collapsible, collapsed, onToggleCollapse,
 }: {
   label: string;
   items: Channel[];
@@ -571,13 +597,26 @@ function ChannelList({
   action?: React.ReactNode;
   emptyText: string;
   unreadIds?: Set<number>;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
+  const hasUnread = !!unreadIds && items.some((c) => unreadIds.has(c.id) && c.id !== activeId);
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between px-1">
-        <span className="text-xs font-semibold text-muted">{label}</span>
+        {collapsible ? (
+          <button onClick={onToggleCollapse} className="flex min-w-0 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted transition hover:text-fg focus-ring">
+            <ChevronRight size={12} className={cn("shrink-0 transition-transform", !collapsed && "rotate-90")} />
+            <span className="truncate">{label}</span>
+            {collapsed && hasUnread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+          </button>
+        ) : (
+          <span className="text-xs font-semibold text-muted">{label}</span>
+        )}
         {action}
       </div>
+      {(!collapsible || !collapsed) && (
       <div className="space-y-0.5">
         {items.map((c) => {
           const unread = unreadIds?.has(c.id) && c.id !== activeId;
@@ -591,6 +630,7 @@ function ChannelList({
         })}
         {items.length === 0 && <p className="px-2 py-1 text-xs text-muted">{emptyText}</p>}
       </div>
+      )}
     </div>
   );
 }
