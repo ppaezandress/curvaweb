@@ -450,7 +450,8 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
 
       <div className="two">
         <div className="card"><h2>Compensación</h2>
-          {pct("alpha", "α — descuento del sombrero de socio", 0, 100, 5)}
+          {pct("alpha", "Cuánto cobra un socio de su trabajo", 0, 100, 5)}
+          <p className="hint" style={{ marginTop: -2 }}>Cuando tú o Balmo trabajan un proyecto, cobran este % de su tarifa; el resto ({100 - P.alpha}%) se guarda en la Banca (tu ahorro). No cambia lo que gana CURVA — solo mueve tu dinero: <b>bolsa hoy vs. ahorro</b>. No diluye al otro socio.</p>
           {pct("beta", "β — barrer utilidad a la Banca", 0, 50, 5)}
           {pct("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
           {pct("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
