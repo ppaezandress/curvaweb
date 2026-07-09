@@ -92,7 +92,7 @@ export async function exchangeCode(code: string, redirect: string) {
 // Crea un evento en el calendario primario con invitados; envía las invitaciones por
 // correo (sendUpdates=all) y opcionalmente genera un Meet.
 export async function createEvent(accessToken: string, ev: {
-  title: string; startISO: string; endISO: string; attendees: string[]; description?: string; withMeet?: boolean;
+  title: string; startISO: string; endISO: string; attendees: string[]; description?: string; withMeet?: boolean; notify?: boolean;
 }): Promise<{ ok: boolean; status: number; event?: { id?: string; htmlLink?: string; hangoutLink?: string } }> {
   const body: Record<string, unknown> = {
     summary: ev.title,
@@ -101,7 +101,7 @@ export async function createEvent(accessToken: string, ev: {
     attendees: ev.attendees.filter(Boolean).map((email) => ({ email })),
   };
   if (ev.description) body.description = ev.description;
-  const p = new URLSearchParams({ sendUpdates: "all" });
+  const p = new URLSearchParams({ sendUpdates: ev.notify === false ? "none" : "all" });
   if (ev.withMeet) {
     body.conferenceData = { createRequest: { requestId: crypto.randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } } };
     p.set("conferenceDataVersion", "1");

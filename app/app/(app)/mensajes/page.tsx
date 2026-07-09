@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, MoreHorizontal } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, MoreHorizontal, CalendarDays } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -14,6 +14,7 @@ import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
 import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
 import { ChannelFilesModal } from "@/components/chat/ChannelFilesModal";
 import { EventModal } from "@/components/chat/EventModal";
+import { AgendaModal } from "@/components/chat/AgendaModal";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { SpaceAvatar } from "@/components/chat/SpaceAvatar";
 import { CultureRail } from "@/components/chat/CultureRail";
@@ -49,6 +50,7 @@ export default function MensajesPage() {
   const [filesOpen, setFilesOpen] = useState(false);
   const [filesCount, setFilesCount] = useState(0);
   const [eventOpen, setEventOpen] = useState(false);
+  const [agendaOpen, setAgendaOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -489,6 +491,9 @@ export default function MensajesPage() {
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
                 <div className="absolute right-0 z-30 mt-1 w-52 overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] p-1 shadow-float">
+                  <button onClick={() => { setAgendaOpen(true); setMoreOpen(false); }} className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-2 focus-ring">
+                    <CalendarDays size={15} className="text-muted" /> Próximas juntas
+                  </button>
                   <button onClick={() => { setShowSaved((s) => !s); setMoreOpen(false); }} className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-2 focus-ring">
                     <Bookmark size={15} className={showSaved ? "text-accent" : "text-muted"} fill={showSaved ? "currentColor" : "none"} /> {showSaved ? "Ver todos los mensajes" : "Mensajes guardados"}
                   </button>
@@ -624,8 +629,15 @@ export default function MensajesPage() {
             const inv = s.attendees.length ? ` · ${s.attendees.length} invitado${s.attendees.length > 1 ? "s" : ""}` : "";
             send(`📅 **${s.title}** · ${s.whenLabel}${inv}${s.link ? `\n${s.link}` : ""}`);
           }}
+          onInstant={(link) => {
+            const who = (myUid && profiles[myUid]?.name?.split(" ")[0]) || "Alguien";
+            send(`📞 **${who} inició una llamada** · Únete: ${link}`);
+          }}
+          channelName={activeChannel ? channelLabel(activeChannel) : undefined}
         />
       )}
+
+      <AgendaModal open={agendaOpen} onClose={() => setAgendaOpen(false)} clientName={activeChannel ? clientNameOf(activeChannel.client_id) : undefined} />
     </div>
   );
 }

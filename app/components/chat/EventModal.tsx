@@ -11,13 +11,15 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 // Modal para crear una junta/evento en Google Calendar con invitados, desde el chat.
 export function EventModal({
-  open, onClose, people, defaultInvitees, onCreated,
+  open, onClose, people, defaultInvitees, onCreated, onInstant, channelName,
 }: {
   open: boolean;
   onClose: () => void;
   people: Person[];
   defaultInvitees?: string[];
   onCreated: (summary: { title: string; whenLabel: string; link: string | null; attendees: string[] }) => void;
+  onInstant?: (link: string) => void;
+  channelName?: string;
 }) {
   const now = new Date();
   const [title, setTitle] = useState("");
@@ -28,10 +30,29 @@ export function EventModal({
   const [desc, setDesc] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set(defaultInvitees || []));
   const [saving, setSaving] = useState(false);
+  const [instantLoading, setInstantLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notConnected, setNotConnected] = useState(false);
 
   const toggle = (email: string) => setSelected((prev) => { const n = new Set(prev); if (n.has(email)) n.delete(email); else n.add(email); return n; });
+
+  const startInstant = async () => {
+    if (instantLoading) return;
+    setInstantLoading(true); setError(null); setNotConnected(false);
+    try {
+      const res = await fetch("/api/gcal/instant", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: channelName ? `Llamada rápida — ${channelName}` : "Llamada rápida" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        if (data.error === "no-gcal" || data.error === "reconnect") { setNotConnected(true); return; }
+        setError(data.error || "No se pudo iniciar la llamada."); return;
+      }
+      if (data.link) onInstant?.(data.link);
+      onClose();
+    } finally { setInstantLoading(false); }
+  };
 
   const create = async () => {
     if (!title.trim() || saving) return;
@@ -66,6 +87,15 @@ export function EventModal({
         </div>
       ) : (
         <>
+          {onInstant && (
+            <>
+              <button onClick={startInstant} disabled={instantLoading} className="mb-3 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60">
+                {instantLoading ? <Loader2 size={15} className="animate-spin" /> : <Video size={15} />}
+                {instantLoading ? "Creando llamada…" : "Reunirse ahora (Meet al instante)"}
+              </button>
+              <div className="mb-3 flex items-center gap-3 text-caption text-muted"><span className="h-px flex-1 bg-line" /> o agenda una junta <span className="h-px flex-1 bg-line" /></div>
+            </>
+          )}
           <Field label="Título">
             <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="Ej. Junta de seguimiento Eleva" autoFocus />
           </Field>
