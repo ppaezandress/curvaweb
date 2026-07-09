@@ -8,6 +8,8 @@ import { Modal } from "@/components/Modal";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/Avatar";
 import { suggestForMeeting } from "@/lib/meeting-match";
+import { refreshTimeRecords } from "@/lib/use-time-records";
+import type { TimeRecord } from "@/lib/notion/fetchers";
 import { cn } from "@/lib/cn";
 
 type GEvent = { id: string; title: string; start: number; end: number; attendees: string[]; hangoutLink?: string };
@@ -18,7 +20,7 @@ const HANDLED_KEY = (uid: string) => `curva.gcal.handled.${uid}`;
 // (proyecto sugerido por el título + asistentes del equipo). Tú confirmas.
 export function MeetingWatcher() {
   const { currentUserId } = useApp();
-  const { clients, projects, tasks, members, clientById, projectById } = useData();
+  const { clients, projects, tasks, members, clientById, projectById, addRecentEntries } = useData();
   const [pending, setPending] = useState<GEvent | null>(null);
   const [projectId, setProjectId] = useState<string>("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -98,7 +100,7 @@ export function MeetingWatcher() {
         .map((id) => members.find((m) => m.id === id))
         .filter(Boolean)
         .map((m) => ({ name: m!.name, minutes }));
-      await fetch("/api/time-entries", {
+      const res = await fetch("/api/time-entries", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           taskId: suggestion?.taskId,
@@ -109,7 +111,12 @@ export function MeetingWatcher() {
           endedAt: pending.end,
           attendees,
         }),
-      });
+      }).then((r) => r.json()).catch(() => ({} as { records?: TimeRecord[] }));
+      // Muestra la junta al instante en el vistazo/historial y reconcilia con Notion (lag de
+      // indexado) para que no haga falta recargar la página.
+      if (Array.isArray(res.records)) addRecentEntries(res.records);
+      setTimeout(() => { refreshTimeRecords(); }, 2500);
+      setTimeout(() => { refreshTimeRecords(); }, 6000);
       markHandled(pending.id);
       setPending(null);
     } finally { setBusy(false); }

@@ -67,7 +67,7 @@ function TodayHoursCard({ baseSeconds, live }: { baseSeconds: number; live: bool
 
 export default function HomePage() {
   const { currentUserId, active, stop, switchTo, sessionSecondsForTask, entries } = useApp();
-  const { tasks, taskById, clientById, memberById } = useData();
+  const { tasks, taskById, clientById, memberById, recentEntries } = useData();
   const { records } = useTimeRecords();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
@@ -91,10 +91,16 @@ export default function HomePage() {
   }, []);
 
   const mine = useMemo(() => tasks.filter((t) => isAssignedTo(t, currentUserId)), [tasks, currentUserId]);
-  const myRecords = useMemo(
-    () => records.filter((r) => (r.person || "").trim() === (me?.name || "").trim()),
-    [records, me],
-  );
+  // Mis registros = los de Notion + los recién creados en esta sesión (a mano / juntas del
+  // calendario), deduplicados por id. Así el vistazo (hoy, semana, pulso) se actualiza SOLO
+  // al registrar tiempo, sin recargar la página; cuando Notion indexa, el mismo id se funde.
+  const myRecords = useMemo(() => {
+    const myName = (me?.name || "").trim();
+    const base = records.filter((r) => (r.person || "").trim() === myName);
+    const known = new Set(base.map((r) => r.id));
+    const fresh = recentEntries.filter((r) => (r.person || "").trim() === myName && !known.has(r.id));
+    return [...base, ...fresh];
+  }, [records, recentEntries, me]);
   const pulse = useMemo(() => computePulse(myRecords, mine), [myRecords, mine]);
 
   const load = useMemo(() => {
@@ -127,11 +133,14 @@ export default function HomePage() {
   // La sesión en curso NO va aquí — la suma en vivo TodayHoursCard.
   const todayBaseSeconds = useMemo(() => {
     const start0 = new Date().setHours(0, 0, 0, 0);
-    const notionSec = myRecords
-      .filter((r) => new Date(r.start).getTime() >= start0)
-      .reduce((a, r) => a + (r.minutes || 0) * 60, 0);
+    const todayRecs = myRecords.filter((r) => new Date(r.start).getTime() >= start0);
+    const notionSec = todayRecs.reduce((a, r) => a + (r.minutes || 0) * 60, 0);
+    // Tramos locales de hoy aún NO absorbidos por Notion. Excluimos los que ya aparecen en
+    // myRecords por su notionId (p. ej. una sesión posteada pero aún sin reconciliar) para
+    // no contarlos dos veces cuando refreshTimeRecords ya trajo el registro real.
+    const notionIds = new Set(todayRecs.map((r) => r.id));
     const localSec = entries
-      .filter((e) => !e.synced && e.endedAt >= start0)
+      .filter((e) => !e.synced && e.endedAt >= start0 && !(e.notionId && notionIds.has(e.notionId)))
       .reduce((a, e) => a + e.seconds, 0);
     return Math.round(notionSec + localSec);
   }, [myRecords, entries]);

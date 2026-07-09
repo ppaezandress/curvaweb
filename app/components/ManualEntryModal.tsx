@@ -8,6 +8,7 @@ import {
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { isDone } from "@/lib/task-status";
+import { refreshTimeRecords } from "@/lib/use-time-records";
 import { formatDuration } from "@/lib/format";
 import { dayKey } from "@/lib/streaks";
 import { Modal, Field, inputCls } from "@/components/Modal";
@@ -187,11 +188,16 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
       // Refrescar tareas para que el total (rollup "Horas registradas" de Notion) se
       // actualice de inmediato. Un 2º reload diferido cubre el lag del rollup.
       if (ok) {
-        // Vuelca los registros creados al buffer compartido → el historial de la tarea los
-        // muestra al instante (sin esperar el indexado de Notion) y bloquea un re-registro.
+        // Vuelca los registros creados al buffer compartido → el historial de la tarea y el
+        // "Trabajado hoy" los muestran al instante (sin esperar el indexado de Notion) y
+        // bloquean un re-registro.
         if (Array.isArray(body.records)) addRecentEntries(body.records);
         await reload();
         setTimeout(() => { reload(); }, 2000);
+        // Reconcilia los registros de tiempo con Notion (que indexa con lag) para que las
+        // vistas se queden con el dato real antes de que el buffer recentEntries se pode.
+        setTimeout(() => { refreshTimeRecords(); }, 2500);
+        setTimeout(() => { refreshTimeRecords(); }, 6000);
       }
       onClose();
       setTaskId(""); setTaskQuery("");
