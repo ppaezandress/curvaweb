@@ -129,7 +129,7 @@ export function DayDetailDrawer({ open, onClose }: { open: boolean; onClose: () 
                         {nowPct >= 0 && nowPct <= 100 && <div className="absolute inset-y-0 z-20 w-px bg-fg/40" style={{ left: `${nowPct}%` }} aria-hidden />}
                         {a.sessions.map((s) => {
                           const left = ((s.start - winStart) / span) * 100;
-                          const width = ((s.minutes * 60000) / span) * 100;
+                          const width = ((s.end - s.start) / span) * 100;
                           const on = hover === s.id;
                           return (
                             <button

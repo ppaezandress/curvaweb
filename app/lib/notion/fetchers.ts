@@ -62,7 +62,8 @@ export type TimeRecord = {
   id: string;
   taskId: string;
   person: string;
-  start: string; // ISO
+  start: string; // ISO (Inicio)
+  end?: string; // ISO (Fin real de Notion) — verdad; si falta, se deriva de start+minutes
   minutes: number;
   inactiveMinutes: number;
   mode: "manual" | "ai"; // manual (tus manos) o ai (espera/IA trabajando)
@@ -87,6 +88,7 @@ async function getTimeRecordsUncached(): Promise<TimeRecord[]> {
         taskId: (P(pg, "Tarea")?.relation || [])[0]?.id || "",
         person: rich.trim(),
         start: P(pg, "Inicio")?.date?.start || "",
+        end: P(pg, "Fin")?.date?.start || undefined,
         minutes: P(pg, "Minutos")?.number || 0,
         inactiveMinutes: P(pg, "Min. inactivos")?.number || 0,
         mode: (P(pg, "Modo")?.select?.name === "IA" ? "ai" : "manual") as "manual" | "ai",

@@ -1,42 +1,71 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import {
-  ArrowLeft, Target, Briefcase, Users, Gauge, Sunrise, Sunset, Timer, Layers,
-  Repeat, CalendarCheck, Clock3, Sparkles, Pencil, Flame, Coffee,
+  ArrowLeft, ChevronLeft, ChevronRight, Target, Briefcase, Users, Gauge, Sunrise, Sunset,
+  Timer, Layers, Repeat, CalendarCheck, Clock3, Sparkles, Pencil, Flame, Coffee,
 } from "lucide-react";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { useTimeRecords } from "@/lib/use-time-records";
 import { formatDuration } from "@/lib/format";
-import { analyzeDay, type Group } from "@/lib/day-analytics";
+import { analyzeDay, dailyTrend, type Group } from "@/lib/day-analytics";
 
+const DAY = 86_400_000;
+const H = 3_600_000;
 const pad = (n: number) => String(n).padStart(2, "0");
 const hhmm = (ms: number) => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const hourLabel = (h: number) => { const ap = h < 12 ? "a" : "p"; const h12 = h % 12 === 0 ? 12 : h % 12; return `${h12}${ap}`; };
-const H = 3_600_000;
+const ymd = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const DOW = ["D", "L", "M", "M", "J", "V", "S"];
 
 export default function DiaPage() {
+  return <Suspense fallback={null}><DiaInner /></Suspense>;
+}
+
+function DiaInner() {
+  const router = useRouter();
+  const params = useSearchParams();
   const { currentUserId, entries } = useApp();
   const { taskById, projectById, clientById, taskTypeById, memberById, recentEntries } = useData();
   const { records } = useTimeRecords();
   const [hover, setHover] = useState<string | null>(null);
   const me = currentUserId ? memberById[currentUserId] : undefined;
+  const myName = (me?.name || "").trim();
+
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+  const dParam = params.get("d");
+  const dayStart = useMemo(() => {
+    if (dParam && /^\d{4}-\d{2}-\d{2}$/.test(dParam)) {
+      const [y, m, d] = dParam.split("-").map(Number);
+      const t = new Date(y, m - 1, d).setHours(0, 0, 0, 0);
+      return Number.isFinite(t) ? Math.min(t, todayStart) : todayStart;
+    }
+    return todayStart;
+  }, [dParam, todayStart]);
+  const isToday = dayStart === todayStart;
+  const now = isToday ? Date.now() : dayStart + DAY;
 
   const a = useMemo(() => analyzeDay(
-    { records, recentEntries, entries, myName: (me?.name || "").trim(), dayStart: new Date().setHours(0, 0, 0, 0), now: Date.now(), priorRecords: records, priorDays: 30 },
+    { records, recentEntries, entries, myName, dayStart, now, priorRecords: records, priorDays: 30 },
     { taskById, projectById, clientById, taskTypeById },
-  ), [records, recentEntries, entries, me, taskById, projectById, clientById, taskTypeById]);
+  ), [records, recentEntries, entries, myName, dayStart, now, taskById, projectById, clientById, taskTypeById]);
 
-  const todayLabel = new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  const trend = useMemo(() => dailyTrend(records, myName, 14, todayStart, Date.now()), [records, myName, todayStart]);
+  const trendMax = Math.max(...trend.map((d) => d.minutes), 1);
+
+  const dayLabel = new Date(dayStart).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
   const colorByKey: Record<string, string> = {};
   a.byProject.forEach((g) => { colorByKey[g.key] = g.color; });
 
+  const goDay = (ds: number) => { if (ds > todayStart) return; router.push(ds === todayStart ? "/dia" : `/dia?d=${ymd(ds)}`); };
+
   // Ventana de la timeline
-  let winStart = new Date().setHours(8, 0, 0, 0), span = 12 * H;
+  let winStart = dayStart + 8 * H, span = 12 * H;
   if (a.sessions.length) {
     winStart = new Date(a.firstStart).setMinutes(0, 0, 0);
     let winEnd = Math.ceil(a.lastEnd / H) * H;
@@ -45,15 +74,12 @@ export default function DiaPage() {
   }
   const ticks: number[] = [];
   for (let t = winStart; t <= winStart + span + 1; t += Math.max(H, Math.ceil(span / 8 / H) * H)) ticks.push(t);
-  const now = Date.now();
-  const nowPct = span > 0 ? ((now - winStart) / span) * 100 : -1;
+  const nowPct = isToday && span > 0 ? ((Date.now() - winStart) / span) * 100 : -1;
   const hovered = a.sessions.find((s) => s.id === hover);
 
-  // Resumen narrativo del día
   const narrative = useMemo(() => {
     if (!a.sessions.length) return "";
-    const parts: string[] = [];
-    parts.push(`Mediste ${formatDuration(a.total * 60)} en ${a.byProject.length} ${a.byProject.length === 1 ? "proyecto" : "proyectos"}`);
+    const parts: string[] = [`Mediste ${formatDuration(a.total * 60)} en ${a.byProject.length} ${a.byProject.length === 1 ? "proyecto" : "proyectos"}`];
     if (a.peakSlot) parts.push(`tu pico fue en la ${a.peakSlot.toLowerCase()}`);
     parts.push(`${a.focusPct}% de foco`);
     if (a.meetingPct >= 25) parts.push(`${a.meetingPct}% en juntas`);
@@ -63,27 +89,58 @@ export default function DiaPage() {
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
-      {/* Encabezado */}
-      <motion.div variants={fadeUp} className="flex items-center gap-3">
-        <Link href="/dashboard" className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted transition hover:border-accent hover:text-accent"><ArrowLeft size={17} /></Link>
-        <div>
-          <p className="text-caption font-medium text-muted">Análisis de tu día</p>
-          <h1 className="font-display text-xl font-bold capitalize leading-tight text-fg sm:text-2xl">{todayLabel}</h1>
+      {/* Encabezado + navegación de día */}
+      <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted transition hover:border-accent hover:text-accent"><ArrowLeft size={17} /></Link>
+          <div>
+            <p className="text-caption font-medium text-muted">{isToday ? "Análisis de tu día" : "Análisis del día"}</p>
+            <h1 className="font-display text-xl font-bold capitalize leading-tight text-fg sm:text-2xl">{isToday ? "Hoy" : dayLabel}</h1>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => goDay(dayStart - DAY)} aria-label="Día anterior" className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted transition hover:border-accent hover:text-accent"><ChevronLeft size={17} /></button>
+          <span className="min-w-[9rem] text-center text-sm font-medium capitalize text-fg">{dayLabel}</span>
+          <button onClick={() => goDay(dayStart + DAY)} disabled={isToday} aria-label="Día siguiente" className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted transition enabled:hover:border-accent enabled:hover:text-accent disabled:opacity-30"><ChevronRight size={17} /></button>
         </div>
       </motion.div>
 
+      {/* Tendencia · últimos 14 días (clic para ver ese día) */}
+      <motion.section variants={fadeUp} className="rounded-card border border-line bg-surface p-4 shadow-soft">
+        <div className="mb-2.5 flex items-center justify-between">
+          <p className="text-caption font-semibold text-muted">Tendencia · últimos 14 días</p>
+          <p className="text-caption text-muted">clic en un día para verlo</p>
+        </div>
+        <div className="flex items-end gap-1.5">
+          {trend.map((d) => {
+            const sel = d.dayStart === dayStart;
+            const pct = (d.minutes / trendMax) * 100;
+            return (
+              <button key={d.dayStart} onClick={() => goDay(d.dayStart)} title={`${formatDuration(d.minutes * 60)}`}
+                className="group flex flex-1 flex-col items-center gap-1 focus-ring rounded">
+                <span className="tabular text-[0.6rem] text-muted opacity-0 transition group-hover:opacity-100">{d.minutes > 0 ? formatDuration(d.minutes * 60) : ""}</span>
+                <div className="flex h-20 w-full items-end">
+                  <div className={`w-full rounded-[3px] transition ${sel ? "bg-accent" : d.minutes > 0 ? "bg-accent/30 group-hover:bg-accent/50" : "bg-surface-2"}`} style={{ height: `${Math.max(pct, 4)}%` }} />
+                </div>
+                <span className={`text-caption ${sel ? "font-bold text-accent" : "text-muted"}`}>{DOW[d.weekday]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </motion.section>
+
       {a.sessions.length === 0 ? (
         <motion.div variants={fadeUp} className="rounded-card border border-dashed border-line py-16 text-center">
-          <p className="text-lg font-semibold text-fg">Aún no mides nada hoy</p>
-          <p className="mt-1 text-body text-muted">Cuando midas tiempo, aquí verás el análisis completo de tu jornada.</p>
-          <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">Ir a Inicio</Link>
+          <p className="text-lg font-semibold text-fg">{isToday ? "Aún no mides nada hoy" : "No mediste tiempo este día"}</p>
+          <p className="mt-1 text-body text-muted">{isToday ? "Cuando midas tiempo, aquí verás el análisis completo de tu jornada." : "Elige otro día en la tendencia de arriba."}</p>
+          {isToday && <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">Ir a Inicio</Link>}
         </motion.div>
       ) : (
         <>
-          {/* Hero: total + resumen + KPIs */}
+          {/* Hero */}
           <motion.section variants={fadeUp} className="grid gap-4 lg:grid-cols-3">
             <div className="rounded-card border border-line bg-surface p-6 shadow-soft lg:col-span-1">
-              <p className="text-caption font-medium text-muted">Trabajado hoy</p>
+              <p className="text-caption font-medium text-muted">{isToday ? "Trabajado hoy" : "Trabajado ese día"}</p>
               <p className="tabular font-display text-[3rem] font-bold leading-none text-fg">{formatDuration(a.total * 60)}</p>
               <p className="mt-2 text-caption text-muted">{a.count} sesiones · {a.tasksTouched} tareas · {formatDuration(a.active * 60)} de foco activo</p>
               {narrative && <p className="mt-3 border-t border-line pt-3 text-caption leading-relaxed text-muted">{narrative}</p>}
@@ -96,7 +153,7 @@ export default function DiaPage() {
             </div>
           </motion.section>
 
-          {/* Timeline grande */}
+          {/* Timeline */}
           <motion.section variants={fadeUp} className="rounded-card border border-line bg-surface p-5 shadow-soft">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-heading text-fg">La forma de tu día</p>
@@ -114,7 +171,7 @@ export default function DiaPage() {
               {nowPct >= 0 && nowPct <= 100 && <div className="absolute inset-y-0 z-20 w-px bg-fg/40" style={{ left: `${nowPct}%` }} aria-hidden />}
               {a.sessions.map((s) => {
                 const left = ((s.start - winStart) / span) * 100;
-                const width = ((s.minutes * 60000) / span) * 100;
+                const width = ((s.end - s.start) / span) * 100;
                 const on = hover === s.id;
                 return (
                   <button key={s.id}
@@ -138,10 +195,10 @@ export default function DiaPage() {
 
           {/* Desgloses */}
           <motion.section variants={fadeUp} className="grid gap-4 md:grid-cols-2">
-            <Breakdown title="Por proyecto" groups={a.byProject} total={a.total} />
-            <Breakdown title="Por pilar de negocio" groups={a.byPilar} total={a.total} />
-            <Breakdown title="Por tipo de actividad" groups={a.byActivity} total={a.total} />
-            <Breakdown title="Por cliente" groups={a.byClient} total={a.total} />
+            <Breakdown title="Por proyecto" groups={a.byProject} />
+            <Breakdown title="Por pilar de negocio" groups={a.byPilar} />
+            <Breakdown title="Por tipo de actividad" groups={a.byActivity} />
+            <Breakdown title="Por cliente" groups={a.byClient} />
           </motion.section>
 
           {/* Ritmo + profundidad */}
@@ -149,15 +206,14 @@ export default function DiaPage() {
             <p className="mb-3 text-heading text-fg">Ritmo y profundidad</p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <Stat icon={<Sunrise size={15} />} label="Arrancaste" value={hhmm(a.firstStart)} />
-              <Stat icon={<Sunset size={15} />} label="Terminaste" value={hhmm(a.lastEnd)} />
+              <Stat icon={<Sunset size={15} />} label={isToday ? "Última actividad" : "Terminaste"} value={hhmm(a.lastEnd)} />
               <Stat icon={<Timer size={15} />} label="Sesión más larga" value={formatDuration(a.longest * 60)} />
               <Stat icon={<Layers size={15} />} label="Bloques profundos" value={`${a.deepBlocks}`} hint="≥ 50 min" />
               <Stat icon={<Repeat size={15} />} label="Cambios de contexto" value={`${a.switches}`} hint="saltos de proyecto" />
               <Stat icon={<Coffee size={15} />} label="Huecos" value={formatDuration(a.gapsMin * 60)} hint="sin medir" />
             </div>
-            {/* Distribución por franja */}
             <div className="mt-4 rounded-card border border-line bg-surface p-4 shadow-soft">
-              <p className="mb-2.5 text-caption font-semibold text-muted">Cuándo rindes</p>
+              <p className="mb-2.5 text-caption font-semibold text-muted">Cuándo rendiste</p>
               <div className="flex gap-2">
                 {["Mañana", "Tarde", "Noche"].map((slot, i) => {
                   const g = a.bySlot.find((x) => x.label === slot);
@@ -183,7 +239,7 @@ export default function DiaPage() {
             <div className="rounded-card border border-line bg-surface p-5 shadow-soft">
               <p className="mb-3 flex items-center gap-1.5 text-heading text-fg"><CalendarCheck size={16} /> Cumplimiento</p>
               <div className="space-y-3 text-sm">
-                <Row label="Tareas con entrega hoy" value={`${a.dueTouched}/${a.dueToday}`} hint={a.dueToday === 0 ? "nada vence hoy" : a.dueTouched >= a.dueToday ? "todas atendidas" : "pendientes por tocar"} />
+                <Row label="Tareas con entrega este día" value={`${a.dueTouched}/${a.dueToday}`} hint={a.dueToday === 0 ? "nada vence" : a.dueTouched >= a.dueToday ? "todas atendidas" : "pendientes por tocar"} />
                 <Row label="Tareas tocadas" value={`${a.tasksTouched}`} />
                 <Row label="Promedio por sesión" value={formatDuration(a.avg * 60)} />
                 <Row label="Trabajo profundo" value={formatDuration(a.deepMin * 60)} hint={`${100 - a.meetingPct}% del día`} />
@@ -246,7 +302,7 @@ function Row({ label, value, hint }: { label: string; value: string; hint?: stri
   );
 }
 
-function Breakdown({ title, groups, total }: { title: string; groups: Group[]; total: number }) {
+function Breakdown({ title, groups }: { title: string; groups: Group[] }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5 shadow-soft">
       <p className="mb-3 text-caption font-semibold text-muted">{title}</p>

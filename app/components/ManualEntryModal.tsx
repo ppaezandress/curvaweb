@@ -55,8 +55,14 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
   const [taskFocused, setTaskFocused] = useState(false);
   // Fecha LOCAL (no toISOString, que en UTC salta a "mañana" después de las 18:00 en México).
   const [date, setDate] = useState(() => dayKey(Date.now()));
-  // Horario: de qué hora a qué hora (la duración se deriva). Default: la última hora.
-  const [startTime, setStartTime] = useState(() => { const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5 - 60, 0, 0); return hhmm(d); });
+  // Horario: de qué hora a qué hora (la duración se deriva). Default: la última hora, pero
+  // SIN cruzar la medianoche hacia atrás: si son las 00:2x, "ahora−60min" caería en 23:2x del
+  // día anterior y, con la fecha en HOY, crearía una sesión en el FUTURO. Se topa en 00:00.
+  const [startTime, setStartTime] = useState(() => {
+    const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5 - 60, 0, 0);
+    const mid = new Date(); mid.setHours(0, 0, 0, 0);
+    return d < mid ? "00:00" : hhmm(d);
+  });
   const [endTime, setEndTime] = useState(() => { const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5, 0, 0); return hhmm(d); });
   const minutes = useMemo(() => toMin(endTime) - toMin(startTime), [startTime, endTime]);
   const valid = minutes > 0;

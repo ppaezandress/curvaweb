@@ -77,10 +77,11 @@ function groupBy(sessions: DaySession[], keyOf: (s: DaySession) => { key: string
 }
 
 export function buildDaySessions(
-  input: { records: TimeRecord[]; recentEntries: TimeRecord[]; entries: LocalEntry[]; myName: string; dayStart: number },
+  input: { records: TimeRecord[]; recentEntries: TimeRecord[]; entries: LocalEntry[]; myName: string; dayStart: number; now: number },
   maps: Maps,
 ): DaySession[] {
-  const { records, recentEntries, entries, myName, dayStart } = input;
+  const { records, recentEntries, entries, myName, dayStart, now } = input;
+  const dayEnd = dayStart + 86_400_000;
   const meta = (taskId: string) => {
     const t = taskId ? maps.taskById[taskId] : undefined;
     const p = t ? maps.projectById[t.projectId] : undefined;
@@ -106,15 +107,18 @@ export function buildDaySessions(
   const all = [...base, ...recentEntries.filter((r) => (r.person || "").trim() === myName && !ids.has(r.id))];
   for (const r of all) {
     const ms = new Date(r.start).getTime();
-    if (!(ms >= dayStart) || !(r.minutes > 0)) continue;
+    // Del día seleccionado y NO en el futuro (no puedes haber trabajado en una hora que
+    // no ha llegado — descarta registros mal fechados). El fin es el Fin REAL de Notion.
+    if (!(ms >= dayStart) || ms >= dayEnd || ms > now || !(r.minutes > 0)) continue;
     known.add(r.id);
-    out.push({ id: r.id, start: ms, end: ms + r.minutes * 60000, minutes: r.minutes, inactiveMinutes: r.inactiveMinutes || 0, taskId: r.taskId, origin: r.origin, mode: r.mode, activity: clean(r.activity), ...meta(r.taskId) });
+    const end = r.end ? new Date(r.end).getTime() : ms + r.minutes * 60000;
+    out.push({ id: r.id, start: ms, end: Math.max(end, ms), minutes: r.minutes, inactiveMinutes: r.inactiveMinutes || 0, taskId: r.taskId, origin: r.origin, mode: r.mode, activity: clean(r.activity), ...meta(r.taskId) });
   }
   for (const e of entries) {
-    if (e.synced || !(e.endedAt >= dayStart) || (e.seconds || 0) <= 0) continue;
+    if (e.synced || !(e.startedAt >= dayStart) || e.startedAt >= dayEnd || e.startedAt > now || (e.seconds || 0) <= 0) continue;
     if (e.notionId && known.has(e.notionId)) continue;
     const mins = Math.round((e.seconds / 60) * 10) / 10;
-    out.push({ id: e.id, start: e.startedAt, end: e.endedAt, minutes: mins, inactiveMinutes: Math.round(((e.inactiveSeconds || 0) / 60) * 10) / 10, taskId: e.taskId, origin: "timer", mode: e.mode, activity: "Trabajo enfocado", ...meta(e.taskId) });
+    out.push({ id: e.id, start: e.startedAt, end: Math.max(e.endedAt, e.startedAt), minutes: mins, inactiveMinutes: Math.round(((e.inactiveSeconds || 0) / 60) * 10) / 10, taskId: e.taskId, origin: "timer", mode: e.mode, activity: "Trabajo enfocado", ...meta(e.taskId) });
   }
   return out.sort((a, b) => a.start - b.start);
 }
@@ -157,7 +161,8 @@ export function analyzeDay(
 
   // Ritmo del día
   const firstStart = sessions.length ? sessions[0].start : 0;
-  const lastEnd = sessions.length ? Math.max(...sessions.map((s) => s.end)) : 0;
+  // "Terminaste" nunca en el futuro: se topa en `now` (hoy) o el fin del día (días pasados).
+  const lastEnd = sessions.length ? Math.min(input.now, Math.max(...sessions.map((s) => s.end))) : 0;
   const spanMin = sessions.length ? Math.round((lastEnd - firstStart) / 60000) : 0;
   const gapsMin = Math.max(0, spanMin - total); // dentro de la jornada, tiempo no medido
   const densityPct = spanMin > 0 ? Math.round((total / spanMin) * 100) : 0;
@@ -198,4 +203,26 @@ export function analyzeDay(
     avgDayMin, deltaVsAvgPct,
     dueToday: dueToday.length, dueTouched, tasksTouched: touched.size,
   };
+}
+
+export type TrendDay = { dayStart: number; minutes: number; isToday: boolean; weekday: number };
+
+// Tendencia: minutos medidos por día en los últimos `days` (para la tira de barras y navegar
+// a días pasados). Cuenta el Inicio de cada registro mío por día LOCAL, sin futuro.
+export function dailyTrend(records: TimeRecord[], myName: string, days: number, todayStart: number, now: number): TrendDay[] {
+  const mine = records.filter((r) => (r.person || "").trim() === myName && r.minutes > 0);
+  const perDay = new Map<number, number>();
+  for (const r of mine) {
+    const ms = new Date(r.start).getTime();
+    if (ms > now) continue;
+    const d = new Date(ms); d.setHours(0, 0, 0, 0);
+    const key = d.getTime();
+    perDay.set(key, (perDay.get(key) || 0) + r.minutes);
+  }
+  const out: TrendDay[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const ds = todayStart - i * 86_400_000;
+    out.push({ dayStart: ds, minutes: Math.round(perDay.get(ds) || 0), isToday: ds === todayStart, weekday: new Date(ds).getDay() });
+  }
+  return out;
 }
