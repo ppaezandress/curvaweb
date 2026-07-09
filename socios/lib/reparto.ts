@@ -19,6 +19,10 @@ export type Proyecto = {
   cajaPct: number;
   comisOn: boolean;
   comisWho: "banca" | "equipo";
+  // Quién trajo el cliente (decide la comisión de origen, regla blindada):
+  //  empresa/inbound → sin comisión · socio → comisión a la Banca · persona → a esa persona.
+  origen?: "empresa" | "socio" | "persona";
+  origenPersona?: string;   // nombre de quien la cobra cuando origen = "persona"
   inMonth: boolean;
   members: Miembro[];
   clienteId?: string | null;
@@ -108,9 +112,13 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
     else { pay[i] = g; }
   });
   const bolsaOut = bb, marginBruto = t - bolsaOut;
-  const comis = pr.comisOn ? Math.min(marginBruto * (P.comisPct / 100), P.comisTope) : 0;
-  const comisBanca = pr.comisOn && pr.comisWho === "banca" ? comis : 0;
-  const comisPaid = pr.comisOn && pr.comisWho === "equipo" ? comis : 0;
+  // Comisión de origen — regla blindada: un socio-originador NUNCA la cobra a su
+  // bolsillo (diluye al otro socio), va a la Banca. Solo Núcleo/externo la cobra.
+  const comisOn = pr.origen ? pr.origen !== "empresa" : pr.comisOn;
+  const comisWho = pr.origen === "persona" ? "equipo" : pr.origen === "socio" ? "banca" : pr.comisWho;
+  const comis = comisOn ? Math.min(marginBruto * (P.comisPct / 100), P.comisTope) : 0;
+  const comisBanca = comisOn && comisWho === "banca" ? comis : 0;
+  const comisPaid = comisOn && comisWho === "equipo" ? comis : 0;
   const cajaProj = t * (pr.cajaPct / 100);
   const marginOp = marginBruto - comis - cajaProj;
   const cajaAhorro = marginOp * (P.ahorro / 100), utilidad = marginOp - cajaAhorro;
@@ -135,6 +143,14 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
     const a = people[k];
     if (a.quien === "socioA") a.extra = sAutil; else if (a.quien === "socioB") a.extra = sButil; else if (a.quien === "nucleo") a.extra = poolEach;
   });
+  // La comisión que cobra un Núcleo/externo (comisPaid) se suma a quien la trajo,
+  // para que aparezca en "cuánto cobra cada quien".
+  if (comisPaid > 0.5) {
+    const quien = (pr.origenPersona || "Quien lo trajo").trim();
+    const k = quien + "|comis";
+    if (!people[k]) people[k] = { nombre: quien, quien: "nuevo", roles: ["comisión"], trabajo: 0, extra: 0 };
+    people[k].extra += comisPaid;
+  }
   return { t, bolsaOut, marginBruto, comis, comisPaid, comisBanca, cajaProj, marginOp, cajaAhorro, poolAmt, utilKept, utilSwept, disc, socioA: sAseat + sAutil, socioB: sBseat + sButil, sAseat, sBseat, sAutil, sButil, banca, people };
 }
 

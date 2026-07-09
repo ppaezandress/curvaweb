@@ -25,7 +25,7 @@ const DEF_GASTOS: Gasto[] = [
 
 function newProject(name: string): Proyecto {
   return {
-    id: uid(), nombre: name, ticket: 80000, tipo: "trazo", cajaPct: 10, comisOn: true, comisWho: "banca", inMonth: true,
+    id: uid(), nombre: name, ticket: 80000, tipo: "trazo", cajaPct: 10, comisOn: true, comisWho: "banca", origen: "empresa", inMonth: true,
     members: [{ rol: "P", quien: "socioA", nombre: "Andrés", sm: 1 }, { rol: "E", quien: "nucleo", nombre: "Ivana", sm: 1 }],
   };
 }
@@ -168,7 +168,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec }: {
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
   const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra > 0.5).sort((a, b) => (b.trabajo + b.extra) - (a.trabajo + a.extra) || order[a.quien] - order[b.quien]);
   let tT = 0, tE = 0; Object.values(r.people).forEach((a) => { tT += a.trabajo; tE += a.extra; });
-  const leak = r.t - (tT + tE + r.comisPaid + r.cajaProj + r.banca);
+  // comisPaid ya está dentro de tE (se asignó a quien la trajo), no se suma aparte.
+  const leak = r.t - (tT + tE + r.cajaProj + r.banca);
   const mr = r.marginOp / t;
   const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv">{fmtMXN(v)}</span></div>;
 
@@ -194,7 +195,22 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec }: {
             <div className="field"><label>Valor del proyecto (sin IVA)</label><div className="money-in"><span>$</span><input type="number" value={active.ticket} onChange={(e) => updateActive((p) => { p.ticket = +e.target.value || 0; })} /></div>
               <p className="hint" style={{ marginTop: 6 }}>De este proyecto, al equipo le toca <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. En proyectos más grandes el % baja (CURVA se queda con más). <b>Vender más caro SIEMPRE deja más</b> — sin trampas.</p>
             </div>
-            <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPreset[tp]; p.comisOn = tp === "trazo"; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
+            <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPreset[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
+            <div className="field"><label>¿Quién trajo este cliente?</label>
+              <div className="chips">
+                <button className="chip-btn" aria-pressed={(active.origen || "empresa") === "empresa"} onClick={() => updateActive((p) => { p.origen = "empresa"; })}>La empresa / inbound</button>
+                <button className="chip-btn" aria-pressed={active.origen === "socio"} onClick={() => updateActive((p) => { p.origen = "socio"; })}>Un socio</button>
+                <button className="chip-btn" aria-pressed={active.origen === "persona"} onClick={() => updateActive((p) => { p.origen = "persona"; })}>Equipo / externo</button>
+              </div>
+              {active.origen === "persona" && (
+                <input type="text" style={{ marginTop: 8 }} placeholder="¿Quién? (nombre)" value={active.origenPersona || ""} onChange={(e) => updateActive((p) => { p.origenPersona = e.target.value; })} />
+              )}
+              <p className="hint" style={{ marginTop: 6 }}>
+                {(active.origen || "empresa") === "empresa" ? "La marca es de los dos → sin comisión."
+                  : active.origen === "socio" ? "🛡️ Los socios NO cobran comisión a su bolsillo (diluiría al otro). Va a la Banca."
+                  : "Cobra la comisión quien lo trajo (no diluye a ningún socio)."}
+              </p>
+            </div>
             <div className="field"><label>Caja del proyecto <span style={{ color: "var(--cobalt)", fontFamily: "var(--mono)", fontWeight: 700 }}>{active.cajaPct}%</span></label><input type="range" min={0} max={25} value={active.cajaPct} onChange={(e) => updateActive((p) => { p.cajaPct = +e.target.value; })} /></div>
             <div className="field"><label>Cliente (de Notion)</label><select value={active.clienteId || ""} onChange={(e) => updateActive((p) => { p.clienteId = e.target.value || null; p.clienteNombre = clientes.find((c) => c.id === e.target.value)?.nombre || null; })}><option value="">— sin asignar —</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
           </div>
@@ -227,7 +243,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec }: {
           <div className="two">
             <div className="card"><h2>El desglose</h2>
               {bd("", "Ingreso del proyecto", r.t)}{bd("sub", `− Equipo (${pctFmt(r.bolsaOut / (r.t || 1))} de este proyecto)`, -r.bolsaOut)}
-              {r.comis > 0 && bd("sub", "− Comisión de origen", -r.comis)}
+              {r.comis > 0 && bd("sub", `− Comisión de origen ${r.comisBanca > 0 ? "→ Banca" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
               {bd("sub", "− Caja del proyecto", -r.cajaProj)}{bd("eq", "CURVA se queda", r.marginOp)}{bd("sub", "− Caja de ahorro", -r.cajaAhorro)}
               {r.poolAmt > 0 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
               {bd("strong", "Utilidad a repartir", r.utilKept)}{bd("sub", `→ ${P.nombreA} ${P.split}%`, r.sAutil)}{bd("sub", `→ ${P.nombreB} ${100 - P.split}%`, r.sButil)}
