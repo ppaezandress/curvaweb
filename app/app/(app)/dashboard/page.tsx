@@ -38,8 +38,35 @@ function ActiveTimerClock({ baseSeconds }: { baseSeconds: number }) {
   );
 }
 
+// "Trabajado hoy" en vivo: total del día (registros de Notion + tramos locales aún no
+// sincronizados) más la sesión en curso, que sube segundo a segundo. Aislado como su propio
+// componente para que el tick de useLiveElapsed re-renderice SOLO esta tarjeta, no la
+// HomePage entera (misma regla que ActiveTimerClock — nada de ticks en la raíz de la página).
+function TodayHoursCard({ baseSeconds, live }: { baseSeconds: number; live: boolean }) {
+  const elapsed = useLiveElapsed(); // cuenta solo cuando hay un cronómetro manual corriendo
+  const total = baseSeconds + (live ? elapsed : 0);
+  return (
+    <div className={`rounded-card border p-5 shadow-soft transition ${live ? "border-accent/40 bg-accent/[0.05]" : "border-line bg-surface"}`}>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-caption font-medium text-muted">Trabajado hoy</span>
+        {live && (
+          <span className="inline-flex items-center gap-1.5 text-caption font-semibold text-accent">
+            <span className="curva-live-dot inline-block h-2 w-2 rounded-full bg-accent" /> en curso
+          </span>
+        )}
+      </div>
+      <p className="tabular font-display text-[2.6rem] font-bold leading-none text-fg">
+        {live ? formatClock(total) : formatDuration(total)}
+      </p>
+      <p className="mt-1.5 text-caption text-muted">
+        {live ? "sube en tiempo real mientras mides" : total > 0 ? "total de hoy" : "aún no mides nada hoy"}
+      </p>
+    </div>
+  );
+}
+
 export default function HomePage() {
-  const { currentUserId, active, stop, switchTo, sessionSecondsForTask } = useApp();
+  const { currentUserId, active, stop, switchTo, sessionSecondsForTask, entries } = useApp();
   const { tasks, taskById, clientById, memberById } = useData();
   const { records } = useTimeRecords();
   const me = currentUserId ? memberById[currentUserId] : undefined;
@@ -92,6 +119,23 @@ export default function HomePage() {
     const todayIdx = (new Date().getDay() + 6) % 7;
     return { bars, total: bars.reduce((a, b) => a + b, 0), todayIdx };
   }, [myRecords]);
+
+  // "Trabajado hoy" (base, sin la sesión viva): registros de Notion de hoy (todas las fuentes:
+  // cronómetro sincronizado + registros a mano, cualquier dispositivo) + tramos locales de hoy
+  // aún NO sincronizados (los que Notion todavía no absorbió). Mismo patrón anti-doble-conteo
+  // que sessionSecondsForTask: el lado Notion es la base, los !synced son el delta pendiente.
+  // La sesión en curso NO va aquí — la suma en vivo TodayHoursCard.
+  const todayBaseSeconds = useMemo(() => {
+    const start0 = new Date().setHours(0, 0, 0, 0);
+    const notionSec = myRecords
+      .filter((r) => new Date(r.start).getTime() >= start0)
+      .reduce((a, r) => a + (r.minutes || 0) * 60, 0);
+    const localSec = entries
+      .filter((e) => !e.synced && e.endedAt >= start0)
+      .reduce((a, e) => a + e.seconds, 0);
+    return Math.round(notionSec + localSec);
+  }, [myRecords, entries]);
+  const activeStartedToday = !!active && active.startedAt >= new Date().setHours(0, 0, 0, 0);
 
   const focusList = useMemo(() => {
     const today0 = new Date().setHours(0, 0, 0, 0);
@@ -269,6 +313,9 @@ export default function HomePage() {
 
         {/* ══ Columna de VISTAZO ══ */}
         <div className="space-y-4">
+          {/* Trabajado hoy — lo primero del vistazo, sube en vivo con el cronómetro */}
+          <TodayHoursCard baseSeconds={todayBaseSeconds} live={activeStartedToday} />
+
           {/* Pulso compacto — con ayuda "¿qué es esto?" (fuera del Link, HTML válido) */}
           <div className="rounded-card border border-line bg-surface p-5 shadow-soft transition hover:border-accent/40">
             <div className="mb-1 flex items-center justify-between">
