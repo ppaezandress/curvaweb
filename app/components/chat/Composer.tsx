@@ -2,7 +2,7 @@
 import { toast } from "@/lib/toast";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, Music, Trash2, Video, Reply } from "lucide-react";
+import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, Music, Trash2, Video, Reply, CalendarPlus } from "lucide-react";
 import type { Task, Member } from "@/lib/mock-data";
 import { taskToken, userToken } from "@/lib/notion-url";
 import { getSupabase } from "@/lib/supabase/client";
@@ -18,7 +18,7 @@ const kindOf = (mime: string): Attachment["type"] =>
 
 // Composer estilo Slack: "@" menciona personas, "/" menciona tareas (→ Notion).
 // Adjuntos: imagen / video / audio (subir archivo o grabar audio).
-export function Composer({ tasks, members, onSend, onTyping, chromeless = false, replyingTo, onCancelReply }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean; replyingTo?: { name: string; preview: string } | null; onCancelReply?: () => void }) {
+export function Composer({ tasks, members, onSend, onTyping, chromeless = false, replyingTo, onCancelReply, onEvent }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean; replyingTo?: { name: string; preview: string } | null; onCancelReply?: () => void; onEvent?: () => void }) {
   const [text, setText] = useState("");
   const [trigger, setTrigger] = useState<Trigger>(null);
   const [people, setPeople] = useState<Member[]>([]);
@@ -251,6 +251,11 @@ export function Composer({ tasks, members, onSend, onTyping, chromeless = false,
           <button onClick={() => setShowVideoRec(true)} disabled={uploading} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90 disabled:opacity-40" aria-label="Grabar video" title="Grabar un video con la cámara">
             <Video size={16} />
           </button>
+          {onEvent && (
+            <button onClick={onEvent} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring active:scale-90" aria-label="Crear junta" title="Crear junta / evento con invitación">
+              <CalendarPlus size={16} />
+            </button>
+          )}
           <textarea
             ref={inputRef}
             value={text}

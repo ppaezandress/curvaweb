@@ -20,6 +20,7 @@ import { DoneCelebration } from "@/components/DoneCelebration";
 import { MusicProbe } from "@/components/MusicProbe";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { MeetingWatcher } from "@/components/MeetingWatcher";
+import { MeetingReminder } from "@/components/MeetingReminder";
 import { AISync } from "@/components/AISync";
 import { SupportButton } from "@/components/SupportButton";
 import { Toaster } from "@/lib/toast";
@@ -88,6 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MusicProbe />
       <PresenceHeartbeat />
       <MeetingWatcher />
+      <MeetingReminder />
       <AISync />
       <SupportButton />
       <Toaster />

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, CalendarPlus } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, MoreHorizontal } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -49,6 +49,7 @@ export default function MensajesPage() {
   const [filesOpen, setFilesOpen] = useState(false);
   const [filesCount, setFilesCount] = useState(0);
   const [eventOpen, setEventOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
@@ -475,21 +476,31 @@ export default function MensajesPage() {
             <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar…" className="w-32 rounded-full border border-line bg-surface-2/60 py-1.5 pl-8 pr-2 text-sm text-fg outline-none transition focus:w-44 focus:border-accent focus-ring" />
           </div>
-          <button onClick={() => setShowSaved((s) => !s)} className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", showSaved ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Guardados" title="Mensajes guardados">
-            <Bookmark size={16} fill={showSaved ? "currentColor" : "none"} />
-          </button>
-          <button onClick={() => setEventOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Nueva junta" title="Crear junta / evento">
-            <CalendarPlus size={16} />
-          </button>
-          <button onClick={() => setFilesOpen(true)} className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Archivos del canal" title="Archivos del canal">
+          <button onClick={() => setFilesOpen(true)} className={cn("relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", showSaved ? "border-line text-muted hover:border-accent hover:text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Archivos del canal" title="Archivos del canal">
             <FolderOpen size={16} />
             {filesCount > 0 && <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">{filesCount}</span>}
           </button>
-          {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
-            <button onClick={() => setSettingsOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Ajustes del canal" title="Ajustes del canal">
-              <Settings size={16} />
+          {/* Overflow: acciones secundarias del canal */}
+          <div className="relative">
+            <button onClick={() => setMoreOpen((o) => !o)} className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", moreOpen || showSaved ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Más opciones" title="Más">
+              <MoreHorizontal size={16} />
             </button>
-          )}
+            {moreOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />
+                <div className="absolute right-0 z-30 mt-1 w-52 overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] p-1 shadow-float">
+                  <button onClick={() => { setShowSaved((s) => !s); setMoreOpen(false); }} className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-2 focus-ring">
+                    <Bookmark size={15} className={showSaved ? "text-accent" : "text-muted"} fill={showSaved ? "currentColor" : "none"} /> {showSaved ? "Ver todos los mensajes" : "Mensajes guardados"}
+                  </button>
+                  {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
+                    <button onClick={() => { setSettingsOpen(true); setMoreOpen(false); }} className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-2 focus-ring">
+                      <Settings size={15} className="text-muted" /> Ajustes del canal
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Barra de mensajes fijados */}
@@ -566,7 +577,7 @@ export default function MensajesPage() {
         <div className="mt-2.5 rounded-2xl border border-line bg-surface px-3 py-2 shadow-soft">
           <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} chromeless
             replyingTo={replyingTo ? { name: replyingProf?.name || "alguien", preview: (replyingTo.body || "adjunto").replace(/\s+/g, " ").slice(0, 60) } : null}
-            onCancelReply={() => setReplyingTo(null)} />
+            onCancelReply={() => setReplyingTo(null)} onEvent={() => setEventOpen(true)} />
         </div>
         </div>
       </div>
