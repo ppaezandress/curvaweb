@@ -48,8 +48,8 @@ export type Reglas = {
   umbral1: number; umbral2: number; umbral3: number;   // 40000 / 80000 / 150000
   // Seniority de un integrante nuevo (multiplicador de su parte)
   smNuevo: number;    // 0.7
-  // Banca / Núcleo
-  pisoNucleo: number; // piso mensual TOTAL del Núcleo (32000). Meta de Banca = 3×.
+  // Banca — meta del colchón (monto directo; el piso mensual del Núcleo se eliminó)
+  metaBancaMonto: number; // 48000
   // Nombres de los socios
   nombreA: string; nombreB: string;  // "Andrés" / "Balmo"
 };
@@ -63,12 +63,12 @@ export const REGLAS_DEFAULT: Reglas = {
   brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,
   umbral1: 40000, umbral2: 80000, umbral3: 150000,
   smNuevo: 0.7,
-  pisoNucleo: 32000,
+  metaBancaMonto: 48000,
   nombreA: "Andrés", nombreB: "Balmo",
 };
 
-// Meta de la Banca = colchón de 3 meses de pisos del Núcleo.
-export const metaBanca = (R: Reglas) => (+R.pisoNucleo || 0) * 3;
+// Meta de la Banca — el colchón objetivo de CURVA (monto directo).
+export const metaBanca = (R: Reglas) => (+R.metaBancaMonto || 0);
 
 export const isSocio = (q: Quien) => q === "socioA" || q === "socioB";
 

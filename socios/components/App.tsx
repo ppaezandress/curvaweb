@@ -10,7 +10,7 @@ import {
 type Gasto = { n: string; m: number; proyectoId?: string | null; proveedor?: string; fecha?: string | null };
 type Cliente = { id: string; nombre: string; estado: string | null };
 type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; activeId: string; rulesVersion?: number };
-const RULES_VERSION = 2; // sube esto cuando una decisión deba re-aplicarse a estados guardados
+const RULES_VERSION = 3; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 
 const KEY = "curva_socios_v1";
 const uid = () => "p" + Math.random().toString(36).slice(2, 9);
@@ -56,8 +56,9 @@ export default function App() {
     // (que antes estaba hardcodeada) toma su default. Así no rompemos localStorage viejo.
     if (s && s.projects) {
       const merged: State = { ...s, params: { ...REGLAS_DEFAULT, ...(s.params || {}) } };
-      // Migración de decisiones: apagar el bono del Núcleo en apps que tenían pool=12.
-      if ((s.rulesVersion || 0) < 2) { merged.params.pool = 0; }
+      // Migraciones de decisiones (se re-aplican a estados guardados viejos):
+      if ((s.rulesVersion || 0) < 2) { merged.params.pool = 0; }              // apagar bono del Núcleo
+      if ((s.rulesVersion || 0) < 3) { merged.params.metaBancaMonto = 48000; } // meta de Banca realista
       merged.rulesVersion = RULES_VERSION;
       setSt(merged);
     } else {
@@ -120,12 +121,12 @@ function Panel({ st, overhead }: { st: State; overhead: number }) {
     Object.values(r.people).forEach((a) => { const k = a.nombre + "|" + a.quien; if (!ppl[k]) ppl[k] = { nombre: a.nombre, quien: a.quien, trabajo: 0, extra: 0 }; ppl[k].trabajo += a.trabajo; ppl[k].extra += a.extra; });
   });
   const preTax = Math.max(0, utilKept - overhead), neto = preTax * (1 - st.params.imp / 100);
-  const piso1 = st.params.pisoNucleo, meta = metaBanca(st.params);
+  const meta = metaBanca(st.params);
   const rows = Object.values(ppl).filter((a) => a.trabajo + a.extra > 0.5).sort((a, b) => (b.trabajo + b.extra) - (a.trabajo + a.extra) || order[a.quien] - order[b.quien]);
   const alerts: [string, string][] = [];
-  if (banca < piso1) alerts.push(["warn", `La Banca del mes (${fmtMXN(banca)}) no cubre 1 mes de pisos del Núcleo (${fmtMXN(piso1)}). Toma sombreros o sube β.`]);
-  else if (banca < meta) alerts.push(["info", `La Banca va en ${Math.round(banca / (meta || 1) * 100)}% de la meta de 3 meses (${fmtMXN(meta)}). Vas bien.`]);
-  else alerts.push(["ok", "La Banca ya cubre la meta de 3 meses. Colchón sano."]);
+  if (banca < meta * 0.34) alerts.push(["warn", `La Banca del mes (${fmtMXN(banca)}) va corta para la meta del colchón (${fmtMXN(meta)}). Toma sombreros o sube la caja de ahorro.`]);
+  else if (banca < meta) alerts.push(["info", `La Banca va en ${Math.round(banca / (meta || 1) * 100)}% de la meta (${fmtMXN(meta)}). Vas bien.`]);
+  else alerts.push(["ok", "La Banca ya cubre la meta del colchón. Sano."]);
   inm.forEach((p) => { const r = compute(p, st.params); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
 
   return (
@@ -141,8 +142,8 @@ function Panel({ st, overhead }: { st: State; overhead: number }) {
         <div className="card">
           <h2>Banca — colchón de CURVA</h2>
           <div className="prog"><i style={{ width: Math.min(100, banca / (meta || 1) * 100) + "%" }} /></div>
-          <div className="prog-lbl"><span>Generado este mes: <b>{fmtMXN(banca)}</b></span><span>Meta 3 meses: <b>{fmtMXN(meta)}</b></span></div>
-          <p className="foot">La Banca la alimentan el descuento del sombrero de socio y la caja de ahorro. Meta: <b>{fmtMXN(meta)}</b> (3 meses de pisos del Núcleo) antes de tocarla.</p>
+          <div className="prog-lbl"><span>Generado este mes: <b>{fmtMXN(banca)}</b></span><span>Meta del colchón: <b>{fmtMXN(meta)}</b></span></div>
+          <p className="foot">La Banca la alimentan el descuento del sombrero de socio y la caja de ahorro. Es el colchón de emergencia de CURVA y el trampolín para pasar a alguien a nómina. Meta: <b>{fmtMXN(meta)}</b>.</p>
         </div>
         <div className="card"><h2>Alertas</h2>{alerts.map((a, i) => <div key={i} className={"alert " + a[0]}>{a[1]}</div>)}</div>
       </div>
@@ -495,10 +496,10 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
       </div>
 
       <div className="two">
-        <div className="card"><h2>Núcleo, Banca y seniority</h2>
+        <div className="card"><h2>Banca y seniority</h2>
           {mult("smNuevo", "Seniority de un integrante nuevo")}
-          {money("pisoNucleo", "Piso mensual TOTAL del Núcleo")}
-          <div className="bd-row" style={{ marginTop: 6 }}><span className="bl">Meta de la Banca (3 meses)</span><span className="bv">{fmtMXN(metaBanca(P))}</span></div>
+          {money("metaBancaMonto", "Meta de la Banca (colchón)")}
+          <p className="foot">El colchón de emergencia de CURVA y el trampolín para pasar a alguien a nómina. Sugerido ~$48k (1 nómina medio año). Súbelo cuando crezcan.</p>
         </div>
         <div className="card"><h2>Nombres de los socios</h2>
           {text("nombreA", "Socio A")}
