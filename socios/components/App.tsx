@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, type CSSProperties } from "react";
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
 } from "lucide-react";
 import {
-  compute, fmtMXN, pctFmt, REGLAS_DEFAULT, type Proyecto, type Reglas, type Miembro, type Quien,
+  compute, fmtMXN, pctFmt, metaBanca, REGLAS_DEFAULT, type Proyecto, type Reglas, type Miembro, type Quien,
 } from "@/lib/reparto";
 
 type Gasto = { n: string; m: number; proyectoId?: string | null; proveedor?: string; fecha?: string | null };
@@ -51,7 +51,9 @@ export default function App() {
   useEffect(() => {
     let s: State | null = null;
     try { s = JSON.parse(localStorage.getItem(KEY) || "null"); } catch { /* noop */ }
-    setSt(s && s.projects ? s : initialState());
+    // Merge de parámetros: los guardados mandan, pero cualquier perilla NUEVA
+    // (que antes estaba hardcodeada) toma su default. Así no rompemos localStorage viejo.
+    setSt(s && s.projects ? { ...s, params: { ...REGLAS_DEFAULT, ...(s.params || {}) } } : initialState());
   }, []);
   useEffect(() => { if (st) try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* noop */ } }, [st]);
   useEffect(() => {
@@ -109,10 +111,11 @@ function Panel({ st, overhead }: { st: State; overhead: number }) {
     Object.values(r.people).forEach((a) => { const k = a.nombre + "|" + a.quien; if (!ppl[k]) ppl[k] = { nombre: a.nombre, quien: a.quien, trabajo: 0, extra: 0 }; ppl[k].trabajo += a.trabajo; ppl[k].extra += a.extra; });
   });
   const preTax = Math.max(0, utilKept - overhead), neto = preTax * (1 - st.params.imp / 100);
+  const piso1 = st.params.pisoNucleo, meta = metaBanca(st.params);
   const rows = Object.values(ppl).filter((a) => a.trabajo + a.extra > 0.5).sort((a, b) => (b.trabajo + b.extra) - (a.trabajo + a.extra) || order[a.quien] - order[b.quien]);
   const alerts: [string, string][] = [];
-  if (banca < 32000) alerts.push(["warn", `La Banca del mes (${fmtMXN(banca)}) no cubre 1 mes de pisos del Núcleo ($32k). Toma sombreros o sube β.`]);
-  else if (banca < 96000) alerts.push(["info", `La Banca va en ${Math.round(banca / 96000 * 100)}% de la meta de 3 meses ($96k). Vas bien.`]);
+  if (banca < piso1) alerts.push(["warn", `La Banca del mes (${fmtMXN(banca)}) no cubre 1 mes de pisos del Núcleo (${fmtMXN(piso1)}). Toma sombreros o sube β.`]);
+  else if (banca < meta) alerts.push(["info", `La Banca va en ${Math.round(banca / (meta || 1) * 100)}% de la meta de 3 meses (${fmtMXN(meta)}). Vas bien.`]);
   else alerts.push(["ok", "La Banca ya cubre la meta de 3 meses. Colchón sano."]);
   inm.forEach((p) => { const r = compute(p, st.params); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
 
@@ -128,9 +131,9 @@ function Panel({ st, overhead }: { st: State; overhead: number }) {
       <div className="two">
         <div className="card">
           <h2>Banca — colchón de CURVA</h2>
-          <div className="prog"><i style={{ width: Math.min(100, banca / 96000 * 100) + "%" }} /></div>
-          <div className="prog-lbl"><span>Generado este mes: <b>{fmtMXN(banca)}</b></span><span>Meta 3 meses: <b>$96,000</b></span></div>
-          <p className="foot">La Banca la alimentan el descuento del sombrero de socio y la caja de ahorro. Meta: <b>~$96k</b> (3 meses de pisos del Núcleo) antes de tocarla.</p>
+          <div className="prog"><i style={{ width: Math.min(100, banca / (meta || 1) * 100) + "%" }} /></div>
+          <div className="prog-lbl"><span>Generado este mes: <b>{fmtMXN(banca)}</b></span><span>Meta 3 meses: <b>{fmtMXN(meta)}</b></span></div>
+          <p className="foot">La Banca la alimentan el descuento del sombrero de socio y la caja de ahorro. Meta: <b>{fmtMXN(meta)}</b> (3 meses de pisos del Núcleo) antes de tocarla.</p>
         </div>
         <div className="card"><h2>Alertas</h2>{alerts.map((a, i) => <div key={i} className={"alert " + a[0]}>{a[1]}</div>)}</div>
       </div>
@@ -151,7 +154,7 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
   const equipoTot = r.bolsaOut + r.comisPaid;
   const segs = [
     { k: "Equipo", v: equipoTot, c: "--c-equipo" }, { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
-    { k: "Banca", v: r.banca, c: "--c-banca" }, { k: "Andrés", v: r.sAutil, c: "--c-andres" }, { k: "Balmo", v: r.sButil, c: "--c-balmo" },
+    { k: "Banca", v: r.banca, c: "--c-banca" }, { k: P.nombreA, v: r.sAutil, c: "--c-andres" }, { k: P.nombreB, v: r.sButil, c: "--c-balmo" },
   ].filter((s) => s.v > 0.5);
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
   const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra > 0.5).sort((a, b) => (b.trabajo + b.extra) - (a.trabajo + a.extra) || order[a.quien] - order[b.quien]);
@@ -190,19 +193,19 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
               <div className="member" key={i}>
                 <input type="text" value={m.nombre} onChange={(e) => updateActive((p) => { p.members[i].nombre = e.target.value; })} />
                 <select value={m.rol} onChange={(e) => updateActive((p) => { p.members[i].rol = e.target.value as Miembro["rol"]; })}><option value="P">Piloto</option><option value="E">Especialista</option><option value="A">Apoyo</option></select>
-                <select value={m.quien} onChange={(e) => updateActive((p) => { const q = e.target.value as Quien; p.members[i].quien = q; p.members[i].sm = q === "nuevo" ? 0.7 : 1; })}><option value="socioA">Andrés</option><option value="socioB">Balmo</option><option value="nucleo">Núcleo</option><option value="nuevo">Nuevo</option></select>
+                <select value={m.quien} onChange={(e) => updateActive((p) => { const q = e.target.value as Quien; p.members[i].quien = q; p.members[i].sm = q === "nuevo" ? P.smNuevo : 1; })}><option value="socioA">{P.nombreA}</option><option value="socioB">{P.nombreB}</option><option value="nucleo">Núcleo</option><option value="nuevo">Nuevo</option></select>
                 <button className="rmv" onClick={() => updateActive((p) => { p.members.splice(i, 1); })}>×</button>
               </div>
             ))}
-            <button className="add" onClick={() => updateActive((p) => { p.members.push({ rol: "A", quien: "nuevo", nombre: "Nuevo", sm: 0.7 }); })}>+ Agregar persona</button>
+            <button className="add" onClick={() => updateActive((p) => { p.members.push({ rol: "A", quien: "nuevo", nombre: "Nuevo", sm: P.smNuevo }); })}>+ Agregar persona</button>
           </div>
         </div>
 
         <div>
           <div className="tiles">
             <Tile k="k-curva" l="CURVA se queda" v={fmtMXN(r.marginOp)} p={`${pctFmt(r.marginOp / t)} del ingreso`} />
-            <Tile k="k-a" l={r.sAseat > 0 ? "Andrés · trabaja" : "Andrés"} v={fmtMXN(r.socioA)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat)}` : `socio ${P.split}%`} />
-            <Tile k="k-b" l={r.sBseat > 0 ? "Balmo · trabaja" : "Balmo"} v={fmtMXN(r.socioB)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat)}` : `socio ${100 - P.split}%`} />
+            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(r.socioA)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat)}` : `socio ${P.split}%`} />
+            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(r.socioB)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat)}` : `socio ${100 - P.split}%`} />
             <Tile k="k-banca" l="A la Banca" v={fmtMXN(r.banca)} p="ahorro CURVA" />
           </div>
           <div className="card">
@@ -216,7 +219,7 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
               {r.comis > 0 && bd("sub", "− Comisión de origen", -r.comis)}
               {bd("sub", "− Caja del proyecto", -r.cajaProj)}{bd("eq", "CURVA se queda", r.marginOp)}{bd("sub", "− Caja de ahorro", -r.cajaAhorro)}
               {r.poolAmt > 0 && bd("sub", "− Pool del Núcleo", -r.poolAmt)}
-              {bd("strong", "Utilidad a repartir", r.utilKept)}{bd("sub", `→ Andrés ${P.split}%`, r.sAutil)}{bd("sub", `→ Balmo ${100 - P.split}%`, r.sButil)}
+              {bd("strong", "Utilidad a repartir", r.utilKept)}{bd("sub", `→ ${P.nombreA} ${P.split}%`, r.sAutil)}{bd("sub", `→ ${P.nombreB} ${100 - P.split}%`, r.sButil)}
             </div>
             <div className="stackcol">
               <div className="card"><h2>Cuánto cobra cada quien</h2><Rank rows={rows} /></div>
@@ -373,33 +376,109 @@ function Facturas({ st, clientes, update }: { st: State; clientes: Cliente[]; up
   );
 }
 
-/* ---------------- Reglas ---------------- */
+/* ---------------- Reglas (el tablero de control — paridad con la hoja Parámetros) ---------------- */
+const rowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 14 };
+const valStyle: CSSProperties = { fontFamily: "var(--mono)", fontWeight: 700, color: "var(--cobalt)", minWidth: 52, textAlign: "right" };
+const numInput: CSSProperties = { flex: 1.3, textAlign: "right", fontFamily: "var(--mono)", fontWeight: 600 };
+
 function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => State) => void }) {
   const P = st.params;
-  const slider = (k: keyof Reglas, label: string, min: number, max: number, step = 1) => (
-    <div className="field" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+  const setN = (k: keyof Reglas, v: number) => update((s) => { (s.params[k] as number) = v; return s; });
+  const setS = (k: keyof Reglas, v: string) => update((s) => { (s.params[k] as string) = v; return s; });
+
+  // Slider en % (0–100)
+  const pct = (k: keyof Reglas, label: string, min: number, max: number, step = 1) => (
+    <div className="field" style={rowStyle}>
       <label style={{ margin: 0, flex: 1 }}>{label}</label>
-      <input style={{ flex: 1.3 }} type="range" min={min} max={max} step={step} value={P[k]} onChange={(e) => update((s) => { s.params[k] = +e.target.value; return s; })} />
-      <span style={{ fontFamily: "var(--mono)", fontWeight: 700, color: "var(--cobalt)", minWidth: 44, textAlign: "right" }}>{P[k]}%</span>
+      <input style={{ flex: 1.3 }} type="range" min={min} max={max} step={step} value={P[k] as number} onChange={(e) => setN(k, +e.target.value)} />
+      <span style={valStyle}>{P[k] as number}%</span>
     </div>
   );
+  // Monto en $
+  const money = (k: keyof Reglas, label: string) => (
+    <div className="field" style={rowStyle}>
+      <label style={{ margin: 0, flex: 1 }}>{label}</label>
+      <div className="money-in" style={{ flex: 1.3 }}><span>$</span><input type="number" min={0} step={500} value={P[k] as number} onChange={(e) => setN(k, +e.target.value || 0)} /></div>
+    </div>
+  );
+  // Multiplicador (peso o seniority)
+  const mult = (k: keyof Reglas, label: string) => (
+    <div className="field" style={rowStyle}>
+      <label style={{ margin: 0, flex: 1 }}>{label}</label>
+      <input style={numInput} type="number" min={0} step={0.1} value={P[k] as number} onChange={(e) => setN(k, +e.target.value || 0)} />
+      <span style={{ ...valStyle, minWidth: 20 }}>×</span>
+    </div>
+  );
+  // Texto (nombres)
+  const text = (k: keyof Reglas, label: string) => (
+    <div className="field" style={rowStyle}>
+      <label style={{ margin: 0, flex: 1 }}>{label}</label>
+      <input style={{ flex: 1.3 }} type="text" value={P[k] as string} onChange={(e) => setS(k, e.target.value)} />
+    </div>
+  );
+
   return (
     <>
-      <div className="page-h"><div><h1>Reglas de CURVA</h1><p>Las perillas del modelo. Fuente única de verdad.</p></div></div>
+      <div className="page-h"><div><h1>Reglas de CURVA</h1><p>El tablero de control del modelo. Mueve cualquier perilla — se guarda solo y se recalcula todo.</p></div></div>
+
       <div className="two">
         <div className="card"><h2>Compensación</h2>
-          {slider("alpha", "α — descuento del socio", 0, 100, 5)}
-          {slider("pool", "Pool del Núcleo (% util.)", 0, 25)}
-          {slider("beta", "β — barrer utilidad a Banca", 0, 50, 5)}
-          {slider("split", "Reparto Andrés (resto Balmo)", 50, 80)}
-          {slider("ahorro", "Caja de ahorro (% margen)", 0, 25)}
-          {slider("imp", "Impuesto aprox (% util.)", 0, 45)}
+          {pct("alpha", "α — descuento del sombrero de socio", 0, 100, 5)}
+          {pct("pool", "Pool del Núcleo (% de la utilidad)", 0, 25)}
+          {pct("beta", "β — barrer utilidad a la Banca", 0, 50, 5)}
+          {pct("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
+          {pct("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
+          {pct("imp", "Impuesto aprox (% de la utilidad)", 0, 45)}
         </div>
-        <div className="card"><h2>Reparto de la bolsa (fijo, validado)</h2>
-          <div className="bd-row"><span className="bl">% equipo por ticket</span><span className="bv">40·30·20·15</span></div>
-          <div className="bd-row"><span className="bl">Pesos de rol</span><span className="bv">1.8·1.5·1.0</span></div>
-          <div className="bd-row"><span className="bl">Pisos por módulo</span><span className="bv">$8k·$6k·$4k</span></div>
-          <div className="bd-row"><span className="bl">Seniority nuevos</span><span className="bv">×0.6–0.8</span></div>
+        <div className="card"><h2>Comisión de origen</h2>
+          {pct("comisPct", "% del margen a quien trae el lead", 0, 25)}
+          {money("comisTope", "Tope de la comisión")}
+          <p className="foot">Solo aplica al primer módulo (exploración). Los leads rápidos van sin comisión. Por proyecto decides si aplica y si va a Banca o al equipo.</p>
+        </div>
+      </div>
+
+      <div className="two">
+        <div className="card"><h2>Pesos de rol</h2>
+          <p className="hint" style={{ marginTop: 0 }}>Lo que cuenta es la proporción entre roles, no el número.</p>
+          {mult("pesoP", "Piloto")}
+          {mult("pesoE", "Especialista")}
+          {mult("pesoA", "Apoyo")}
+        </div>
+        <div className="card"><h2>Pisos por rol (mínimo por módulo)</h2>
+          <p className="hint" style={{ marginTop: 0 }}>Lo mínimo que cobra un freelance por un módulo.</p>
+          {money("pisoP", "Piso Piloto")}
+          {money("pisoE", "Piso Especialista")}
+          {money("pisoA", "Piso Apoyo")}
+        </div>
+      </div>
+
+      <div className="card"><h2>Apalancamiento — % de equipo según el ticket</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Brackets marginales: los primeros pesos pagan más equipo, los siguientes menos. CURVA se queda más en tickets grandes.</p>
+        <div className="two" style={{ marginTop: 4 }}>
+          <div>
+            {pct("brkChico", "Tramo chico (≤ umbral 1)", 0, 60)}
+            {pct("brkMediano", "Tramo mediano (umbral 1–2)", 0, 60)}
+            {pct("brkGrande", "Tramo grande (umbral 2–3)", 0, 60)}
+            {pct("brkTope", "Tramo muy grande (> umbral 3)", 0, 60)}
+          </div>
+          <div>
+            {money("umbral1", "Umbral 1")}
+            {money("umbral2", "Umbral 2")}
+            {money("umbral3", "Umbral 3")}
+          </div>
+        </div>
+      </div>
+
+      <div className="two">
+        <div className="card"><h2>Núcleo, Banca y seniority</h2>
+          {mult("smNuevo", "Seniority de un integrante nuevo")}
+          {money("pisoNucleo", "Piso mensual TOTAL del Núcleo")}
+          <div className="bd-row" style={{ marginTop: 6 }}><span className="bl">Meta de la Banca (3 meses)</span><span className="bv">{fmtMXN(metaBanca(P))}</span></div>
+        </div>
+        <div className="card"><h2>Nombres de los socios</h2>
+          {text("nombreA", "Socio A")}
+          {text("nombreB", "Socio B")}
+          <p className="foot">Se usan en todo: cotizador, panel y reparto. (En el Excel el Socio A decía “Oliab”; aquí es {P.nombreA}.)</p>
         </div>
       </div>
     </>

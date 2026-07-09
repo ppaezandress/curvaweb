@@ -1,12 +1,14 @@
 // Motor de reparto de CURVA — lógica pura, sin dependencias.
 // Portado y validado (108 combinaciones sin fuga + Monte Carlo). Fuente única de la matemática.
-
-export const PESO = { P: 1.8, E: 1.5, A: 1.0 } as const;
-export const PISO = { P: 8000, E: 6000, A: 4000 } as const;
-export const ROLNAME = { P: "Piloto", E: "Especialista", A: "Apoyo" } as const;
+//
+// TODO parámetro del modelo vive en `Reglas` (= la hoja "Parámetros" del Excel):
+// pesos, pisos, comisión, apalancamiento por ticket, umbrales, seniority y nombres.
+// Nada se queda hardcodeado — así los socios pueden "mover" cualquier cosa desde la app.
 
 export type Rol = "P" | "E" | "A";
 export type Quien = "socioA" | "socioB" | "nucleo" | "nuevo";
+
+export const ROLNAME = { P: "Piloto", E: "Especialista", A: "Apoyo" } as const;
 
 export type Miembro = { rol: Rol; quien: Quien; nombre: string; sm: number };
 export type Proyecto = {
@@ -23,16 +25,58 @@ export type Proyecto = {
   clienteNombre?: string | null;
 };
 
+// ── El tablero de control (paridad con la hoja "Parámetros" del Excel) ──
 export type Reglas = {
-  alpha: number; pool: number; beta: number; split: number; ahorro: number; imp: number;
+  // Compensación (todos en %)
+  alpha: number;   // descuento del sombrero de socio → a Banca
+  pool: number;    // pool del Núcleo (% de la utilidad)
+  beta: number;    // barrido de utilidad a Banca
+  split: number;   // reparto Socio A (resto al Socio B)
+  ahorro: number;  // caja de ahorro (% del margen operativo)
+  imp: number;     // impuesto aprox sobre la utilidad
+  // Comisión de origen
+  comisPct: number;   // % del margen (10)
+  comisTope: number;  // tope en $ (30000)
+  // Pesos de rol (multiplicadores; lo que cuenta es la proporción)
+  pesoP: number; pesoE: number; pesoA: number;         // 1.8 / 1.5 / 1.0
+  // Pisos por rol (mínimo que cobra un freelance por módulo, en $)
+  pisoP: number; pisoE: number; pisoA: number;         // 8000 / 6000 / 4000
+  // Apalancamiento: % de equipo según el tamaño del ticket (brackets marginales, en %)
+  brkChico: number; brkMediano: number; brkGrande: number; brkTope: number; // 40/30/20/15
+  umbral1: number; umbral2: number; umbral3: number;   // 40000 / 80000 / 150000
+  // Seniority de un integrante nuevo (multiplicador de su parte)
+  smNuevo: number;    // 0.7
+  // Banca / Núcleo
+  pisoNucleo: number; // piso mensual TOTAL del Núcleo (32000). Meta de Banca = 3×.
+  // Nombres de los socios
+  nombreA: string; nombreB: string;  // "Andrés" / "Balmo"
 };
 
-export const REGLAS_DEFAULT: Reglas = { alpha: 60, pool: 12, beta: 0, split: 60, ahorro: 15, imp: 30 };
+export const REGLAS_DEFAULT: Reglas = {
+  alpha: 60, pool: 12, beta: 0, split: 60, ahorro: 15, imp: 30,
+  comisPct: 10, comisTope: 30000,
+  pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
+  pisoP: 8000, pisoE: 6000, pisoA: 4000,
+  brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,
+  umbral1: 40000, umbral2: 80000, umbral3: 150000,
+  smNuevo: 0.7,
+  pisoNucleo: 32000,
+  nombreA: "Andrés", nombreB: "Balmo",
+};
+
+// Meta de la Banca = colchón de 3 meses de pisos del Núcleo.
+export const metaBanca = (R: Reglas) => (+R.pisoNucleo || 0) * 3;
 
 export const isSocio = (q: Quien) => q === "socioA" || q === "socioB";
 
-export function baseBolsa(t: number): number {
-  const br: [number, number][] = [[40000, 0.4], [80000, 0.3], [150000, 0.2], [Infinity, 0.15]];
+// Bolsa base del equipo por tramos marginales, según los brackets/umbrales de las Reglas.
+export function baseBolsa(t: number, R: Reglas): number {
+  const br: [number, number][] = [
+    [R.umbral1, R.brkChico / 100],
+    [R.umbral2, R.brkMediano / 100],
+    [R.umbral3, R.brkGrande / 100],
+    [Infinity, R.brkTope / 100],
+  ];
   let b = 0, prev = 0;
   for (const [cap, r] of br) { b += r * Math.max(0, Math.min(t, cap) - prev); prev = cap; if (t <= cap) break; }
   return b;
@@ -48,10 +92,12 @@ export type Resultado = {
 };
 
 export function compute(pr: Proyecto, P: Reglas): Resultado {
+  const PESO = { P: P.pesoP, E: P.pesoE, A: P.pesoA } as const;
+  const PISO = { P: P.pisoP, E: P.pisoE, A: P.pisoA } as const;
   const t = Math.max(0, +pr.ticket || 0);
   const mem = pr.members.map((m) => ({ ...m }));
   let sumw = 0; mem.forEach((m) => { sumw += PESO[m.rol] * (isSocio(m.quien) ? 1 : (+m.sm || 1)); });
-  const bb = baseBolsa(t), vpw = sumw > 0 ? bb / sumw : 0;
+  const bb = baseBolsa(t, P), vpw = sumw > 0 ? bb / sumw : 0;
   let topup = 0, disc = 0, sAseat = 0, sBseat = 0;
   const pay: Record<number, number> = {};
   mem.forEach((m, i) => {
@@ -61,7 +107,7 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
     else { pay[i] = Math.max(g, PISO[m.rol]); topup += Math.max(0, pay[i] - g); }
   });
   const bolsaOut = bb + topup, marginBruto = t - bolsaOut;
-  const comis = pr.comisOn ? Math.min(marginBruto * 0.1, 30000) : 0;
+  const comis = pr.comisOn ? Math.min(marginBruto * (P.comisPct / 100), P.comisTope) : 0;
   const comisBanca = pr.comisOn && pr.comisWho === "banca" ? comis : 0;
   const comisPaid = pr.comisOn && pr.comisWho === "equipo" ? comis : 0;
   const cajaProj = t * (pr.cajaPct / 100) - topup;
@@ -74,15 +120,15 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
   const sAutil = utilKept * (P.split / 100), sButil = utilKept * (1 - P.split / 100);
   const banca = cajaAhorro + disc + utilSwept + comisBanca;
   const people: Record<string, Persona> = {};
-  const nm = (m: Miembro) => (m.quien === "socioA" ? "Andrés" : m.quien === "socioB" ? "Balmo" : m.nombre);
+  const nm = (m: Miembro) => (m.quien === "socioA" ? P.nombreA : m.quien === "socioB" ? P.nombreB : m.nombre);
   mem.forEach((m, i) => {
     const k = nm(m) + "|" + m.quien;
     if (!people[k]) people[k] = { nombre: nm(m), quien: m.quien, roles: [], trabajo: 0, extra: 0 };
     people[k].roles.push(ROLNAME[m.rol]); people[k].trabajo += pay[i];
   });
   (["socioA", "socioB"] as const).forEach((sq) => {
-    const k = (sq === "socioA" ? "Andrés" : "Balmo") + "|" + sq;
-    if (!people[k]) people[k] = { nombre: sq === "socioA" ? "Andrés" : "Balmo", quien: sq, roles: ["—"], trabajo: 0, extra: 0 };
+    const k = (sq === "socioA" ? P.nombreA : P.nombreB) + "|" + sq;
+    if (!people[k]) people[k] = { nombre: sq === "socioA" ? P.nombreA : P.nombreB, quien: sq, roles: ["—"], trabajo: 0, extra: 0 };
   });
   Object.keys(people).forEach((k) => {
     const a = people[k];
