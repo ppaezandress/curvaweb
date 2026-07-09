@@ -92,9 +92,9 @@ function DiaInner() {
       {/* Encabezado + navegación de día */}
       <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted transition hover:border-accent hover:text-accent"><ArrowLeft size={17} /></Link>
+          <Link href="/insights" aria-label="Volver a Análisis" title="Volver a Análisis" className="focus-ring inline-flex h-9 w-9 items-center justify-center rounded-control border border-line text-muted transition hover:border-accent hover:text-accent"><ArrowLeft size={17} /></Link>
           <div>
-            <p className="text-caption font-medium text-muted">{isToday ? "Análisis de tu día" : "Análisis del día"}</p>
+            <p className="text-caption font-medium text-muted">Análisis · {isToday ? "tu día" : "un día"}</p>
             <h1 className="font-display text-xl font-bold capitalize leading-tight text-fg sm:text-2xl">{isToday ? "Hoy" : dayLabel}</h1>
           </div>
         </div>

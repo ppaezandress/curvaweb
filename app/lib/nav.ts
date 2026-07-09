@@ -14,7 +14,9 @@ export function navLinks({ isAdmin = false }: { isAdmin?: boolean } = {}): NavLi
   if (PILOT.messages) {
     links.push({ href: "/mensajes", label: "Mensajes", icon: MessageCircle, match: (p) => p === "/mensajes" });
   }
-  links.push({ href: "/insights", label: "Análisis", icon: LineChart, match: (p) => p === "/insights" });
+  // "Análisis" agrupa la vista general (/insights) y el análisis del día (/dia) → el sidebar
+  // marca "Análisis" en ambas para que sepas en qué área estás.
+  links.push({ href: "/insights", label: "Análisis", icon: LineChart, match: (p) => p === "/insights" || p === "/dia" });
   if (isAdmin) {
     links.push({ href: "/equipo", label: "Equipo", icon: Users, match: (p) => p === "/equipo" });
   }

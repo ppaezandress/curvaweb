@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
-import { Clock, ListChecks, CalendarCheck, Gauge, TrendingUp } from "lucide-react";
+import { Clock, ListChecks, CalendarCheck, Gauge, TrendingUp, CalendarDays, ArrowRight } from "lucide-react";
 import { fadeUp, staggerContainer } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -121,6 +122,18 @@ function Analisis() {
         subtitle="Tu trabajo con profundidad: cómo avanzas en el tiempo, por área y por cliente. Solo tú ves tu detalle."
         action={<RangePicker />}
       />
+
+      {/* Acceso al análisis del día (vista hermana, día a día) */}
+      <Link href="/dia" className="focus-ring group flex items-center justify-between gap-3 rounded-card border border-accent/30 bg-accent/5 px-5 py-4 transition hover:border-accent hover:bg-accent/10">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-tile bg-accent/10 text-accent"><CalendarDays size={18} /></span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-fg">Análisis de tu día</span>
+            <span className="block truncate text-caption text-muted">Horarios, foco, proyectos y ritmo — hoy o cualquier día pasado</span>
+          </span>
+        </span>
+        <ArrowRight size={16} className="shrink-0 text-accent transition group-hover:translate-x-0.5" />
+      </Link>
 
       {/* Pulso — métrica insignia (semanal). Sin tiempo medido esta semana el Pulso
           va neutro (—) y los factores en 0, no el 25 ámbar + defaults inventados. */}
