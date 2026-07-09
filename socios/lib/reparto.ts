@@ -39,8 +39,6 @@ export type Reglas = {
   comisTope: number;  // tope en $ (30000)
   // Pesos de rol (multiplicadores; lo que cuenta es la proporción)
   pesoP: number; pesoE: number; pesoA: number;         // 1.8 / 1.5 / 1.0
-  // Pisos por rol (mínimo que cobra un freelance por módulo, en $)
-  pisoP: number; pisoE: number; pisoA: number;         // 8000 / 6000 / 4000
   // Apalancamiento: % de equipo según el tamaño del ticket (brackets marginales, en %)
   brkChico: number; brkMediano: number; brkGrande: number; brkTope: number; // 40/30/20/15
   umbral1: number; umbral2: number; umbral3: number;   // 40000 / 80000 / 150000
@@ -56,7 +54,6 @@ export const REGLAS_DEFAULT: Reglas = {
   alpha: 60, pool: 12, beta: 0, split: 60, ahorro: 15, imp: 30,
   comisPct: 10, comisTope: 30000,
   pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
-  pisoP: 8000, pisoE: 6000, pisoA: 4000,
   brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,
   umbral1: 40000, umbral2: 80000, umbral3: 150000,
   smNuevo: 0.7,
@@ -93,24 +90,26 @@ export type Resultado = {
 
 export function compute(pr: Proyecto, P: Reglas): Resultado {
   const PESO = { P: P.pesoP, E: P.pesoE, A: P.pesoA } as const;
-  const PISO = { P: P.pisoP, E: P.pisoE, A: P.pisoA } as const;
   const t = Math.max(0, +pr.ticket || 0);
   const mem = pr.members.map((m) => ({ ...m }));
   let sumw = 0; mem.forEach((m) => { sumw += PESO[m.rol] * (isSocio(m.quien) ? 1 : (+m.sm || 1)); });
   const bb = baseBolsa(t, P), vpw = sumw > 0 ? bb / sumw : 0;
-  let topup = 0, disc = 0, sAseat = 0, sBseat = 0;
+  let disc = 0, sAseat = 0, sBseat = 0;
   const pay: Record<number, number> = {};
+  // Cada quien cobra lo que le toca del reparto de la bolsa. Sin tarifa mínima:
+  // en un ticket chico simplemente sale menos, nunca se fuerza un pago que
+  // meta a CURVA en números rojos.
   mem.forEach((m, i) => {
     const sm = isSocio(m.quien) ? 1 : (+m.sm || 1);
     const g = PESO[m.rol] * sm * vpw;
     if (isSocio(m.quien)) { pay[i] = (P.alpha / 100) * g; disc += (1 - P.alpha / 100) * g; if (m.quien === "socioA") sAseat += pay[i]; else sBseat += pay[i]; }
-    else { pay[i] = Math.max(g, PISO[m.rol]); topup += Math.max(0, pay[i] - g); }
+    else { pay[i] = g; }
   });
-  const bolsaOut = bb + topup, marginBruto = t - bolsaOut;
+  const bolsaOut = bb, marginBruto = t - bolsaOut;
   const comis = pr.comisOn ? Math.min(marginBruto * (P.comisPct / 100), P.comisTope) : 0;
   const comisBanca = pr.comisOn && pr.comisWho === "banca" ? comis : 0;
   const comisPaid = pr.comisOn && pr.comisWho === "equipo" ? comis : 0;
-  const cajaProj = t * (pr.cajaPct / 100) - topup;
+  const cajaProj = t * (pr.cajaPct / 100);
   const marginOp = marginBruto - comis - cajaProj;
   const cajaAhorro = marginOp * (P.ahorro / 100), utilidad = marginOp - cajaAhorro;
   const nucleo = mem.filter((m) => m.quien === "nucleo");

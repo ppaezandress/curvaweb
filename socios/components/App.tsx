@@ -437,18 +437,16 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         </div>
       </div>
 
-      <div className="two">
-        <div className="card"><h2>Pesos de rol</h2>
-          <p className="hint" style={{ marginTop: 0 }}>Lo que cuenta es la proporción entre roles, no el número.</p>
-          {mult("pesoP", "Piloto")}
-          {mult("pesoE", "Especialista")}
-          {mult("pesoA", "Apoyo")}
-        </div>
-        <div className="card"><h2>Pisos por rol (mínimo por módulo)</h2>
-          <p className="hint" style={{ marginTop: 0 }}>Lo mínimo que cobra un freelance por un módulo.</p>
-          {money("pisoP", "Piso Piloto")}
-          {money("pisoE", "Piso Especialista")}
-          {money("pisoA", "Piso Apoyo")}
+      <div className="card"><h2>Pesos de rol</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Qué tanto se lleva cada sombrero, comparado con los demás. Lo que cuenta es la proporción entre roles, no el número: un Piloto (1.8) se lleva casi el doble que un Apoyo (1.0).</p>
+        <div className="two" style={{ marginTop: 4 }}>
+          <div>
+            {mult("pesoP", "Piloto")}
+            {mult("pesoE", "Especialista")}
+          </div>
+          <div>
+            {mult("pesoA", "Apoyo")}
+          </div>
         </div>
       </div>
 
