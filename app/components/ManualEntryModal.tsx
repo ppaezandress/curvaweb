@@ -41,7 +41,7 @@ const BANDS = [
 ];
 const TICKS = [6, 9, 12, 15, 18, 21, 24].map((h) => h * 60);
 
-export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolean; onClose: () => void; presetTaskId?: string }) {
   const { currentUserId } = useApp();
   const { tasks, clients, clientById, members, memberById, taskTypes, taskTypeById, reload } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
@@ -113,6 +113,13 @@ export function ManualEntryModal({ open, onClose }: { open: boolean; onClose: ()
     if (open && me && Object.keys(attendees).length === 0) setAttendees({ [me.name]: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, me]);
+
+  // Si se abrió desde una tarea concreta, la pre-selecciona (así "ya trabajé esta task"
+  // es un clic: la tarea llega elegida y solo pones el horario).
+  useEffect(() => {
+    if (open && presetTaskId) setTaskId(presetTaskId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, presetTaskId]);
 
   const AreaIcon = AREAS.find((a) => a.label === area)?.icon ?? Focus;
   const peopleCount = Object.keys(attendees).length;

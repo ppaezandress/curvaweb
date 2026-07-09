@@ -12,6 +12,7 @@ import { EsfuerzoPicker } from "@/components/EsfuerzoPicker";
 import { formatDuration, hhmmFromISO } from "@/lib/format";
 import { dueDateLabel } from "@/lib/date";
 import { openInNotion } from "@/lib/notion-url";
+import { openManualEntry } from "@/lib/manual-entry";
 import { useOverlay } from "@/lib/use-overlay";
 import { Avatar } from "@/components/Avatar";
 
@@ -113,13 +114,21 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
-          {/* Abrir en Notion (app de escritorio si la tienes, si no web) */}
-          <button
-            onClick={() => openInNotion(task.id)}
-            className="flex w-full items-center justify-center gap-2 rounded-control border border-line bg-surface-2 py-2.5 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring"
-          >
-            <ExternalLink size={15} /> Abrir en Notion
-          </button>
+          {/* Acciones: registrar tiempo a mano (para tareas ya trabajadas sin cronómetro) + Notion */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => { openManualEntry(task.id); onClose(); }}
+              className="flex w-full items-center justify-center gap-2 rounded-control bg-accent py-2.5 text-sm font-semibold text-white transition hover:opacity-90 focus-ring"
+            >
+              <Clock3 size={15} /> Registrar tiempo
+            </button>
+            <button
+              onClick={() => openInNotion(task.id)}
+              className="flex w-full items-center justify-center gap-2 rounded-control border border-line bg-surface-2 py-2.5 text-sm font-semibold text-fg transition hover:border-accent hover:text-accent focus-ring"
+            >
+              <ExternalLink size={15} /> Notion
+            </button>
+          </div>
 
           {/* Tiempo total + benchmark */}
           <div className="rounded-card border border-line bg-surface-2 p-4">
@@ -160,7 +169,12 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-muted"><History size={13} /> Historial</p>
             {stats.mine.length === 0 ? (
-              <p className="rounded-control border border-dashed border-line py-5 text-center text-xs text-muted">Sin sesiones registradas aún. Dale play para empezar a medirla.</p>
+              <div className="rounded-control border border-dashed border-line py-5 text-center">
+                <p className="text-xs text-muted">Sin sesiones aún. Dale play, o registra el tiempo que ya trabajaste.</p>
+                <button onClick={() => { openManualEntry(task.id); onClose(); }} className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 focus-ring">
+                  <Clock3 size={13} /> Registrar tiempo a mano
+                </button>
+              </div>
             ) : (
               <div className="space-y-1.5">
                 {stats.mine.slice(0, 30).map((r) => {

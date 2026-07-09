@@ -16,7 +16,7 @@ import { useTimeRecords } from "@/lib/use-time-records";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
-import { ManualEntryModal } from "@/components/ManualEntryModal";
+import { openManualEntry } from "@/lib/manual-entry";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 function greeting() {
@@ -47,7 +47,6 @@ export default function HomePage() {
   const [q, setQ] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
-  const [showManual, setShowManual] = useState(false);
   const [focusFilter, setFocusFilter] = useState<"foco" | "hoy" | "semana" | "todas">("foco");
   const [showPulseInfo, setShowPulseInfo] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -319,7 +318,7 @@ export default function HomePage() {
           </div>
 
           {/* Registrar tiempo (acción secundaria) */}
-          <button onClick={() => setShowManual(true)} className="focus-ring flex w-full items-center gap-3 rounded-card border border-line bg-surface p-4 text-left text-fg shadow-soft transition hover:border-accent active:scale-[0.99]">
+          <button onClick={() => openManualEntry()} className="focus-ring flex w-full items-center gap-3 rounded-card border border-line bg-surface p-4 text-left text-fg shadow-soft transition hover:border-accent active:scale-[0.99]">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-tile bg-surface-2"><PencilLine size={18} /></span>
             <span className="min-w-0"><span className="block text-sm font-semibold">Registrar tiempo</span><span className="block truncate text-caption text-muted">¿Ya trabajaste? Anótalo a mano</span></span>
           </button>
@@ -327,7 +326,6 @@ export default function HomePage() {
       </div>
 
       <NewTaskModal open={showNew} onClose={() => setShowNew(false)} initialName={newName} />
-      <ManualEntryModal open={showManual} onClose={() => setShowManual(false)} />
 
       {/* Explicación del Pulso — que deje de ser un número misterioso (feedback: nadie sabía qué era) */}
       <Modal open={showPulseInfo} onClose={() => setShowPulseInfo(false)} title="¿Qué es el Pulso?">
