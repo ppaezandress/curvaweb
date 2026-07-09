@@ -93,7 +93,7 @@ export async function exchangeCode(code: string, redirect: string) {
 // correo (sendUpdates=all) y opcionalmente genera un Meet.
 export async function createEvent(accessToken: string, ev: {
   title: string; startISO: string; endISO: string; attendees: string[]; description?: string; withMeet?: boolean;
-}): Promise<{ id?: string; htmlLink?: string; hangoutLink?: string } | null> {
+}): Promise<{ ok: boolean; status: number; event?: { id?: string; htmlLink?: string; hangoutLink?: string } }> {
   const body: Record<string, unknown> = {
     summary: ev.title,
     start: { dateTime: ev.startISO },
@@ -111,9 +111,9 @@ export async function createEvent(accessToken: string, ev: {
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) return null;
+  if (!r.ok) return { ok: false, status: r.status }; // 403 = permiso viejo (solo lectura) → reconectar
   const d = await r.json() as { id?: string; htmlLink?: string; hangoutLink?: string };
-  return { id: d.id, htmlLink: d.htmlLink, hangoutLink: d.hangoutLink };
+  return { ok: true, status: 200, event: { id: d.id, htmlLink: d.htmlLink, hangoutLink: d.hangoutLink } };
 }
 
 export async function refreshAccess(refreshToken: string) {

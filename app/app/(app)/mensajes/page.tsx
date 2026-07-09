@@ -82,7 +82,7 @@ export default function MensajesPage() {
 
   const loadProfiles = useCallback(async () => {
     if (!sb) return;
-    const { data } = await sb.from("profiles").select("id,name,avatar_url,notion_user_id");
+    const { data } = await sb.from("profiles").select("id,name,avatar_url,notion_user_id,email");
     const map: Record<string, ChatProfile> = {};
     (data || []).forEach((p: ChatProfile) => (map[p.id] = p));
     setProfiles(map);
@@ -619,7 +619,7 @@ export default function MensajesPage() {
         <EventModal
           open={eventOpen}
           onClose={() => setEventOpen(false)}
-          people={members.filter((m) => m.email && m.id !== currentUserId).map((m) => ({ name: m.name, email: m.email as string }))}
+          people={Object.values(profiles).filter((p) => p.email && p.id !== myUid).map((p) => ({ name: p.name, email: p.email as string }))}
           onCreated={(s) => {
             const inv = s.attendees.length ? ` · ${s.attendees.length} invitado${s.attendees.length > 1 ? "s" : ""}` : "";
             send(`📅 **${s.title}** · ${s.whenLabel}${inv}${s.link ? `\n${s.link}` : ""}`);

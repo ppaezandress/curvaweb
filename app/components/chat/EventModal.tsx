@@ -45,7 +45,7 @@ export function EventModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        if (data.error === "no-gcal") { setNotConnected(true); return; }
+        if (data.error === "no-gcal" || data.error === "reconnect") { setNotConnected(true); return; }
         setError(data.error || "No se pudo crear el evento."); return;
       }
       const whenLabel = start.toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -58,10 +58,11 @@ export function EventModal({
     <Modal open={open} onClose={onClose} title="Nueva junta">
       {notConnected ? (
         <div className="space-y-3 py-2 text-center">
-          <p className="text-sm text-muted">Para crear juntas necesitas conectar tu Google Calendar.</p>
+          <p className="text-sm text-muted">Para crear juntas necesitas <b className="text-fg">(re)conectar tu Google Calendar</b> — el permiso cambió para poder crear eventos.</p>
           <a href="/api/gcal/login" className="inline-flex items-center gap-1.5 rounded-control bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
             <Calendar size={15} /> Conectar Google Calendar
           </a>
+          <p className="text-caption text-muted">Después de conectar, vuelve a abrir “Nueva junta”.</p>
         </div>
       ) : (
         <>

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const ref = await refreshAccess(refresh);
   if (!ref.access_token) return NextResponse.json({ ok: false, error: "no-gcal" }, { status: 401 });
 
-  const ev = await createEvent(ref.access_token, {
+  const res = await createEvent(ref.access_token, {
     title: String(body.title),
     startISO: String(body.startISO),
     endISO: String(body.endISO),
@@ -28,6 +28,10 @@ export async function POST(req: Request) {
     description: body.description ? String(body.description) : undefined,
     withMeet: !!body.withMeet,
   });
-  if (!ev) return NextResponse.json({ ok: false, error: "No se pudo crear el evento" }, { status: 500 });
-  return NextResponse.json({ ok: true, event: ev });
+  if (!res.ok) {
+    // 403 = el token no tiene permiso de escritura (se conectó con el scope viejo) → reconectar.
+    if (res.status === 403) return NextResponse.json({ ok: false, error: "reconnect" }, { status: 403 });
+    return NextResponse.json({ ok: false, error: "No se pudo crear el evento" }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true, event: res.event });
 }

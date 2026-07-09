@@ -13,7 +13,7 @@ import { EMOJI_LIST } from "@/lib/emojis";
 import { cn } from "@/lib/cn";
 
 export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null; edited_at?: string | null; deleted_at?: string | null; parent_id?: number | null };
-export type ChatProfile = { id: string; name: string; avatar_url: string | null };
+export type ChatProfile = { id: string; name: string; avatar_url: string | null; email?: string | null };
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
 
