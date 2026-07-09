@@ -4,8 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Camera, X, Check, RefreshCw } from "lucide-react";
 import { useCelebrate } from "@/lib/celebrate-context";
-import { useApp } from "@/lib/app-context";
-import { useData } from "@/lib/data-context";
 import { formatDuration } from "@/lib/format";
 import { addReaction } from "@/lib/reactions";
 import { backdrop, fadeUp, staggerContainer } from "@/lib/motion";
@@ -18,8 +16,6 @@ const PHRASES = ["¡Tarea cerrada!", "¡Bien hecho!", "Una menos 💥", "¡A cel
 
 export function DoneCelebration() {
   const { celebrating, dismiss } = useCelebrate();
-  const { sessionSecondsForTask } = useApp();
-  const { taskById } = useData();
   const [emoji, setEmoji] = useState<string | null>(null);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [photoURL, setPhotoURL] = useState<string | null>(null);
@@ -93,9 +89,12 @@ export function DoneCelebration() {
     dismiss();
   };
 
-  // Total REAL en la tarea: lo previo (Notion) + todas las sesiones (la recién cerrada ya entró).
-  const task = celebrating ? taskById[celebrating.taskId] : undefined;
-  const totalSec = celebrating ? (task?.baselineSeconds ?? 0) + sessionSecondsForTask(celebrating.taskId) : 0;
+  // Total REAL en la tarea, CONGELADO al momento de cerrarla (lo pasa quien llama a
+  // celebrate). No lo recalculamos aquí: el reload()+reconcile que corre justo después
+  // de cerrar hace que el tramo recién cerrado desaparezca de sessionSecondsForTask
+  // antes de que el baseline de Notion lo absorba → mostraría un total desplomado
+  // (bug real de Ivana: casi 2h de trabajo mostradas como "1m").
+  const totalSec = celebrating ? celebrating.totalSeconds : 0;
 
   return (
     <AnimatePresence>

@@ -109,10 +109,13 @@ function ManualRow({ taskId }: { taskId: string }) {
   const terminar = async () => {
     if (marking) return;
     setMarking(true);
+    // Congela el total AHORA (antes de pause()/reload()): el reconcile contra Notion
+    // vaciaría el tramo recién cerrado antes de que el baseline lo absorba (mostraba 1m).
+    const totalAtDone = totalLive;
     try {
       pause();
       await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, status: "DONE" }) });
-      celebrate(taskId, task?.name || "Tarea");
+      celebrate(taskId, task?.name || "Tarea", totalAtDone);
       await reload();
     } finally { setMarking(false); }
   };

@@ -34,6 +34,11 @@ export function TaskCard({ task }: { task: Task }) {
   const markDone = async () => {
     if (marking || done) return;
     setMarking(true);
+    // Congela el total AHORA (antes de pause()/reload()): pause() puede mandar el
+    // tramo a revisión y reload() lo reconcilia contra Notion, dos caminos que lo
+    // vaciarían de sessionSecondsForTask antes de tiempo. El modal debe mostrar lo
+    // que la tarjeta ya muestra en este instante.
+    const totalAtDone = total;
     try {
       if (isRunning) pause();
       await fetch("/api/tasks", {
@@ -41,7 +46,7 @@ export function TaskCard({ task }: { task: Task }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId: task.id, status: "DONE" }),
       });
-      celebrate(task.id, task.name);
+      celebrate(task.id, task.name, totalAtDone);
       await reload();
     } finally {
       setMarking(false);

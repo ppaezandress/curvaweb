@@ -2,11 +2,16 @@
 
 import { createContext, useContext, useState } from "react";
 
-type Target = { taskId: string; taskName: string } | null;
+// totalSeconds = total invertido en la tarea CONGELADO al momento de cerrarla.
+// No lo recalcules en el modal: tras cerrar corre un reload() que reconcilia los
+// tramos contra el baseline de Notion, y por el lag de indexado el tramo recién
+// cerrado desaparece de sessionSecondsForTask antes de que el baseline lo incluya
+// → el total se desplomaría (bug real: 2h de trabajo mostradas como "1m").
+type Target = { taskId: string; taskName: string; totalSeconds: number } | null;
 
 type Ctx = {
   celebrating: Target;
-  celebrate: (taskId: string, taskName: string) => void;
+  celebrate: (taskId: string, taskName: string, totalSeconds: number) => void;
   dismiss: () => void;
 };
 
@@ -18,7 +23,7 @@ export function CelebrateProvider({ children }: { children: React.ReactNode }) {
     <CelebrateContext.Provider
       value={{
         celebrating,
-        celebrate: (taskId, taskName) => setCelebrating({ taskId, taskName }),
+        celebrate: (taskId, taskName, totalSeconds) => setCelebrating({ taskId, taskName, totalSeconds }),
         dismiss: () => setCelebrating(null),
       }}
     >
