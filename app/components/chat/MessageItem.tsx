@@ -15,6 +15,18 @@ import { cn } from "@/lib/cn";
 export type ChatMsg = { id: number; user_id: string | null; body: string; kind: string; created_at: string; attachment_url?: string | null; attachment_type?: string | null; edited_at?: string | null; deleted_at?: string | null; parent_id?: number | null };
 export type ChatProfile = { id: string; name: string; avatar_url: string | null; email?: string | null };
 export type ReactionAgg = { emoji: string; count: number; mine: boolean };
+export type RsvpAgg = { yes: number; no: number; maybe: number; mine: string | null };
+
+// Un mensaje es "de junta" si arranca con el 📅 que pone EventModal → onCreated.
+export function isMeetingMsg(body: string): boolean {
+  return body.trimStart().startsWith("📅");
+}
+
+const RSVP_OPTS: { key: string; label: string; emoji: string }[] = [
+  { key: "yes", label: "Voy", emoji: "✅" },
+  { key: "no", label: "No voy", emoji: "❌" },
+  { key: "maybe", label: "Tal vez", emoji: "🤔" },
+];
 
 
 // Formato inline estilo Slack/markdown: **negrita** _cursiva_ ~~tachado~~ `código`.
@@ -68,7 +80,7 @@ function MessageEditor({ initial, onSave, onCancel }: { initial: string; onSave:
 export function MessageItem({
   msg, prof, mine, reactions, onToggleReaction, onBg = false,
   grouped = false, pinned = false, saved = false, canModify = false, editing = false,
-  parentMsg, parentProf,
+  parentMsg, parentProf, rsvp, onRsvp,
   onReply, onStartEdit, onCancelEdit, onSaveEdit, onDelete, onTogglePin, onToggleSave,
 }: {
   msg: ChatMsg;
@@ -77,6 +89,8 @@ export function MessageItem({
   reactions: ReactionAgg[];
   onToggleReaction: (messageId: number, emoji: string) => void;
   onBg?: boolean;
+  rsvp?: RsvpAgg;
+  onRsvp?: (messageId: number, response: string) => void;
   grouped?: boolean;
   pinned?: boolean;
   saved?: boolean;
@@ -172,6 +186,30 @@ export function MessageItem({
               ),
             )}
             {msg.edited_at && <span className={cn("ml-1.5 align-middle text-[10px]", mine ? "text-white/60" : "text-muted")}>(editado)</span>}
+          </div>
+        )}
+
+        {/* RSVP a una junta: responder Voy / No voy / Tal vez dentro del chat */}
+        {!editing && isMeetingMsg(msg.body) && onRsvp && (
+          <div className={cn("mt-1.5 flex flex-wrap items-center gap-1.5", mine && "justify-end")}>
+            {RSVP_OPTS.map((o) => {
+              const count = rsvp ? (rsvp[o.key as "yes" | "no" | "maybe"] as number) : 0;
+              const active = rsvp?.mine === o.key;
+              return (
+                <button
+                  key={o.key}
+                  onClick={() => onRsvp(msg.id, o.key)}
+                  aria-pressed={active}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition focus-ring active:scale-95",
+                    active ? "border-accent bg-accent/10 text-accent" : "border-line bg-surface text-muted hover:border-muted/40 hover:text-fg",
+                  )}
+                >
+                  <span aria-hidden>{o.emoji}</span> {o.label}
+                  {count > 0 && <span className={cn("tabular-nums", active ? "text-accent" : "text-fg/70")}>{count}</span>}
+                </button>
+              );
+            })}
           </div>
         )}
 

@@ -9,7 +9,7 @@ import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { Composer } from "@/components/chat/Composer";
-import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg } from "@/components/chat/MessageItem";
+import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg, type RsvpAgg } from "@/components/chat/MessageItem";
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
 import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
 import { ChannelFilesModal } from "@/components/chat/ChannelFilesModal";
@@ -44,6 +44,7 @@ export default function MensajesPage() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [reactions, setReactions] = useState<ReactionRow[]>([]);
+  const [rsvps, setRsvps] = useState<{ message_id: number; user_id: string; response: string }[]>([]);
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -196,7 +197,9 @@ export default function MensajesPage() {
       if (ids.length) {
         const { data: rx } = await sb.from("message_reactions").select("id,message_id,user_id,emoji").in("message_id", ids);
         if (active) setReactions((rx as ReactionRow[]) || []);
-      } else setReactions([]);
+        const { data: rv } = await sb.from("message_rsvp").select("message_id,user_id,response").in("message_id", ids);
+        if (active) setRsvps((rv as { message_id: number; user_id: string; response: string }[]) || []);
+      } else { setReactions([]); setRsvps([]); }
       loadPins();
       loadFilesCount();
     })();
@@ -222,6 +225,12 @@ export default function MensajesPage() {
           const { data: msgs } = await sb.from("messages").select("id").eq("channel_id", activeId);
           const ids = (msgs || []).map((m: { id: number }) => m.id);
           if (ids.length) { const { data: rx } = await sb.from("message_reactions").select("id,message_id,user_id,emoji").in("message_id", ids); setReactions((rx as ReactionRow[]) || []); }
+        })
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_rsvp" },
+        async () => {
+          const { data: msgs } = await sb.from("messages").select("id").eq("channel_id", activeId);
+          const ids = (msgs || []).map((m: { id: number }) => m.id);
+          if (ids.length) { const { data: rv } = await sb.from("message_rsvp").select("message_id,user_id,response").in("message_id", ids); setRsvps((rv as { message_id: number; user_id: string; response: string }[]) || []); }
         })
       .on("broadcast", { event: "typing" }, ({ payload }: { payload?: { userId?: string; name?: string } }) => {
         if (!payload?.userId || payload.userId === myUid) return;
@@ -305,6 +314,19 @@ export default function MensajesPage() {
     else await sb.from("message_reactions").insert({ message_id: messageId, user_id: myUid, emoji });
   };
 
+  // RSVP a un mensaje de junta: mismo botón = quitar; otro = cambiar respuesta.
+  const setRsvp = async (messageId: number, response: string) => {
+    if (!sb || !myUid) return;
+    const mine = rsvps.find((r) => r.message_id === messageId && r.user_id === myUid);
+    if (mine && mine.response === response) {
+      setRsvps((prev) => prev.filter((r) => !(r.message_id === messageId && r.user_id === myUid)));
+      await sb.from("message_rsvp").delete().eq("message_id", messageId).eq("user_id", myUid);
+    } else {
+      setRsvps((prev) => [...prev.filter((r) => !(r.message_id === messageId && r.user_id === myUid)), { message_id: messageId, user_id: myUid, response }]);
+      await sb.from("message_rsvp").upsert({ message_id: messageId, user_id: myUid, response }, { onConflict: "message_id,user_id" });
+    }
+  };
+
   const createChannel = async (name: string, memberProfileIds: string[]) => {
     if (!sb || !myUid) return;
     const { data: ch } = await sb.from("channels").insert({ name, kind: "channel", created_by: myUid }).select("id").single();
@@ -377,6 +399,17 @@ export default function MensajesPage() {
     });
     return Object.values(by);
   }, [reactions, myUid]);
+
+  // RSVP agregado por mensaje: conteos + mi respuesta
+  const rsvpFor = useCallback((messageId: number): RsvpAgg => {
+    const rs = rsvps.filter((r) => r.message_id === messageId);
+    const agg: RsvpAgg = { yes: 0, no: 0, maybe: 0, mine: null };
+    rs.forEach((r) => {
+      if (r.response === "yes" || r.response === "no" || r.response === "maybe") agg[r.response]++;
+      if (r.user_id === myUid) agg.mine = r.response;
+    });
+    return agg;
+  }, [rsvps, myUid]);
 
   if (authed === false) {
     return <div className="rounded-card border border-dashed border-line p-10 text-center text-sm text-muted">Tu sesión expiró. Vuelve a iniciar sesión para ver los mensajes.</div>;
@@ -550,6 +583,7 @@ export default function MensajesPage() {
                 <MessageItem
                   msg={m} prof={m.user_id ? profiles[m.user_id] : undefined} mine={m.user_id === myUid}
                   reactions={reactionsFor(m.id)} onToggleReaction={toggleReaction} onBg={chatHasBg}
+                  rsvp={rsvpFor(m.id)} onRsvp={setRsvp}
                   grouped={grouped} pinned={pinnedSet.has(m.id)} saved={saved.has(m.id)} canModify={m.user_id === myUid} editing={editingId === m.id}
                   parentMsg={parent} parentProf={parent?.user_id ? profiles[parent.user_id] : undefined}
                   onReply={setReplyingTo} onStartEdit={setEditingId} onCancelEdit={() => setEditingId(null)}
