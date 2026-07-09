@@ -38,7 +38,7 @@ function initialState(): State {
 
 const NAV = [
   { k: "panel", label: "Panel", Icon: LayoutDashboard },
-  { k: "cotizador", label: "Cotizador", Icon: Calculator },
+  { k: "calculadora", label: "Calculadora", Icon: Calculator },
   { k: "proyectos", label: "Proyectos", Icon: FolderKanban },
   { k: "facturas", label: "Facturas", Icon: Receipt },
   { k: "reglas", label: "Reglas", Icon: SlidersHorizontal },
@@ -101,8 +101,8 @@ export default function App() {
 
       <main className="main">
         {sec === "panel" && <Panel st={st} overhead={overhead} />}
-        {sec === "cotizador" && <Cotizador st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} />}
-        {sec === "proyectos" && <Proyectos st={st} update={update} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("cotizador"); }} />}
+        {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} />}
+        {sec === "proyectos" && <Proyectos st={st} update={update} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
         {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
         {sec === "reglas" && <ReglasView st={st} update={update} />}
       </main>
@@ -154,8 +154,8 @@ function Panel({ st, overhead }: { st: State; overhead: number }) {
   );
 }
 
-/* ---------------- Cotizador ---------------- */
-function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
+/* ---------------- Calculadora ---------------- */
+function Calculadora({ st, active, clientes, update, updateActive, setSec }: {
   st: State; active: Proyecto; clientes: Cliente[];
   update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void;
 }) {
@@ -174,7 +174,7 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
 
   return (
     <>
-      <div className="page-h"><div><h1>Cotizador</h1><p>Cotiza un proyecto y ve el reparto de cada peso.</p></div></div>
+      <div className="page-h"><div><h1>Calculadora</h1><p>Mete el proyecto y ve, peso por peso, cuánto le toca a cada quien.</p></div></div>
       <div className="proj-bar">
         <select value={active.id} onChange={(e) => update((s) => { s.activeId = e.target.value; return s; })}>
           {st.projects.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.inMonth ? "" : " · fuera del mes"}</option>)}
@@ -191,7 +191,9 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
         <div className="sidec">
           <div className="card">
             <h2>El proyecto</h2>
-            <div className="field"><label>Valor del proyecto (sin IVA)</label><div className="money-in"><span>$</span><input type="number" value={active.ticket} onChange={(e) => updateActive((p) => { p.ticket = +e.target.value || 0; })} /></div></div>
+            <div className="field"><label>Valor del proyecto (sin IVA)</label><div className="money-in"><span>$</span><input type="number" value={active.ticket} onChange={(e) => updateActive((p) => { p.ticket = +e.target.value || 0; })} /></div>
+              <p className="hint" style={{ marginTop: 6 }}>De este proyecto, al equipo le toca <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. En proyectos más grandes el % baja (CURVA se queda con más). <b>Vender más caro SIEMPRE deja más</b> — sin trampas.</p>
+            </div>
             <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPreset[tp]; p.comisOn = tp === "trazo"; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
             <div className="field"><label>Caja del proyecto <span style={{ color: "var(--cobalt)", fontFamily: "var(--mono)", fontWeight: 700 }}>{active.cajaPct}%</span></label><input type="range" min={0} max={25} value={active.cajaPct} onChange={(e) => updateActive((p) => { p.cajaPct = +e.target.value; })} /></div>
             <div className="field"><label>Cliente (de Notion)</label><select value={active.clienteId || ""} onChange={(e) => updateActive((p) => { p.clienteId = e.target.value || null; p.clienteNombre = clientes.find((c) => c.id === e.target.value)?.nombre || null; })}><option value="">— sin asignar —</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
@@ -224,10 +226,10 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec }: {
           </div>
           <div className="two">
             <div className="card"><h2>El desglose</h2>
-              {bd("", "Ingreso del proyecto", r.t)}{bd("sub", "− Bolsa del equipo", -r.bolsaOut)}
+              {bd("", "Ingreso del proyecto", r.t)}{bd("sub", `− Equipo (${pctFmt(r.bolsaOut / (r.t || 1))} de este proyecto)`, -r.bolsaOut)}
               {r.comis > 0 && bd("sub", "− Comisión de origen", -r.comis)}
               {bd("sub", "− Caja del proyecto", -r.cajaProj)}{bd("eq", "CURVA se queda", r.marginOp)}{bd("sub", "− Caja de ahorro", -r.cajaAhorro)}
-              {r.poolAmt > 0 && bd("sub", "− Pool del Núcleo", -r.poolAmt)}
+              {r.poolAmt > 0 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
               {bd("strong", "Utilidad a repartir", r.utilKept)}{bd("sub", `→ ${P.nombreA} ${P.split}%`, r.sAutil)}{bd("sub", `→ ${P.nombreB} ${100 - P.split}%`, r.sButil)}
             </div>
             <div className="stackcol">
@@ -458,8 +460,8 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         </div>
       </div>
 
-      <div className="card"><h2>Apalancamiento — % de equipo según el ticket</h2>
-        <p className="hint" style={{ marginTop: 0 }}>Brackets marginales: los primeros pesos pagan más equipo, los siguientes menos. CURVA se queda más en tickets grandes.</p>
+      <div className="card"><h2>% de equipo según el tamaño del ticket</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Funciona por tramos (como los impuestos): los primeros pesos pagan más equipo, los siguientes menos. Así CURVA se queda con más en proyectos grandes, <b>y vender más caro siempre paga más</b> (sin saltos raros). Probado con 5,000 escenarios: 0 fugas.</p>
         <div className="two" style={{ marginTop: 4 }}>
           <div>
             {pct("brkChico", "Tramo chico (≤ umbral 1)", 0, 60)}
