@@ -16,6 +16,7 @@ import { useTimeRecords } from "@/lib/use-time-records";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { TaskCard } from "@/components/TaskCard";
 import { NewTaskModal } from "@/components/NewTaskModal";
+import { DayDetailDrawer } from "@/components/DayDetailDrawer";
 import { openManualEntry } from "@/lib/manual-entry";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -42,11 +43,15 @@ function ActiveTimerClock({ baseSeconds }: { baseSeconds: number }) {
 // sincronizados) más la sesión en curso, que sube segundo a segundo. Aislado como su propio
 // componente para que el tick de useLiveElapsed re-renderice SOLO esta tarjeta, no la
 // HomePage entera (misma regla que ActiveTimerClock — nada de ticks en la raíz de la página).
-function TodayHoursCard({ baseSeconds, live }: { baseSeconds: number; live: boolean }) {
+function TodayHoursCard({ baseSeconds, live, onOpen }: { baseSeconds: number; live: boolean; onOpen: () => void }) {
   const elapsed = useLiveElapsed(); // cuenta solo cuando hay un cronómetro manual corriendo
   const total = baseSeconds + (live ? elapsed : 0);
   return (
-    <div className={`rounded-card border p-5 shadow-soft transition ${live ? "border-accent/40 bg-accent/[0.05]" : "border-line bg-surface"}`}>
+    <button
+      onClick={onOpen}
+      aria-label="Ver el detalle de tu día"
+      className={`group focus-ring block w-full rounded-card border p-5 text-left shadow-soft transition hover:shadow-float active:scale-[0.99] ${live ? "border-accent/40 bg-accent/[0.05]" : "border-line bg-surface hover:border-accent/40"}`}
+    >
       <div className="mb-1 flex items-center justify-between">
         <span className="text-caption font-medium text-muted">Trabajado hoy</span>
         {live && (
@@ -58,10 +63,11 @@ function TodayHoursCard({ baseSeconds, live }: { baseSeconds: number; live: bool
       <p className="tabular font-display text-[2.6rem] font-bold leading-none text-fg">
         {live ? formatClock(total) : formatDuration(total)}
       </p>
-      <p className="mt-1.5 text-caption text-muted">
-        {live ? "sube en tiempo real mientras mides" : total > 0 ? "total de hoy" : "aún no mides nada hoy"}
+      <p className="mt-1.5 flex items-center justify-between text-caption text-muted">
+        <span>{live ? "sube en tiempo real mientras mides" : total > 0 ? "total de hoy" : "aún no mides nada hoy"}</span>
+        <span className="inline-flex items-center gap-1 font-medium text-muted/70 transition group-hover:text-accent">Ver tu día <ChevronRight size={13} className="transition group-hover:translate-x-0.5" /></span>
       </p>
-    </div>
+    </button>
   );
 }
 
@@ -76,6 +82,7 @@ export default function HomePage() {
   const [newName, setNewName] = useState("");
   const [focusFilter, setFocusFilter] = useState<"foco" | "hoy" | "semana" | "todas">("foco");
   const [showPulseInfo, setShowPulseInfo] = useState(false);
+  const [showDay, setShowDay] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -322,8 +329,8 @@ export default function HomePage() {
 
         {/* ══ Columna de VISTAZO ══ */}
         <div className="space-y-4">
-          {/* Trabajado hoy — lo primero del vistazo, sube en vivo con el cronómetro */}
-          <TodayHoursCard baseSeconds={todayBaseSeconds} live={activeStartedToday} />
+          {/* Trabajado hoy — lo primero del vistazo, sube en vivo; clic abre el detalle del día */}
+          <TodayHoursCard baseSeconds={todayBaseSeconds} live={activeStartedToday} onOpen={() => setShowDay(true)} />
 
           {/* Pulso compacto — con ayuda "¿qué es esto?" (fuera del Link, HTML válido) */}
           <div className="rounded-card border border-line bg-surface p-5 shadow-soft transition hover:border-accent/40">
@@ -382,6 +389,8 @@ export default function HomePage() {
       </div>
 
       <NewTaskModal open={showNew} onClose={() => setShowNew(false)} initialName={newName} />
+
+      <DayDetailDrawer open={showDay} onClose={() => setShowDay(false)} />
 
       {/* Explicación del Pulso — que deje de ser un número misterioso (feedback: nadie sabía qué era) */}
       <Modal open={showPulseInfo} onClose={() => setShowPulseInfo(false)} title="¿Qué es el Pulso?">
