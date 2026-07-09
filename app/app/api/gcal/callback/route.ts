@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { exchangeCode } from "@/lib/gcal";
+import { exchangeCode, redirectFor } from "@/lib/gcal";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   }
   jar.delete("gc_state");
 
-  const tok = await exchangeCode(code);
+  const tok = await exchangeCode(code, redirectFor(url.origin));
   if (tok.refresh_token) {
     jar.set("gc_refresh", tok.refresh_token, {
       httpOnly: true,

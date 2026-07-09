@@ -7,8 +7,16 @@ const SECRET = (process.env.GOOGLE_CLIENT_SECRET || "").trim();
 export const GCAL_REDIRECT =
   (process.env.GOOGLE_REDIRECT_URI || "http://127.0.0.1:3000/api/gcal/callback").trim();
 
-// Lectura de eventos (incluye disponibilidad). Solo lectura.
-export const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events.readonly";
+// Lectura + escritura de eventos: leer juntas (registro de tiempo) y CREAR eventos con
+// invitados desde el chat. calendar.events cubre ambas. OJO: al ampliar el scope, cada
+// usuario debe RECONECTAR Google Calendar para otorgar el permiso nuevo.
+export const GCAL_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+
+// El redirect debe ser el mismo dominio donde arranca el flujo (si no, la cookie de
+// state no viaja). Se deriva del host del request; GCAL_REDIRECT queda como fallback.
+export function redirectFor(origin?: string) {
+  return origin ? `${origin.replace(/\/$/, "")}/api/gcal/callback` : GCAL_REDIRECT;
+}
 
 export type GEvent = {
   id: string;
@@ -57,10 +65,10 @@ export function gcalConfigured() {
   return !!ID && !!SECRET;
 }
 
-export function authorizeUrl(state: string) {
+export function authorizeUrl(state: string, redirect: string) {
   const p = new URLSearchParams({
     client_id: ID,
-    redirect_uri: GCAL_REDIRECT,
+    redirect_uri: redirect,
     response_type: "code",
     scope: GCAL_SCOPE,
     access_type: "offline", // para recibir refresh_token
@@ -70,15 +78,42 @@ export function authorizeUrl(state: string) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${p.toString()}`;
 }
 
-export async function exchangeCode(code: string) {
+export async function exchangeCode(code: string, redirect: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      code, client_id: ID, client_secret: SECRET, redirect_uri: GCAL_REDIRECT, grant_type: "authorization_code",
+      code, client_id: ID, client_secret: SECRET, redirect_uri: redirect, grant_type: "authorization_code",
     }),
   });
   return res.json() as Promise<{ access_token?: string; refresh_token?: string; expires_in?: number }>;
+}
+
+// Crea un evento en el calendario primario con invitados; envía las invitaciones por
+// correo (sendUpdates=all) y opcionalmente genera un Meet.
+export async function createEvent(accessToken: string, ev: {
+  title: string; startISO: string; endISO: string; attendees: string[]; description?: string; withMeet?: boolean;
+}): Promise<{ id?: string; htmlLink?: string; hangoutLink?: string } | null> {
+  const body: Record<string, unknown> = {
+    summary: ev.title,
+    start: { dateTime: ev.startISO },
+    end: { dateTime: ev.endISO },
+    attendees: ev.attendees.filter(Boolean).map((email) => ({ email })),
+  };
+  if (ev.description) body.description = ev.description;
+  const p = new URLSearchParams({ sendUpdates: "all" });
+  if (ev.withMeet) {
+    body.conferenceData = { createRequest: { requestId: crypto.randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } } };
+    p.set("conferenceDataVersion", "1");
+  }
+  const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${p.toString()}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) return null;
+  const d = await r.json() as { id?: string; htmlLink?: string; hangoutLink?: string };
+  return { id: d.id, htmlLink: d.htmlLink, hangoutLink: d.hangoutLink };
 }
 
 export async function refreshAccess(refreshToken: string) {

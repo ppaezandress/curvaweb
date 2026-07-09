@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, CalendarPlus } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -13,6 +13,7 @@ import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg } from "@
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
 import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
 import { ChannelFilesModal } from "@/components/chat/ChannelFilesModal";
+import { EventModal } from "@/components/chat/EventModal";
 import { ChatBackground } from "@/components/chat/ChatBackground";
 import { SpaceAvatar } from "@/components/chat/SpaceAvatar";
 import { CultureRail } from "@/components/chat/CultureRail";
@@ -47,6 +48,7 @@ export default function MensajesPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
   const [filesCount, setFilesCount] = useState(0);
+  const [eventOpen, setEventOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
@@ -476,6 +478,9 @@ export default function MensajesPage() {
           <button onClick={() => setShowSaved((s) => !s)} className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", showSaved ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Guardados" title="Mensajes guardados">
             <Bookmark size={16} fill={showSaved ? "currentColor" : "none"} />
           </button>
+          <button onClick={() => setEventOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Nueva junta" title="Crear junta / evento">
+            <CalendarPlus size={16} />
+          </button>
           <button onClick={() => setFilesOpen(true)} className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Archivos del canal" title="Archivos del canal">
             <FolderOpen size={16} />
             {filesCount > 0 && <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">{filesCount}</span>}
@@ -597,6 +602,18 @@ export default function MensajesPage() {
 
       {activeChannel && (
         <ChannelFilesModal open={filesOpen} onClose={() => setFilesOpen(false)} channelId={activeChannel.id} myUid={myUid} isAdmin={isAdmin} profiles={profiles} onChange={loadFilesCount} />
+      )}
+
+      {activeChannel && (
+        <EventModal
+          open={eventOpen}
+          onClose={() => setEventOpen(false)}
+          people={members.filter((m) => m.email && m.id !== currentUserId).map((m) => ({ name: m.name, email: m.email as string }))}
+          onCreated={(s) => {
+            const inv = s.attendees.length ? ` · ${s.attendees.length} invitado${s.attendees.length > 1 ? "s" : ""}` : "";
+            send(`📅 **${s.title}** · ${s.whenLabel}${inv}${s.link ? `\n${s.link}` : ""}`);
+          }}
+        />
       )}
     </div>
   );

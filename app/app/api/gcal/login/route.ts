@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { authorizeUrl, gcalConfigured } from "@/lib/gcal";
+import { authorizeUrl, redirectFor, gcalConfigured } from "@/lib/gcal";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!gcalConfigured()) {
     return NextResponse.json({ ok: false, error: "Google Calendar no configurado" }, { status: 400 });
   }
@@ -14,5 +14,6 @@ export async function GET() {
   jar.set("gc_state", state, {
     httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 600,
   });
-  return NextResponse.redirect(authorizeUrl(state));
+  const redirect = redirectFor(new URL(req.url).origin);
+  return NextResponse.redirect(authorizeUrl(state, redirect));
 }

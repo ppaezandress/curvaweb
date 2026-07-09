@@ -19,13 +19,14 @@ export type ReactionAgg = { emoji: string; count: number; mine: boolean };
 
 // Formato inline estilo Slack/markdown: **negrita** _cursiva_ ~~tachado~~ `código`.
 function renderRich(text: string): ReactNode[] {
-  const rx = /(\*\*[^*\n]+\*\*|__[^_\n]+__|~~[^~\n]+~~|`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_)/g;
+  const rx = /(\*\*[^*\n]+\*\*|__[^_\n]+__|~~[^~\n]+~~|`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_|https?:\/\/[^\s]+)/g;
   const out: ReactNode[] = [];
   let last = 0, k = 0, m: RegExpExecArray | null;
   while ((m = rx.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const t = m[0];
-    if (t.startsWith("**") || t.startsWith("__")) out.push(<strong key={k++} className="font-semibold">{t.slice(2, -2)}</strong>);
+    if (t.startsWith("http")) out.push(<a key={k++} href={t} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 opacity-90 hover:opacity-100">{t}</a>);
+    else if (t.startsWith("**") || t.startsWith("__")) out.push(<strong key={k++} className="font-semibold">{t.slice(2, -2)}</strong>);
     else if (t.startsWith("~~")) out.push(<s key={k++}>{t.slice(2, -2)}</s>);
     else if (t.startsWith("`")) out.push(<code key={k++} className="rounded bg-black/10 px-1 py-0.5 font-mono text-[0.85em]">{t.slice(1, -1)}</code>);
     else out.push(<em key={k++}>{t.slice(1, -1)}</em>);
