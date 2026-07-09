@@ -67,6 +67,7 @@ export type TimeRecord = {
   inactiveMinutes: number;
   mode: "manual" | "ai"; // manual (tus manos) o ai (espera/IA trabajando)
   origin?: "timer" | "manual"; // cómo se capturó: cronómetro vs tecleado a mano (undefined = legado)
+  activity?: string; // tipo de actividad (Área: Trabajo enfocado / Reunión / Llamada / Junta …)
 };
 
 async function getTimeRecordsUncached(): Promise<TimeRecord[]> {
@@ -93,6 +94,7 @@ async function getTimeRecordsUncached(): Promise<TimeRecord[]> {
           const o = P(pg, "Origen")?.select?.name;
           return o === "A mano" ? "manual" : o === "Cronómetro" ? "timer" : undefined;
         })() as "timer" | "manual" | undefined,
+        activity: P(pg, "Área")?.select?.name || undefined,
       };
     })
     .filter((r) => r.minutes > 0);
