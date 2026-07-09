@@ -51,7 +51,9 @@ export type Reglas = {
 };
 
 export const REGLAS_DEFAULT: Reglas = {
-  alpha: 60, pool: 12, beta: 0, split: 60, ahorro: 15, imp: 30,
+  // pool arranca en 0: el bono del Núcleo es un PENDIENTE (se prende cuando haya
+  // equipo de planta y estén seguros de sostenerlo). Decisión 2026-07-09.
+  alpha: 60, pool: 0, beta: 0, split: 60, ahorro: 15, imp: 30,
   comisPct: 10, comisTope: 30000,
   pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
   brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,

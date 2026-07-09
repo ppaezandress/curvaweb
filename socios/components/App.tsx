@@ -9,7 +9,8 @@ import {
 
 type Gasto = { n: string; m: number; proyectoId?: string | null; proveedor?: string; fecha?: string | null };
 type Cliente = { id: string; nombre: string; estado: string | null };
-type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; activeId: string };
+type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; activeId: string; rulesVersion?: number };
+const RULES_VERSION = 2; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 
 const KEY = "curva_socios_v1";
 const uid = () => "p" + Math.random().toString(36).slice(2, 9);
@@ -32,7 +33,7 @@ function initialState(): State {
   const p1 = newProject("Wellness (ejemplo)");
   const p2 = newProject("Web Trazo (ejemplo)");
   p2.ticket = 30000; p2.cajaPct = 8; p2.members = [{ rol: "P", quien: "nucleo", nombre: "Lomba", sm: 1 }];
-  return { params: { ...REGLAS_DEFAULT }, gastos: DEF_GASTOS.slice(), projects: [p1, p2], activeId: p1.id };
+  return { params: { ...REGLAS_DEFAULT }, gastos: DEF_GASTOS.slice(), projects: [p1, p2], activeId: p1.id, rulesVersion: RULES_VERSION };
 }
 
 const NAV = [
@@ -53,7 +54,15 @@ export default function App() {
     try { s = JSON.parse(localStorage.getItem(KEY) || "null"); } catch { /* noop */ }
     // Merge de parámetros: los guardados mandan, pero cualquier perilla NUEVA
     // (que antes estaba hardcodeada) toma su default. Así no rompemos localStorage viejo.
-    setSt(s && s.projects ? { ...s, params: { ...REGLAS_DEFAULT, ...(s.params || {}) } } : initialState());
+    if (s && s.projects) {
+      const merged: State = { ...s, params: { ...REGLAS_DEFAULT, ...(s.params || {}) } };
+      // Migración de decisiones: apagar el bono del Núcleo en apps que tenían pool=12.
+      if ((s.rulesVersion || 0) < 2) { merged.params.pool = 0; }
+      merged.rulesVersion = RULES_VERSION;
+      setSt(merged);
+    } else {
+      setSt(initialState());
+    }
   }, []);
   useEffect(() => { if (st) try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* noop */ } }, [st]);
   useEffect(() => {
@@ -424,7 +433,6 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
       <div className="two">
         <div className="card"><h2>Compensación</h2>
           {pct("alpha", "α — descuento del sombrero de socio", 0, 100, 5)}
-          {pct("pool", "Pool del Núcleo (% de la utilidad)", 0, 25)}
           {pct("beta", "β — barrer utilidad a la Banca", 0, 50, 5)}
           {pct("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
           {pct("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
@@ -476,8 +484,15 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         <div className="card"><h2>Nombres de los socios</h2>
           {text("nombreA", "Socio A")}
           {text("nombreB", "Socio B")}
-          <p className="foot">Se usan en todo: cotizador, panel y reparto. (En el Excel el Socio A decía “Oliab”; aquí es {P.nombreA}.)</p>
+          <p className="foot">Se usan en todo: calculadora, panel y reparto. (En el Excel el Socio A decía “Oliab”; aquí es {P.nombreA}.)</p>
         </div>
+      </div>
+
+      <div className="card" style={{ borderStyle: "dashed", opacity: 0.95 }}>
+        <h2>A futuro — aún no activo</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Cosas que el modelo puede hacer, pero que <b>hoy dejamos apagadas</b> para salir e ir iterando sin prometer de más. Préndelas cuando estén seguros.</p>
+        {pct("pool", "Bono del Núcleo — % de la ganancia repartido al equipo de planta", 0, 25)}
+        <p className="foot">Es un extra para la gente de planta (Ivana, Lomba, Yannick, Diana) además de su pago por trabajo. Se prende cuando tengan un Núcleo fijo y la Banca lo aguante. Hoy en <b>0%</b> = no reparte bono.</p>
       </div>
     </>
   );
