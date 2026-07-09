@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSupabase, getAdminSupabase } from "@/lib/supabase/server";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
+import { rateLimit, clientIp, tooMany } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,11 @@ const Schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Anti-abuso: sube capturas base64 y escribe en DB + Notion. Cubeta amplia (feedback
+  // legítimo puede venir en ráfaga), pero acotada por IP para frenar spam/DoS.
+  const rl = await rateLimit(`support:${clientIp(req)}`, { limit: 20, windowSec: 60 });
+  if (!rl.ok) return tooMany(rl.retryAfter);
+
   const sb = await getServerSupabase();
   if (!sb) return NextResponse.json({ ok: false, error: "Sin sesión" }, { status: 401 });
 

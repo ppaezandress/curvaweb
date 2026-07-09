@@ -78,7 +78,14 @@ export function MeetingWatcher() {
   if (!pending) return null;
 
   const minutes = Math.round((pending.end - pending.start) / 60000);
-  const teammates = members.filter((m) => suggestion?.attendeeMemberIds.includes(m.id) || m.id === currentUserId);
+  // Todo el equipo, con los detectados/tú arriba: así puedes registrar la junta también
+  // para invitados que el detector no reconoció por correo.
+  const teammates = members
+    .filter((m) => m.name && m.name !== "—")
+    .sort((a, b) => {
+      const rank = (id: string) => (id === currentUserId ? 0 : suggestion?.attendeeMemberIds.includes(id) ? 1 : 2);
+      return rank(a.id) - rank(b.id);
+    });
 
   const dismiss = () => { markHandled(pending.id); setPending(null); };
 

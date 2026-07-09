@@ -19,7 +19,7 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
   const links = navLinks({ isAdmin: adminResolved && isAdmin });
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-surface lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-surface backdrop-blur-xl lg:flex">
       <div className="px-5 pb-2 pt-5">
         <Link href="/dashboard" className="text-xl text-fg focus-ring inline-flex rounded-md">
           <Logo />

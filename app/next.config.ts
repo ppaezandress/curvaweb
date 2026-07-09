@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          // CSP parcial SEGURO: solo directivas que no dependen de orígenes (no rompen
+          // realtime/imágenes/cámara). Cierran clickjacking (refuerza X-Frame-Options),
+          // inyección de plugins y secuestro de <base>. El CSP completo con script-src/
+          // connect-src/img-src va en el lote aparte probado contra Supabase/Notion/Spotify/GCal.
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" },
         ],
       },
     ];

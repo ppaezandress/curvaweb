@@ -7,7 +7,7 @@ const base =
   "inline-flex items-center justify-center gap-2 rounded-control font-semibold transition focus-ring disabled:pointer-events-none disabled:opacity-40 active:scale-[0.98]";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-white hover:opacity-90",
+  primary: "bg-accent text-white hover:opacity-90 glow-accent",
   secondary: "border border-line bg-surface text-fg hover:border-accent hover:bg-surface-2",
   ghost: "text-muted hover:bg-surface-2 hover:text-fg",
   danger: "text-danger hover:bg-danger/10",
@@ -36,7 +36,7 @@ export function IconButton({
 }: { tone?: "neutral" | "primary" | "success" } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const tones = {
     neutral: "border border-line bg-surface text-fg hover:border-accent",
-    primary: "bg-accent text-white hover:opacity-90",
+    primary: "bg-accent text-white hover:opacity-90 glow-accent",
     success: "bg-success text-white hover:opacity-90",
   };
   return (
