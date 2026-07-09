@@ -12,6 +12,7 @@ import { DateRangeProvider, useDateRange } from "@/lib/range-context";
 import { granularityFor, prevOf } from "@/lib/range";
 import { bucketize, type GroupBy, type EntityMaps } from "@/lib/timeseries";
 import { computePulse, PULSE_LABELS, type PulseComponents } from "@/lib/pulse";
+import { analyzeDay } from "@/lib/day-analytics";
 import { isDone, isAssignedTo } from "@/lib/task-status";
 import { dayKey } from "@/lib/streaks";
 import { formatHours, formatDuration } from "@/lib/format";
@@ -55,10 +56,16 @@ const GROUPS: { key: GroupBy; label: string }[] = [
 ];
 
 function Analisis() {
-  const { currentUserId } = useApp();
-  const { tasks, taskById, taskTypeById, projectById, clientById, memberById } = useData();
+  const { currentUserId, entries } = useApp();
+  const { tasks, taskById, taskTypeById, projectById, clientById, memberById, recentEntries } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
   const { records, loading } = useTimeRecords();
+
+  // Resumen de HOY para el acceso al análisis del día (mismas fuentes que el dashboard).
+  const today = useMemo(() => analyzeDay(
+    { records, recentEntries, entries, myName: (me?.name || "").trim(), dayStart: new Date().setHours(0, 0, 0, 0), now: Date.now(), priorRecords: records, priorDays: 30 },
+    { taskById, projectById, clientById, taskTypeById },
+  ), [records, recentEntries, entries, me, taskById, projectById, clientById, taskTypeById]);
   const { range } = useDateRange();
   const [groupBy, setGroupBy] = useState<GroupBy>("area");
 
@@ -123,16 +130,38 @@ function Analisis() {
         action={<RangePicker />}
       />
 
-      {/* Acceso al análisis del día (vista hermana, día a día) */}
-      <Link href="/dia" className="focus-ring group flex items-center justify-between gap-3 rounded-card border border-accent/30 bg-accent/5 px-5 py-4 transition hover:border-accent hover:bg-accent/10">
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-tile bg-accent/10 text-accent"><CalendarDays size={18} /></span>
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-fg">Análisis de tu día</span>
-            <span className="block truncate text-caption text-muted">Horarios, foco, proyectos y ritmo — hoy o cualquier día pasado</span>
+      {/* Acceso al análisis del día (vista hermana, día a día). Al entrar a Análisis
+          aparece "luego luego" con el resumen de HOY para poder meterse ahí directo. */}
+      <Link
+        href="/dia"
+        className="focus-ring group block rounded-card border border-accent/30 bg-accent/5 p-5 transition hover:border-accent hover:bg-accent/10"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-tile bg-accent/10 text-accent"><CalendarDays size={18} /></span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-fg">Tu día · hoy</span>
+              <span className="block truncate text-caption text-muted">Horarios, foco, proyectos y ritmo — hoy o cualquier día pasado</span>
+            </span>
           </span>
-        </span>
-        <ArrowRight size={16} className="shrink-0 text-accent transition group-hover:translate-x-0.5" />
+          <span className="flex shrink-0 items-center gap-1 text-caption font-medium text-accent">
+            Abrir <ArrowRight size={15} className="transition group-hover:translate-x-0.5" />
+          </span>
+        </div>
+        {today.total > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-accent/15 pt-4">
+            <DayStat value={formatDuration(today.total * 60)} label="trabajado hoy" />
+            <DayStat value={`${today.focusPct}%`} label="foco" />
+            <DayStat value={String(today.count)} label={today.count === 1 ? "sesión" : "sesiones"} />
+            {today.byProject[0] && (
+              <DayStat value={today.byProject[0].label} label="proyecto principal" truncate />
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 border-t border-accent/15 pt-4 text-caption text-muted">
+            Aún sin tiempo registrado hoy. Dale play a una tarea o registra un tramo para ver tu jornada aquí.
+          </p>
+        )}
       </Link>
 
       {/* Pulso — métrica insignia (semanal). Sin tiempo medido esta semana el Pulso
@@ -204,6 +233,15 @@ function Analisis() {
         </>
       )}
     </div>
+  );
+}
+
+function DayStat({ value, label, truncate }: { value: string; label: string; truncate?: boolean }) {
+  return (
+    <span className={`flex flex-col ${truncate ? "min-w-0" : ""}`}>
+      <span className={`text-base font-semibold text-fg ${truncate ? "max-w-[10rem] truncate" : ""}`}>{value}</span>
+      <span className="text-caption text-muted">{label}</span>
+    </span>
   );
 }
 
