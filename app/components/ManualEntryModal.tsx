@@ -43,7 +43,7 @@ const TICKS = [6, 9, 12, 15, 18, 21, 24].map((h) => h * 60);
 
 export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolean; onClose: () => void; presetTaskId?: string }) {
   const { currentUserId } = useApp();
-  const { tasks, clients, clientById, members, memberById, taskTypes, taskTypeById, reload } = useData();
+  const { tasks, clients, clientById, members, memberById, taskTypes, taskTypeById, reload, recentEntries, addRecentEntries } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
   const [area, setArea] = useState("Trabajo enfocado");
@@ -141,10 +141,21 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
     if (list.length === 0) return;
     const startedAt = new Date(`${date}T${startTime}:00`).getTime();
     const endedAt = new Date(`${date}T${endTime}:00`).getTime();
-    // [3] Si hay una tarea elegida y ya existe un registro que se encima con este
-    // horario, avisamos una vez antes de crear un duplicado. El 2º clic procede.
+    // Sin tarea el registro no se liga a ninguna tarea → no sale en el historial de tareas
+    // (así se perdían de vista muchos registros). Avisamos una vez; el 2º clic procede.
+    if (!taskId && !dupMsg) {
+      setDupMsg("Este tiempo no quedará ligado a ninguna tarea, así que no aparecerá en el historial de una tarea. ¿Guardar de todos modos?");
+      return;
+    }
+    // [3] Si hay una tarea elegida y ya existe un registro que se encima con este horario,
+    // avisamos una vez antes de crear un duplicado. Buscamos también en los recién creados
+    // (recentEntries) para que el aviso funcione aunque Notion aún no haya indexado el previo
+    // (era justo el hueco por donde se colaban los duplicados). El 2º clic procede.
     if (taskId && !dupMsg) {
-      const clash = records.find((r) => {
+      // Notion (records) + recién creados (recentEntries). Un .find toma el primero, no hace
+      // falta deduplicar; solo leemos taskId/start/minutes/person, presentes en ambos.
+      const pool = [...records, ...recentEntries];
+      const clash = pool.find((r) => {
         if (r.taskId !== taskId || !r.start) return false;
         const rs = new Date(r.start).getTime();
         const re = rs + r.minutes * 60000;
@@ -171,10 +182,14 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
           attendees: list,
         }),
       });
-      const ok = r.ok && (await r.json().catch(() => ({}))).ok !== false;
+      const body = await r.json().catch(() => ({} as { ok?: boolean; records?: unknown }));
+      const ok = r.ok && body.ok !== false;
       // Refrescar tareas para que el total (rollup "Horas registradas" de Notion) se
       // actualice de inmediato. Un 2º reload diferido cubre el lag del rollup.
       if (ok) {
+        // Vuelca los registros creados al buffer compartido → el historial de la tarea los
+        // muestra al instante (sin esperar el indexado de Notion) y bloquea un re-registro.
+        if (Array.isArray(body.records)) addRecentEntries(body.records);
         await reload();
         setTimeout(() => { reload(); }, 2000);
       }

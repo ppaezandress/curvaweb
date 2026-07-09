@@ -71,6 +71,7 @@ async function createRow(props: {
   area?: string;
   pilar?: string;
   mode?: "manual" | "ai";
+  origin?: "timer" | "manual";
 }) {
   const title = `${props.userName || "—"} · ${(props.taskName || props.area || "Tiempo").slice(0, 50)}`;
   const properties: Record<string, unknown> = {
@@ -90,6 +91,10 @@ async function createRow(props: {
     properties["Min. inactivos"] = { number: Math.round(props.inactiveMinutes * 10) / 10 };
   // Modo (Manual / IA). Si la propiedad aún no existe en la DB, se reintenta sin ella.
   if (props.mode) properties["Modo"] = { select: { name: props.mode === "ai" ? "IA" : "Manual" } };
+  // Origen: cómo se capturó el tiempo — con el Cronómetro (play/stop) o "A mano" (tecleado
+  // en el modal Registrar tiempo). Distinto de Modo (que es humano vs IA). Sirve para marcar
+  // el registro en el historial. Si la propiedad no existe, se reintenta sin ella (abajo).
+  if (props.origin) properties["Origen"] = { select: { name: props.origin === "manual" ? "A mano" : "Cronómetro" } };
 
   const post = (p: Record<string, unknown>) =>
     notionFetch<{ id: string }>("/pages", {
@@ -100,11 +105,11 @@ async function createRow(props: {
   try {
     return (await post(properties)).id;
   } catch (e) {
-    // Alguna propiedad opcional (Modo / Pilar) aún no existe en la DB → registra sin las
-    // opcionales para no perder el tiempo medido.
-    if ((props.mode || props.pilar) && /Modo|Pilar|is not a property|does not exist|validation_error/i.test(String(e))) {
-      const { Modo, Pilar, ...rest } = properties as { Modo?: unknown; Pilar?: unknown };
-      void Modo; void Pilar;
+    // Alguna propiedad opcional (Modo / Pilar / Origen) aún no existe en la DB → registra sin
+    // las opcionales para no perder el tiempo medido.
+    if ((props.mode || props.pilar || props.origin) && /Modo|Pilar|Origen|is not a property|does not exist|validation_error/i.test(String(e))) {
+      const { Modo, Pilar, Origen, ...rest } = properties as { Modo?: unknown; Pilar?: unknown; Origen?: unknown };
+      void Modo; void Pilar; void Origen;
       return (await post(rest)).id;
     }
     throw e;
@@ -130,22 +135,33 @@ export async function POST(req: Request) {
     const b = valid.data;
     const { taskId, clientId, taskName, area, pilar, startedAt, endedAt } = b;
 
-    // Modo manual con asistentes
+    // Modo manual con asistentes ("A mano"). Devolvemos también los registros creados
+    // (records) para que el cliente los pinte al instante en el historial, sin esperar a que
+    // Notion indexe la página nueva (el lag de indexado hacía que "no apareciera" y el usuario
+    // lo registrara de nuevo → duplicados).
     if (Array.isArray(b.attendees) && b.attendees.length > 0) {
       const ids: string[] = [];
+      const records: TimeRecord[] = [];
       for (const a of b.attendees as Attendee[]) {
         if (!a.minutes || a.minutes <= 0) continue;
+        const mins = Math.round(a.minutes * 10) / 10;
         const id = await createRow({
           taskId, clientId, taskName, area, pilar,
           userName: a.name,
           startedAt,
           endedAt: startedAt + a.minutes * 60000,
-          minutes: Math.round(a.minutes * 10) / 10,
+          minutes: mins,
+          origin: "manual",
         });
         ids.push(id);
+        records.push({
+          id, taskId: taskId || "", person: a.name,
+          start: new Date(startedAt).toISOString(), minutes: mins,
+          inactiveMinutes: 0, mode: "manual", origin: "manual",
+        });
       }
       invalidateTimeCaches();
-      return NextResponse.json({ ok: true, ids });
+      return NextResponse.json({ ok: true, ids, records });
     }
 
     // Modo cronómetro (una persona): la identidad SIEMPRE es la del usuario autenticado,
@@ -157,6 +173,7 @@ export async function POST(req: Request) {
       userName: persona?.name || "",
       startedAt, endedAt, minutes, inactiveMinutes,
       mode: b.mode === "ai" ? "ai" : "manual",
+      origin: "timer",
     });
     invalidateTimeCaches();
     return NextResponse.json({ ok: true, id });

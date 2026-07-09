@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { Member, Client, Project, Task, TaskType } from "@/lib/mock-data";
+import type { TimeRecord } from "@/lib/notion/fetchers";
 import {
   members as mockMembers,
   clients as mockClients,
@@ -35,6 +36,11 @@ type DataCtx = Data & {
   taskById: Record<string, Task>;
   taskTypeById: Record<string, TaskType>;
   reload: () => void;
+  // Registros de tiempo recién creados en esta sesión (aún puede que Notion no los indexe).
+  // Las vistas del historial los mezclan con lo que trae Notion (dedupe por id) para que un
+  // registro manual aparezca al instante y no se registre dos veces por el lag de indexado.
+  recentEntries: TimeRecord[];
+  addRecentEntries: (recs: TimeRecord[]) => void;
 };
 
 const empty: Data = {
@@ -51,6 +57,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<Data>(empty);
   const [ready, setReady] = useState(false);
   const [source, setSource] = useState("");
+  // Buffer de registros recién creados (con marca de tiempo para poder podar los viejos).
+  const [recent, setRecent] = useState<{ rec: TimeRecord; at: number }[]>([]);
+
+  const addRecentEntries = useCallback((recs: TimeRecord[]) => {
+    if (!recs.length) return;
+    const now = Date.now();
+    setRecent((prev) =>
+      // Poda: descarta lo de hace > 5 min (Notion indexa en segundos; con esto no crece).
+      [...prev.filter((e) => now - e.at < 300_000), ...recs.map((rec) => ({ rec, at: now }))],
+    );
+  }, []);
 
   const load = useCallback(() => {
     // Modo demo (sin Supabase): no hay a quién pedirle datos — /api/data respondería
@@ -120,9 +137,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [data],
   );
 
+  const recentEntries = useMemo(() => recent.map((e) => e.rec), [recent]);
+
   const value = useMemo(
-    () => ({ ...data, ...maps, ready, source, reload: load }),
-    [data, maps, ready, source, load],
+    () => ({ ...data, ...maps, ready, source, reload: load, recentEntries, addRecentEntries }),
+    [data, maps, ready, source, load, recentEntries, addRecentEntries],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, ExternalLink } from "lucide-react";
+import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, ExternalLink, Pencil } from "lucide-react";
 import { backdrop, DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -16,7 +16,7 @@ import { openManualEntry } from "@/lib/manual-entry";
 import { useOverlay } from "@/lib/use-overlay";
 import { Avatar } from "@/components/Avatar";
 
-type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai" };
+type Rec = { id: string; taskId: string; person: string; start: string; minutes: number; mode?: "manual" | "ai"; origin?: "timer" | "manual" };
 const DEFAULT_EST: Record<string, number> = { Ligera: 30, Media: 90, Pesada: 180 };
 
 // Fecha de vencimiento sin correrse por zona horaria (usa parseDateOnly).
@@ -25,7 +25,7 @@ const dayLabel = (iso: string) => dueDateLabel(iso);
 // Detalle por tarea: su historial real de sesiones + cómo se compara con tu benchmark.
 // Es el "genera data por tarea y aprende de eso" — abre desde cualquier TaskCard.
 export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) {
-  const { taskById, clientById, projectById, memberById, reload } = useData();
+  const { taskById, clientById, projectById, memberById, reload, recentEntries } = useData();
   const { currentUserId, isAdmin, sessionSecondsForTask: liveSecs } = useApp();
 
   const [records, setRecords] = useState<Rec[]>([]);
@@ -48,9 +48,13 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
 
   const stats = useMemo(() => {
     const myName = currentUserId ? memberById[currentUserId]?.name : undefined;
+    // Mezcla lo que trajo Notion con lo recién creado en esta sesión (dedupe por id): un
+    // registro manual aparece al instante aunque Notion aún no lo haya indexado.
+    const known = new Set(records.map((r) => r.id));
+    const all = [...records, ...recentEntries.filter((r) => !known.has(r.id))];
     // Muro individuo/equipo: un NO-admin solo ve SUS propias sesiones de la tarea
     // (nunca el detalle nominal de compañeros). Admin ve todas.
-    const taskRecs = records.filter((r) => r.taskId === taskId);
+    const taskRecs = all.filter((r) => r.taskId === taskId);
     const visible = isAdmin ? taskRecs : taskRecs.filter((r) => r.person === myName);
     const mine = visible.sort((a, b) => (b.start || "").localeCompare(a.start || ""));
     const totalMin = mine.reduce((a, r) => a + (r.minutes || 0), 0);
@@ -65,7 +69,7 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
       bench = samples.length >= 2 ? Math.round(samples.reduce((a, b) => a + b, 0) / samples.length) : (DEFAULT_EST[weight] || 60);
     }
     return { mine, totalMin, sessions: mine.length, people, bench };
-  }, [records, taskId, task, taskById, memberById, currentUserId, isAdmin]);
+  }, [records, recentEntries, taskId, task, taskById, memberById, currentUserId, isAdmin]);
 
   // No cerramos con `!open` para que AnimatePresence pueda animar la SALIDA; el gate de
   // `open` vive dentro del portal. `task` sigue definida durante el cierre (no se desmonta).
@@ -186,7 +190,11 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
                         <p className="truncate text-xs font-medium text-fg">{r.person || "—"}</p>
                         <p className="text-caption text-muted">{dayLabel(r.start)} · {hhmmFromISO(r.start)}</p>
                       </div>
-                      {r.mode === "ai" && <Sparkles size={12} className="text-accent" />}
+                      {r.mode === "ai"
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-caption font-semibold text-accent"><Sparkles size={11} /> IA</span>
+                        : r.origin === "manual"
+                          ? <span className="inline-flex items-center gap-1 rounded-full bg-surface px-1.5 py-0.5 text-caption font-medium text-muted"><Pencil size={10} /> A mano</span>
+                          : null}
                       <span className="tabular flex items-center gap-1 text-xs font-semibold text-fg"><Clock3 size={12} className="text-muted" /> {formatDuration((r.minutes || 0) * 60)}</span>
                     </div>
                   );
