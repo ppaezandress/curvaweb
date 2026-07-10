@@ -1,5 +1,6 @@
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { MetricHint } from "@/components/ui/MetricHint";
 
 export type Delta = { up: boolean; text: string; muted?: boolean } | null;
 
@@ -21,6 +22,7 @@ export function Stat({
   value,
   delta,
   hint,
+  help,
   className,
 }: {
   icon?: React.ReactNode;
@@ -28,6 +30,7 @@ export function Stat({
   value: React.ReactNode;
   delta?: Delta;
   hint?: React.ReactNode;
+  help?: string;
   className?: string;
 }) {
   return (
@@ -35,6 +38,7 @@ export function Stat({
       <p className="flex items-center gap-1.5 text-caption font-medium text-muted">
         {icon}
         {label}
+        {help && <MetricHint text={help} />}
       </p>
       <div className="mt-1 flex items-baseline gap-2">
         <span className="tabular text-title text-fg">{value}</span>

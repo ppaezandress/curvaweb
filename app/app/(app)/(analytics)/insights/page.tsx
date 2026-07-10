@@ -21,6 +21,7 @@ import { RangePicker } from "@/components/ui/RangePicker";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { Chart } from "@/components/ui/Chart";
 import { Bars } from "@/components/analytics/Bars";
+import { MetricHint } from "@/components/ui/MetricHint";
 import { Stat, toDelta } from "@/components/ui/Stat";
 import { Meter } from "@/components/ui/Meter";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -175,7 +176,7 @@ function Analisis() {
             <p className="text-body text-fg">{pulse.headline}</p>
             <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
               {(Object.keys(pulse.components) as (keyof PulseComponents)[]).map((k) => (
-                <ComponentBar key={k} label={PULSE_LABELS[k]} value={pulse.weekMinutes === 0 ? 0 : pulse.components[k]} />
+                <ComponentBar key={k} label={PULSE_LABELS[k]} value={pulse.weekMinutes === 0 ? 0 : pulse.components[k]} help={PULSE_COMPONENT_HELP[k]} />
               ))}
             </div>
           </div>
@@ -192,10 +193,10 @@ function Analisis() {
         <>
           {/* KPIs del rango */}
           <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard icon={<Clock size={14} />} label="Horas" value={formatHours(cur.min * 60)} curr={cur.min} prev={prv?.min ?? null} spark={totalSpark} />
-            <KpiCard icon={<ListChecks size={14} />} label="Tareas" value={String(cur.tasks)} curr={cur.tasks} prev={prv?.tasks ?? null} />
-            <KpiCard icon={<CalendarCheck size={14} />} label="Días activos" value={String(cur.days)} curr={cur.days} prev={prv?.days ?? null} />
-            <KpiCard icon={<Gauge size={14} />} label="Horas / día" value={formatHours(cur.perDay * 60)} curr={Math.round(cur.perDay)} prev={prv ? Math.round(prv.perDay) : null} />
+            <KpiCard icon={<Clock size={14} />} label="Horas" value={formatHours(cur.min * 60)} curr={cur.min} prev={prv?.min ?? null} spark={totalSpark} help="Total de tiempo que mediste en este periodo. El % compara contra el periodo anterior." />
+            <KpiCard icon={<ListChecks size={14} />} label="Tareas" value={String(cur.tasks)} curr={cur.tasks} prev={prv?.tasks ?? null} help="Cuántas tareas distintas tocaste en el periodo." />
+            <KpiCard icon={<CalendarCheck size={14} />} label="Días activos" value={String(cur.days)} curr={cur.days} prev={prv?.days ?? null} help="En cuántos días del periodo mediste algo de tiempo." />
+            <KpiCard icon={<Gauge size={14} />} label="Horas / día" value={formatHours(cur.perDay * 60)} curr={Math.round(cur.perDay)} prev={prv ? Math.round(prv.perDay) : null} help="Tu promedio de horas por día activo (no cuenta los días sin actividad)." />
           </motion.div>
 
           {/* Avance en el tiempo — la vista estrella */}
@@ -236,21 +237,29 @@ function Analisis() {
   );
 }
 
-function DayStat({ value, label, truncate }: { value: string; label: string; truncate?: boolean }) {
+function DayStat({ value, label, truncate, help }: { value: string; label: string; truncate?: boolean; help?: string }) {
   return (
     <span className={`flex flex-col ${truncate ? "min-w-0" : ""}`}>
       <span className={`text-base font-semibold text-fg ${truncate ? "max-w-[10rem] truncate" : ""}`}>{value}</span>
-      <span className="text-caption text-muted">{label}</span>
+      <span className="flex items-center gap-1 text-caption text-muted">{label}{help && <MetricHint text={help} />}</span>
     </span>
   );
 }
 
-function ComponentBar({ label, value }: { label: string; value: number }) {
+// Explicación de cada factor del Pulso, en lenguaje simple (fuente: lib/pulse.ts).
+const PULSE_COMPONENT_HELP: Record<keyof PulseComponents, string> = {
+  C: "Constancia: en cuántos días de la semana estuviste activo, más tu racha.",
+  V: "Volumen: cuánto tiempo mediste esta semana comparado con tu semana típica.",
+  F: "Foco: qué tan poco de tu tiempo quedó marcado como inactivo.",
+  K: "Cumplimiento: tus tareas con fecha que no están vencidas.",
+};
+
+function ComponentBar({ label, value, help }: { label: string; value: number; help?: string }) {
   const pct = Math.round(value * 100);
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between">
-        <span className="text-caption text-muted">{label}</span>
+        <span className="flex items-center gap-1 text-caption text-muted">{label}{help && <MetricHint text={help} />}</span>
         <span className="tabular text-caption font-semibold text-fg">{pct}</span>
       </div>
       <Meter value={pct} label={`${label}: ${pct} de 100`} height="h-1.5" />
@@ -258,10 +267,10 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-function KpiCard({ icon, label, value, curr, prev, spark }: { icon: React.ReactNode; label: string; value: string; curr: number; prev: number | null; spark?: number[] }) {
+function KpiCard({ icon, label, value, curr, prev, spark, help }: { icon: React.ReactNode; label: string; value: string; curr: number; prev: number | null; spark?: number[]; help?: string }) {
   return (
     <motion.div variants={fadeUp} className="rounded-card border border-line bg-surface p-5 shadow-soft">
-      <Stat icon={icon} label={label} value={value} delta={toDelta(curr, prev)} />
+      <Stat icon={icon} label={label} value={value} delta={toDelta(curr, prev)} help={help} />
       {spark && spark.length > 1 && <Chart values={spark} height={34} bare className="mt-3" />}
     </motion.div>
   );

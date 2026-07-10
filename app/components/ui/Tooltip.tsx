@@ -11,12 +11,14 @@ export function Tooltip({
   className,
   wrapperClassName,
   side = "top",
+  multiline = false,
 }: {
   content: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   wrapperClassName?: string;
   side?: "top" | "right";
+  multiline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -24,6 +26,9 @@ export function Tooltip({
     side === "right"
       ? "left-full top-1/2 ml-2 -translate-y-1/2"
       : "bottom-full left-1/2 mb-1.5 -translate-x-1/2";
+  // Por defecto una sola línea (labels de iconos); multiline permite envolver textos largos
+  // (explicaciones de métricas) con un ancho máximo.
+  const wrap = multiline ? "max-w-[240px] whitespace-normal leading-snug" : "whitespace-nowrap";
   return (
     <span
       className={cn("relative inline-flex", wrapperClassName)}
@@ -38,7 +43,8 @@ export function Tooltip({
           role="tooltip"
           id={id}
           className={cn(
-            "pointer-events-none absolute z-50 whitespace-nowrap rounded-control bg-ink px-2.5 py-1.5 text-caption font-medium text-white shadow-float",
+            "pointer-events-none absolute z-50 rounded-control bg-ink px-2.5 py-1.5 text-caption font-medium text-white shadow-float",
+            wrap,
             pos,
             className,
           )}

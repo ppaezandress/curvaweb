@@ -14,6 +14,7 @@ import { useData } from "@/lib/data-context";
 import { useTimeRecords } from "@/lib/use-time-records";
 import { formatDuration } from "@/lib/format";
 import { analyzeDay, dailyTrend, type Group } from "@/lib/day-analytics";
+import { MetricHint } from "@/components/ui/MetricHint";
 
 const DAY = 86_400_000;
 const H = 3_600_000;
@@ -146,10 +147,10 @@ function DiaInner() {
               {narrative && <p className="mt-3 border-t border-line pt-3 text-caption leading-relaxed text-muted">{narrative}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:col-span-2">
-              <Kpi icon={<Target size={14} />} label="Foco" value={`${a.focusPct}%`} hint={`${formatDuration(a.inactive * 60)} inactivo`} tone={a.focusPct >= 80 ? "success" : a.focusPct >= 60 ? "warn" : undefined} />
-              <Kpi icon={<Briefcase size={14} />} label="Facturable" value={`${a.billablePct}%`} hint={formatDuration(a.billableMin * 60)} />
-              <Kpi icon={<Users size={14} />} label="En juntas" value={`${a.meetingPct}%`} hint={formatDuration(a.meetingMin * 60)} />
-              <Kpi icon={<Gauge size={14} />} label="Densidad" value={`${a.densityPct}%`} hint={`${formatDuration(a.gapsMin * 60)} en huecos`} />
+              <Kpi icon={<Target size={14} />} label="Foco" value={`${a.focusPct}%`} hint={`${formatDuration(a.inactive * 60)} inactivo`} tone={a.focusPct >= 80 ? "success" : a.focusPct >= 60 ? "warn" : undefined} help="Del tiempo que mediste, qué parte estuviste activo (no inactivo). Más alto = menos distracciones." />
+              <Kpi icon={<Briefcase size={14} />} label="Facturable" value={`${a.billablePct}%`} hint={formatDuration(a.billableMin * 60)} help="Qué parte de tu día fue en tareas de cliente (facturables), no internas." />
+              <Kpi icon={<Users size={14} />} label="En juntas" value={`${a.meetingPct}%`} hint={formatDuration(a.meetingMin * 60)} help="Qué parte del día fueron reuniones, llamadas o juntas, vs. trabajo a solas." />
+              <Kpi icon={<Gauge size={14} />} label="Densidad" value={`${a.densityPct}%`} hint={`${formatDuration(a.gapsMin * 60)} en huecos`} help="Del rato entre tu primera y última sesión, qué parte realmente mediste. Baja = muchos huecos sin medir." />
             </div>
           </motion.section>
 
@@ -208,9 +209,9 @@ function DiaInner() {
               <Stat icon={<Sunrise size={15} />} label="Arrancaste" value={hhmm(a.firstStart)} />
               <Stat icon={<Sunset size={15} />} label={isToday ? "Última actividad" : "Terminaste"} value={hhmm(a.lastEnd)} />
               <Stat icon={<Timer size={15} />} label="Sesión más larga" value={formatDuration(a.longest * 60)} />
-              <Stat icon={<Layers size={15} />} label="Bloques profundos" value={`${a.deepBlocks}`} hint="≥ 50 min" />
-              <Stat icon={<Repeat size={15} />} label="Cambios de contexto" value={`${a.switches}`} hint="saltos de proyecto" />
-              <Stat icon={<Coffee size={15} />} label="Huecos" value={formatDuration(a.gapsMin * 60)} hint="sin medir" />
+              <Stat icon={<Layers size={15} />} label="Bloques profundos" value={`${a.deepBlocks}`} hint="≥ 50 min" help="Cuántas sesiones seguidas de 50 minutos o más tuviste. Señal de concentración sin interrupciones." />
+              <Stat icon={<Repeat size={15} />} label="Cambios de contexto" value={`${a.switches}`} hint="saltos de proyecto" help="Cuántas veces saltaste de un proyecto a otro entre sesiones. Muchos saltos = día fragmentado." />
+              <Stat icon={<Coffee size={15} />} label="Huecos" value={formatDuration(a.gapsMin * 60)} hint="sin medir" help="Tiempo entre tu primera y última sesión que no quedó medido en ninguna tarea." />
             </div>
             <div className="mt-4 rounded-card border border-line bg-surface p-4 shadow-soft">
               <p className="mb-2.5 text-caption font-semibold text-muted">Cuándo rendiste</p>
@@ -272,31 +273,31 @@ function DiaInner() {
   );
 }
 
-function Kpi({ icon, label, value, hint, tone }: { icon: React.ReactNode; label: string; value: string; hint?: string; tone?: "success" | "warn" }) {
+function Kpi({ icon, label, value, hint, tone, help }: { icon: React.ReactNode; label: string; value: string; hint?: string; tone?: "success" | "warn"; help?: string }) {
   const c = tone === "success" ? "text-success" : tone === "warn" ? "text-warn" : "text-fg";
   return (
     <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
-      <p className="flex items-center gap-1.5 text-caption font-medium text-muted">{icon} {label}</p>
+      <p className="flex items-center gap-1.5 text-caption font-medium text-muted">{icon} {label}{help && <MetricHint text={help} />}</p>
       <p className={`tabular mt-1 font-display text-2xl font-bold ${c}`}>{value}</p>
       {hint && <p className="mt-0.5 text-caption text-muted">{hint}</p>}
     </div>
   );
 }
 
-function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: string; value: string; hint?: string }) {
+function Stat({ icon, label, value, hint, help }: { icon: React.ReactNode; label: string; value: string; hint?: string; help?: string }) {
   return (
     <div className="rounded-card border border-line bg-surface p-3.5 shadow-soft">
-      <p className="flex items-center gap-1.5 text-caption font-medium text-muted">{icon} {label}</p>
+      <p className="flex items-center gap-1.5 text-caption font-medium text-muted">{icon} {label}{help && <MetricHint text={help} />}</p>
       <p className="tabular mt-1 font-display text-lg font-bold text-fg">{value}</p>
       {hint && <p className="text-caption text-muted">{hint}</p>}
     </div>
   );
 }
 
-function Row({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Row({ label, value, hint, help }: { label: string; value: string; hint?: string; help?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <span className="text-muted">{label}{hint && <span className="ml-1 text-caption text-muted/70">· {hint}</span>}</span>
+      <span className="text-muted">{label}{help && <MetricHint text={help} />}{hint && <span className="ml-1 text-caption text-muted/70">· {hint}</span>}</span>
       <span className="tabular shrink-0 font-semibold text-fg">{value}</span>
     </div>
   );
