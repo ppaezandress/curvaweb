@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause, ChevronRight, Clock, HelpCircle, CalendarCheck, Timer, Target, ListChecks } from "lucide-react";
+import { Search, Plus, PencilLine, Flame, ArrowRight, Play, Pause, ChevronRight, ChevronDown, Clock, HelpCircle, CalendarCheck, Timer, Target, ListChecks, AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -81,6 +81,7 @@ export default function HomePage() {
   const [showNew, setShowNew] = useState(false);
   const [newName, setNewName] = useState("");
   const [focusFilter, setFocusFilter] = useState<"foco" | "hoy" | "semana" | "todas">("foco");
+  const [showOverdue, setShowOverdue] = useState(false);
   const [showPulseInfo, setShowPulseInfo] = useState(false);
   const [showDay, setShowDay] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -153,7 +154,11 @@ export default function HomePage() {
   }, [myRecords, entries]);
   const activeStartedToday = !!active && active.startedAt >= new Date().setHours(0, 0, 0, 0);
 
-  const focusList = useMemo(() => {
+  // "Para hoy" (chip Foco) mostraba una lista curada a 6 ordenada por urgencia; como las
+  // vencidas puntúan más que las de hoy, con varias vencidas tapaban a TODAS las de hoy
+  // (feedback de Emiliano). Ahora en Foco se separan: "Para hoy" trae TODAS las que vencen
+  // hoy + la activa + lo que está en curso (sin corte), y las vencidas van a su propio grupo.
+  const { focusList, overdueList } = useMemo(() => {
     const today0 = new Date().setHours(0, 0, 0, 0);
     const urg = (t: (typeof mine)[number]) => {
       let s = 0;
@@ -170,17 +175,41 @@ export default function HomePage() {
       if (/curso|progress|haciendo/i.test(t.status)) s += 10;
       return s;
     };
-    const actionable = mine.filter((t) => !isDone(t.status) && (active?.taskId === t.id || isActionable(t.status)));
-    // El filtro por fecha respeta la tarea activa (siempre visible mientras corre).
-    const ranged =
-      focusFilter === "hoy"
-        ? actionable.filter((t) => active?.taskId === t.id || inDateRange(t.dueDate, "hoy"))
-        : focusFilter === "semana"
-          ? actionable.filter((t) => active?.taskId === t.id || inDateRange(t.dueDate, "semana"))
-          : actionable;
-    const sorted = ranged.sort((a, b) => urg(b) - urg(a));
-    // "Foco" cura a las 6 más urgentes; los demás filtros muestran todo lo que cae en el rango.
-    return focusFilter === "foco" ? sorted.slice(0, 6) : sorted;
+    // Accionable = no terminada y (la activa | estado accionable | vence hoy/vencida). El
+    // "vence hoy/vencida" cubre tareas con un status que isActionable no reconoce pero que
+    // igual tienen fecha para hoy — antes desaparecían del tablero.
+    const hasDueUpToToday = (t: (typeof mine)[number]) => {
+      const due = dueDateMs(t.dueDate);
+      return due != null && due < today0 + 86_400_000;
+    };
+    const actionable = mine.filter(
+      (t) => !isDone(t.status) && (active?.taskId === t.id || isActionable(t.status) || hasDueUpToToday(t)),
+    );
+    if (focusFilter !== "foco") {
+      const ranged =
+        focusFilter === "hoy"
+          ? actionable.filter((t) => active?.taskId === t.id || inDateRange(t.dueDate, "hoy"))
+          : focusFilter === "semana"
+            ? actionable.filter((t) => active?.taskId === t.id || inDateRange(t.dueDate, "semana"))
+            : actionable;
+      return { focusList: [...ranged].sort((a, b) => urg(b) - urg(a)), overdueList: [] as typeof mine };
+    }
+    // Foco: "Para hoy" = activa + vence hoy + en curso (aunque no tenga fecha). Sin corte.
+    const isToday = (t: (typeof mine)[number]) => {
+      const due = dueDateMs(t.dueDate);
+      return due != null && due >= today0 && due < today0 + 86_400_000;
+    };
+    const today = actionable
+      .filter((t) => active?.taskId === t.id || isToday(t) || /curso|progress|haciendo/i.test(t.status))
+      .sort((a, b) => urg(b) - urg(a));
+    const todaySet = new Set(today.map((t) => t.id));
+    const overdue = actionable
+      .filter((t) => {
+        const due = dueDateMs(t.dueDate);
+        return !todaySet.has(t.id) && due != null && due < today0;
+      })
+      .sort((a, b) => urg(b) - urg(a));
+    return { focusList: today, overdueList: overdue };
   }, [mine, active, focusFilter]);
 
   const matches = useMemo(() => {
@@ -315,7 +344,27 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            {focusList.length === 0 ? (
+            {/* Vencidas (solo en Foco): su propio grupo colapsable, para que no tapen las de hoy.
+                Se abre solo si el usuario tiene vencidas Y nada para hoy (si no, quedaría un
+                tablero aparentemente vacío). */}
+            {focusFilter === "foco" && overdueList.length > 0 && (
+              <div className="mb-2.5">
+                <button
+                  onClick={() => setShowOverdue((v) => !v)}
+                  className="focus-ring flex w-full items-center justify-between rounded-control border border-warn/30 bg-warn/[0.06] px-3 py-2.5 text-sm transition hover:bg-warn/10"
+                  aria-expanded={showOverdue || focusList.length === 0}
+                >
+                  <span className="flex items-center gap-2 font-semibold text-warn">
+                    <AlertTriangle size={15} /> {overdueList.length} {overdueList.length === 1 ? "tarea vencida" : "tareas vencidas"}
+                  </span>
+                  <ChevronDown size={16} className={`text-warn/70 transition ${showOverdue || focusList.length === 0 ? "rotate-180" : ""}`} />
+                </button>
+                {(showOverdue || focusList.length === 0) && (
+                  <div className="mt-2 space-y-2">{overdueList.map((t) => <TaskCard key={t.id} task={t} />)}</div>
+                )}
+              </div>
+            )}
+            {focusList.length === 0 && overdueList.length === 0 ? (
               <EmptyState
                 icon={<Search size={28} />}
                 title="Nada pendiente por ahora"
