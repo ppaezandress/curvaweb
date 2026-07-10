@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Loader2, Check, Clock, Minus, Plus, ArrowRight, AlertTriangle,
+  Loader2, Check, Clock, Minus, Plus, ArrowRight, AlertTriangle, Moon,
   Focus, Phone, MapPin, Users, Search, MoreHorizontal, type LucideIcon,
 } from "lucide-react";
 import { useApp } from "@/lib/app-context";
@@ -26,7 +26,20 @@ const DUR_PRESETS = [15, 30, 45, 60, 90, 120];
 const pad = (n: number) => String(n).padStart(2, "0");
 const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
-const fromMin = (t: number) => `${pad(Math.floor(t / 60) % 24)}:${pad(((t % 60) + 60) % 60)}`;
+// Envuelve un minuto-del-día a [0, 1440) para que ±15 / presets crucen la medianoche
+// sin generar horas negativas o >24h.
+const wrapMin = (t: number) => ((t % 1440) + 1440) % 1440;
+const fromMin = (t: number) => `${pad(Math.floor(wrapMin(t) / 60))}:${pad(wrapMin(t) % 60)}`;
+// Día calendario siguiente a un "YYYY-MM-DD" local (maneja fin de mes/año).
+const nextDayKey = (key: string) => {
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + 1);
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+};
+const dayLabel = (key: string) => {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
+};
 const labelHour = (min: number) => { const h = Math.floor(min / 60) % 24; const ap = h < 12 ? "a" : "p"; const h12 = h % 12 === 0 ? 12 : h % 12; return `${h12}${ap}`; };
 const labelHourMin = (min: number) => { const h = Math.floor(min / 60) % 24; const m = ((min % 60) + 60) % 60; const ap = h < 12 ? "a" : "p"; const h12 = h % 12 === 0 ? 12 : h % 12; return m === 0 ? `${h12}${ap}` : `${h12}:${pad(m)}${ap}`; };
 
@@ -64,7 +77,14 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
     return d < mid ? "00:00" : hhmm(d);
   });
   const [endTime, setEndTime] = useState(() => { const d = new Date(); d.setMinutes(Math.floor(d.getMinutes() / 5) * 5, 0, 0); return hhmm(d); });
-  const minutes = useMemo(() => toMin(endTime) - toMin(startTime), [startTime, endTime]);
+  // Si el fin es cronológicamente ANTES o igual que el inicio, la sesión cruza la
+  // medianoche: el fin es del día siguiente (p. ej. 8:00p → 2:00a = 6h). Solo empatar
+  // exacto (fin == inicio) se queda inválido; end < start ya es una sesión nocturna.
+  const crossesMidnight = toMin(endTime) < toMin(startTime);
+  const minutes = useMemo(
+    () => toMin(endTime) - toMin(startTime) + (toMin(endTime) < toMin(startTime) ? 1440 : 0),
+    [startTime, endTime],
+  );
   const valid = minutes > 0;
   // asistentes seleccionados; null = duración completa, número = "se fue antes"
   const [attendees, setAttendees] = useState<Record<string, number | null>>(
@@ -83,12 +103,14 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
   // Al cambiar tarea/fecha/horario, re-evaluamos (limpia el aviso previo).
   useEffect(() => { setDupMsg(null); }, [taskId, date, startTime, endTime]);
 
-  // Ajuste rápido ±15 min (sin cruzar el otro extremo).
+  // Ajuste rápido ±15 min. Envuelve en la medianoche (23:45 +15 → 00:00), así se
+  // puede armar una sesión nocturna moviendo cualquiera de los dos extremos.
   const bump = (which: "start" | "end", delta: number) => {
-    if (which === "start") setStartTime(fromMin(Math.max(0, Math.min(toMin(startTime) + delta, toMin(endTime)))));
-    else setEndTime(fromMin(Math.min(24 * 60 - 1, Math.max(toMin(endTime) + delta, toMin(startTime)))));
+    if (which === "start") setStartTime(fromMin(toMin(startTime) + delta));
+    else setEndTime(fromMin(toMin(endTime) + delta));
   };
-  const applyPreset = (m: number) => setEndTime(fromMin(Math.min(toMin(startTime) + m, 24 * 60 - 1)));
+  // Preset de duración: fija el fin = inicio + m (cruzando medianoche si hace falta).
+  const applyPreset = (m: number) => setEndTime(fromMin(toMin(startTime) + m));
   const setEndNow = () => { const d = new Date(); d.setMinutes(Math.round(d.getMinutes() / 5) * 5, 0, 0); setEndTime(hhmm(d)); };
   // La timeline interactiva ajusta ambos extremos a la vez.
   const setRange = (s: number, e: number) => { setStartTime(fromMin(s)); setEndTime(fromMin(e)); };
@@ -147,7 +169,9 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
     }));
     if (list.length === 0) return;
     const startedAt = new Date(`${date}T${startTime}:00`).getTime();
-    const endedAt = new Date(`${date}T${endTime}:00`).getTime();
+    // Si cruza la medianoche, el fin es del día siguiente (construido desde el string
+    // de fecha local, no sumando 24h en ms, para no errar en cambios de horario).
+    const endedAt = new Date(`${crossesMidnight ? nextDayKey(date) : date}T${endTime}:00`).getTime();
     // Sin tarea el registro no se liga a ninguna tarea → no sale en el historial de tareas
     // (así se perdían de vista muchos registros). Avisamos una vez; el 2º clic procede.
     if (!taskId && !dupMsg) {
@@ -263,18 +287,24 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
             <TimePart label="Fin" value={endTime} onBump={(d) => bump("end", d)} onChange={setEndTime} accent />
           </div>
 
-          {/* Timeline interactiva: arrastra los extremos o el bloque entero */}
-          <Timeline startMin={toMin(startTime)} endMin={toMin(endTime)} valid={valid} onChange={setRange} />
+          {/* Cuando la sesión NO cruza la medianoche: timeline arrastrable del día.
+              Cuando SÍ cruza (p. ej. 8:00p → 2:00a): banda nocturna que lo deja claro. */}
+          {crossesMidnight ? (
+            <NightBand startTime={startTime} endTime={endTime} endDay={dayLabel(nextDayKey(date))} />
+          ) : (
+            <Timeline startMin={toMin(startTime)} endMin={toMin(endTime)} valid={valid} onChange={setRange} />
+          )}
 
           {/* Duración derivada (con micro-pop) + "Terminó ahora" */}
           <div className="mt-3 flex items-center justify-between gap-2">
             {valid ? (
               <span key={minutes} className="modal-pop inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1.5 text-sm font-bold text-accent">
                 <Clock size={14} /> {formatDuration(minutes * 60)}
+                {crossesMidnight && <span className="ml-0.5 inline-flex items-center gap-1 rounded-full bg-indigo-500/15 px-1.5 py-0.5 text-caption font-semibold text-indigo-500 dark:text-indigo-300"><Moon size={10} /> termina {dayLabel(nextDayKey(date))}</span>}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-danger/10 dark:bg-danger/15 px-3 py-1.5 text-sm font-semibold text-danger">
-                El fin debe ser después del inicio
+                El inicio y el fin son la misma hora
               </span>
             )}
             <button onClick={setEndNow} className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-accent hover:text-accent active:scale-95">
@@ -534,6 +564,28 @@ function Timeline({
         ))}
       </div>
       <p className="mt-1.5 text-center text-caption text-muted">Arrastra los extremos o desliza el bloque</p>
+    </div>
+  );
+}
+
+/* Banda para una sesión que cruza la medianoche (p. ej. 8:00p → 2:00a). No es
+   arrastrable (el rango se ajusta con los campos de hora y los presets); su trabajo
+   es dejar clarísimo que empieza de noche, pasa la medianoche y termina de madrugada. */
+function NightBand({ startTime, endTime, endDay }: { startTime: string; endTime: string; endDay: string }) {
+  return (
+    <div className="mt-4">
+      <div className="relative flex h-10 items-center overflow-hidden rounded-control bg-gradient-to-r from-indigo-500/25 via-indigo-500/10 to-sky-400/15 ring-1 ring-inset ring-indigo-400/30">
+        <span className="shrink-0 pl-3 text-caption font-bold tabular text-fg">{labelHourMin(toMin(startTime))}</span>
+        <div className="mx-2 h-px flex-1 bg-indigo-400/40" />
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--surface-solid)] px-2 py-0.5 text-caption font-semibold text-indigo-500 shadow-sm dark:text-indigo-300">
+          <Moon size={11} /> medianoche
+        </span>
+        <div className="mx-2 h-px flex-1 bg-sky-400/40" />
+        <span className="shrink-0 pr-3 text-caption font-bold tabular text-accent">{labelHourMin(toMin(endTime))}</span>
+      </div>
+      <p className="mt-1.5 text-center text-caption text-muted">
+        Sesión nocturna · el fin cae en <span className="font-semibold text-fg">{endDay}</span>
+      </p>
     </div>
   );
 }
