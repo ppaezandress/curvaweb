@@ -3,21 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ZoomIn } from "lucide-react";
+import { toast } from "@/lib/toast";
 
 const D = 280; // viewport cuadrado (px en pantalla)
 const OUT = 512; // resolución de salida (px)
 
 // Modal para ajustar la foto de perfil: arrastrar para mover + slider de zoom.
 // Recorta a un cuadrado (que el Avatar muestra como círculo) y devuelve un Blob JPEG.
+// `source` puede ser un File recién elegido O la URL de la foto que YA está puesta
+// (para re-encuadrar sin volver a subir un archivo).
 export function AvatarCropModal({
-  file,
+  source,
   onCancel,
   onConfirm,
 }: {
-  file: File;
+  source: File | string;
   onCancel: () => void;
   onConfirm: (blob: Blob) => void;
 }) {
+  const isRemote = typeof source === "string";
   const [mounted, setMounted] = useState(false);
   const [url, setUrl] = useState("");
   const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
@@ -31,13 +35,16 @@ export function AvatarCropModal({
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
-    const u = URL.createObjectURL(file);
-    setUrl(u);
+    // File → objectURL local; string → la URL remota tal cual (foto ya subida).
+    const objectUrl = typeof source === "string" ? null : URL.createObjectURL(source);
+    const src = objectUrl ?? (source as string);
+    setUrl(src);
     const img = new Image();
+    if (isRemote) img.crossOrigin = "anonymous"; // permite exportar a canvas sin contaminarlo
     img.onload = () => setNat({ w: img.naturalWidth, h: img.naturalHeight });
-    img.src = u;
-    return () => URL.revokeObjectURL(u);
-  }, [file]);
+    img.src = src;
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [source, isRemote]);
 
   const cover = nat ? Math.max(D / nat.w, D / nat.h) : 1;
   const eff = cover * zoom;
@@ -78,8 +85,11 @@ export function AvatarCropModal({
       if (!ctx) return;
       const f = OUT / D;
       ctx.drawImage(imgEl.current, posX * f, posY * f, dw * f, dh * f);
+      // toBlob lanza SecurityError si el canvas quedó contaminado (imagen remota sin CORS).
       const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", 0.9));
       if (blob) onConfirm(blob);
+    } catch {
+      toast("No se pudo procesar la imagen. Vuelve a subir la foto para ajustarla.", { tone: "error" });
     } finally {
       setBusy(false);
     }
@@ -111,6 +121,7 @@ export function AvatarCropModal({
               ref={imgEl}
               src={url}
               alt=""
+              crossOrigin={isRemote ? "anonymous" : undefined}
               draggable={false}
               style={{ position: "absolute", left: posX, top: posY, width: dw, height: dh, maxWidth: "none" }}
             />

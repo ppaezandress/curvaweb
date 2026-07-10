@@ -17,7 +17,7 @@ export function AccountSettings() {
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropSource, setCropSource] = useState<File | string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function AccountSettings() {
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) setCropFile(file);
+    if (file) setCropSource(file);
   };
 
   const uploadBlob = async (blob: Blob) => {
@@ -77,6 +77,15 @@ export function AccountSettings() {
         <div className="min-w-0">
           <p className="truncate font-display text-xl font-bold text-fg">{me.name}</p>
           <p className="truncate text-sm text-muted">{me.role || "Equipo CURVA"}</p>
+          {photoUrl && (
+            <button
+              onClick={() => setCropSource(photoUrl)}
+              disabled={uploading}
+              className="mt-1.5 text-xs font-medium text-accent transition hover:opacity-80 disabled:opacity-40 focus-ring rounded"
+            >
+              Ajustar foto actual
+            </button>
+          )}
         </div>
       </div>
 
@@ -89,11 +98,11 @@ export function AccountSettings() {
       <ThemeSelector />
 
       <p className="text-xs text-muted">Tu nombre, correo y rol se sincronizan desde Notion (Team Tracker). Para cambiarlos, edítalos ahí.</p>
-      {cropFile && (
+      {cropSource && (
         <AvatarCropModal
-          file={cropFile}
-          onCancel={() => setCropFile(null)}
-          onConfirm={(blob) => { setCropFile(null); uploadBlob(blob); }}
+          source={cropSource}
+          onCancel={() => setCropSource(null)}
+          onConfirm={(blob) => { setCropSource(null); uploadBlob(blob); }}
         />
       )}
     </div>

@@ -4,7 +4,7 @@ import { toast } from "@/lib/toast";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { Camera, LogOut, Loader2, Settings, FolderOpen } from "lucide-react";
+import { Camera, LogOut, Loader2, Settings, FolderOpen, Crop } from "lucide-react";
 import { popover } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -24,7 +24,7 @@ export function ProfileMenu() {
   const [alignLeft, setAlignLeft] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropSource, setCropSource] = useState<File | string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +55,7 @@ export function ProfileMenu() {
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // permite re-elegir la misma imagen
-    if (file) setCropFile(file);
+    if (file) setCropSource(file);
   };
 
   // Subir la foto YA recortada (cuadrada) que devuelve el modal.
@@ -130,6 +130,15 @@ export function ProfileMenu() {
             {uploading ? "Subiendo…" : "Cambiar foto de perfil"}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+          {photoUrl && (
+            <button
+              onClick={() => { setOpen(false); setCropSource(photoUrl); }}
+              disabled={uploading || !supabaseConfigured()}
+              className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2 disabled:opacity-40"
+            >
+              <Crop size={16} /> Ajustar foto actual
+            </button>
+          )}
           <Link href="/recursos" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
             <FolderOpen size={16} /> Recursos
           </Link>
@@ -142,11 +151,11 @@ export function ProfileMenu() {
         </motion.div>
       )}
       </AnimatePresence>
-      {cropFile && (
+      {cropSource && (
         <AvatarCropModal
-          file={cropFile}
-          onCancel={() => setCropFile(null)}
-          onConfirm={(blob) => { setCropFile(null); uploadBlob(blob); }}
+          source={cropSource}
+          onCancel={() => setCropSource(null)}
+          onConfirm={(blob) => { setCropSource(null); uploadBlob(blob); }}
         />
       )}
     </div>
