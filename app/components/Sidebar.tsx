@@ -10,6 +10,7 @@ import { navLinks } from "@/lib/nav";
 import { Logo } from "@/components/Logo";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useNewPhotos } from "@/lib/use-new-photos";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "curva.sidebar.collapsed";
@@ -23,6 +24,7 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
   const { memberById } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
   const links = navLinks({ isAdmin: adminResolved && isAdmin });
+  const newPhotos = useNewPhotos();
 
   const [collapsed, setCollapsed] = useState(
     () => typeof window !== "undefined" && localStorage.getItem(STORAGE_KEY) === "1",
@@ -112,18 +114,23 @@ export function Sidebar({ onNew }: { onNew?: () => void }) {
         {links.map((l) => {
           const active = l.match(pathname);
           const Icon = l.icon;
+          const dot = newPhotos && l.href === "/momentos" && !active;
           const link = (
             <Link
               href={l.href}
-              aria-label={collapsed ? l.label : undefined}
+              aria-label={collapsed ? `${l.label}${dot ? " (fotos nuevas)" : ""}` : undefined}
               className={cn(
                 "focus-ring flex items-center rounded-control font-medium transition",
                 collapsed ? "h-11 w-11 justify-center" : "gap-3 px-3 py-2 text-sm",
                 active ? "bg-accent/10 text-accent" : "text-muted hover:bg-surface-2 hover:text-fg",
               )}
             >
-              <Icon size={collapsed ? 21 : 18} strokeWidth={active ? 2.4 : 2} />
-              {!collapsed && l.label}
+              <span className="relative inline-flex">
+                <Icon size={collapsed ? 21 : 18} strokeWidth={active ? 2.4 : 2} />
+                {dot && <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-accent ring-2 ring-surface" aria-hidden />}
+              </span>
+              {!collapsed && <span className="flex-1">{l.label}</span>}
+              {!collapsed && dot && <span className="h-2 w-2 rounded-full bg-accent" aria-hidden />}
             </Link>
           );
           return collapsed ? (

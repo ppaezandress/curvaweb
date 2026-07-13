@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Heart, Send, Sparkles } from "lucide-react";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
-import { formatHours } from "@/lib/format";
 import { Avatar } from "@/components/Avatar";
 
 // Kudos de cultura ("buena onda"): tras trabajar juntos (coworking_sessions de la última
@@ -92,7 +91,7 @@ export function KudosCard() {
               <Avatar name={p.name} src={p.avatarUrl} size={32} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-fg">{p.name}</p>
-                <p className="text-xs text-muted">{formatHours(p.minutes * 60)} juntos esta semana</p>
+                <p className="text-xs text-muted">Trabajaron juntos esta semana</p>
               </div>
               <input
                 value={note[p.uid] || ""}

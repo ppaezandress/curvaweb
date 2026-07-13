@@ -6,10 +6,12 @@ import { useData } from "@/lib/data-context";
 import { readMusicLog, type MusicEntry } from "@/lib/music-log";
 import { hhmmFromISO } from "@/lib/format";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
+import { markPhotosSeen } from "@/lib/use-new-photos";
 import { notionTaskUrl } from "@/lib/notion-url";
 import { KudosCard } from "@/components/KudosCard";
 import { RachasBoard } from "@/components/RachasBoard";
 import { AchievementsStrip } from "@/components/AchievementsStrip";
+import { TeamDirectory } from "@/components/TeamDirectory";
 import { Meter } from "@/components/ui/Meter";
 
 type TeamPhoto = { id: number; task_id: string; url: string; caption: string | null; user_id: string | null; created_at: string };
@@ -28,9 +30,13 @@ function timeOfDay(iso: string): LucideIcon {
 // Cero horas ni métricas de cuánto trabaja nadie — eso es solo para admins.
 export default function MomentosPage() {
   const { taskById } = useData();
+  const [tab, setTab] = useState<"momentos" | "equipo">("momentos");
   const [photos, setPhotos] = useState<TeamPhoto[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [music, setMusic] = useState<MusicEntry[]>([]);
+
+  // Entrar a Momentos = viste las fotos → apaga la bolita del nav.
+  useEffect(() => { markPhotosSeen(); }, []);
 
   useEffect(() => {
     setMusic(readMusicLog());
@@ -39,7 +45,7 @@ export default function MomentosPage() {
     if (!sb) return;
     (async () => {
       const [{ data: ph }, { data: profs }] = await Promise.all([
-        sb.from("task_photos").select("id,task_id,url,caption,user_id,created_at").order("created_at", { ascending: false }).limit(60),
+        sb.from("task_photos").select("id,task_id,url,caption,user_id,created_at").order("created_at", { ascending: false }).limit(200),
         sb.from("profiles").select("id,name"),
       ]);
       setPhotos((ph as TeamPhoto[]) || []);
@@ -56,7 +62,7 @@ export default function MomentosPage() {
         { event: "INSERT", schema: "public", table: "task_photos" },
         (payload: { new: TeamPhoto }) => {
           const nueva = payload.new;
-          setPhotos((prev) => (prev.some((p) => p.id === nueva.id) ? prev : [nueva, ...prev].slice(0, 60)));
+          setPhotos((prev) => (prev.some((p) => p.id === nueva.id) ? prev : [nueva, ...prev].slice(0, 200)));
         },
       )
       .subscribe();
@@ -78,6 +84,23 @@ export default function MomentosPage() {
         <p className="mt-0.5 text-sm text-muted">Lo divertido del equipo: fotos, buena onda y música.</p>
       </div>
 
+      {/* Sub-pestañas: el feed de siempre, o el directorio del equipo */}
+      <div className="flex gap-1.5">
+        {([["momentos", "Momentos"], ["equipo", "Equipo"]] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`focus-ring rounded-full px-4 py-1.5 text-sm font-medium transition ${tab === key ? "bg-ink text-white" : "border border-line bg-surface text-muted hover:border-accent/40 hover:text-fg"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "equipo" ? (
+        <TeamDirectory />
+      ) : (
+        <>
       {/* Buena onda */}
       <KudosCard />
 
@@ -141,6 +164,8 @@ export default function MomentosPage() {
           </div>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }
