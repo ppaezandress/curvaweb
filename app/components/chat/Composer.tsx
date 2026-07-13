@@ -1,7 +1,7 @@
 "use client";
 import { toast } from "@/lib/toast";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Send, ListTodo, AtSign, X, Paperclip, Mic, Loader2, Music, Trash2, Video, Reply, CalendarPlus } from "lucide-react";
 import type { Task, Member } from "@/lib/mock-data";
 import { taskToken, userToken } from "@/lib/notion-url";
@@ -16,9 +16,15 @@ export type Attachment = { url: string; type: "image" | "video" | "audio" };
 const kindOf = (mime: string): Attachment["type"] =>
   mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "image";
 
+// Handle imperativo para que el padre (área del chat) pueda inyectar un archivo
+// soltado con drag & drop y reutilizar el mismo camino de subida/preview.
+export type ComposerHandle = { addFile: (file: File) => void };
+
+type ComposerProps = { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean; replyingTo?: { name: string; preview: string } | null; onCancelReply?: () => void; onEvent?: () => void };
+
 // Composer estilo Slack: "@" menciona personas, "/" menciona tareas (→ Notion).
-// Adjuntos: imagen / video / audio (subir archivo o grabar audio).
-export function Composer({ tasks, members, onSend, onTyping, chromeless = false, replyingTo, onCancelReply, onEvent }: { tasks: Task[]; members: Member[]; onSend: (body: string, attachment?: Attachment) => void; onTyping?: () => void; chromeless?: boolean; replyingTo?: { name: string; preview: string } | null; onCancelReply?: () => void; onEvent?: () => void }) {
+// Adjuntos: imagen / video / audio (subir archivo, grabar audio o soltar del escritorio).
+export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer({ tasks, members, onSend, onTyping, chromeless = false, replyingTo, onCancelReply, onEvent }, ref) {
   const [text, setText] = useState("");
   const [trigger, setTrigger] = useState<Trigger>(null);
   const [people, setPeople] = useState<Member[]>([]);
@@ -84,6 +90,9 @@ export function Composer({ tasks, members, onSend, onTyping, chromeless = false,
     const ext = (file.name.split(".").pop() || "bin").toLowerCase();
     uploadBlob(file, ext);
   };
+
+  // El área del chat (padre) puede soltar un archivo aquí vía drag & drop.
+  useImperativeHandle(ref, () => ({ addFile: (f: File) => onFile(f) }));
 
   // Grabar audio con el micrófono. Safari es quisquilloso con MediaRecorder: hay que
   // elegir un mimeType soportado y pedir chunks periódicos (timeslice), o el blob
@@ -281,4 +290,4 @@ export function Composer({ tasks, members, onSend, onTyping, chromeless = false,
       />
     </div>
   );
-}
+});

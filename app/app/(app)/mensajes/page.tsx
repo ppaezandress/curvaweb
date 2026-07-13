@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, MoreHorizontal, CalendarDays } from "lucide-react";
+import { Plus, MessageSquarePlus, Settings, Search, Pin, Bookmark, ChevronRight, FolderOpen, MoreHorizontal, CalendarDays, UploadCloud } from "lucide-react";
 import { DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { getSupabase, supabaseConfigured } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
-import { Composer } from "@/components/chat/Composer";
+import { Composer, type ComposerHandle } from "@/components/chat/Composer";
+import { toast } from "@/lib/toast";
 import { MessageItem, type ChatMsg, type ChatProfile, type ReactionAgg, type RsvpAgg } from "@/components/chat/MessageItem";
 import { CreateChannelModal } from "@/components/chat/CreateChannelModal";
 import { ChannelSettingsModal } from "@/components/chat/ChannelSettingsModal";
@@ -54,6 +55,8 @@ export default function MensajesPage() {
   const [agendaOpen, setAgendaOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const composerRef = useRef<ComposerHandle>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pins, setPins] = useState<{ message_id: number; channel_id: number }[]>([]);
   const [query, setQuery] = useState("");
@@ -479,12 +482,35 @@ export default function MensajesPage() {
         </div>
       </aside>
 
-      {/* Chat */}
-      <div className={cn(
-        "relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-line/60",
-        hasDock ? "h-[calc(100dvh-230px)] lg:h-[calc(100dvh-176px)]" : "h-[calc(100dvh-190px)] lg:h-[calc(100dvh-96px)]",
-      )}>
+      {/* Chat — también zona de drop: arrastra un archivo del escritorio y suéltalo aquí */}
+      <div
+        className={cn(
+          "relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-line/60",
+          hasDock ? "h-[calc(100dvh-230px)] lg:h-[calc(100dvh-176px)]" : "h-[calc(100dvh-190px)] lg:h-[calc(100dvh-96px)]",
+        )}
+        onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); if (!dragging) setDragging(true); } }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          const file = e.dataTransfer.files?.[0];
+          if (!file) return;
+          if (!/^(image|video|audio)\//.test(file.type)) {
+            toast("Por ahora solo puedes soltar imágenes, videos o audios.", { tone: "error" });
+            return;
+          }
+          composerRef.current?.addFile(file);
+        }}
+      >
         <ChatBackground bg={activeChannel?.background} />
+        {dragging && (
+          <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center rounded-card border-2 border-dashed border-accent bg-accent/10 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2 text-accent">
+              <UploadCloud size={32} />
+              <p className="text-sm font-semibold">Suelta para adjuntar</p>
+            </div>
+          </div>
+        )}
         <div className="relative z-10 flex min-h-0 flex-1 flex-col p-2.5 sm:p-3">
         {/* Selector móvil de espacios */}
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
@@ -614,7 +640,7 @@ export default function MensajesPage() {
         )}
 
         <div className="mt-2.5 rounded-2xl border border-line bg-surface px-3 py-2 shadow-soft">
-          <Composer tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} chromeless
+          <Composer ref={composerRef} tasks={tasks} members={members.filter((m) => m.id !== currentUserId && m.name && m.name !== "—")} onSend={send} onTyping={broadcastTyping} chromeless
             replyingTo={replyingTo ? { name: replyingProf?.name || "alguien", preview: (replyingTo.body || "adjunto").replace(/\s+/g, " ").slice(0, 60) } : null}
             onCancelReply={() => setReplyingTo(null)} onEvent={() => setEventOpen(true)} />
         </div>
