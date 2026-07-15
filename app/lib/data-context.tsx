@@ -41,6 +41,8 @@ type DataCtx = Data & {
   // registro manual aparezca al instante y no se registre dos veces por el lag de indexado.
   recentEntries: TimeRecord[];
   addRecentEntries: (recs: TimeRecord[]) => void;
+  // Quita del buffer un registro recién creado que se acaba de borrar (que no reaparezca).
+  removeRecentEntry: (id: string) => void;
 };
 
 const empty: Data = {
@@ -67,6 +69,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // Poda: descarta lo de hace > 5 min (Notion indexa en segundos; con esto no crece).
       [...prev.filter((e) => now - e.at < 300_000), ...recs.map((rec) => ({ rec, at: now }))],
     );
+  }, []);
+
+  const removeRecentEntry = useCallback((id: string) => {
+    setRecent((prev) => prev.filter((e) => e.rec.id !== id));
   }, []);
 
   const load = useCallback(() => {
@@ -140,8 +146,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const recentEntries = useMemo(() => recent.map((e) => e.rec), [recent]);
 
   const value = useMemo(
-    () => ({ ...data, ...maps, ready, source, reload: load, recentEntries, addRecentEntries }),
-    [data, maps, ready, source, load, recentEntries, addRecentEntries],
+    () => ({ ...data, ...maps, ready, source, reload: load, recentEntries, addRecentEntries, removeRecentEntry }),
+    [data, maps, ready, source, load, recentEntries, addRecentEntries, removeRecentEntry],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, ExternalLink, Pencil } from "lucide-react";
+import { X, Clock3, History, Gauge, Calendar, Flag, Building2, Hand, Sparkles, ExternalLink, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "@/lib/toast";
 import { backdrop, DUR_BASE, EASE_CURVA } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -25,12 +26,43 @@ const dayLabel = (iso: string) => dueDateLabel(iso);
 // Detalle por tarea: su historial real de sesiones + cómo se compara con tu benchmark.
 // Es el "genera data por tarea y aprende de eso" — abre desde cualquier TaskCard.
 export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) {
-  const { taskById, clientById, projectById, memberById, reload, recentEntries } = useData();
+  const { taskById, clientById, projectById, memberById, reload, recentEntries, removeRecentEntry } = useData();
   const { currentUserId, isAdmin, sessionSecondsForTask: liveSecs } = useApp();
 
   const [records, setRecords] = useState<Rec[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // "Quitar tiempo": qué sesión está pidiendo confirmación y cuál se está borrando.
+  const myName = currentUserId ? memberById[currentUserId]?.name : undefined;
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Archiva la sesión en Notion (endpoint DELETE) y refresca el total de la tarea. Optimista:
+  // la quitamos de la vista al instante y la devolvemos si el servidor falla.
+  const deleteEntry = async (id: string) => {
+    setBusyId(id);
+    const snapshot = records;
+    setRecords((rs) => rs.filter((r) => r.id !== id));
+    removeRecentEntry(id);
+    try {
+      const res = await fetch(`/api/time-entries?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) {
+        setRecords(snapshot);
+        toast(j.error || "No se pudo quitar el tiempo", { tone: "error" });
+      } else {
+        toast("Tiempo quitado de la tarea");
+        reload(); // el rollup "Horas registradas" baja en el próximo dato fresco de Notion
+      }
+    } catch {
+      setRecords(snapshot);
+      toast("No se pudo quitar el tiempo", { tone: "error" });
+    } finally {
+      setBusyId(null);
+      setConfirmId(null);
+    }
+  };
 
   // Escape + scroll-lock (patrón seguro compartido; ver lib/use-overlay.ts).
   useOverlay(open, onClose);
@@ -196,6 +228,28 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
                           ? <span className="inline-flex items-center gap-1 rounded-full bg-surface px-1.5 py-0.5 text-caption font-medium text-muted"><Pencil size={10} /> A mano</span>
                           : null}
                       <span className="tabular flex items-center gap-1 text-xs font-semibold text-fg"><Clock3 size={12} className="text-muted" /> {formatDuration((r.minutes || 0) * 60)}</span>
+                      {/* Quitar tiempo: solo tus propias sesiones (o admin). Confirmación inline
+                          para no borrar por error; sin diálogo nativo (bloquea la app). */}
+                      {(isAdmin || r.person === myName) && (
+                        confirmId === r.id ? (
+                          <span className="flex shrink-0 items-center gap-1">
+                            <button onClick={() => deleteEntry(r.id)} disabled={busyId === r.id}
+                              className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-1 text-caption font-semibold text-danger transition hover:bg-danger/20 focus-ring disabled:opacity-50">
+                              {busyId === r.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} Quitar
+                            </button>
+                            <button onClick={() => setConfirmId(null)} disabled={busyId === r.id}
+                              className="rounded-full px-2 py-1 text-caption font-medium text-muted transition hover:bg-surface-2 focus-ring">
+                              No
+                            </button>
+                          </span>
+                        ) : (
+                          <button onClick={() => setConfirmId(r.id)}
+                            className="shrink-0 rounded-full p-1.5 text-muted transition hover:bg-danger/10 hover:text-danger focus-ring"
+                            aria-label="Quitar esta sesión" title="Quitar esta sesión">
+                            <Trash2 size={13} />
+                          </button>
+                        )
+                      )}
                     </div>
                   );
                 })}

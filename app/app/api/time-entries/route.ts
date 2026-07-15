@@ -181,3 +181,39 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "No se pudo registrar el tiempo" });
   }
 }
+
+// DELETE: quita una sesión mal registrada (?id=<pageId>). Archiva la página en Notion
+// (no borra duro) y refresca el rollup "Horas registradas" de la tarea. Reglas del muro:
+// cada quien solo puede quitar SUS propias sesiones; un admin puede quitar cualquiera.
+type NotionPageMeta = {
+  parent?: { database_id?: string };
+  properties?: { Persona?: { rich_text?: { plain_text?: string }[] } };
+};
+
+export async function DELETE(req: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  if (!notionConfigured() || !DB) return NextResponse.json({ ok: false, skipped: true });
+
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ ok: false, error: "Falta el id de la sesión" }, { status: 400 });
+
+  const persona = await getPersona(auth.sb, auth.user.id);
+  try {
+    // Trae la página para (a) confirmar que es de ESTA base (no permitir archivar páginas
+    // arbitrarias de Notion vía este endpoint) y (b) verificar de quién es el registro.
+    const page = await notionFetch<NotionPageMeta>(`/pages/${id}`);
+    if ((page.parent?.database_id || "").replace(/-/g, "") !== DB.replace(/-/g, "")) {
+      return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 });
+    }
+    const owner = (page.properties?.Persona?.rich_text?.[0]?.plain_text || "").trim();
+    if (!persona?.is_admin && owner !== (persona?.name || "").trim()) {
+      return NextResponse.json({ ok: false, error: "No puedes quitar el tiempo de otra persona" }, { status: 403 });
+    }
+    await notionFetch(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+    invalidateTimeCaches();
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ ok: false, error: "No se pudo quitar el tiempo" }, { status: 500 });
+  }
+}
