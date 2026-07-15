@@ -4,6 +4,7 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Curve from '../components/Curve.astro';
 import HeroAsk from '../components/HeroAsk.astro';
+import Diagnostico from '../components/Diagnostico.astro';
 import ImpactoCarrusel from '../components/ImpactoCarrusel.astro';
 import Caminos from '../components/Caminos.astro';
 import RedNodos from '../components/RedNodos.astro';
@@ -338,6 +339,9 @@ const producto = {
       </div>
     </div>
   </section>
+
+  <!-- ============================== PRE-DIAGNÓSTICO INTERACTIVO (idea de Diana) ============================== -->
+  <Diagnostico calLink={calLink} />
 
   <!-- ============================== ÁREAS (cómo te ayudamos — mosaico claro) ============================== -->
   <Caminos calLink={calLink} />

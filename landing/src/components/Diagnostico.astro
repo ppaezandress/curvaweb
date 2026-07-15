@@ -1,0 +1,402 @@
+---
+// Mini-diagnóstico inmersivo "La nube de tu operación" — idea de Diana (audio 2026-07-10).
+// Gancho: nube-orbe que respira. Al tocarla, la pantalla se abre con clip-path circular →
+// atmósfera VIVA: parallax con el mouse, aura que sigue el cursor, las preguntas entran
+// volando y al seleccionarlas estallan en partículas + relámpago. Al revelar, colapsan al
+// centro y "sale el sol" con tu arquetipo. Determinístico, sin IA. Lógica: scripts/diagnostico.ts.
+import { fichas, categorias } from '../data/diagnostico';
+
+const { calLink = 'https://cal.com/andres-paez/30min' } = Astro.props;
+
+// Dirección de entrada cinematográfica por posición en el grid (fan desde los lados).
+const entrada = (i: number) => {
+  const col = i % 4;
+  const ex = col === 0 ? -80 : col === 3 ? 80 : col === 1 ? -28 : 28;
+  const ey = 46 - Math.floor(i / 4) * 4;
+  return `--ex:${ex}px;--ey:${ey}px`;
+};
+---
+
+<section id="diagnostico" class="dx" data-cal={calLink}>
+  <div class="dx-atmos" aria-hidden="true"></div>
+
+  <!-- ===================== GANCHO · la nube-orbe ===================== -->
+  <div class="dx-hook mx-auto max-w-3xl px-6 text-center">
+    <p class="reveal dx-eyebrow"><span class="dx-eyebrow-dot"></span>Espejo rápido · 30 segundos · cero compromiso</p>
+    <h2 class="reveal dx-hook-title display">
+      ¿Y si tu empresa te dijera<br /><span class="dx-hook-em">qué le pasa</span>?
+    </h2>
+    <p class="reveal dx-hook-sub">Toca la nube y descúbrelo en un minuto. No es un diagnóstico formal, es un espejo para ti.</p>
+
+    <button type="button" class="dx-orb" data-dx-open aria-haspopup="dialog" aria-label="Abrir el pre-diagnóstico interactivo">
+      <span class="dx-orb-halo" aria-hidden="true"></span>
+      <span class="dx-orb-glow" aria-hidden="true"></span>
+      <span class="dx-orb-body" aria-hidden="true">
+        <span class="dx-orb-puff p1"></span>
+        <span class="dx-orb-puff p2"></span>
+        <span class="dx-orb-puff p3"></span>
+        <span class="dx-orb-puff p4"></span>
+      </span>
+      <span class="dx-orb-spark s1" aria-hidden="true"></span>
+      <span class="dx-orb-spark s2" aria-hidden="true"></span>
+      <span class="dx-orb-spark s3" aria-hidden="true"></span>
+      <span class="dx-orb-spark s4" aria-hidden="true"></span>
+      <span class="dx-orb-label">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 12a4 4 0 0 1 0-8 5 5 0 0 1 9.6 1.5A3.5 3.5 0 0 1 17 12H8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 16.5 7.5 20M13 16.5 12 20M17 16.5l-1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Tócame
+      </span>
+    </button>
+  </div>
+
+  <!-- ===================== OVERLAY inmersivo ===================== -->
+  <div class="dx-overlay" data-dx-overlay role="dialog" aria-modal="true" aria-label="Pre-diagnóstico de CURVA" hidden>
+    <div class="dx-sky" data-dx-sky aria-hidden="true">
+      <span class="dx-star" style="top:12%;left:18%"></span><span class="dx-star" style="top:24%;left:72%;animation-delay:1.1s"></span>
+      <span class="dx-star" style="top:66%;left:12%;animation-delay:.6s"></span><span class="dx-star" style="top:78%;left:84%;animation-delay:1.6s"></span>
+      <span class="dx-star" style="top:40%;left:50%;animation-delay:.3s"></span><span class="dx-star" style="top:16%;left:44%;animation-delay:2s"></span>
+      <span class="dx-driftcloud dc1"></span>
+      <span class="dx-driftcloud dc2"></span>
+      <span class="dx-driftcloud dc3"></span>
+      <span class="dx-stormtint" data-dx-tint></span>
+      <span class="dx-lightning" data-dx-lightning></span>
+    </div>
+
+    <span class="dx-cursor" data-dx-cursor aria-hidden="true"></span>
+
+    <button type="button" class="dx-close" data-dx-close aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+
+    <div class="dx-flash" data-dx-flash aria-hidden="true"></div>
+
+    <!-- PASO 1 · campo de nubes -->
+    <div class="dx-panel" data-dx-panel="pick">
+      <header class="dx-panel-head">
+        <h3 class="display dx-q">Toca todo lo que se parezca a tu día a día</h3>
+        <p class="dx-q-sub"><span data-dx-count>Aún nada</span> · entre más honesto, mejor te leemos</p>
+        <div class="dx-charge" data-dx-charge aria-hidden="true"><span class="dx-charge-fill" data-dx-charge-fill></span></div>
+      </header>
+
+      <div class="dx-cloudfield" data-dx-field role="group" aria-label="Problemas con los que te identificas">
+        {fichas.map((f, i) => (
+          <button
+            type="button"
+            class="dx-cloud"
+            data-dx-cloud
+            data-id={f.id}
+            data-cat={f.cat}
+            aria-pressed="false"
+            style={`--cat:${categorias[f.cat].color};--i:${i};--rx:${(i % 5) - 2};--dly:${(i % 6) * 0.4}s;${entrada(i)}`}
+          >
+            <span class="dx-cloud-shape" aria-hidden="true"></span>
+            <span class="dx-cloud-check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+            </span>
+            <span class="dx-cloud-text">{f.texto}</span>
+          </button>
+        ))}
+      </div>
+
+      <div class="dx-dock">
+        <button type="button" class="dx-reveal" data-dx-submit disabled>
+          <span class="dx-reveal-text">Revelar mi cielo</span>
+          <span class="dx-reveal-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke-linecap="round"/><circle cx="12" cy="12" r="3.4"/></svg></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- PASO 2 · sale el sol -->
+    <div class="dx-panel dx-result" data-dx-panel="result" hidden>
+      <span class="dx-sun" data-dx-sun aria-hidden="true"></span>
+      <div class="dx-result-inner">
+        <p class="dx-result-eyebrow">Tu cielo hoy</p>
+        <h3 class="dx-arquetipo display" data-dx-arquetipo>—</h3>
+
+        <div class="dx-urg" data-dx-urg>
+          <div class="dx-urg-track"><span class="dx-urg-fill" data-dx-urg-fill></span></div>
+          <p class="dx-urg-label">Marcaste <b data-dx-total>0</b> de 16 · tu caso es más <b data-dx-eje>operativo</b></p>
+        </div>
+
+        <p class="dx-lectura" data-dx-lectura></p>
+
+        <div class="dx-necesitas">
+          <p class="dx-necesitas-title">Lo que tu caso pide</p>
+          <p data-dx-necesitas></p>
+        </div>
+
+        <div class="dx-actions">
+          <a href={calLink} target="_blank" rel="noopener" class="dx-cta-cal" data-dx-cal>
+            <span>Agenda una llamada</span>
+            <span class="dx-cta-cal-i" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h13M12 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </a>
+          <a href="#" class="dx-cta-caso" data-dx-caso>
+            <span class="dx-cta-caso-k">Historia real ↗</span>
+            <span class="dx-cta-caso-t" data-dx-caso-label>—</span>
+          </a>
+        </div>
+
+        <form class="dx-mail" data-dx-mail>
+          <label class="dx-mail-label" for="dx-email">¿Te mando el detalle a tu correo? <span>(opcional)</span></label>
+          <div class="dx-mail-row">
+            <input id="dx-email" type="email" placeholder="tu@correo.com" aria-label="Tu correo" />
+            <button type="submit">Enviármelo</button>
+          </div>
+          <p class="dx-mail-ok" data-dx-mail-ok hidden>¡Anotado! Te escribimos pronto. Sin spam.</p>
+        </form>
+
+        <button type="button" class="dx-restart" data-dx-restart>↺ Volver a mirar el cielo</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ================= tokens locales + easings (emil) ================= */
+  .dx {
+    --e-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --e-io: cubic-bezier(0.77, 0, 0.175, 1);
+    --e-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    position: relative; overflow: hidden;
+    padding: clamp(6rem, 14vh, 11rem) 0;
+    background: radial-gradient(120% 90% at 50% -10%, #eaf2ff 0%, var(--color-sand-50) 45%, #fff 100%);
+  }
+  .dx-atmos {
+    position: absolute; inset: 0; pointer-events: none; opacity: .8;
+    background:
+      radial-gradient(40rem 26rem at 78% 8%, rgba(56,189,248,.14), transparent 60%),
+      radial-gradient(38rem 24rem at 14% 96%, rgba(37,99,235,.10), transparent 62%);
+  }
+
+  /* ================= gancho ================= */
+  .dx-hook { position: relative; z-index: 2; }
+  .dx-eyebrow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    text-transform: uppercase; letter-spacing: .2em; font-size: .68rem; font-weight: 600;
+    color: var(--color-ember); background: rgba(37,99,235,.07); padding: .4rem .85rem; border-radius: 999px;
+  }
+  .dx-eyebrow-dot { width: .4rem; height: .4rem; border-radius: 50%; background: var(--color-jade); box-shadow: 0 0 8px var(--color-jade); animation: dx-blink 2.4s var(--e-io) infinite; }
+  @keyframes dx-blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .dx-hook-title { margin-top: 1.6rem; font-weight: 600; color: var(--color-ink); font-size: clamp(2.1rem, 6.5vw, 4.4rem); line-height: 1.02; letter-spacing: -.03em; }
+  .dx-hook-em { background: var(--gradient-curve); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .dx-hook-sub { margin: 1.3rem auto 0; max-width: 34rem; color: var(--color-sand-600); font-size: 1.05rem; line-height: 1.55; }
+
+  /* Red de seguridad: si el observer de reveal no corre (JS lento/caído/500 transitorio),
+     el gancho NO debe quedar invisible con solo la nube flotando. Se auto-revela tras 1.4s.
+     Si el JS sí agrega .is-visible antes, esta animación se desactiva y manda el reveal normal. */
+  .dx-hook .reveal { animation: dx-reveal-failsafe .01s linear 1.4s forwards; }
+  .dx-hook .reveal.is-visible { animation: none; }
+  @keyframes dx-reveal-failsafe { to { opacity: 1; transform: none; filter: none; } }
+
+  .dx-orb { position: relative; margin: clamp(2.5rem, 6vh, 4.5rem) auto 0; width: clamp(15rem, 34vw, 20rem); height: clamp(11rem, 24vw, 14rem); display: grid; place-items: center; cursor: pointer; transition: transform .5s var(--e-out); animation: dx-breathe 6s ease-in-out infinite; }
+  @keyframes dx-breathe { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-10px) scale(1.025)} }
+  .dx-orb:hover { transform: translateY(-6px) scale(1.05); animation-play-state: paused; }
+  .dx-orb:active { transform: translateY(-2px) scale(.99); }
+  .dx-orb:focus-visible { outline: none; }
+  .dx-orb:focus-visible .dx-orb-body { box-shadow: 0 0 0 3px var(--color-ember), 0 30px 60px -20px rgba(37,99,235,.5); }
+  .dx-orb-halo { position: absolute; width: 130%; height: 150%; border-radius: 50%; background: radial-gradient(circle, rgba(125,211,252,.35), rgba(37,99,235,.08) 45%, transparent 70%); filter: blur(6px); animation: dx-halo 6s ease-in-out infinite; }
+  /* Solo opacity: animar scale sobre un elemento con blur repinta el blur cada frame
+     (y esto corre SIEMPRE en el home). Con opacity el compositor no repinta. */
+  @keyframes dx-halo { 0%,100%{opacity:.6} 50%{opacity:1} }
+  .dx-orb-glow { position: absolute; width: 60%; height: 55%; border-radius: 50%; top: 38%; background: radial-gradient(circle, rgba(37,99,235,.5), transparent 70%); filter: blur(26px); animation: dx-halo 4.5s ease-in-out infinite reverse; }
+  .dx-orb-body { position: relative; width: 100%; height: 72%; }
+  .dx-orb-puff { position: absolute; border-radius: 50%; background: linear-gradient(160deg, #ffffff, #dbeafe 70%, #bfdbfe); box-shadow: inset 0 6px 12px rgba(255,255,255,.9), inset 0 -10px 20px rgba(37,99,235,.18), 0 24px 50px -18px rgba(37,99,235,.45); }
+  .dx-orb-puff.p1 { width: 46%; height: 78%; left: 27%; top: 8%; }
+  .dx-orb-puff.p2 { width: 40%; height: 62%; left: 4%; top: 30%; animation: dx-puff 7s ease-in-out infinite; }
+  .dx-orb-puff.p3 { width: 44%; height: 66%; right: 3%; top: 28%; animation: dx-puff 7s ease-in-out infinite .8s; }
+  .dx-orb-puff.p4 { width: 62%; height: 52%; left: 19%; bottom: 2%; }
+  @keyframes dx-puff { 0%,100%{transform:translateX(0)} 50%{transform:translateX(4px)} }
+  .dx-orb-spark { position: absolute; width: .5rem; height: .5rem; border-radius: 50%; background: var(--color-jade); box-shadow: 0 0 10px var(--color-jade); }
+  .dx-orb-spark.s1 { top: 8%; left: 22%; animation: dx-float 5s ease-in-out infinite; }
+  .dx-orb-spark.s2 { top: 20%; right: 16%; width: .35rem; height: .35rem; background: var(--color-ember); box-shadow: 0 0 8px var(--color-ember); animation: dx-float 6s ease-in-out infinite 1s; }
+  .dx-orb-spark.s3 { bottom: 26%; left: 12%; width: .3rem; height: .3rem; animation: dx-float 7s ease-in-out infinite .5s; }
+  .dx-orb-spark.s4 { bottom: 16%; right: 22%; animation: dx-float 5.5s ease-in-out infinite 1.5s; }
+  @keyframes dx-float { 0%,100%{transform:translateY(0); opacity:.9} 50%{transform:translateY(-12px); opacity:.4} }
+  .dx-orb-label { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: .45rem; padding: .55rem 1.15rem; border-radius: 999px; font-weight: 600; font-size: .92rem; color: var(--color-ink); background: rgba(255,255,255,.75); backdrop-filter: blur(6px); box-shadow: 0 10px 24px -10px rgba(37,99,235,.35), inset 0 1px 1px rgba(255,255,255,.9); }
+  .dx-orb-label svg { width: 1.05rem; height: 1.05rem; color: var(--color-ember); }
+
+  /* ================= overlay inmersivo ================= */
+  .dx-overlay {
+    position: fixed; inset: 0; z-index: 90;
+    display: grid; place-items: safe center; padding: clamp(1rem, 4vw, 3rem);
+    background: linear-gradient(180deg, #0a1836, var(--color-ink) 55%, #081026);
+    clip-path: circle(0% at var(--dx-x, 50%) var(--dx-y, 60%));
+    transition: clip-path .7s var(--e-drawer);
+    overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+    --px: 0; --py: 0;
+  }
+  .dx-overlay[hidden] { display: none; }
+  .dx-overlay.is-open { clip-path: circle(150% at var(--dx-x, 50%) var(--dx-y, 60%)); }
+  @media (hover: hover) and (pointer: fine) { .dx-overlay.is-open { cursor: none; } }
+
+  .dx-sky { position: absolute; inset: -4%; pointer-events: none; overflow: hidden; translate: calc(var(--px) * 16px) calc(var(--py) * 16px); transition: translate .35s var(--e-out); }
+  .dx-star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #cfe6ff; box-shadow: 0 0 6px #7dd3fc; opacity: .5; animation: dx-twinkle 3.5s ease-in-out infinite; }
+  @keyframes dx-twinkle { 0%,100%{opacity:.2; transform:scale(1)} 50%{opacity:.9; transform:scale(1.4)} }
+  .dx-driftcloud { position: absolute; border-radius: 50%; filter: blur(30px); opacity: .5; background: radial-gradient(circle, rgba(125,211,252,.28), transparent 70%); }
+  /* Nubes de fondo ESTÁTICAS: mover un elemento con blur(30px) repinta cada frame.
+     El parallax del cielo (translate por mouse) ya les da vida sin ese costo. */
+  .dx-driftcloud.dc1 { width: 34rem; height: 20rem; top: -6rem; left: -8rem; }
+  .dx-driftcloud.dc2 { width: 28rem; height: 18rem; bottom: -5rem; right: -6rem; background: radial-gradient(circle, rgba(37,99,235,.3), transparent 70%); }
+  .dx-driftcloud.dc3 { width: 22rem; height: 14rem; top: 40%; left: 55%; opacity: .35; }
+  .dx-stormtint { position: absolute; inset: 0; opacity: 0; transition: opacity .9s var(--e-out); background: radial-gradient(70% 60% at 50% 40%, rgba(249,115,22,.20), rgba(120,30,10,.10) 55%, transparent 75%); }
+  .dx-lightning { position: absolute; inset: 0; opacity: 0; background: radial-gradient(60% 45% at 50% 30%, rgba(224,242,254,.9), rgba(125,211,252,.25) 40%, transparent 70%); }
+  .dx-lightning.go { animation: dx-strike .55s ease-out; }
+  @keyframes dx-strike { 0%{opacity:0} 6%{opacity:.55} 14%{opacity:.08} 22%{opacity:.75} 38%{opacity:0} 100%{opacity:0} }
+
+  /* aura del cursor */
+  .dx-cursor { position: fixed; top: 0; left: 0; width: 22rem; height: 22rem; border-radius: 50%; pointer-events: none; z-index: 2; margin: -11rem 0 0 -11rem; opacity: 0; transition: opacity .4s ease; background: radial-gradient(circle, rgba(125,211,252,.14), rgba(37,99,235,.05) 35%, transparent 62%); will-change: transform; }
+  .dx-overlay.is-open .dx-cursor { opacity: 1; }
+  @media (hover: none), (pointer: coarse) { .dx-cursor { display: none; } }
+
+  .dx-close { position: absolute; top: clamp(1rem,3vw,2rem); right: clamp(1rem,3vw,2rem); z-index: 6; width: 2.75rem; height: 2.75rem; border-radius: 999px; display: grid; place-items: center; color: rgba(255,255,255,.85); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); transition: transform .2s var(--e-out), background .2s; }
+  .dx-close:hover { background: rgba(255,255,255,.16); transform: rotate(90deg); }
+  .dx-close:active { transform: rotate(90deg) scale(.94); }
+  .dx-close svg { width: 1.2rem; height: 1.2rem; }
+
+  .dx-flash { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 55%, #fff, rgba(255,255,255,.6) 30%, transparent 65%); }
+  .dx-flash.go { animation: dx-flash .7s var(--e-out) forwards; }
+  @keyframes dx-flash { 0%{opacity:0} 22%{opacity:.9} 100%{opacity:0} }
+
+  /* ---- panel ---- */
+  .dx-panel { position: relative; z-index: 3; width: 100%; max-width: 62rem; margin: auto; padding-block: 1rem; translate: calc(var(--px) * -7px) calc(var(--py) * -7px); transition: translate .35s var(--e-out); }
+  .dx-panel[hidden] { display: none; }
+  .dx-panel-head { text-align: center; }
+  @media (max-width: 560px) { .dx-panel { padding-top: 3.5rem; } .dx-q { padding: 0 2.5rem; } }
+  .dx-q { color: #fff; font-weight: 600; font-size: clamp(1.5rem, 3.6vw, 2.4rem); line-height: 1.1; letter-spacing: -.02em; }
+  .dx-q-sub { margin-top: .7rem; color: rgba(255,255,255,.6); font-size: .95rem; }
+  .dx-q-sub b, .dx-q-sub [data-dx-count] { color: var(--color-jade-300); font-weight: 600; }
+  .dx-charge { width: min(24rem, 74vw); height: .38rem; margin: 1rem auto 0; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .dx-charge-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--color-jade), var(--color-ember)); transition: width .45s var(--e-out), background .5s; box-shadow: 0 0 12px rgba(125,211,252,.6); }
+  .dx-charge[data-level="alta"] .dx-charge-fill { background: linear-gradient(90deg, var(--color-flare), #ef4444); box-shadow: 0 0 14px rgba(249,115,22,.7); }
+
+  /* ---- campo de nubes ---- */
+  .dx-cloudfield { display: grid; gap: .8rem; margin: clamp(1.5rem,4vh,2.75rem) 0; grid-template-columns: repeat(2, 1fr); perspective: 1000px; }
+  @media (min-width: 720px) { .dx-cloudfield { grid-template-columns: repeat(4, 1fr); gap: 1rem; } }
+
+  .dx-cloud {
+    --cat: var(--color-ember);
+    position: relative; text-align: left; padding: 1.05rem 1.1rem; border-radius: 1.4rem 1.6rem 1.5rem 1.7rem;
+    color: rgba(255,255,255,.9); font-size: .92rem; line-height: 1.3; font-weight: 500; cursor: pointer;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.13);
+    box-shadow: 0 14px 30px -18px rgba(0,0,0,.5), inset 0 1px 1px rgba(255,255,255,.14);
+    /* Sin backdrop-filter: 16 cards con blur en un contenedor animado = jank (repaints).
+       Sobre la atmósfera oscura, el fondo translúcido se ve casi idéntico y va a 60fps. */
+    transition: transform .3s var(--e-out), box-shadow .35s var(--e-out), background .35s, border-color .35s, color .3s;
+  }
+  /* estado base = visible en reposo, para que al seleccionar (que reemplaza la
+     animación de entrada) el card NO caiga a un estado oculto. El "oculto" vive
+     en el `from` del keyframe con fill `both`. */
+  .dx-overlay.is-open .dx-cloud { animation: dx-cloud-in .7s var(--e-out) both, dx-cloud-bob 7s ease-in-out infinite; animation-delay: calc(0.15s + var(--i) * 0.05s), calc(1s + var(--dly)); }
+  @keyframes dx-cloud-in {
+    from { opacity: 0; transform: translate(var(--ex,0), var(--ey,22px)) scale(.9); }
+    to   { opacity: 1; transform: translate(0,0) scale(1); }
+  }
+  @keyframes dx-cloud-bob { 0%,100%{ translate: 0 0; } 50%{ translate: 0 -7px; } }
+  .dx-cloud-shape { position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0; background: radial-gradient(120% 120% at 30% 0%, color-mix(in oklab, var(--cat) 30%, transparent), transparent 60%); transition: opacity .4s var(--e-out); }
+  @media (hover: hover) and (pointer: fine) {
+    .dx-cloud:hover { transform: translateY(-5px) scale(1.03) rotate(calc(var(--rx) * 0.4deg)); box-shadow: 0 24px 48px -18px color-mix(in oklab, var(--cat) 65%, #000); border-color: color-mix(in oklab, var(--cat) 55%, rgba(255,255,255,.2)); z-index: 2; }
+  }
+  .dx-cloud:active { transform: scale(.97); }
+  .dx-cloud[aria-pressed="true"] {
+    color: #fff; border-color: var(--cat);
+    background: color-mix(in oklab, var(--cat) 26%, rgba(255,255,255,.05));
+    box-shadow: 0 0 0 1px var(--cat), 0 20px 50px -16px var(--cat), inset 0 1px 1px rgba(255,255,255,.25);
+    animation: dx-cloud-pop .45s var(--e-out);
+  }
+  .dx-cloud[aria-pressed="true"] .dx-cloud-shape { opacity: 1; }
+  @keyframes dx-cloud-pop { 0%{transform:scale(.97)} 40%{transform:scale(1.06)} 70%{transform:scale(.99)} 100%{transform:scale(1)} }
+  .dx-cloud-check { position: absolute; top: -.6rem; right: -.4rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--cat); box-shadow: 0 6px 16px -4px var(--cat); transform: scale(0); transition: transform .35s var(--e-out); }
+  .dx-cloud[aria-pressed="true"] .dx-cloud-check { transform: scale(1); }
+  .dx-cloud-check svg { width: .85rem; height: .85rem; stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .4s var(--e-out) .1s; }
+  .dx-cloud[aria-pressed="true"] .dx-cloud-check svg { stroke-dashoffset: 0; }
+  .dx-cloud-text { position: relative; }
+
+  /* colapso al revelar */
+  .dx-cloudfield.collapsing .dx-cloud { transition: transform .6s var(--e-io), opacity .6s var(--e-out), filter .6s; animation: none; }
+  .dx-cloudfield.collapsing .dx-cloud[data-collapse="in"] { transform: var(--to-center) scale(.25); opacity: 0; filter: blur(4px); }
+  .dx-cloudfield.collapsing .dx-cloud[data-collapse="out"] { opacity: 0; transform: scale(.9); filter: blur(3px); }
+
+  /* partículas de selección (creadas por JS). Sin box-shadow: el glow encarece el paint. */
+  .dx-particle { position: fixed; z-index: 5; width: .5rem; height: .5rem; border-radius: 50%; pointer-events: none; will-change: transform, opacity; }
+
+  /* ---- dock / botón revelar ---- */
+  .dx-dock { display: flex; justify-content: center; }
+  .dx-reveal { position: relative; display: inline-flex; align-items: center; gap: .7rem; padding: .5rem .6rem .5rem 1.6rem; border-radius: 999px; font-weight: 600; font-size: 1.05rem; color: #fff; background: linear-gradient(120deg, var(--color-flare), #fb923c); box-shadow: 0 18px 40px -14px rgba(249,115,22,.6); transition: transform .18s var(--e-out), opacity .3s, filter .2s; }
+  .dx-reveal:disabled { opacity: .35; filter: grayscale(.4); pointer-events: none; }
+  .dx-reveal:not(:disabled) { animation: dx-reveal-pulse 2.4s ease-in-out infinite; }
+  @keyframes dx-reveal-pulse { 0%,100%{box-shadow:0 18px 40px -14px rgba(249,115,22,.6)} 50%{box-shadow:0 18px 54px -10px rgba(249,115,22,.9)} }
+  .dx-reveal:hover { transform: translateY(-2px); }
+  .dx-reveal:active { transform: scale(.97); }
+  .dx-reveal-icon { width: 2.6rem; height: 2.6rem; border-radius: 999px; display: grid; place-items: center; background: rgba(255,255,255,.22); transition: transform .3s var(--e-out); }
+  .dx-reveal:hover .dx-reveal-icon { transform: rotate(90deg) scale(1.06); }
+  .dx-reveal-icon svg { width: 1.2rem; height: 1.2rem; }
+  .dx-reveal:not(:disabled) .dx-reveal-icon svg { animation: dx-spin 9s linear infinite; }
+  @keyframes dx-spin { to { transform: rotate(360deg); } }
+
+  /* ================= resultado (sale el sol) ================= */
+  .dx-result { display: grid; place-items: center; text-align: center; }
+  .dx-sun { position: absolute; top: 42%; left: 50%; width: 40rem; height: 40rem; border-radius: 50%; translate: -50% -50%; background: radial-gradient(circle, color-mix(in oklab, var(--cat, var(--color-ember)) 55%, #fff) 0%, color-mix(in oklab, var(--cat, var(--color-ember)) 30%, transparent) 30%, transparent 60%); opacity: 0; filter: blur(10px); }
+  .dx-result.lit .dx-sun { animation: dx-sunrise 1.1s var(--e-out) forwards, dx-sunpulse 5s ease-in-out 1.1s infinite; }
+  @keyframes dx-sunrise { 0%{opacity:0; transform:scale(.4)} 100%{opacity:.6; transform:scale(1)} }
+  @keyframes dx-sunpulse { 0%,100%{opacity:.55} 50%{opacity:.72} }
+  .dx-result-inner { position: relative; z-index: 2; max-width: 42rem; }
+  .dx-result.lit .dx-result-inner > * { opacity: 0; transform: translateY(16px); animation: dx-rise .6s var(--e-out) forwards; }
+  .dx-result.lit .dx-result-inner > *:nth-child(1) { animation-delay: .35s; }
+  .dx-result.lit .dx-result-inner > *:nth-child(2) { animation-delay: .45s; }
+  .dx-result.lit .dx-result-inner > *:nth-child(3) { animation-delay: .55s; }
+  .dx-result.lit .dx-result-inner > *:nth-child(4) { animation-delay: .65s; }
+  .dx-result.lit .dx-result-inner > *:nth-child(5) { animation-delay: .75s; }
+  .dx-result.lit .dx-result-inner > *:nth-child(6) { animation-delay: .85s; }
+  .dx-result.lit .dx-result-inner > *:nth-child(7) { animation-delay: .95s; }
+  @keyframes dx-rise { to { opacity: 1; transform: none; } }
+  .dx-result-eyebrow { text-transform: uppercase; letter-spacing: .24em; font-size: .7rem; font-weight: 600; color: var(--color-jade-300); }
+  .dx-arquetipo { color: #fff; font-weight: 600; font-size: clamp(2.4rem, 7vw, 4.2rem); line-height: 1; letter-spacing: -.025em; margin-top: .6rem; }
+  .dx-urg { margin: 1.4rem auto 0; max-width: 26rem; }
+  .dx-urg-track { height: .5rem; border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .dx-urg-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--gradient-curve); transition: width 1s var(--e-out); }
+  .dx-urg[data-level="alta"] .dx-urg-fill { background: linear-gradient(90deg, var(--color-flare), #ef4444); }
+  .dx-urg-label { margin-top: .6rem; font-size: .9rem; color: rgba(255,255,255,.75); }
+  .dx-urg-label b { color: #fff; font-weight: 700; }
+  .dx-lectura { margin-top: 1.4rem; font-size: 1.15rem; line-height: 1.5; color: rgba(255,255,255,.92); }
+  .dx-necesitas { margin-top: 1.4rem; padding: 1.1rem 1.3rem; border-radius: 1.1rem; text-align: left; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); }
+  .dx-necesitas-title { text-transform: uppercase; letter-spacing: .18em; font-size: .66rem; font-weight: 700; color: var(--color-jade-300); margin-bottom: .35rem; }
+  .dx-necesitas p:last-child { color: rgba(255,255,255,.9); line-height: 1.45; }
+  .dx-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem; margin-top: 1.8rem; }
+  .dx-cta-cal { display: inline-flex; align-items: center; gap: .6rem; padding: .5rem .5rem .5rem 1.5rem; border-radius: 999px; font-weight: 600; color: #fff; background: linear-gradient(120deg, var(--color-flare), #fb923c); box-shadow: 0 16px 36px -14px rgba(249,115,22,.6); transition: transform .18s var(--e-out); }
+  .dx-cta-cal:hover { transform: translateY(-2px); }
+  .dx-cta-cal:active { transform: scale(.97); }
+  .dx-cta-cal-i { width: 2.4rem; height: 2.4rem; border-radius: 999px; display: grid; place-items: center; background: rgba(255,255,255,.22); transition: transform .3s var(--e-out); }
+  .dx-cta-cal:hover .dx-cta-cal-i { transform: translateX(3px); }
+  .dx-cta-cal-i svg { width: 1.1rem; height: 1.1rem; }
+  .dx-cta-caso { display: inline-flex; flex-direction: column; gap: .1rem; color: rgba(255,255,255,.75); transition: color .2s; }
+  .dx-cta-caso:hover { color: #fff; }
+  .dx-cta-caso-k { text-transform: uppercase; letter-spacing: .14em; font-size: .62rem; font-weight: 700; color: var(--color-jade-300); }
+  .dx-cta-caso-t { font-weight: 600; font-size: .95rem; border-bottom: 1px solid rgba(255,255,255,.28); padding-bottom: 1px; }
+  .dx-mail { margin: 1.8rem auto 0; max-width: 26rem; padding-top: 1.4rem; border-top: 1px solid rgba(255,255,255,.12); text-align: left; }
+  .dx-mail-label { display: block; font-size: .85rem; color: rgba(255,255,255,.78); margin-bottom: .55rem; }
+  .dx-mail-label span { color: rgba(255,255,255,.45); }
+  .dx-mail-row { display: flex; gap: .5rem; }
+  .dx-mail-row input { flex: 1; min-width: 0; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.07); color: #fff; padding: .65rem 1.1rem; font-size: .9rem; }
+  .dx-mail-row input::placeholder { color: rgba(255,255,255,.4); }
+  .dx-mail-row input:focus { outline: none; border-color: var(--color-jade); }
+  .dx-mail-row button { white-space: nowrap; border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-weight: 600; font-size: .88rem; padding: .65rem 1.1rem; transition: background .2s, transform .15s var(--e-out); }
+  .dx-mail-row button:hover { background: rgba(255,255,255,.24); }
+  .dx-mail-row button:active { transform: scale(.96); }
+  .dx-mail-ok { margin-top: .6rem; font-size: .85rem; color: var(--color-jade-300); font-weight: 600; }
+  .dx-restart { margin-top: 1.6rem; font-size: .88rem; color: rgba(255,255,255,.55); transition: color .2s; }
+  .dx-restart:hover { color: #fff; }
+
+  /* ================= reduced motion ================= */
+  @media (prefers-reduced-motion: reduce) {
+    .dx-orb, .dx-orb-halo, .dx-orb-glow, .dx-orb-puff, .dx-orb-spark, .dx-eyebrow-dot,
+    .dx-driftcloud, .dx-star, .dx-reveal-icon svg, .dx-reveal { animation: none !important; }
+    .dx-sky, .dx-panel { translate: none !important; }
+    .dx-cursor { display: none !important; }
+    .dx-overlay { transition: opacity .3s ease; clip-path: none !important; opacity: 0; }
+    .dx-overlay.is-open { opacity: 1; }
+    .dx-overlay.is-open .dx-cloud { animation: none !important; opacity: 1; transform: none; filter: none; }
+    .dx-cloudfield.collapsing .dx-cloud { transition: opacity .3s ease; transform: none !important; }
+    .dx-result.lit .dx-sun { animation: none; opacity: .5; }
+    .dx-result.lit .dx-result-inner > * { animation: none; opacity: 1; transform: none; }
+    .dx-urg-fill, .dx-charge-fill { transition: none; }
+  }
+</style>

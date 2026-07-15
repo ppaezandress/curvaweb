@@ -99,6 +99,7 @@ const {
       import { initClimb } from '../scripts/climb';
       import { initPgAuto } from '../scripts/pgauto';
       import { initAnimGate } from '../scripts/anim-gate';
+      import { initDiagnostico } from '../scripts/diagnostico';
 
       // Persistentes: se inicializan una vez (guard idempotente dentro de cada init).
       initLenis();
@@ -133,6 +134,7 @@ const {
         initClimb();
         initPgAuto();
         initAnimGate();
+        initDiagnostico();
         // Dispara el page-load orquestado (data-load) en el primer pintado.
         requestAnimationFrame(() =>
           requestAnimationFrame(() => document.body.classList.add('is-loaded'))
