@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, Fragment, type CSSProperties 
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange, Users,
+  Scale, CalendarRange, Users, Share2,
 } from "lucide-react";
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
@@ -77,6 +77,21 @@ const gastosDeProyecto = (gastos: Gasto[], id: string): Gasto[] => gastos.filter
 const cajaMonto = (pr: Proyecto): number => Math.max(0, +pr.ticket || 0) * ((pr.cajaPct || 0) / 100);
 const sumaGastos = (gs: Gasto[]): number => gs.reduce((a, g) => a + (+g.m || 0), 0);
 const mesDe = (fecha?: string | null): string => (fecha || "").slice(0, 7); // "YYYY-MM"
+
+// Compartir por el sheet nativo del sistema (WhatsApp, correo, etc.) usando Web Share
+// API en móvil; en desktop o sin soporte cae a wa.me con el texto ya escrito. Así lo
+// que hoy exportas a PDF también se puede mandar directo por WhatsApp desde la app.
+async function compartir(title: string, text: string) {
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      await navigator.share({ title, text });
+      return;
+    }
+  } catch {
+    return; // el usuario canceló el sheet
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+}
 
 // Resuelve la identidad de cada miembro desde el roster (fuente de verdad):
 // nombre y tipo (núcleo/socio/nuevo) salen del directorio, no de una copia vieja.
@@ -478,7 +493,10 @@ function DatosCobro({ st, update }: { st: State; update: (fn: (s: State) => Stat
             <div><span>CLABE</span><b>{b.clabe}</b></div>
             <div><span>Titular</span><b>{b.titular}</b></div>
           </div>
-          <button className="btn primary" onClick={() => window.open("/pdf/banco", "_blank")}><FileText size={15} /> Descargar ficha</button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="btn primary" onClick={() => window.open("/pdf/banco", "_blank")}><FileText size={15} /> Descargar ficha</button>
+            <button className="btn ghost" onClick={() => compartir("Datos de cobro CURVA", `*Datos de cobro — CURVA*\nBanco: ${b.banco}\nTitular: ${b.titular}\nCLABE: ${b.clabe}${b.cuenta ? `\nCuenta: ${b.cuenta}` : ""}${b.swift ? `\nSWIFT/BIC: ${b.swift}` : ""}`)}><Share2 size={15} /> WhatsApp</button>
+          </div>
         </div>
       ) : (
         <div className="bank-edit">
@@ -1164,6 +1182,11 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
     .filter((a) => a.trabajo + a.extra + (a.comision || 0) > 0.5)
     .sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
   const abrirPdf = (persona?: string) => window.open("/pdf/" + p.id + (persona ? "?persona=" + encodeURIComponent(persona) : ""), "_blank");
+  // Resumen de texto del reparto, listo para mandar por WhatsApp.
+  const textoReparto = () => {
+    const lineas = gentePdf.map((a) => `• ${a.nombre}: ${fmtMXN(a.trabajo + a.extra + (a.comision || 0))}`);
+    return `*Reparto — ${p.nombre}*\nIngreso: ${fmtMXN(r.t)}${p.conIVA ? ` (con IVA: ${fmtMXN(totalCliente(p))})` : ""}\n\nLo que gana cada quien:\n${lineas.join("\n")}`;
+  };
   const exportPersona = (persona: string) => { abrirPdf(persona); setExported((s) => new Set(s).add(persona)); };
   const pagos = p.pagos || [];
   const doDelete = () => update((s) => {
@@ -1217,6 +1240,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
             <button className="btn ghost" onClick={() => window.open("/pdf/banco?proyecto=" + p.id, "_blank")}><Wallet size={14} /> Datos para cobro</button>
             <button className="btn ghost" onClick={() => setReglasOpen(true)}><SlidersHorizontal size={14} /> Ver reglas</button>
             <button className="btn ghost" onClick={() => setGastosOpen(true)}><Receipt size={14} /> Gastos{misGastos.length ? ` (${misGastos.length})` : ""}</button>
+            <button className="btn ghost" onClick={() => compartir(`Reparto · ${p.nombre}`, textoReparto())}><Share2 size={14} /> WhatsApp</button>
             <div className="est-chips">
               {(["cotizacion", "activo", "cerrado", "cancelado"] as EstadoProyecto[]).map((e) => (
                 <button key={e} className="chip-btn sm" aria-pressed={estado === e} onClick={() => upP((x) => { x.estado = e; })}>{ESTADO_LABEL[e]}</button>
@@ -1259,6 +1283,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
                   <div key={a.nombre} className={"pdf-mr" + (ya ? " done" : "")}>
                     <span className="pdf-mr-who"><span className="nm">{a.nombre}</span><span className={"badge " + badgeCls[a.quien]}>{badgeTxt[a.quien]}</span></span>
                     <span className="pdf-mr-v">{fmtMXN(base + comis)}{comis > 0.5 && <span className="pdf-mr-comis">{fmtMXN(base)} + {fmtMXN(comis)} comisión</span>}</span>
+                    <button className="btn sm ghost" title="Compartir por WhatsApp" onClick={() => compartir(`${a.nombre} · ${p.nombre}`, `Hola ${a.nombre}, tu parte de *${p.nombre}*: ${fmtMXN(base + comis)}${comis > 0.5 ? ` (${fmtMXN(base)} + ${fmtMXN(comis)} comisión)` : ""}.`)}><Share2 size={13} /></button>
                     <button className={"btn sm " + (ya ? "ok-btn" : "primary")} onClick={() => exportPersona(a.nombre)}>{ya ? <><Check size={13} /> Bajado</> : <><FileText size={13} /> PDF</>}</button>
                   </div>
                 );
