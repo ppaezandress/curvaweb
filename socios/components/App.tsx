@@ -13,7 +13,7 @@ import {
   type EstadoProyecto, type Rol, type CajaKind, type CajaGrupo, type DatosBancarios,
 } from "@/lib/reparto";
 
-type Gasto = { n: string; m: number; proyectoId?: string | null; proveedor?: string; fecha?: string | null; esIngreso?: boolean };
+type Gasto = { n: string; m: number; proyectoId?: string | null; proveedor?: string; fecha?: string | null; esIngreso?: boolean; id?: string; categoria?: string };
 type Cliente = { id: string; nombre: string; estado: string | null };
 // Directorio del equipo: defines a cada persona UNA vez (nombre + qué es) y la
 // reutilizas en cualquier proyecto. Los socios A/B no viven aquí: son fijos y su
@@ -68,6 +68,15 @@ const cajaPresetDe = (R: Reglas) => ({ trazo: R.cajaTrazo, trayectoria: R.cajaTr
 const DEF_GASTOS: Gasto[] = [
   { n: "ChatGPT", m: 360 }, { n: "Claude Max", m: 1800 }, { n: "Claude", m: 360 }, { n: "Notion", m: 400 }, { n: "Contadora", m: 800 },
 ];
+
+// ── Gastos por proyecto: la "caja del proyecto" (ticket × cajaPct) es un presupuesto
+// del que se van restando gastos categorizados. Los gastos con proyectoId salen de esa
+// caja (y NO cuentan como overhead de la empresa). Los sin proyectoId = overhead. ──
+const CAT_GASTO = ["Viáticos", "Comidas", "Transporte", "Herramientas", "Subcontratación", "Otros"] as const;
+const gastosDeProyecto = (gastos: Gasto[], id: string): Gasto[] => gastos.filter((g) => g.proyectoId === id && !g.esIngreso);
+const cajaMonto = (pr: Proyecto): number => Math.max(0, +pr.ticket || 0) * ((pr.cajaPct || 0) / 100);
+const sumaGastos = (gs: Gasto[]): number => gs.reduce((a, g) => a + (+g.m || 0), 0);
+const mesDe = (fecha?: string | null): string => (fecha || "").slice(0, 7); // "YYYY-MM"
 
 // Resuelve la identidad de cada miembro desde el roster (fuente de verdad):
 // nombre y tipo (núcleo/socio/nuevo) salen del directorio, no de una copia vieja.
@@ -309,7 +318,9 @@ export default function App() {
   if (!st) return <div style={{ padding: 40 }}>Cargando…</div>;
 
   const active = st.projects.find((p) => p.id === st.activeId) || st.projects[0];
-  const overhead = st.gastos.reduce((s, g) => s + (+g.m || 0), 0);
+  // Overhead de la empresa = solo gastos SIN proyecto. Los de proyecto salen de la caja
+  // de su proyecto (no del overhead global), para no contarlos dos veces.
+  const overhead = st.gastos.filter((g) => !g.proyectoId).reduce((s, g) => s + (+g.m || 0), 0);
   const update = (fn: (s: State) => State) => setSt((prev) => (prev ? fn(structuredClone(prev)) : prev));
   const updateActive = (fn: (p: Proyecto) => void) => update((s) => { const p = s.projects.find((x) => x.id === s.activeId); if (p) fn(p); return s; });
 
@@ -1032,20 +1043,25 @@ function Proyectos({ st, update, setActive }: { st: State; update: (fn: (s: Stat
           </div>
         )}
         {visibles.map((p) => (
-          <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} />
+          <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} gastos={st.gastos} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} />
         ))}
       </div>
     </>
   );
 }
 
-function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: {
-  p: Proyecto; params: Reglas; roster: RosterPerson[]; open: boolean; onToggle: () => void;
+function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setActive }: {
+  p: Proyecto; params: Reglas; roster: RosterPerson[]; gastos: Gasto[]; open: boolean; onToggle: () => void;
   update: (fn: (s: State) => State) => void; setActive: (id: string) => void;
 }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [reglasOpen, setReglasOpen] = useState(false);
+  const [gastosOpen, setGastosOpen] = useState(false);
+  const [gConcepto, setGConcepto] = useState("");
+  const [gMonto, setGMonto] = useState(0);
+  const [gCat, setGCat] = useState<string>(CAT_GASTO[0]);
+  const [gFecha, setGFecha] = useState(todayISO());
   const [exported, setExported] = useState<Set<string>>(new Set()); // PDFs ya generados en esta sesión
   const R = reglasDe(p, params);   // foto congelada si está guardado; params vivos si no
   const pr = membersResolved(p, roster, R);
@@ -1065,6 +1081,15 @@ function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: 
   const rec = pctRecibido(p);
   const estado: EstadoProyecto = p.estado ?? "cotizacion";
   const upP = (fn: (x: Proyecto) => void) => update((s) => { const x = s.projects.find((y) => y.id === p.id); if (x) fn(x); return s; });
+  // Gastos de este proyecto (salen de su caja).
+  const misGastos = gastosDeProyecto(gastos, p.id);
+  const cajaBudget = cajaMonto(p), gastado = sumaGastos(misGastos), cajaRestante = cajaBudget - gastado;
+  const addGasto = () => {
+    if (gMonto <= 0 || !gConcepto.trim()) return;
+    update((s) => { s.gastos.push({ id: uid(), n: gConcepto.trim(), m: Math.round(gMonto), categoria: gCat, fecha: gFecha, proyectoId: p.id }); return s; });
+    setGConcepto(""); setGMonto(0);
+  };
+  const delGasto = (id: string) => update((s) => { s.gastos = s.gastos.filter((g) => g.id !== id); return s; });
 
   return (
     <div className={"pcard" + (open ? " open" : "")}>
@@ -1097,6 +1122,7 @@ function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: 
             <button className="btn ghost" onClick={() => setPdfOpen(true)}><FileText size={14} /> PDF de reparto</button>
             <button className="btn ghost" onClick={() => window.open("/pdf/banco?proyecto=" + p.id, "_blank")}><Wallet size={14} /> Datos para cobro</button>
             <button className="btn ghost" onClick={() => setReglasOpen(true)}><SlidersHorizontal size={14} /> Ver reglas</button>
+            <button className="btn ghost" onClick={() => setGastosOpen(true)}><Receipt size={14} /> Gastos{misGastos.length ? ` (${misGastos.length})` : ""}</button>
             <div className="est-chips">
               {(["cotizacion", "activo", "cerrado", "cancelado"] as EstadoProyecto[]).map((e) => (
                 <button key={e} className="chip-btn sm" aria-pressed={estado === e} onClick={() => upP((x) => { x.estado = e; })}>{ESTADO_LABEL[e]}</button>
@@ -1192,6 +1218,52 @@ function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: 
           </div>
         );
       })()}
+
+      {gastosOpen && (
+        <div className="pdf-modal-bg" onClick={() => setGastosOpen(false)}>
+          <div className="pdf-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pdf-modal-h">
+              <div><b>Gastos de {p.nombre}</b><div className="hint" style={{ margin: "2px 0 0" }}>Salen de la caja del proyecto ({p.cajaPct}% del ticket = {fmtMXN(cajaBudget)}).</div></div>
+              <button className="rmv" onClick={() => setGastosOpen(false)}>×</button>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
+                <span>Gastado <b style={{ fontFamily: "var(--mono)" }}>{fmtMXN(gastado)}</b> de {fmtMXN(cajaBudget)}</span>
+                <span>Restante <b style={{ fontFamily: "var(--mono)", color: cajaRestante < 0 ? "var(--c-caja)" : "var(--cobalt)" }}>{fmtMXN(cajaRestante)}</b></span>
+              </div>
+              <div className="pcard-prog"><i style={{ width: Math.min(100, cajaBudget > 0 ? gastado / cajaBudget * 100 : 0) + "%", background: cajaRestante < 0 ? "var(--c-caja)" : undefined }} /></div>
+              {cajaRestante < 0 && <p className="hint" style={{ color: "var(--c-caja)", marginTop: 4 }}>Te pasaste del presupuesto de la caja por {fmtMXN(-cajaRestante)}.</p>}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.9fr 1fr 1.1fr", gap: 6, marginBottom: 6 }}>
+              <input type="text" placeholder="Concepto (ej. vuelo CDMX)" value={gConcepto} onChange={(e) => setGConcepto(e.target.value)} />
+              <div className="money-in"><span>$</span><input type="number" min={0} value={gMonto || ""} onChange={(e) => setGMonto(+e.target.value || 0)} /></div>
+              <select value={gCat} onChange={(e) => setGCat(e.target.value)}>{CAT_GASTO.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+              <input type="date" value={gFecha} onChange={(e) => setGFecha(e.target.value)} />
+            </div>
+            <button className="btn primary" style={{ width: "100%", marginBottom: 10 }} disabled={gMonto <= 0 || !gConcepto.trim()} onClick={addGasto}><Plus size={14} /> Agregar gasto</button>
+            {misGastos.length === 0 ? (
+              <div className="hint">Sin gastos aún. Agrega los viáticos, comidas, transporte, etc. que salgan de la caja de este proyecto para ver cómo va bajando.</div>
+            ) : (
+              Object.entries(misGastos.reduce((acc, g) => { const k = mesDe(g.fecha) || "0000-00"; (acc[k] = acc[k] || []).push(g); return acc; }, {} as Record<string, Gasto[]>))
+                .sort(([a], [b]) => (a < b ? 1 : -1))
+                .map(([mes, gs]) => (
+                  <div key={mes} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, textTransform: "uppercase", opacity: 0.6, borderBottom: "1px solid var(--border)", paddingBottom: 2, marginBottom: 4 }}>
+                      <span>{mes === "0000-00" ? "Sin fecha" : mesLabel(mes)}</span><span style={{ fontFamily: "var(--mono)" }}>{fmtMXN(sumaGastos(gs))}</span>
+                    </div>
+                    {gs.map((g) => (
+                      <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}>
+                        <span style={{ flex: 1 }}>{g.n} <span className="badge" style={{ opacity: 0.7, marginLeft: 4 }}>{g.categoria || "Otros"}</span></span>
+                        <span style={{ fontFamily: "var(--mono)", fontWeight: 700 }}>{fmtMXN(g.m)}</span>
+                        <button className="rmv" onClick={() => g.id && delGasto(g.id)}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1514,7 +1586,7 @@ function Facturas({ st, clientes, update }: { st: State; clientes: Cliente[]; up
     }
     const proj = dest.tipo === "proyecto" ? st.projects.find((p) => p.id === dest.proyectoId) : null;
     update((s) => {
-      s.gastos.push({ n: `${data.proveedor} · ${data.concepto}`.slice(0, 60), m: Math.round(data.total), proveedor: data.proveedor, fecha: data.fecha, proyectoId: proj?.id || null });
+      s.gastos.push({ id: uid(), n: `${data.proveedor} · ${data.concepto}`.slice(0, 60), m: Math.round(data.total), proveedor: data.proveedor, fecha: data.fecha, proyectoId: proj?.id || null, categoria: proj ? "Otros" : undefined });
       return s;
     });
     setSaved(true);
