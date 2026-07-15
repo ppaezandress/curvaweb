@@ -103,6 +103,10 @@ export type Reglas = {
   smNuevo: number;    // 0.7
   // Banca — meta del colchón (monto directo; el piso mensual del Núcleo se eliminó)
   metaBancaMonto: number; // 48000
+  // Caja del proyecto — % por defecto según el tipo de proyecto. El modelo usa
+  // pr.cajaPct (por proyecto, editable en la Calculadora); esto es solo el DEFAULT que
+  // se aplica al elegir el tipo. Editable en Reglas para que los socios lo muevan.
+  cajaTrazo: number; cajaTrayectoria: number; cajaAlianza: number; // 10 / 8 / 15
   // Nombres de los socios
   nombreA: string; nombreB: string;  // "Andrés" / "Balmo"
 };
@@ -119,6 +123,7 @@ export const REGLAS_DEFAULT: Reglas = {
   umbral1: 40000, umbral2: 80000, umbral3: 150000,
   smNuevo: 0.7,
   metaBancaMonto: 48000,
+  cajaTrazo: 10, cajaTrayectoria: 8, cajaAlianza: 15,
   nombreA: "Andrés", nombreB: "Balmo",
 };
 
@@ -138,6 +143,24 @@ export function baseBolsa(t: number, R: Reglas): number {
   let b = 0, prev = 0;
   for (const [cap, r] of br) { b += r * Math.max(0, Math.min(t, cap) - prev); prev = cap; if (t <= cap) break; }
   return b;
+}
+
+// Desglose de baseBolsa por tramos, para explicar VISUALMENTE en la UI qué tramo aplica
+// a un ticket dado y cuánto aporta cada uno. Σ(aporte) === baseBolsa(t, R). `activo` =
+// el ticket entra a este tramo; `lleno` = el ticket ya lo cubrió completo. Mover el %
+// de un tramo con activo=false NO cambia la bolsa (de ahí la confusión de Balmo).
+export type TramoBolsa = { i: number; desde: number; hasta: number; pct: number; aporte: number; activo: boolean; lleno: boolean };
+export function baseBolsaDesglose(t: number, R: Reglas): TramoBolsa[] {
+  const tramos: [number, number, number][] = [
+    [0, R.umbral1, R.brkChico],
+    [R.umbral1, R.umbral2, R.brkMediano],
+    [R.umbral2, R.umbral3, R.brkGrande],
+    [R.umbral3, Infinity, R.brkTope],
+  ];
+  return tramos.map(([desde, hasta, pct], i) => {
+    const base = Math.max(0, Math.min(t, hasta) - desde);
+    return { i, desde, hasta, pct, aporte: base * (pct / 100), activo: t > desde, lleno: t >= hasta };
+  });
 }
 
 export type Persona = { nombre: string; quien: Quien; roles: string[]; trabajo: number; extra: number; comision: number };

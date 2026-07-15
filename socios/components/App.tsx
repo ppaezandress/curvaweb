@@ -8,7 +8,7 @@ import {
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
   cajaLabel, CAJA_ORDER, isSocio,
-  repartoPorMes, ticketSinIVA,
+  repartoPorMes, ticketSinIVA, baseBolsaDesglose,
   REGLAS_DEFAULT, IVA, ROLNAME, type Proyecto, type Reglas, type Miembro, type Quien, type Pago, type ReparteMes,
   type EstadoProyecto, type Rol, type CajaKind, type CajaGrupo, type DatosBancarios,
 } from "@/lib/reparto";
@@ -62,7 +62,9 @@ const roleColor: Record<Quien, string> = { socioA: "--c-andres", socioB: "--c-ba
 const badgeCls: Record<Quien, string> = { socioA: "b-socio", socioB: "b-socio", nucleo: "b-nucleo", nuevo: "b-nuevo" };
 const badgeTxt: Record<Quien, string> = { socioA: "socio", socioB: "socio", nucleo: "núcleo", nuevo: "nuevo" };
 const order: Record<Quien, number> = { socioA: 0, socioB: 1, nucleo: 2, nuevo: 3 };
-const cajaPreset = { trazo: 10, trayectoria: 8, alianza: 15 } as const;
+// Default de % de caja del proyecto por tipo — ahora sale de Reglas (editable), no
+// hardcodeado. Cada proyecto puede sobreescribirlo con su slider en la Calculadora.
+const cajaPresetDe = (R: Reglas) => ({ trazo: R.cajaTrazo, trayectoria: R.cajaTrayectoria, alianza: R.cajaAlianza } as const);
 const DEF_GASTOS: Gasto[] = [
   { n: "ChatGPT", m: 360 }, { n: "Claude Max", m: 1800 }, { n: "Claude", m: 360 }, { n: "Notion", m: 400 }, { n: "Contadora", m: 800 },
 ];
@@ -645,7 +647,7 @@ function AgendaEditor({ active, st, P, updateActive }: {
             {Array.from({ length: N }, (_, k) => k + 1).map((m) => {
               const inicio = active.fechaInicio || todayISO();
               return (
-                <div className="agenda-mes" key={m} style={{ border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+                <div className="agenda-mes" key={m} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
                   <div className="gt" style={{ fontWeight: 700, marginBottom: 8 }}>Mes {m} · {mesLabel(addMonths(inicio, m - 1))}</div>
                   {mem(m).map((mm, i) => (
                     <div className="member2" key={i}>
@@ -728,26 +730,32 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   st: State; active: Proyecto; clientes: Cliente[];
   update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void;
 }) {
-  // Nuevo borrador limpio (descarta cualquier borrador anterior sin guardar).
+  const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("total"); // "cuánto cobra cada quien": total vs mes a mes
+  const [confirmDescartar, setConfirmDescartar] = useState(false);
+  // "+ Nuevo": si ya hay un borrador en curso, CONTINÚALO (no lo perdemos); solo si no
+  // hay ninguno se crea uno en blanco. Así editar otro proyecto nunca borra tu trabajo.
   const nuevoBorrador = () => update((s) => {
-    s.projects = s.projects.filter((x) => !x.borrador);
+    const ex = s.projects.find((x) => x.borrador);
+    if (ex) { s.activeId = ex.id; return s; }
     const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id;
     return s;
   });
-  // Guardar: fija el proyecto actual (deja de ser borrador), limpia la Calculadora
-  // con un borrador nuevo y te lleva a Proyectos.
+  // Descartar explícitamente el borrador en curso y abrir uno en blanco (con confirmación).
+  const descartarBorrador = () => { update((s) => { s.projects = s.projects.filter((x) => !x.borrador); const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id; return s; }); setConfirmDescartar(false); setToast("Borrador descartado"); };
+  // Guardar: congela la foto de Reglas del proyecto activo. Si era un BORRADOR, lo
+  // "gradúa" y abre uno nuevo en blanco. Si ya era un proyecto guardado (re-guardar),
+  // solo re-congela y NO toca tu borrador de trabajo. En ningún caso se pierde el borrador.
   const guardarYNuevo = () => {
-    const nombre = (st.projects.find((x) => x.id === st.activeId)?.nombre || "El proyecto").trim();
+    const cur0 = st.projects.find((x) => x.id === st.activeId);
+    const eraBorrador = !!cur0?.borrador;
+    const nombre = (cur0?.nombre || "El proyecto").trim();
     update((s) => {
       const cur = s.projects.find((x) => x.id === s.activeId);
-      // Congela la foto de las Reglas de dinero al guardar: desde ya, mover perillas en
-      // Reglas para otro proyecto NO recalcula este. Re-guardar re-congela con las de hoy.
       if (cur) { cur.borrador = false; cur.reglas = { ...s.params }; }
-      s.projects = s.projects.filter((x) => !x.borrador);
-      const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id;
+      if (eraBorrador) { const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id; }
       return s;
     });
-    setToast(`“${nombre}” guardado`);
+    setToast(eraBorrador ? `“${nombre}” guardado` : `“${nombre}” actualizado`);
     setSec("proyectos");
   };
   if (!active) return (
@@ -761,14 +769,18 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   );
   // Borrador → params vivos (afinas mientras armas). Guardado → su foto congelada.
   const P = reglasDe(active, st.params), r = compute(membersResolved(active, st.roster, P), P), t = r.t || 1;
-  // Lo que REALMENTE aterriza en la Masa salarial: la bolsa menos el "sombrero de
-  // socio" (disc), que no se queda en el equipo sino que se va a la Banca. Sumar la
-  // bolsa completa aquí Y la Banca aparte cuenta el disc dos veces → la barra no
-  // cuadraba con el ingreso (bug reportado por Balmo). Incluye el bono del Núcleo
-  // (poolAmt) para que Equipo+Caja+Banca+socios == ingreso exacto.
-  const equipoTot = r.bolsaOut - r.disc + r.comisPaid + r.poolAmt;
+  // "Equipo" = lo que REALMENTE aterriza en la Masa salarial por trabajar: la bolsa
+  // menos el "sombrero de socio" (disc), que no se queda en el equipo sino que se va a
+  // la Banca. Este mismo número (bolsaOut − disc) se usa en "El desglose" para que el %
+  // del equipo COINCIDA en las dos vistas (antes barra=35% vs desglose=41%, bug de Balmo).
+  // Comisión y bono del Núcleo se pintan como franjas propias (no dentro de Equipo) para
+  // que barra y desglose sean idénticas franja por franja. Todo suma el ingreso exacto.
+  const equipoNeto = r.bolsaOut - r.disc;
   const segs = [
-    { k: "Equipo", v: equipoTot, c: "--c-equipo" }, { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
+    { k: "Equipo", v: equipoNeto, c: "--c-equipo" },
+    { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
+    { k: "Bono Núcleo", v: r.poolAmt, c: "--c-reserva" },
+    { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
     { k: "Banca", v: r.banca, c: "--c-banca" }, { k: P.nombreA, v: r.sAutil, c: "--c-andres" }, { k: P.nombreB, v: r.sButil, c: "--c-balmo" },
   ].filter((s) => s.v > 0.5);
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
@@ -830,9 +842,15 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <input type="text" value={active.nombre} placeholder="Nombre del proyecto" onChange={(e) => updateActive((p) => { p.nombre = e.target.value; })} />
         </div>
         <div className="pb-actions">
-          <button className="btn" title="Empieza un proyecto nuevo en blanco" onClick={nuevoBorrador}><Plus size={15} /> Nuevo</button>
-          <button className="btn danger" title="Borra el proyecto abierto" onClick={() => update((s) => { s.projects = s.projects.filter((x) => x.id !== s.activeId); s.activeId = s.projects[0]?.id || ""; return s; })}>Borrar</button>
-          <button className="btn primary" title="Guarda este proyecto y deja la Calculadora lista para el siguiente" onClick={guardarYNuevo}>Guardar proyecto <ArrowRight size={15} /></button>
+          <button className="btn" title="Empieza (o continúa) un borrador sin guardar" onClick={nuevoBorrador}><Plus size={15} /> Nuevo</button>
+          {active.borrador ? (
+            confirmDescartar
+              ? <span className="pcard-delc">¿Descartar borrador? <button className="btn danger" onClick={descartarBorrador}>Sí</button><button className="btn ghost" onClick={() => setConfirmDescartar(false)}>No</button></span>
+              : <button className="btn danger" title="Descarta este borrador y abre uno en blanco" onClick={() => setConfirmDescartar(true)}>Descartar</button>
+          ) : (
+            <button className="btn danger" title="Borra el proyecto abierto" onClick={() => update((s) => { s.projects = s.projects.filter((x) => x.id !== s.activeId); s.activeId = s.projects[0]?.id || ""; return s; })}>Borrar</button>
+          )}
+          <button className="btn primary" title={active.borrador ? "Guarda este proyecto y deja la Calculadora lista para el siguiente" : "Re-guarda este proyecto (congela sus reglas con las de hoy)"} onClick={guardarYNuevo}>{active.borrador ? <>Guardar proyecto <ArrowRight size={15} /></> : <>Actualizar <ArrowRight size={15} /></>}</button>
         </div>
         <label className="pb-month">
           <input type="checkbox" checked={active.inMonth} onChange={(e) => updateActive((p) => { p.inMonth = e.target.checked; })} /> Cuenta en el mes
@@ -873,7 +891,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                       <div className="iva-row muted"><span>IVA (16%) {conIVA ? "· de Hacienda, no se reparte" : ""}</span><span>{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b>{fmtMXN(total)}</b></div>
                     </div>
-                    <p className="hint" style={{ marginTop: 8 }}>De la base, al equipo le toca <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}.</p>
+                    <p className="hint" style={{ marginTop: 8 }}>Bolsa <b>bruta</b> del equipo: <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. De ahí, el sombrero de socio pasa a la Banca; lo <b>neto</b> al equipo se ve en “A dónde va cada peso” y “El desglose”.</p>
                   </div>
                 </>
               );
@@ -889,7 +907,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               </div>
               <p className="hint" style={{ marginTop: 6 }}>{(active.modoCobro ?? "golpe") === "mensual" && (active.plazoMeses ?? 1) > 1 ? <>~{fmtMXN(totalCliente(active) / (active.plazoMeses || 1))}/mes durante {active.plazoMeses} meses.</> : "Todo en uno o dos pagos."}</p>
             </div>
-            <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPreset[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
+            <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
             <div className="field"><label>¿Quién trajo este cliente? <span className="tip" data-tip="Decide quién se lleva la comisión (10% del margen) por CONSEGUIR al cliente. No cambia lo que paga el cliente, solo a dónde va ese 10%."><Info /></span></label>
               <div className="chips">
                 <button className="chip-btn" aria-pressed={(active.origen || "empresa") === "empresa"} onClick={() => updateActive((p) => { p.origen = "empresa"; })}>La marca</button>
@@ -960,14 +978,27 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           </div>
           <div className="two">
             <div className="card"><h2>El desglose</h2>
-              {bd("", "Ingreso del proyecto", r.t)}{bd("sub", `− Equipo (${pctFmt(r.bolsaOut / (r.t || 1))} de este proyecto)`, -r.bolsaOut)}
+              {bd("", "Ingreso del proyecto", r.t)}{bd("sub", `− Equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))} de este proyecto)`, -(r.bolsaOut - r.disc))}
+              {r.disc > 0.5 && bd("sub", "− Sombrero de socio → Banca", -r.disc)}
               {r.comis > 0 && bd("sub", `− Comisión de origen ${r.comisBanca > 0 ? "→ Banca" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
               {bd("sub", "− Caja del proyecto", -r.cajaProj)}{bd("eq", "CURVA se queda", r.marginOp)}{bd("sub", "− Caja de ahorro", -r.cajaAhorro)}
               {r.poolAmt > 0 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
               {bd("strong", "Utilidad a repartir", r.utilKept)}{bd("sub", `→ ${P.nombreA} ${P.split}%`, r.sAutil)}{bd("sub", `→ ${P.nombreB} ${100 - P.split}%`, r.sButil)}
             </div>
             <div className="stackcol">
-              <div className="card"><h2>Cuánto cobra cada quien</h2><Rank rows={rows} /></div>
+              <div className="card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <h2 style={{ margin: 0 }}>Cuánto cobra cada quien</h2>
+                  {(active.plazoMeses ?? 1) >= 2 && (
+                    <div className="chips">
+                      <button className="chip-btn sm" aria-pressed={vistaCobro === "total"} onClick={() => setVistaCobro("total")}>Total</button>
+                      <button className="chip-btn sm" aria-pressed={vistaCobro === "mes"} onClick={() => setVistaCobro("mes")}>Por mes</button>
+                    </div>
+                  )}
+                </div>
+                <Rank rows={rows} />
+                {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver el reparto mensual (mes 1…{active.plazoMeses}) aquí abajo.</p>}
+              </div>
               <div className="card"><h2>Salud del ticket</h2>
                 <div className="health">
                   <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
@@ -980,7 +1011,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           </div>
         </div>
       </div>
-      <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />
+      {vistaCobro === "mes" && <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />}
     </>
   );
 }
@@ -989,7 +1020,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
 function Proyectos({ st, update, setActive }: { st: State; update: (fn: (s: State) => State) => void; setActive: (id: string) => void }) {
   const [open, setOpen] = useState<string | null>(st.activeId);
   const visibles = st.projects.filter((p) => !p.borrador);   // los borradores viven solo en la Calculadora
-  const nuevo = () => { const nb = makeDraft(st.projects); update((s) => { s.projects = s.projects.filter((x) => !x.borrador); s.projects.push(nb); return s; }); setActive(nb.id); };
+  // Si ya hay un borrador en curso, contínualo (no lo perdemos); si no, crea uno en blanco.
+  const nuevo = () => { const ex = st.projects.find((x) => x.borrador); if (ex) { setActive(ex.id); return; } const nb = makeDraft(st.projects); update((s) => { s.projects.push(nb); return s; }); setActive(nb.id); };
   return (
     <>
       <div className="page-h"><div><h1>Proyectos</h1><p>Registra cada pago que entra y te digo cuánto mandar a cada caja.</p></div><button className="btn primary" onClick={nuevo}><Plus size={15} /> Nuevo</button></div>
@@ -1013,6 +1045,7 @@ function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: 
 }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [reglasOpen, setReglasOpen] = useState(false);
   const [exported, setExported] = useState<Set<string>>(new Set()); // PDFs ya generados en esta sesión
   const R = reglasDe(p, params);   // foto congelada si está guardado; params vivos si no
   const pr = membersResolved(p, roster, R);
@@ -1063,6 +1096,7 @@ function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: 
             <button className="btn ghost" onClick={() => setActive(p.id)}><Calculator size={14} /> Editar</button>
             <button className="btn ghost" onClick={() => setPdfOpen(true)}><FileText size={14} /> PDF de reparto</button>
             <button className="btn ghost" onClick={() => window.open("/pdf/banco?proyecto=" + p.id, "_blank")}><Wallet size={14} /> Datos para cobro</button>
+            <button className="btn ghost" onClick={() => setReglasOpen(true)}><SlidersHorizontal size={14} /> Ver reglas</button>
             <div className="est-chips">
               {(["cotizacion", "activo", "cerrado", "cancelado"] as EstadoProyecto[]).map((e) => (
                 <button key={e} className="chip-btn sm" aria-pressed={estado === e} onClick={() => upP((x) => { x.estado = e; })}>{ESTADO_LABEL[e]}</button>
@@ -1114,6 +1148,50 @@ function ProyectoCard({ p, params, roster, open, onToggle, update, setActive }: 
           </div>
         </div>
       )}
+
+      {reglasOpen && (() => {
+        const filas: [string, string][] = [
+          ["Sombrero de socio (α)", `${R.alpha}%`],
+          ["Reparto socios", `${R.nombreA} ${R.split}% · ${R.nombreB} ${100 - R.split}%`],
+          ["Caja de ahorro", `${R.ahorro}%`],
+          ["Barrido a Banca (β)", `${R.beta}%`],
+          ["ISR reservado", `${R.imp}%`],
+          ["Bono del Núcleo", `${R.pool}%`],
+          ["Comisión de origen", `${R.comisPct}% (tope ${fmtMXN(R.comisTope)})`],
+          ["Pesos de rol", `Piloto ${R.pesoP} · Especialista ${R.pesoE} · Apoyo ${R.pesoA}`],
+          ["Seniority de un nuevo", `×${R.smNuevo}`],
+          ["Meta de la Banca", fmtMXN(R.metaBancaMonto)],
+          ["Caja de ESTE proyecto", `${p.cajaPct}%`],
+        ];
+        const tramos = [
+          `Hasta ${fmtMXN(R.umbral1)} → ${R.brkChico}%`,
+          `${fmtMXN(R.umbral1)}–${fmtMXN(R.umbral2)} → ${R.brkMediano}%`,
+          `${fmtMXN(R.umbral2)}–${fmtMXN(R.umbral3)} → ${R.brkGrande}%`,
+          `Más de ${fmtMXN(R.umbral3)} → ${R.brkTope}%`,
+        ];
+        return (
+          <div className="pdf-modal-bg" onClick={() => setReglasOpen(false)}>
+            <div className="pdf-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="pdf-modal-h">
+                <div><b>Reglas de {p.nombre}</b><div className="hint" style={{ margin: "2px 0 0" }}>{p.reglas ? "Parámetros congelados al guardar este proyecto. Solo lectura." : "Este proyecto aún usa las reglas actuales (sin foto congelada)."}</div></div>
+                <button className="rmv" onClick={() => setReglasOpen(false)}>×</button>
+              </div>
+              <div style={{ display: "grid", gap: 6, fontSize: 14 }}>
+                {filas.map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid var(--border)", paddingBottom: 5 }}>
+                    <span style={{ opacity: 0.75 }}>{k}</span>
+                    <span style={{ fontFamily: "var(--mono)", fontWeight: 700, textAlign: "right" }}>{v}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ opacity: 0.75, marginBottom: 4 }}>% de equipo por tramos (marginal):</div>
+                  <div style={{ display: "grid", gap: 3 }}>{tramos.map((t, i) => <div key={i} style={{ fontFamily: "var(--mono)", fontSize: 13 }}>{t}</div>)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1547,6 +1625,7 @@ const numInput: CSSProperties = { flex: 1.3, textAlign: "right", fontFamily: "va
 function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => State) => void }) {
   const P = st.params;
   const [confirmReset, setConfirmReset] = useState(false);
+  const [ticketEj, setTicketEj] = useState(100000); // ticket de ejemplo para explicar los tramos
   // ¿Hay algo cambiado respecto a los valores por defecto? (para avisar y habilitar el reset)
   const modificado = (Object.keys(REGLAS_DEFAULT) as (keyof Reglas)[]).some((k) => P[k] !== REGLAS_DEFAULT[k]);
   const doReset = () => { update((s) => { s.params = { ...REGLAS_DEFAULT }; return s; }); setConfirmReset(false); };
@@ -1634,6 +1713,50 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
             {money("umbral1", "Umbral 1")}
             {money("umbral2", "Umbral 2")}
             {money("umbral3", "Umbral 3")}
+          </div>
+        </div>
+        {(() => {
+          const tramos = baseBolsaDesglose(ticketEj, P);
+          const bolsaEj = tramos.reduce((a, x) => a + x.aporte, 0);
+          const nombres = ["chico", "mediano", "grande", "muy grande"];
+          return (
+            <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+              <div className="field" style={{ ...rowStyle, marginBottom: 8 }}>
+                <label style={{ margin: 0, flex: 1 }}>Pruébalo con un ticket de ejemplo</label>
+                <div className="money-in" style={{ flex: 1.3 }}><span>$</span><input type="number" min={0} step={5000} value={ticketEj} onChange={(e) => setTicketEj(Math.max(0, +e.target.value || 0))} /></div>
+              </div>
+              <div className="stack">
+                {tramos.filter((x) => x.aporte > 0.5).map((x) => (
+                  <div key={x.i} className="seg" title={`Tramo ${nombres[x.i]} · ${x.pct}% · ${fmtMXN(x.aporte)}`} style={{ flex: `0 0 ${x.aporte / (bolsaEj || 1) * 100}%`, background: x.activo ? "var(--c-equipo)" : "var(--border)" }} />
+                ))}
+              </div>
+              <div style={{ fontSize: 13, marginTop: 8, display: "grid", gap: 3 }}>
+                {tramos.map((x) => (
+                  <div key={x.i} style={{ display: "flex", justifyContent: "space-between", opacity: x.activo ? 1 : 0.4 }}>
+                    <span>{x.activo ? "✓" : "—"} Tramo {nombres[x.i]} ({x.pct}%){x.hasta === Infinity ? ` · > ${fmtMXN(x.desde)}` : ` · ${fmtMXN(x.desde)}–${fmtMXN(x.hasta)}`}</span>
+                    <span style={{ fontFamily: "var(--mono)", fontWeight: 700 }}>{x.activo ? fmtMXN(x.aporte) : "no aplica"}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 4, fontWeight: 700 }}>
+                  <span>Bolsa del equipo para {fmtMXN(ticketEj)}</span>
+                  <span style={{ fontFamily: "var(--mono)", color: "var(--cobalt)" }}>{fmtMXN(bolsaEj)} · {pctFmt(bolsaEj / (ticketEj || 1))}</span>
+                </div>
+              </div>
+              <p className="hint" style={{ marginTop: 8 }}>Estás moviendo <b>tramos</b>, no el ticket. Para un ticket de {fmtMXN(ticketEj)} solo aplican los tramos marcados ✓ (hasta donde llega el ticket). Mover un tramo que dice “no aplica” <b>no cambia nada</b> para este ticket — por eso a veces parece que una barrita no hace nada.</p>
+            </div>
+          );
+        })()}
+      </div>
+
+      <div className="card"><h2>Caja del proyecto — % por defecto según el tipo</h2>
+        <p className="hint" style={{ marginTop: 0 }}>El % del ingreso que se aparta para gastos del proyecto (viáticos, comidas, etc.). Esto es el <b>default</b> al elegir el tipo; en cada proyecto puedes ajustarlo con su slider en la Calculadora.</p>
+        <div className="two" style={{ marginTop: 4 }}>
+          <div>
+            {pct("cajaTrazo", "Trazo", 0, 25)}
+            {pct("cajaTrayectoria", "Trayectoria", 0, 25)}
+          </div>
+          <div>
+            {pct("cajaAlianza", "Alianza", 0, 25)}
           </div>
         </div>
       </div>
