@@ -43,12 +43,18 @@ export default function RecursosPage() {
 
   const add = async () => {
     const clean = normalizeUrl(url);
-    if (!title.trim() || !clean || saving) return;
+    // El link es lo único obligatorio: si no pones nombre, usamos el dominio (ej. "figma.com").
+    // Antes se exigía nombre Y link, así que pegar solo un link "no guardaba nada".
+    if (!clean || saving) return;
     const sb = getSupabase();
-    if (!sb || !uid) return;
+    if (!sb) { toast("El espacio de recursos aún no está disponible.", { tone: "error" }); return; }
+    // Los usuarios de "acceso rápido" no tienen sesión real → antes el guardado hacía un
+    // return silencioso (el link "se perdía" sin avisar). Ahora lo decimos claro.
+    if (!uid) { toast("Entra con tu correo (no con el acceso rápido) para guardar recursos.", { tone: "error" }); return; }
     setSaving(true);
     try {
-      const { error } = await sb.from("resources").insert({ title: title.trim(), url: clean, kind: "link", added_by: uid });
+      const finalTitle = title.trim() || hostOf(clean);
+      const { error } = await sb.from("resources").insert({ title: finalTitle, url: clean, kind: "link", added_by: uid });
       if (error) { toast("No se pudo agregar: " + error.message, { tone: "error" }); return; }
       setTitle(""); setUrl("");
       await load();
@@ -78,7 +84,8 @@ export default function RecursosPage() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={title} onChange={(e) => setTitle(e.target.value)}
-            placeholder="Nombre (ej. Brand book de Curva)"
+            onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+            placeholder="Nombre (opcional, ej. Brand book de Curva)"
             className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3.5 py-2.5 text-sm text-fg placeholder:text-muted focus-ring"
           />
           <input
@@ -89,7 +96,7 @@ export default function RecursosPage() {
           />
           <button
             onClick={add}
-            disabled={saving || !title.trim() || !url.trim()}
+            disabled={saving || !url.trim()}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-control bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Agregar
