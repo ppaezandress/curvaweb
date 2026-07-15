@@ -3,6 +3,7 @@
 // Lo consumen el drawer "Tu día" (vistazo) y la página /dia (análisis profundo).
 import type { TimeRecord } from "@/lib/notion/fetchers";
 import type { Task, Project, Client, TaskType } from "@/lib/mock-data";
+import { dueDateMs } from "@/lib/date";
 
 export type LocalEntry = {
   id: string;
@@ -188,8 +189,11 @@ export function analyzeDay(
   const dayEnd = input.dayStart + 86_400_000;
   const touched = new Set(sessions.map((s) => s.taskId).filter(Boolean));
   const dueToday = Object.values(maps.taskById).filter((t) => {
-    if (!t.dueDate) return false;
-    const d = new Date(t.dueDate).getTime();
+    // `new Date("2026-07-15")` se interpreta como UTC → en México (UTC-6) se corría un día
+    // atrás y una tarea que vence HOY caía fuera del rango. `dueDateMs` la parsea como fecha
+    // local (igual que el resto de la app), así el conteo cuadra con Notion.
+    const d = dueDateMs(t.dueDate);
+    if (d == null) return false;
     return d >= input.dayStart && d < dayEnd;
   });
   const dueTouched = dueToday.filter((t) => touched.has(t.id)).length;
