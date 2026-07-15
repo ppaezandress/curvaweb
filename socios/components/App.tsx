@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, Fragment, type CSSProperties 
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange,
+  Scale, CalendarRange, Users,
 } from "lucide-react";
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
@@ -168,6 +168,7 @@ const NAV = [
   { k: "calculadora", label: "Calculadora", Icon: Calculator },
   { k: "proyectos", label: "Proyectos", Icon: FolderKanban },
   { k: "mimes", label: "Mi mes", Icon: Scale },
+  { k: "personas", label: "Personas", Icon: Users },
   { k: "cajas", label: "Cajas", Icon: Wallet },
   { k: "facturas", label: "Facturas", Icon: Receipt },
   { k: "reglas", label: "Reglas", Icon: SlidersHorizontal },
@@ -352,6 +353,7 @@ export default function App() {
         {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} />}
         {sec === "proyectos" && <Proyectos st={st} update={update} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
         {sec === "mimes" && <MiMes st={st} setSec={setSec} />}
+        {sec === "personas" && <Personas st={st} />}
         {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} />}
         {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
         {sec === "reglas" && <ReglasView st={st} update={update} />}
@@ -596,6 +598,98 @@ function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
   );
 }
 type ReparteMesLite = { personas: ReparteMes["personas"] };
+
+/* ---------------- Personas (dashboard por persona) ----------------
+   El detalle de cada socio y de cada persona del Núcleo: cuánto gana sumando TODOS
+   los proyectos vivos, desglosado por proyecto y pronosticado por mes. Reusa
+   repartoPorMes (Método A) + fechaInicio para el calendario. */
+type AggPersona = { nombre: string; quien: Quien; total: number; neto: number; byProject: Record<string, number>; byMonth: Record<string, number> };
+function Personas({ st }: { st: State }) {
+  const P = st.params;
+  const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
+  const agg: Record<string, AggPersona> = {};
+  vivos.forEach((p) => {
+    const R = reglasDe(p, P);
+    const rm = repartoPorMes(membersResolved(p, st.roster, R), R);
+    const inicio = p.fechaInicio || todayISO();
+    rm.forEach((mm) => {
+      const ym = addMonths(inicio, mm.mes - 1);
+      Object.values(mm.personas).forEach((pe) => {
+        const bruto = pe.trabajo + pe.extra + pe.comision;
+        if (bruto <= 0.5) return;
+        const k = pe.nombre + "|" + pe.quien;
+        const a = (agg[k] = agg[k] || { nombre: pe.nombre, quien: pe.quien, total: 0, neto: 0, byProject: {}, byMonth: {} });
+        a.total += bruto; a.neto += pe.neto;
+        a.byProject[p.nombre] = (a.byProject[p.nombre] || 0) + bruto;
+        a.byMonth[ym] = (a.byMonth[ym] || 0) + bruto;
+      });
+    });
+  });
+  const rows = Object.values(agg).sort((a, b) => b.total - a.total || order[a.quien] - order[b.quien]);
+  const [selK, setSelK] = useState<string>("");
+  const sel = rows.find((r) => r.nombre + "|" + r.quien === selK) || rows[0];
+  const meses = sel ? Object.keys(sel.byMonth).sort() : [];
+  const maxMes = Math.max(1, ...meses.map((m) => sel!.byMonth[m]));
+  const proyectos = sel ? Object.entries(sel.byProject).sort((a, b) => b[1] - a[1]) : [];
+  const maxProj = Math.max(1, ...proyectos.map(([, v]) => v));
+
+  return (
+    <>
+      <div className="page-h"><div><h1>Personas</h1><p>El detalle de cada persona: cuánto gana sumando <b>todos</b> los proyectos vivos, por proyecto y pronosticado por mes.</p></div></div>
+      {rows.length === 0 ? (
+        <div className="card"><p className="hint" style={{ margin: 0 }}>No hay proyectos vivos con reparto todavía. Arma uno en la Calculadora y guárdalo.</p></div>
+      ) : (
+        <div className="two">
+          <div className="card" style={{ alignSelf: "start" }}>
+            <h2 style={{ marginTop: 0 }}>Quién</h2>
+            <div style={{ display: "grid", gap: 4 }}>
+              {rows.map((r) => {
+                const k = r.nombre + "|" + r.quien;
+                const on = sel && r.nombre + "|" + r.quien === (sel.nombre + "|" + sel.quien);
+                return (
+                  <button key={k} onClick={() => setSelK(k)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, width: "100%", textAlign: "left", cursor: "pointer", padding: "8px 10px", borderRadius: 10, border: "1px solid " + (on ? "var(--cobalt)" : "var(--border)"), background: on ? "var(--glass)" : "transparent" }}>
+                    <span><b>{r.nombre}</b> <span className={"badge " + badgeCls[r.quien]}>{badgeTxt[r.quien]}</span></span>
+                    <span style={{ fontFamily: "var(--mono)", fontWeight: 700 }}>{fmtMXN(r.total)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {sel && (
+            <div className="stackcol">
+              <div className="tiles">
+                <Tile k="k-a" l={`${sel.nombre} · total`} v={fmtMXN(sel.total)} p="bruto, todos los proyectos" tip="Todo lo que gana esta persona sumando cada proyecto vivo (antes de ISR)." />
+                <Tile k="k-curva" l="Neto estimado" v={fmtMXN(sel.neto)} p={`después de ISR (${pctFmt((P.imp || 0) / 100)})`} tip="Lo que le queda tras apartar el ISR reservado en Reglas." />
+              </div>
+              <div className="card">
+                <h2>Por proyecto</h2>
+                {proyectos.map(([name, v]) => (
+                  <div key={name} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}><span>{name}</span><span style={{ fontFamily: "var(--mono)", fontWeight: 700 }}>{fmtMXN(v)}</span></div>
+                    <div className="pcard-prog"><i style={{ width: v / maxProj * 100 + "%" }} /></div>
+                  </div>
+                ))}
+              </div>
+              <div className="card">
+                <h2>Pronóstico por mes</h2>
+                <p className="hint" style={{ marginTop: 0 }}>Cuánto cobra {sel.nombre} cada mes según el plazo de cada proyecto (Método A).</p>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-end", height: 130, overflowX: "auto", paddingTop: 8 }}>
+                  {meses.map((m) => (
+                    <div key={m} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, minWidth: 62 }}>
+                      <div style={{ fontSize: 11, fontFamily: "var(--mono)", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtMXN(sel.byMonth[m])}</div>
+                      <div style={{ width: 30, height: Math.max(4, sel.byMonth[m] / maxMes * 84), background: "var(--grad)", borderRadius: 7 }} />
+                      <div style={{ fontSize: 11, opacity: 0.6 }}>{mesLabel(m)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 /* ---------------- Equipo por mes (agenda) ----------------
    Deja variar quién trabaja y con qué rol cada mes ("este mes piloteo yo, el que
