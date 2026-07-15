@@ -541,6 +541,13 @@ export default function MensajesPage() {
             <FolderOpen size={16} />
             {filesCount > 0 && <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">{filesCount}</span>}
           </button>
+          {/* Ajustes del canal: engranaje directo en el header (antes solo vivía escondido en
+              "···", por eso "no se podía editar el canal ya creado"). Creador o admin. */}
+          {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
+            <button onClick={() => setSettingsOpen(true)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-muted transition hover:border-accent hover:text-accent focus-ring" aria-label="Ajustes del canal" title="Ajustes del canal (renombrar, miembros, tema, fondo)">
+              <Settings size={16} />
+            </button>
+          )}
           {/* Overflow: acciones secundarias del canal */}
           <div className="relative">
             <button onClick={() => setMoreOpen((o) => !o)} className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition focus-ring", moreOpen || showSaved ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:border-accent hover:text-accent")} aria-label="Más opciones" title="Más">
@@ -556,11 +563,6 @@ export default function MensajesPage() {
                   <button onClick={() => { setShowSaved((s) => !s); setMoreOpen(false); }} className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-2 focus-ring">
                     <Bookmark size={15} className={showSaved ? "text-accent" : "text-muted"} fill={showSaved ? "currentColor" : "none"} /> {showSaved ? "Ver todos los mensajes" : "Mensajes guardados"}
                   </button>
-                  {activeChannel && activeChannel.kind !== "dm" && (activeChannel.created_by === myUid || isAdmin) && (
-                    <button onClick={() => { setSettingsOpen(true); setMoreOpen(false); }} className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm text-fg transition hover:bg-surface-2 focus-ring">
-                      <Settings size={15} className="text-muted" /> Ajustes del canal
-                    </button>
-                  )}
                 </div>
               </>
             )}
