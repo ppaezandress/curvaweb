@@ -1053,24 +1053,32 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               const incluido = modo === "incluido";
               const conIVA = modo !== "sin";
               const inputVal = incluido ? Math.round(active.ticket * (1 + IVA) * 100) / 100 : active.ticket;
-              const setModo = (m: "sin" | "mas" | "incluido") => updateActive((p) => { p.ivaModo = m; p.conIVA = m !== "sin"; });
+              // Al cambiar de botón, el NÚMERO que se ve en el campo se queda igual y solo
+              // se reinterpreta: "Descontar IVA" lo trata como total (saca la base ÷1.16);
+              // los otros lo tratan como base. Así el campo nunca "salta" al cambiar de modo.
+              const setModo = (m: "sin" | "mas" | "incluido") => updateActive((p) => {
+                const oldModo = p.ivaModo ?? (p.conIVA ? "mas" : "sin");
+                const visible = oldModo === "incluido" ? Math.round(p.ticket * (1 + IVA) * 100) / 100 : p.ticket;
+                p.ivaModo = m; p.conIVA = m !== "sin";
+                p.ticket = m === "incluido" ? Math.round(ticketSinIVA(visible) * 100) / 100 : visible;
+              });
               const onTicket = (v: number) => updateActive((p) => { p.ticket = incluido ? Math.round(ticketSinIVA(v) * 100) / 100 : v; });
               const base = active.ticket, iva = conIVA ? base * IVA : 0, total = base + iva;
               return (
                 <>
-                  <div className="field"><label>{incluido ? "Precio total (estos $ YA traen IVA)" : modo === "mas" ? "Precio del proyecto (antes de IVA)" : "Valor del proyecto"}</label>
+                  <div className="field"><label>Precio del proyecto <span className="tip" data-tip="Escribe el número una vez. El botón de abajo decide qué se hace con el IVA; el número se queda igual."><Info /></span></label>
                     <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
                   </div>
-                  <div className="field"><label>¿Este precio lleva IVA? <span className="tip" data-tip="Una sola pregunta. El modelo SIEMPRE reparte la base sin IVA; esto solo dice cómo tecleaste el número y si el cliente paga IVA."><Info /></span></label>
+                  <div className="field"><label>¿Qué hago con el IVA?</label>
                     <div className="chips">
                       <button className="chip-btn" aria-pressed={modo === "sin"} onClick={() => setModo("sin")}>Sin IVA</button>
                       <button className="chip-btn" aria-pressed={modo === "mas"} onClick={() => setModo("mas")}>+ IVA encima</button>
-                      <button className="chip-btn" aria-pressed={modo === "incluido"} onClick={() => setModo("incluido")}>Ya trae IVA</button>
+                      <button className="chip-btn" aria-pressed={modo === "incluido"} onClick={() => setModo("incluido")}>Descontar IVA</button>
                     </div>
                     <p className="hint" style={{ marginTop: 6, marginBottom: 8 }}>
-                      {modo === "sin" && "No facturas IVA. El precio que tecleas es lo que se reparte."}
-                      {modo === "mas" && "Tecleas el precio antes de IVA; al cliente se le suma 16% encima."}
-                      {incluido && "Estos $ ya incluyen IVA: la app le descuenta el 16%, reparte solo la base y aparta el IVA para Hacienda."}
+                      {modo === "sin" && "El precio que escribes no lleva IVA: se reparte tal cual y es lo que paga el cliente."}
+                      {modo === "mas" && "El precio que escribes es SIN IVA; al cliente se le suma 16% encima (se reparte la base)."}
+                      {incluido && "El precio que escribes YA trae IVA: la app le descuenta el 16% y reparte solo la base."}
                     </p>
                     <div className="iva-box">
                       <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}>{fmtMXN(base)}</b></div>
