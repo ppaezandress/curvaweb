@@ -1067,23 +1067,23 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               const base = active.ticket, iva = conIVA ? base * IVA : 0, total = base + iva;
               return (
                 <>
-                  <div className="field"><label>{incluido ? "Precio total del proyecto (con IVA)" : modo === "mas" ? "Precio del proyecto (antes de IVA)" : "Valor del proyecto"}</label>
+                  <div className="field"><label>{incluido ? "Precio total (estos $ YA traen IVA)" : modo === "mas" ? "Precio del proyecto (antes de IVA)" : "Valor del proyecto"}</label>
                     <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
                   </div>
                   <div className="field"><label>¿Este precio lleva IVA? <span className="tip" data-tip="Una sola pregunta. El modelo SIEMPRE reparte la base sin IVA; esto solo dice cómo tecleaste el número y si el cliente paga IVA."><Info /></span></label>
                     <div className="chips">
                       <button className="chip-btn" aria-pressed={modo === "sin"} onClick={() => setModo("sin")}>Sin IVA</button>
                       <button className="chip-btn" aria-pressed={modo === "mas"} onClick={() => setModo("mas")}>+ IVA encima</button>
-                      <button className="chip-btn" aria-pressed={modo === "incluido"} onClick={() => setModo("incluido")}>IVA incluido</button>
+                      <button className="chip-btn" aria-pressed={modo === "incluido"} onClick={() => setModo("incluido")}>Ya trae IVA</button>
                     </div>
                     <p className="hint" style={{ marginTop: 6, marginBottom: 8 }}>
                       {modo === "sin" && "No facturas IVA. El precio que tecleas es lo que se reparte."}
                       {modo === "mas" && "Tecleas el precio antes de IVA; al cliente se le suma 16% encima."}
-                      {incluido && "Tecleas el total que paga el cliente (ya con IVA); la app le quita el 16% para el reparto."}
+                      {incluido && "Estos $ ya incluyen IVA: la app le descuenta el 16%, reparte solo la base y aparta el IVA para Hacienda."}
                     </p>
                     <div className="iva-box">
                       <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}>{fmtMXN(base)}</b></div>
-                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? "· de Hacienda, no se reparte" : ""}</span><span>{fmtMXN(iva)}</span></div>
+                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? (incluido ? "· descontado del total, para Hacienda" : "· de Hacienda, no se reparte") : ""}</span><span>{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b>{fmtMXN(total)}</b></div>
                     </div>
                     <p className="hint" style={{ marginTop: 8 }}>Bolsa <b>bruta</b> del equipo: <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. De ahí, el sombrero de socio pasa a la Banca; lo <b>neto</b> al equipo se ve en “A dónde va cada peso” y “El desglose”.</p>
