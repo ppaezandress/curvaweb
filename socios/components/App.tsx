@@ -1160,7 +1160,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <div className="card">
             <h2>A dónde va cada peso del ingreso</h2>
             <div className="stack">{segs.map((s) => <div key={s.k} className="seg" title={`${s.k} ${fmtMXN(s.v)}`} style={{ flex: `0 0 ${s.v / totSeg * 100}%`, background: `var(${s.c})` }} />)}</div>
-            <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span className="lv">{fmtMXN(s.v)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
+            <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v)} className="lv num-anim">{fmtMXN(s.v)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
           </div>
           <div className="two">
             <div className="card"><h2>El desglose</h2>
@@ -2079,7 +2079,7 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
 
 /* ---------------- helpers UI ---------------- */
 function Tile({ k, l, v, p, tip }: { k: string; l: string; v: string; p?: string; tip?: string }) {
-  return <div className={"tile " + k}><div className="tl"><i />{l}{tip && <span className="tip" data-tip={tip} style={{ marginLeft: "auto" }}><Info /></span>}</div><div className="tv">{v}</div>{p && <div className="tp">{p}</div>}</div>;
+  return <div className={"tile " + k}><div className="tl"><i />{l}{tip && <span className="tip" data-tip={tip} style={{ marginLeft: "auto" }}><Info /></span>}</div><div className="tv"><span key={v} className="num-anim">{v}</span></div>{p && <div className="tp">{p}</div>}</div>;
 }
 function Rank({ rows }: { rows: { nombre: string; quien: Quien; trabajo: number; extra: number; comision?: number }[] }) {
   const totOf = (a: { trabajo: number; extra: number; comision?: number }) => a.trabajo + a.extra + (a.comision || 0);
@@ -2088,7 +2088,7 @@ function Rank({ rows }: { rows: { nombre: string; quien: Quien; trabajo: number;
   return <div className="rank">{rows.map((a, i) => { const base = a.trabajo + a.extra; const comis = a.comision || 0; const tot = base + comis; return (
     <div key={i} className="rk"><div className="who">{comis > 0.5 && <span className="comis-dot" title={`Incluye ${fmtMXN(comis)} de comisión por traer el proyecto`} />}<span className="nm">{a.nombre}</span><span className={"badge " + badgeCls[a.quien]}>{badgeTxt[a.quien]}</span></div>
       <div className="track">{base > 0.5 && <i style={{ width: Math.max(3, base / max * 100) + "%", background: `var(${roleColor[a.quien]})` }} />}{comis > 0.5 && <i className="seg-comis" title={`Comisión: ${fmtMXN(comis)}`} style={{ width: Math.max(3, comis / max * 100) + "%", background: "var(--c-caja)" }} />}</div>
-      <div className="amt">{fmtMXN(tot)}{comis > 0.5 && <span className="amt-comis">{fmtMXN(base)} + {fmtMXN(comis)}</span>}</div></div>); })}</div>;
+      <div className="amt"><span key={fmtMXN(tot)} className="num-anim">{fmtMXN(tot)}</span>{comis > 0.5 && <span className="amt-comis">{fmtMXN(base)} + {fmtMXN(comis)}</span>}</div></div>); })}</div>;
 }
 function Field({ l, v, strong }: { l: string; v: string; strong?: boolean }) {
   return <div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, marginBottom: 3 }}>{l}</div><div style={{ fontWeight: strong ? 700 : 500, fontFamily: strong ? "var(--mono)" : "var(--sans)", color: strong ? "var(--pos)" : "var(--ink)" }}>{v}</div></div>;

@@ -213,6 +213,12 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 /* ── Stack "a dónde va cada peso" ── */
 .stack{display:flex;height:34px;border-radius:9px;overflow:hidden;gap:3px;margin-bottom:18px}
 .seg{min-width:2px;border-radius:3px;transition:flex .5s var(--ease)}
+
+/* Pulso al cambiar un número: se remonta al cambiar su valor (key) y dispara esto.
+   Hace que la Calculadora se sienta "viva" — ves que el número reaccionó. */
+@keyframes numflash{0%{transform:scale(1.09);filter:brightness(1.4)}55%{filter:brightness(1.12)}100%{transform:scale(1);filter:none}}
+.num-anim{display:inline-block;animation:numflash .5s var(--ease)}
+@media(prefers-reduced-motion:reduce){.num-anim{animation:none}}
 .legend{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
 @media(max-width:560px){.legend{grid-template-columns:1fr}}
 .lg{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:9px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border)}
