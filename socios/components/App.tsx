@@ -432,7 +432,11 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
         const v = pe.trabajo + pe.extra + pe.comision;
         if (isSocio(pe.quien)) c.socios += v; else c.equipo += v;
       });
-      c.banca += mm.banca; c.caja += mm.cajaProyecto + mm.cajaAhorro;
+      // mm.banca YA incluye la caja de ahorro (reparto.ts: banca = cajaAhorro +
+      // disc + utilSwept + comisBanca), igual que el tile "A la Banca" del Panel.
+      // La columna "Caja" es SOLO la caja del proyecto — si aquí volviéramos a
+      // sumar cajaAhorro, el Total se inflaría y dejaría de cuadrar con el ingreso.
+      c.banca += mm.banca; c.caja += mm.cajaProyecto;
     });
   });
   // Gastos de proyecto en su mes (fecha); overhead fijo se aplica a cada mes con reparto.
@@ -442,7 +446,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
   const totalCorte = (c: CorteMes) => c.equipo + c.socios + c.banca + c.caja;
   const corteCols: [string, (c: CorteMes) => number][] = [
     ["Total", totalCorte], ["Equipo", (c) => c.equipo], ["Socios", (c) => c.socios],
-    ["Banca", (c) => c.banca], ["Cajas", (c) => c.caja], ["Gastos", (c) => c.gastos],
+    ["Banca", (c) => c.banca], ["Caja proy.", (c) => c.caja], ["Gastos", (c) => c.gastos],
   ];
 
   return (
