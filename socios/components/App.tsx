@@ -400,96 +400,108 @@ export default function App() {
 
 /* ---------------- Panel ---------------- */
 function Panel({ st, overhead, update }: { st: State; overhead: number; update: (fn: (s: State) => State) => void }) {
-  const inm = st.projects.filter((p) => p.inMonth && !p.borrador);
-  let fact = 0, banca = 0, utilKept = 0;
-  const ppl: Record<string, { nombre: string; quien: Quien; trabajo: number; extra: number; comision: number }> = {};
-  inm.forEach((p) => {
-    const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); fact += r.t; banca += r.banca; utilKept += r.sAutil + r.sButil;
-    Object.values(r.people).forEach((a) => { const k = a.nombre + "|" + a.quien; if (!ppl[k]) ppl[k] = { nombre: a.nombre, quien: a.quien, trabajo: 0, extra: 0, comision: 0 }; ppl[k].trabajo += a.trabajo; ppl[k].extra += a.extra; ppl[k].comision += a.comision || 0; });
-  });
-  const preTax = Math.max(0, utilKept - overhead), neto = preTax * (1 - st.params.imp / 100);
   const meta = metaBanca(st.params);
-  const rows = Object.values(ppl).filter((a) => a.trabajo + a.extra + a.comision > 0.5).sort((a, b) => (b.trabajo + b.extra + b.comision) - (a.trabajo + a.extra + a.comision) || order[a.quien] - order[b.quien]);
-  const alerts: [string, string][] = [];
-  if (banca < meta * 0.34) alerts.push(["warn", `La Banca del mes (${fmtMXN(banca)}) va corta para la meta del colchón (${fmtMXN(meta)}). Toma sombreros o sube la caja de ahorro.`]);
-  else if (banca < meta) alerts.push(["info", `La Banca va en ${Math.round(banca / (meta || 1) * 100)}% de la meta (${fmtMXN(meta)}). Vas bien.`]);
-  else alerts.push(["ok", "La Banca ya cubre la meta del colchón. Sano."]);
-  inm.forEach((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
-
-  // ── Proyección: reparto acumulado y flujo por mes (todos los proyectos vivos) ──
   const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
+
+  // ── Agregación por MES-CALENDARIO (PROYECTADO / Método A) sobre proyectos vivos ──
+  // Una sola pasada alimenta: tiles del mes, ranking del mes, flujo y Cortes. Todo
+  // "por mes" (devengado), sin mezclar bases de tiempo como antes.
+  type PplRow = { nombre: string; quien: Quien; trabajo: number; extra: number; comision: number };
+  type MesAgg = { equipo: number; socios: number; utilSocios: number; banca: number; caja: number; gastos: number; ppl: Record<string, PplRow>; proys: Set<string> };
+  const nuevoMes = (): MesAgg => ({ equipo: 0, socios: 0, utilSocios: 0, banca: 0, caja: 0, gastos: 0, ppl: {}, proys: new Set() });
+  const porMes: Record<string, MesAgg> = {};
+  vivos.forEach((p) => {
+    const R = reglasDe(p, st.params);
+    const rm = repartoPorMes(membersResolved(p, st.roster, R), R);
+    const inicio = p.fechaInicio || todayISO();
+    rm.forEach((mm) => {
+      const ym = addMonths(inicio, mm.mes - 1);
+      const Mm = (porMes[ym] = porMes[ym] || nuevoMes());
+      // mm.banca YA incluye la caja de ahorro; la caja es solo la del proyecto.
+      Mm.banca += mm.banca; Mm.caja += mm.cajaProyecto; Mm.proys.add(p.id);
+      Object.values(mm.personas).forEach((pe) => {
+        const v = pe.trabajo + pe.extra + pe.comision;
+        if (isSocio(pe.quien)) { Mm.socios += v; Mm.utilSocios += pe.extra; } else Mm.equipo += v;
+        const k = pe.nombre + "|" + pe.quien;
+        const a = (Mm.ppl[k] = Mm.ppl[k] || { nombre: pe.nombre, quien: pe.quien, trabajo: 0, extra: 0, comision: 0 });
+        a.trabajo += pe.trabajo; a.extra += pe.extra; a.comision += pe.comision;
+      });
+    });
+  });
+  // Gastos por mes: gastos de proyecto en su fecha + overhead fijo en cada mes activo.
+  st.gastos.filter((g) => g.proyectoId && !g.esIngreso).forEach((g) => { const ym = mesDe(g.fecha); if (ym && porMes[ym]) porMes[ym].gastos += +g.m || 0; });
+  Object.values(porMes).forEach((Mm) => { Mm.gastos += overhead; });
+
+  const allYM = Object.keys(porMes).sort();
+  const curYM = todayISO().slice(0, 7);
+  const [ymSel, setYmSel] = useState<string>("");
+  const selYM = allYM.includes(ymSel) ? ymSel : allYM.includes(curYM) ? curYM : (allYM[0] || curYM);
+  const M = porMes[selYM] || nuevoMes();
+  const ingresoMes = M.equipo + M.socios + M.banca + M.caja;
+  const netoMes = Math.max(0, M.utilSocios - overhead) * (1 - st.params.imp / 100);
+  const rows = Object.values(M.ppl).filter((a) => a.trabajo + a.extra + a.comision > 0.5).sort((a, b) => (b.trabajo + b.extra + b.comision) - (a.trabajo + a.extra + a.comision) || order[a.quien] - order[b.quien]);
+  const proysDelMes = vivos.filter((p) => M.proys.has(p.id));
+
+  const alerts: [string, string][] = [];
+  if (M.banca < meta * 0.34) alerts.push(["warn", `La Banca de ${mesLabel(selYM)} (${fmtMXN(M.banca)}) va corta para la meta mensual del colchón (${fmtMXN(meta)}).`]);
+  else if (M.banca < meta) alerts.push(["info", `La Banca de ${mesLabel(selYM)} va en ${Math.round(M.banca / (meta || 1) * 100)}% de la meta mensual (${fmtMXN(meta)}). Vas bien.`]);
+  else alerts.push(["ok", `La Banca de ${mesLabel(selYM)} ya cubre la meta del colchón. Sano.`]);
+  proysDelMes.forEach((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
+
+  // ── Proyección acumulada (todos los proyectos vivos, a valor completo) ──
   let sAndres = 0, sBalmo = 0, sEquipo = 0, sBancaAll = 0, sCobrado = 0, sTicket = 0;
-  const flujo: Record<string, number> = {};
   vivos.forEach((p) => {
     const rr = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params));
     sTicket += rr.t;
     sCobrado += (p.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0);
     sBancaAll += rr.banca;
     Object.values(rr.people).forEach((a) => {
-      const v = a.trabajo + a.extra + (a.comision || 0); // incluir comisión: si alguien del equipo trajo el cliente, esa comisión es suya
+      const v = a.trabajo + a.extra + (a.comision || 0);
       if (a.quien === "socioA") sAndres += v; else if (a.quien === "socioB") sBalmo += v; else sEquipo += v;
     });
-    // flujo temporal del ingreso (sin IVA)
-    const n = (p.modoCobro ?? "golpe") === "mensual" ? Math.max(1, p.plazoMeses ?? 1) : 1;
-    const per = rr.t / n;
-    for (let i = 0; i < n; i++) { const k = addMonths(p.fechaInicio || todayISO(), i); flujo[k] = (flujo[k] || 0) + per; }
   });
-  const meses = Object.keys(flujo).sort().slice(0, 9);
-  const maxFlujo = Math.max(1, ...meses.map((m) => flujo[m]));
   const porCobrar = Math.max(0, sTicket - sCobrado);
 
-  // ── Cortes mensuales: a dónde va cada peso, mes a mes (reparto Método A) + gastos ──
-  type CorteMes = { equipo: number; socios: number; banca: number; caja: number; gastos: number };
-  const cortes: Record<string, CorteMes> = {};
-  const ensureC = (ym: string) => (cortes[ym] = cortes[ym] || { equipo: 0, socios: 0, banca: 0, caja: 0, gastos: 0 });
-  vivos.forEach((p) => {
-    const R = reglasDe(p, st.params);
-    const rm = repartoPorMes(membersResolved(p, st.roster, R), R);
-    const inicio = p.fechaInicio || todayISO();
-    rm.forEach((mm) => {
-      const c = ensureC(addMonths(inicio, mm.mes - 1));
-      Object.values(mm.personas).forEach((pe) => {
-        const v = pe.trabajo + pe.extra + pe.comision;
-        if (isSocio(pe.quien)) c.socios += v; else c.equipo += v;
-      });
-      // mm.banca YA incluye la caja de ahorro (reparto.ts: banca = cajaAhorro +
-      // disc + utilSwept + comisBanca), igual que el tile "A la Banca" del Panel.
-      // La columna "Caja" es SOLO la caja del proyecto — si aquí volviéramos a
-      // sumar cajaAhorro, el Total se inflaría y dejaría de cuadrar con el ingreso.
-      c.banca += mm.banca; c.caja += mm.cajaProyecto;
-    });
-  });
-  // Gastos de proyecto en su mes (fecha); overhead fijo se aplica a cada mes con reparto.
-  st.gastos.filter((g) => g.proyectoId && !g.esIngreso).forEach((g) => { const ym = mesDe(g.fecha); if (ym && cortes[ym]) cortes[ym].gastos += +g.m || 0; });
-  const mesesCorte = Object.keys(cortes).sort().slice(0, 12);
-  mesesCorte.forEach((ym) => { cortes[ym].gastos += overhead; });
-  const totalCorte = (c: CorteMes) => c.equipo + c.socios + c.banca + c.caja;
-  const corteCols: [string, (c: CorteMes) => number][] = [
-    ["Total", totalCorte], ["Equipo", (c) => c.equipo], ["Socios", (c) => c.socios],
-    ["Banca", (c) => c.banca], ["Caja proy.", (c) => c.caja], ["Gastos", (c) => c.gastos],
+  // Flujo por mes (= ingreso del mes) y Cortes: derivados de porMes (todo devengado).
+  const flujoVal = (x: MesAgg) => x.equipo + x.socios + x.banca + x.caja;
+  const mesesFlujo = allYM.slice(0, 9);
+  const maxFlujo = Math.max(1, ...mesesFlujo.map((m) => flujoVal(porMes[m])));
+  const mesesCorte = allYM.slice(0, 12);
+  const corteCols: [string, (x: MesAgg) => number][] = [
+    ["Total", flujoVal], ["Equipo", (x) => x.equipo], ["Socios", (x) => x.socios],
+    ["Banca", (x) => x.banca], ["Caja proy.", (x) => x.caja], ["Gastos", (x) => x.gastos],
   ];
 
   return (
     <>
-      <div className="page-h"><div><h1>Panel</h1><p>El estado de CURVA este mes, de un vistazo.</p></div></div>
+      <div className="page-h"><div><h1>Panel</h1><p>El estado de CURVA, mes a mes. Elige el mes para ver sus números (proyectado según el plazo de cada proyecto).</p></div></div>
+      {allYM.length > 0 && (
+        <div className="proj-bar" style={{ flexWrap: "wrap" }}>
+          <div className="pb-group"><span className="pb-cap"><CalendarRange size={13} style={{ verticalAlign: -2 }} /> Mes</span>
+            <div className="chips">
+              {allYM.map((m) => <button key={m} className="chip-btn" aria-pressed={m === selYM} onClick={() => setYmSel(m)}>{mesLabel(m)}</button>)}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="tiles rise">
-        <Tile k="k-fact" l="Facturado del mes" v={fmtMXN(fact)} p={`${inm.length} proyecto${inm.length !== 1 ? "s" : ""}`} tip="Suma del valor (sin IVA) de los proyectos marcados como 'cuenta en el mes'." />
-        <Tile k="k-a" l="Utilidad bruta socios" v={fmtMXN(utilKept)} p="antes de gastos" tip="Lo que se reparten Andrés y Balmo juntos este mes, ANTES de restar gastos e impuestos." />
-        <Tile k="k-banca" l="A la Banca" v={fmtMXN(banca)} p="ahorro del mes" tip="Lo que se va al colchón de ahorro de CURVA este mes." />
-        <Tile k="k-neto" l="Utilidad NETA socios" v={fmtMXN(neto)} p="después de gastos e imp." tip="Lo que de verdad les queda a los socios: utilidad bruta − gastos (overhead) − impuesto aprox." />
+        <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · proyectado`} tip="Lo que los proyectos activos reparten en el mes elegido (equipo + socios + Banca + caja), según su plazo. Es proyectado (devengado), no lo cobrado." />
+        <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
+        <Tile k="k-banca" l="A la Banca del mes" v={fmtMXN(M.banca)} p="colchón" tip="Lo que va al colchón de CURVA en el mes elegido (caja de ahorro + sombrero de socio)." />
+        <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR aprox." />
       </div>
       <div className="two rise r2">
         <div className="card">
           <h2>Banca — colchón de CURVA</h2>
-          <div className="prog"><i style={{ width: Math.min(100, banca / (meta || 1) * 100) + "%" }} /></div>
-          <div className="prog-lbl"><span>Generado este mes: <b>{fmtMXN(banca)}</b></span><span>Meta del colchón: <b>{fmtMXN(meta)}</b></span></div>
-          <p className="foot">La Banca la alimentan el descuento del sombrero de socio y la caja de ahorro. Es el colchón de emergencia de CURVA y el trampolín para pasar a alguien a nómina. Meta: <b>{fmtMXN(meta)}</b>.</p>
+          <div className="prog"><i style={{ width: Math.min(100, M.banca / (meta || 1) * 100) + "%" }} /></div>
+          <div className="prog-lbl"><span>{mesLabel(selYM)}: <b>{fmtMXN(M.banca)}</b></span><span>Meta mensual: <b>{fmtMXN(meta)}</b></span></div>
+          <p className="foot">La Banca la alimentan el sombrero de socio y la caja de ahorro. Colchón de emergencia de CURVA y trampolín para pasar a alguien a nómina. Meta por mes: <b>{fmtMXN(meta)}</b>.</p>
         </div>
         <div className="card"><h2>Alertas</h2>{alerts.map((a, i) => <div key={i} className={"alert " + a[0]}>{a[1]}</div>)}</div>
       </div>
       <div className="two">
-        <div className="card"><h2>Proyectos del mes</h2>{inm.length ? inm.map((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); return (<div key={p.id} className="grow"><div><div className="gn">{p.nombre}</div><div className="gt">{p.tipo} · {p.members.length} pers.</div></div><div className="gv">{fmtMXN(r.t)}</div><div className="gm">margen {pctFmt(r.marginOp / (r.t || 1))}</div></div>); }) : <div className="hint">Ningún proyecto en el mes.</div>}</div>
-        <div className="card"><h2>Cuánto se lleva cada quien</h2><Rank rows={rows} /></div>
+        <div className="card"><h2>Proyectos de {mesLabel(selYM)}</h2>{proysDelMes.length ? proysDelMes.map((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); return (<div key={p.id} className="grow"><div><div className="gn">{p.nombre}</div><div className="gt">{p.tipo} · {p.members.length} pers.</div></div><div className="gv">{fmtMXN(r.t)}</div><div className="gm">margen {pctFmt(r.marginOp / (r.t || 1))}</div></div>); }) : <div className="hint">Ningún proyecto en este mes.</div>}</div>
+        <div className="card"><h2>Cuánto cobra cada quien en {mesLabel(selYM)}</h2><Rank rows={rows} /></div>
       </div>
 
       <div className="card rise r4">
@@ -502,18 +514,18 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
         <div className="prog-lbl" style={{ marginBottom: 4 }}><span>Cobrado: <b>{fmtMXN(sCobrado)}</b></span><span>Por cobrar: <b>{fmtMXN(porCobrar)}</b></span></div>
         <div className="prog"><i style={{ width: Math.min(100, sCobrado / (sTicket || 1) * 100) + "%" }} /></div>
         <h2 style={{ marginTop: 22 }}>Flujo de ingresos por mes</h2>
-        {meses.length ? (
+        {mesesFlujo.length ? (
           <div className="flow">
-            {meses.map((m) => (
+            {mesesFlujo.map((m) => (
               <div className="flow-col" key={m}>
-                <div className="flow-v">{fmtMXN(flujo[m])}</div>
-                <div className="flow-bar" style={{ height: Math.max(6, flujo[m] / maxFlujo * 96) + "px" }}><div className="flow-seg" style={{ height: "100%", background: "var(--grad)" }} /></div>
+                <div className="flow-v">{fmtMXN(flujoVal(porMes[m]))}</div>
+                <div className="flow-bar" style={{ height: Math.max(6, flujoVal(porMes[m]) / maxFlujo * 96) + "px" }}><div className="flow-seg" style={{ height: "100%", background: "var(--grad)" }} /></div>
                 <div className="flow-x">{mesLabel(m)}</div>
               </div>
             ))}
           </div>
         ) : <div className="hint">Agrega proyectos con fecha de inicio para ver el flujo.</div>}
-        <p className="foot">Reparte cada proyecto en el tiempo según su plazo y forma de cobro (mensual = dividido entre los meses; de golpe = todo en el mes de arranque). Ingresos sin IVA.</p>
+        <p className="foot">Cada proyecto se reparte en el tiempo según su plazo (Método A). Ingresos proyectados, sin IVA.</p>
       </div>
 
       {mesesCorte.length > 0 && (
@@ -527,7 +539,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
               {mesesCorte.flatMap((ym) => [
                 <div key={ym + "-m"} style={{ fontWeight: 700, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{mesLabel(ym)}</div>,
                 ...corteCols.map(([label, fn]) => (
-                  <div key={ym + "-" + label} style={{ textAlign: "right", fontFamily: "var(--mono)", fontWeight: label === "Total" ? 700 : 400, color: label === "Total" ? "var(--cobalt)" : label === "Gastos" ? "var(--c-caja)" : undefined, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{fmtMXN(fn(cortes[ym]))}</div>
+                  <div key={ym + "-" + label} style={{ textAlign: "right", fontFamily: "var(--mono)", fontWeight: label === "Total" ? 700 : 400, color: label === "Total" ? "var(--cobalt)" : label === "Gastos" ? "var(--c-caja)" : undefined, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{fmtMXN(fn(porMes[ym]))}</div>
                 )),
               ])}
             </div>
