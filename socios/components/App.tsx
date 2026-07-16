@@ -8,7 +8,7 @@ import {
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
   cajaLabel, CAJA_ORDER, isSocio,
-  repartoPorMes, ticketSinIVA, baseBolsaDesglose,
+  repartoPorMes, ticketSinIVA, baseBolsaDesglose, reglasDifierenDinero,
   REGLAS_DEFAULT, IVA, ROLNAME, type Proyecto, type Reglas, type Miembro, type Quien, type Pago, type ReparteMes,
   type EstadoProyecto, type Rol, type CajaKind, type CajaGrupo, type DatosBancarios,
 } from "@/lib/reparto";
@@ -854,7 +854,7 @@ function AgendaEditor({ active, st, P, updateActive }: {
 /* ---------------- Reparto mes a mes (dentro de la Calculadora) ----------------
    Cuando el proyecto dura >1 mes, muestra cuánto cobra cada persona CADA MES y su
    TOTAL del proyecto. Sin agenda = parejo (mismo cada mes); con agenda = varía. */
-function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
+function RepartoMensual({ pr, P, bare }: { pr: Proyecto; P: Reglas; bare?: boolean }) {
   const N = Math.max(1, pr.plazoMeses ?? 1);
   if (N < 2) return null;
   const meses = repartoPorMes(pr, P);
@@ -874,10 +874,9 @@ function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
   const totalPorMes = meses.map((_, idx) => rows.reduce((s, r) => s + r.porMes[idx], 0));
   const granTotal = rows.reduce((s, r) => s + r.total, 0);
   const varia = !!pr.agenda;
-  return (
-    <div className="card">
-      <h2>Cada quien, mes a mes</h2>
-      <p className="hint" style={{ marginTop: 0 }}>{varia ? "El equipo cambia por mes (agenda): esto es lo que cobra cada quien cada mes y su total del proyecto." : `Cobro parejo: cada quien cobra lo mismo los ${N} meses. Última columna = total del proyecto.`}</p>
+  const inner = (
+    <>
+      <p className="hint" style={{ marginTop: bare ? 8 : 0 }}>{varia ? "El equipo cambia por mes (agenda): esto es lo que cobra cada quien cada mes y su total del proyecto." : `Cobro parejo: cada quien cobra lo mismo los ${N} meses. Última columna = total del proyecto.`}</p>
       <div className="mes-matrix">
         <div className="mm-grid" style={{ gridTemplateColumns: `minmax(116px,1.3fr) repeat(${N}, minmax(76px,1fr)) minmax(94px,1fr)` }}>
           <div className="mm-h mm-name">Persona</div>
@@ -895,6 +894,14 @@ function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
           <div className="mm-num mm-foot mm-tot">{fmtMXN(granTotal)}</div>
         </div>
       </div>
+    </>
+  );
+  // bare = sin tarjeta propia (para incrustarlo dentro de "Cuánto cobra cada quien"
+  // cuando el toggle está en "Por mes"); si no, se dibuja como su propia tarjeta.
+  return bare ? inner : (
+    <div className="card">
+      <h2>Cada quien, mes a mes</h2>
+      {inner}
     </div>
   );
 }
@@ -942,7 +949,13 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
     </>
   );
   // Borrador → params vivos (afinas mientras armas). Guardado → su foto congelada.
-  const P = reglasDe(active, st.params), r = compute(membersResolved(active, st.roster, P), P), t = r.t || 1;
+  // La Calculadora es el banco de trabajo: SIEMPRE calcula con las Reglas VIVAS
+  // (st.params), para que mover un umbral/parámetro se refleje al instante. La foto
+  // congelada (pr.reglas) solo gobierna cómo se ve el proyecto en Panel/Proyectos/PDF;
+  // aquí, al "Actualizar", se recongela con las de ahora. Si el proyecto guardado activo
+  // tiene reglas distintas a las vivas, se muestra un aviso (reglasDivergen) abajo.
+  const P = st.params, r = compute(membersResolved(active, st.roster, P), P), t = r.t || 1;
+  const reglasDivergen = !active.borrador && !!active.reglas && reglasDifierenDinero(active.reglas, st.params);
   // "Equipo" = lo que REALMENTE aterriza en la Masa salarial por trabajar: la bolsa
   // menos el "sombrero de socio" (disc), que no se queda en el equipo sino que se va a
   // la Banca. Este mismo número (bolsaOut − disc) se usa en "El desglose" para que el %
@@ -1031,6 +1044,14 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <span className="tip" data-tip="Si está marcado, este proyecto suma en los totales del Panel de ESTE mes (facturado, utilidad, Banca). Desmárcalo si es de otro mes o aún no arranca."><Info /></span>
         </label>
       </div>
+
+      {reglasDivergen && (
+        <div className="alert warn" style={{ marginBottom: 12 }}>
+          Estás calculando con las <b>Reglas de ahora</b> (las cambiaste desde que guardaste este proyecto).
+          En el <b>Panel</b> y en <b>Proyectos</b> sigue congelado con las reglas de cuando lo guardaste;
+          pulsa <b>Actualizar</b> para recongelarlo con las de ahora.
+        </div>
+      )}
 
       <div className="grid rise">
         <div className="sidec">
@@ -1170,8 +1191,10 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                     </div>
                   )}
                 </div>
-                <Rank rows={rows} />
-                {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver el reparto mensual (mes 1…{active.plazoMeses}) aquí abajo.</p>}
+                {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "mes"
+                  ? <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} bare />
+                  : <Rank rows={rows} />}
+                {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver cuánto cobra cada quien mes por mes (mes 1…{active.plazoMeses}).</p>}
               </div>
               <div className="card"><h2>Salud del ticket</h2>
                 <div className="health">
@@ -1185,7 +1208,6 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           </div>
         </div>
       </div>
-      {vistaCobro === "mes" && <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />}
     </>
   );
 }

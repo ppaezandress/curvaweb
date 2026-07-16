@@ -132,6 +132,19 @@ export const metaBanca = (R: Reglas) => (+R.metaBancaMonto || 0);
 
 export const isSocio = (q: Quien) => q === "socioA" || q === "socioB";
 
+// Campos de DINERO de las Reglas (todo menos los nombres de los socios). Sirve para
+// detectar si un proyecto guardado se calcularía distinto con las Reglas VIVAS que con
+// su foto congelada — la Calculadora avisa cuando difieren para que quede claro que en
+// el Panel/Proyectos el proyecto conserva sus reglas de cuando se guardó.
+export const REGLAS_MONEY_KEYS: (keyof Reglas)[] = [
+  "alpha", "pool", "beta", "split", "ahorro", "imp", "comisPct", "comisTope",
+  "pesoP", "pesoE", "pesoA", "brkChico", "brkMediano", "brkGrande", "brkTope",
+  "umbral1", "umbral2", "umbral3", "smNuevo", "metaBancaMonto",
+  "cajaTrazo", "cajaTrayectoria", "cajaAlianza",
+];
+export const reglasDifierenDinero = (a: Reglas, b: Reglas): boolean =>
+  REGLAS_MONEY_KEYS.some((k) => (+a[k] || 0) !== (+b[k] || 0));
+
 // Bolsa base del equipo por tramos marginales, según los brackets/umbrales de las Reglas.
 export function baseBolsa(t: number, R: Reglas): number {
   const br: [number, number][] = [
