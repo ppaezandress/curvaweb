@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, Fragment, type CSSProperties } from "react";
+import { useEffect, useState, useCallback, useRef, type CSSProperties } from "react";
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
@@ -851,12 +851,14 @@ function AgendaEditor({ active, st, P, updateActive }: {
   );
 }
 
-/* ---------------- Reparto mes a mes (dentro de la Calculadora) ----------------
-   Cuando el proyecto dura >1 mes, muestra cuánto cobra cada persona CADA MES y su
-   TOTAL del proyecto. Sin agenda = parejo (mismo cada mes); con agenda = varía. */
-function RepartoMensual({ pr, P, bare }: { pr: Proyecto; P: Reglas; bare?: boolean }) {
+/* ---------------- Reparto mes a mes — carrusel por persona (en la Calculadora) ----
+   En "Por mes", cada persona sale en su propia tarjeta deslizable: cuánto gana AL MES
+   y cuánto EN TOTAL del proyecto (con el detalle mes a mes). Sin agenda = parejo (lo
+   mismo cada mes); con agenda = varía por mes. Los números salen de repartoPorMes
+   (Método A), así que Σ(meses) por persona == su total en compute(). */
+function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
+  const [i, setI] = useState(0);
   const N = Math.max(1, pr.plazoMeses ?? 1);
-  if (N < 2) return null;
   const meses = repartoPorMes(pr, P);
   const inicio = pr.fechaInicio || todayISO();
   type Row = { nombre: string; quien: Quien; total: number; porMes: number[] };
@@ -870,38 +872,27 @@ function RepartoMensual({ pr, P, bare }: { pr: Proyecto; P: Reglas; bare?: boole
     });
   });
   const rows = Object.values(map).filter((r) => r.total > 0.5).sort((a, b) => b.total - a.total || order[a.quien] - order[b.quien]);
-  if (!rows.length) return null;
-  const totalPorMes = meses.map((_, idx) => rows.reduce((s, r) => s + r.porMes[idx], 0));
-  const granTotal = rows.reduce((s, r) => s + r.total, 0);
+  if (N < 2 || !rows.length) return null;
+  const idx = Math.min(i, rows.length - 1);         // clamp: si cambia el equipo, no se sale
+  const rw = rows[idx];
+  const mesLabels = meses.map((mm) => mesLabel(addMonths(inicio, mm.mes - 1)));
   const varia = !!pr.agenda;
-  const inner = (
-    <>
-      <p className="hint" style={{ marginTop: bare ? 8 : 0 }}>{varia ? "El equipo cambia por mes (agenda): esto es lo que cobra cada quien cada mes y su total del proyecto." : `Cobro parejo: cada quien cobra lo mismo los ${N} meses. Última columna = total del proyecto.`}</p>
-      <div className="mes-matrix">
-        <div className="mm-grid" style={{ gridTemplateColumns: `minmax(116px,1.3fr) repeat(${N}, minmax(76px,1fr)) minmax(94px,1fr)` }}>
-          <div className="mm-h mm-name">Persona</div>
-          {meses.map((mm) => <div key={mm.mes} className="mm-h mm-num">{mesLabel(addMonths(inicio, mm.mes - 1))}</div>)}
-          <div className="mm-h mm-num mm-tot">Total</div>
-          {rows.map((rw, i) => (
-            <Fragment key={i}>
-              <div className="mm-name"><span className="nm">{rw.nombre}</span><span className={"badge " + badgeCls[rw.quien]}>{badgeTxt[rw.quien]}</span></div>
-              {rw.porMes.map((v, idx) => <div key={idx} className="mm-num">{fmtMXN(v)}</div>)}
-              <div className="mm-num mm-tot">{fmtMXN(rw.total)}</div>
-            </Fragment>
-          ))}
-          <div className="mm-name mm-foot">Total del mes</div>
-          {totalPorMes.map((v, idx) => <div key={idx} className="mm-num mm-foot">{fmtMXN(v)}</div>)}
-          <div className="mm-num mm-foot mm-tot">{fmtMXN(granTotal)}</div>
-        </div>
+  const prom = rw.total / N;
+  const go = (d: number) => setI((rows.length + idx + d) % rows.length);
+  return (
+    <div className="carr">
+      <div className="carr-nav">
+        <button className="carr-arrow" onClick={() => go(-1)} aria-label="Persona anterior">‹</button>
+        <div className="carr-who"><span className="nm">{rw.nombre}</span><span className={"badge " + badgeCls[rw.quien]}>{badgeTxt[rw.quien]}</span></div>
+        <button className="carr-arrow" onClick={() => go(1)} aria-label="Siguiente persona">›</button>
       </div>
-    </>
-  );
-  // bare = sin tarjeta propia (para incrustarlo dentro de "Cuánto cobra cada quien"
-  // cuando el toggle está en "Por mes"); si no, se dibuja como su propia tarjeta.
-  return bare ? inner : (
-    <div className="card">
-      <h2>Cada quien, mes a mes</h2>
-      {inner}
+      <div className="carr-total">{fmtMXN(rw.total)}<span>en total · {N} meses</span></div>
+      <div className="carr-sub">{varia ? "Varía por mes (agenda) — el detalle está abajo." : `≈ ${fmtMXN(prom)} al mes, parejo los ${N} meses.`}</div>
+      <div className="carr-months">
+        {rw.porMes.map((v, k) => <div key={k}><span className="mlbl">{mesLabels[k]}</span><b>{fmtMXN(v)}</b></div>)}
+      </div>
+      <div className="carr-dots">{rows.map((_, k) => <button key={k} aria-pressed={k === idx} onClick={() => setI(k)} aria-label={`Ver persona ${k + 1}`} />)}</div>
+      <div className="carr-count">Persona {idx + 1} de {rows.length} · desliza para ver a cada quien</div>
     </div>
   );
 }
@@ -1192,7 +1183,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   )}
                 </div>
                 {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "mes"
-                  ? <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} bare />
+                  ? <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />
                   : <Rank rows={rows} />}
                 {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver cuánto cobra cada quien mes por mes (mes 1…{active.plazoMeses}).</p>}
               </div>
