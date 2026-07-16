@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, type CSSProperties } from "react";
+import { useEffect, useState, useCallback, useRef, Component, type ReactNode, type CSSProperties } from "react";
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
@@ -109,7 +109,7 @@ function membersResolved(pr: Proyecto, roster: RosterPerson[], P: Reglas): Proye
   let agenda = pr.agenda;
   if (agenda) {
     const a2: Record<number, Miembro[]> = {};
-    for (const k of Object.keys(agenda)) a2[+k] = agenda[+k].map(resolve);
+    for (const k of Object.keys(agenda)) a2[+k] = (Array.isArray(agenda[+k]) ? agenda[+k] : []).map(resolve);
     agenda = a2;
   }
   return agenda ? { ...pr, members, agenda } : { ...pr, members };
@@ -188,6 +188,24 @@ const NAV = [
   { k: "facturas", label: "Facturas", Icon: Receipt },
   { k: "reglas", label: "Reglas", Icon: SlidersHorizontal },
 ] as const;
+
+// Red de seguridad: si una vista lanza una excepción en render (p. ej. un dato viejo
+// con forma rara), en vez de tumbar TODA la app (pantalla en blanco) mostramos un aviso
+// y dejamos recargar. Se resetea al cambiar de sección (key={sec} donde se usa).
+class ErrorBoundary extends Component<{ children: ReactNode }, { err: boolean }> {
+  constructor(props: { children: ReactNode }) { super(props); this.state = { err: false }; }
+  static getDerivedStateFromError() { return { err: true }; }
+  render() {
+    if (this.state.err) return (
+      <div className="card" style={{ margin: 20 }}>
+        <h2>Se evitó una caída en esta vista</h2>
+        <p className="hint" style={{ marginBottom: 14 }}>Algo se rompió aquí (normalmente un dato viejo con forma rara), pero protegimos el resto de la app. Recarga; si vuelve a pasar en un proyecto, ábrelo y revisa su plazo/datos.</p>
+        <button className="btn primary" onClick={() => { try { location.reload(); } catch { /* noop */ } }}>Recargar</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [st, setSt] = useState<State | null>(null);
@@ -364,14 +382,16 @@ export default function App() {
       </aside>
 
       <main className="main">
-        {sec === "panel" && <Panel st={st} overhead={overhead} update={update} />}
-        {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} />}
-        {sec === "proyectos" && <Proyectos st={st} update={update} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
-        {sec === "mimes" && <MiMes st={st} setSec={setSec} />}
-        {sec === "personas" && <Personas st={st} />}
-        {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} />}
-        {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
-        {sec === "reglas" && <ReglasView st={st} update={update} />}
+        <ErrorBoundary key={sec}>
+          {sec === "panel" && <Panel st={st} overhead={overhead} update={update} />}
+          {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} />}
+          {sec === "proyectos" && <Proyectos st={st} update={update} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
+          {sec === "mimes" && <MiMes st={st} setSec={setSec} />}
+          {sec === "personas" && <Personas st={st} />}
+          {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} />}
+          {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
+          {sec === "reglas" && <ReglasView st={st} update={update} />}
+        </ErrorBoundary>
       </main>
       {toast && <div className="toast"><Check size={15} /> {toast}</div>}
     </div>
@@ -406,7 +426,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
     sCobrado += (p.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0);
     sBancaAll += rr.banca;
     Object.values(rr.people).forEach((a) => {
-      const v = a.trabajo + a.extra;
+      const v = a.trabajo + a.extra + (a.comision || 0); // incluir comisión: si alguien del equipo trajo el cliente, esa comisión es suya
       if (a.quien === "socioA") sAndres += v; else if (a.quien === "socioB") sBalmo += v; else sEquipo += v;
     });
     // flujo temporal del ingreso (sin IVA)
@@ -768,7 +788,7 @@ function Personas({ st }: { st: State }) {
 function AgendaEditor({ active, st, P, updateActive }: {
   active: Proyecto; st: State; P: Reglas; updateActive: (fn: (p: Proyecto) => void) => void;
 }) {
-  const N = Math.max(1, active.plazoMeses ?? 1);
+  const N = Math.max(1, Math.floor(+(active.plazoMeses || 0) || 1));
   if (N < 2) return null;
   const on = !!active.agenda;
   const seed = (): Record<number, Miembro[]> => {
@@ -858,7 +878,9 @@ function AgendaEditor({ active, st, P, updateActive }: {
    (Método A), así que Σ(meses) por persona == su total en compute(). */
 function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
   const [i, setI] = useState(0);
-  const N = Math.max(1, pr.plazoMeses ?? 1);
+  // Floor + casteo idéntico al motor (reparto.ts): un plazo decimal o NaN haría
+  // Array(N) → RangeError y tumbaría la app. Nunca construir Array(N) con N sucio.
+  const N = Math.max(1, Math.floor(+(pr.plazoMeses || 0) || 1));
   const meses = repartoPorMes(pr, P);
   const inicio = pr.fechaInicio || todayISO();
   type Row = { nombre: string; quien: Quien; total: number; porMes: number[] };
@@ -1049,16 +1071,19 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <div className="card">
             <h2>El proyecto</h2>
             {(() => {
-              const modo: "sin" | "mas" | "incluido" = active.ivaModo ?? (active.conIVA ? "mas" : "sin");
+              // Solo 2 modos (decisión Andrés 2026-07-16): "sin" (no lleva IVA) y
+              // "incluido" (descontar IVA). Se quitó "+ IVA encima". Proyectos viejos
+              // con "mas" se muestran como "sin" (el reparto sigue sobre la misma base).
+              const modo: "sin" | "incluido" = active.ivaModo === "incluido" ? "incluido" : "sin";
               const incluido = modo === "incluido";
               const conIVA = modo !== "sin";
               const inputVal = incluido ? Math.round(active.ticket * (1 + IVA) * 100) / 100 : active.ticket;
               // Al cambiar de botón, el NÚMERO que se ve en el campo se queda igual y solo
               // se reinterpreta: "Descontar IVA" lo trata como total (saca la base ÷1.16);
               // los otros lo tratan como base. Así el campo nunca "salta" al cambiar de modo.
-              const setModo = (m: "sin" | "mas" | "incluido") => updateActive((p) => {
-                const oldModo = p.ivaModo ?? (p.conIVA ? "mas" : "sin");
-                const visible = oldModo === "incluido" ? Math.round(p.ticket * (1 + IVA) * 100) / 100 : p.ticket;
+              const setModo = (m: "sin" | "incluido") => updateActive((p) => {
+                const oldIncluido = p.ivaModo === "incluido";
+                const visible = oldIncluido ? Math.round(p.ticket * (1 + IVA) * 100) / 100 : p.ticket;
                 p.ivaModo = m; p.conIVA = m !== "sin";
                 p.ticket = m === "incluido" ? Math.round(ticketSinIVA(visible) * 100) / 100 : visible;
               });
@@ -1072,12 +1097,10 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   <div className="field"><label>¿Qué hago con el IVA?</label>
                     <div className="chips">
                       <button className="chip-btn" aria-pressed={modo === "sin"} onClick={() => setModo("sin")}>Sin IVA</button>
-                      <button className="chip-btn" aria-pressed={modo === "mas"} onClick={() => setModo("mas")}>+ IVA encima</button>
                       <button className="chip-btn" aria-pressed={modo === "incluido"} onClick={() => setModo("incluido")}>Descontar IVA</button>
                     </div>
                     <p className="hint" style={{ marginTop: 6, marginBottom: 8 }}>
                       {modo === "sin" && "El precio que escribes no lleva IVA: se reparte tal cual y es lo que paga el cliente."}
-                      {modo === "mas" && "El precio que escribes es SIN IVA; al cliente se le suma 16% encima (se reparte la base)."}
                       {incluido && "El precio que escribes YA trae IVA: la app le descuenta el 16% y reparte solo la base."}
                     </p>
                     <div className="iva-box">
@@ -1091,7 +1114,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               );
             })()}
             <div className="two" style={{ gap: 12 }}>
-              <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, +e.target.value || 1); })} /></div>
+              <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} step={1} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, Math.floor(+e.target.value) || 1); })} /></div>
               <div className="field"><label>Arranca</label><input type="date" value={active.fechaInicio ?? todayISO()} onChange={(e) => updateActive((p) => { p.fechaInicio = e.target.value; })} /></div>
             </div>
             <div className="field"><label>¿Cómo cobras?</label>
