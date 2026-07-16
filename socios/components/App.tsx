@@ -1206,13 +1206,22 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v)} className="lv num-anim">{fmtMXN(s.v)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
           </div>
           <div className="two">
-            <div className="card"><h2>El desglose</h2>
-              {bd("", "Ingreso del proyecto", r.t)}{bd("sub", `− Equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))} de este proyecto)`, -(r.bolsaOut - r.disc))}
-              {r.disc > 0.5 && bd("sub", "− Sombrero de socio → Banca", -r.disc)}
-              {r.comis > 0 && bd("sub", `− Comisión de origen ${r.comisBanca > 0 ? "→ Banca" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
-              {bd("sub", "− Caja del proyecto", -r.cajaProj)}{bd("eq", "CURVA se queda", r.marginOp)}{bd("sub", "− Caja de ahorro", -r.cajaAhorro)}
-              {r.poolAmt > 0 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
-              {bd("strong", "Utilidad a repartir", r.utilKept)}{bd("sub", `→ ${P.nombreA} ${P.split}%`, r.sAutil)}{bd("sub", `→ ${P.nombreB} ${100 - P.split}%`, r.sButil)}
+            <div className="card"><h2>El desglose · estado de resultados</h2>
+              {bd("", "Ingreso del proyecto", r.t)}
+              {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
+              {r.disc > 0.5 && bd("sub", "− Sombrero de socio (reserva a Banca)", -r.disc)}
+              {r.comis > 0.5 && bd("sub", `− Comisión de origen ${r.comisBanca > 0.5 ? "(a Banca)" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
+              {bd("eq", "Utilidad bruta", r.t - r.bolsaOut - r.comis)}
+              {bd("sub", "− Caja del proyecto", -r.cajaProj)}
+              {bd("eq", "Utilidad operativa", r.marginOp)}
+              {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (reserva a Banca)", -r.cajaAhorro)}
+              {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
+              {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
+              {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
+              {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
+              {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
+              {P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}%)`, -(r.utilKept * P.imp / 100))}
+              {P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
             </div>
             <div className="stackcol">
               <div className="card">
