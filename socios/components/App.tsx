@@ -741,6 +741,8 @@ function Personas({ st }: { st: State }) {
   const maxMes = Math.max(1, ...meses.map((m) => sel!.byMonth[m]));
   const proyectos = sel ? Object.entries(sel.byProject).sort((a, b) => b[1] - a[1]) : [];
   const maxProj = Math.max(1, ...proyectos.map(([, v]) => v));
+  const curYM = todayISO().slice(0, 7);
+  const esteMes = sel ? (sel.byMonth[curYM] || 0) : 0;
 
   return (
     <>
@@ -766,8 +768,9 @@ function Personas({ st }: { st: State }) {
           </div>
           {sel && (
             <div className="stackcol">
-              <div className="tiles">
-                <Tile k="k-a" l={`${sel.nombre} · total`} v={fmtMXN(sel.total)} p="bruto, todos los proyectos" tip="Todo lo que gana esta persona sumando cada proyecto vivo (antes de ISR)." />
+              <div className="tiles" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+                <Tile k="k-fact" l={`Este mes · ${mesLabel(curYM)}`} v={fmtMXN(esteMes)} p="proyectado" tip="Lo que gana esta persona en el mes actual, sumando todos sus proyectos (proyectado, Método A)." />
+                <Tile k="k-a" l={`${sel.nombre} · total`} v={fmtMXN(sel.total)} p="todos los proyectos" tip="Todo lo que gana esta persona sumando cada proyecto vivo (bruto, antes de ISR)." />
                 <Tile k="k-curva" l="Neto estimado" v={fmtMXN(sel.neto)} p={`después de ISR (${pctFmt((P.imp || 0) / 100)})`} tip="Lo que le queda tras apartar el ISR reservado en Reglas." />
               </div>
               <div className="card">
