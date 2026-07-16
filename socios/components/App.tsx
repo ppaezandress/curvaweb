@@ -418,6 +418,33 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
   const maxFlujo = Math.max(1, ...meses.map((m) => flujo[m]));
   const porCobrar = Math.max(0, sTicket - sCobrado);
 
+  // ── Cortes mensuales: a dónde va cada peso, mes a mes (reparto Método A) + gastos ──
+  type CorteMes = { equipo: number; socios: number; banca: number; caja: number; gastos: number };
+  const cortes: Record<string, CorteMes> = {};
+  const ensureC = (ym: string) => (cortes[ym] = cortes[ym] || { equipo: 0, socios: 0, banca: 0, caja: 0, gastos: 0 });
+  vivos.forEach((p) => {
+    const R = reglasDe(p, st.params);
+    const rm = repartoPorMes(membersResolved(p, st.roster, R), R);
+    const inicio = p.fechaInicio || todayISO();
+    rm.forEach((mm) => {
+      const c = ensureC(addMonths(inicio, mm.mes - 1));
+      Object.values(mm.personas).forEach((pe) => {
+        const v = pe.trabajo + pe.extra + pe.comision;
+        if (isSocio(pe.quien)) c.socios += v; else c.equipo += v;
+      });
+      c.banca += mm.banca; c.caja += mm.cajaProyecto + mm.cajaAhorro;
+    });
+  });
+  // Gastos de proyecto en su mes (fecha); overhead fijo se aplica a cada mes con reparto.
+  st.gastos.filter((g) => g.proyectoId && !g.esIngreso).forEach((g) => { const ym = mesDe(g.fecha); if (ym && cortes[ym]) cortes[ym].gastos += +g.m || 0; });
+  const mesesCorte = Object.keys(cortes).sort().slice(0, 12);
+  mesesCorte.forEach((ym) => { cortes[ym].gastos += overhead; });
+  const totalCorte = (c: CorteMes) => c.equipo + c.socios + c.banca + c.caja;
+  const corteCols: [string, (c: CorteMes) => number][] = [
+    ["Total", totalCorte], ["Equipo", (c) => c.equipo], ["Socios", (c) => c.socios],
+    ["Banca", (c) => c.banca], ["Cajas", (c) => c.caja], ["Gastos", (c) => c.gastos],
+  ];
+
   return (
     <>
       <div className="page-h"><div><h1>Panel</h1><p>El estado de CURVA este mes, de un vistazo.</p></div></div>
@@ -464,6 +491,26 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
         ) : <div className="hint">Agrega proyectos con fecha de inicio para ver el flujo.</div>}
         <p className="foot">Reparte cada proyecto en el tiempo según su plazo y forma de cobro (mensual = dividido entre los meses; de golpe = todo en el mes de arranque). Ingresos sin IVA.</p>
       </div>
+
+      {mesesCorte.length > 0 && (
+        <div className="card">
+          <h2>Cortes mensuales — a dónde va cada peso</h2>
+          <p className="hint" style={{ marginTop: 0 }}>Mes a mes (según el plazo de cada proyecto): cuánto se reparte a cada bolsa y los gastos del mes (incluye el overhead fijo).</p>
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `minmax(72px,0.9fr) repeat(${corteCols.length}, minmax(78px,1fr))`, gap: "5px 12px", minWidth: 580, fontSize: 13, alignItems: "center" }}>
+              <div style={{ fontWeight: 700, opacity: 0.55, fontSize: 12, textTransform: "uppercase" }}>Mes</div>
+              {corteCols.map(([label]) => <div key={"h-" + label} style={{ fontWeight: 700, opacity: 0.55, fontSize: 12, textTransform: "uppercase", textAlign: "right" }}>{label}</div>)}
+              {mesesCorte.flatMap((ym) => [
+                <div key={ym + "-m"} style={{ fontWeight: 700, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{mesLabel(ym)}</div>,
+                ...corteCols.map(([label, fn]) => (
+                  <div key={ym + "-" + label} style={{ textAlign: "right", fontFamily: "var(--mono)", fontWeight: label === "Total" ? 700 : 400, color: label === "Total" ? "var(--cobalt)" : label === "Gastos" ? "var(--c-caja)" : undefined, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{fmtMXN(fn(cortes[ym]))}</div>
+                )),
+              ])}
+            </div>
+          </div>
+          <p className="foot">“Total” = lo que se reparte ese mes (equipo + socios + Banca + cajas). Los gastos salen de la caja de cada proyecto; el overhead es el costo fijo de la empresa cada mes.</p>
+        </div>
+      )}
 
       <DatosCobro st={st} update={update} />
     </>
