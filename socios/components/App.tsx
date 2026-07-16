@@ -58,6 +58,14 @@ const cajaKindColor: Record<CajaKind, string> = {
 const ESTADO_LABEL: Record<EstadoProyecto, string> = {
   cotizacion: "Cotización", activo: "Activo", cerrado: "Cerrado", cancelado: "Cancelado",
 };
+// El estado se DERIVA solo de lo cobrado (no se elige a mano): sin pagos = Cotización,
+// con pagos = Activo, 100% cobrado = Cerrado. "Cancelado" es lo único manual (se guarda
+// en pr.estado). Así el usuario no tiene que mantener el estado a mano.
+function estadoAuto(pr: Proyecto): EstadoProyecto {
+  if ((pr.estado ?? "cotizacion") === "cancelado") return "cancelado";
+  const rec = pctRecibido(pr);
+  return rec >= 0.999 ? "cerrado" : rec > 0.0001 ? "activo" : "cotizacion";
+}
 const roleColor: Record<Quien, string> = { socioA: "--c-andres", socioB: "--c-balmo", nucleo: "--c-banca", nuevo: "--muted" };
 const badgeCls: Record<Quien, string> = { socioA: "b-socio", socioB: "b-socio", nucleo: "b-nucleo", nuevo: "b-nuevo" };
 const badgeTxt: Record<Quien, string> = { socioA: "socio", socioB: "socio", nucleo: "núcleo", nuevo: "nuevo" };
@@ -1046,7 +1054,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
         <div className="pb-group">
           <span className="pb-cap">Proyecto abierto <span className="tip" data-tip="Cambia entre tus proyectos guardados. Lo que elijas aquí es lo que ves y editas abajo."><Info /></span></span>
           <select value={active.id} onChange={(e) => update((s) => { s.activeId = e.target.value; return s; })}>
-            {st.projects.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.borrador ? " · sin guardar" : p.inMonth ? "" : " · fuera del mes"}</option>)}
+            {st.projects.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.borrador ? " · sin guardar" : ""}</option>)}
           </select>
         </div>
         <div className="pb-group grow">
@@ -1055,19 +1063,11 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
         </div>
         <div className="pb-actions">
           <button className="btn" title="Empieza (o continúa) un borrador sin guardar" onClick={nuevoBorrador}><Plus size={15} /> Nuevo</button>
-          {active.borrador ? (
-            confirmDescartar
-              ? <span className="pcard-delc">¿Descartar borrador? <button className="btn danger" onClick={descartarBorrador}>Sí</button><button className="btn ghost" onClick={() => setConfirmDescartar(false)}>No</button></span>
-              : <button className="btn danger" title="Descarta este borrador y abre uno en blanco" onClick={() => setConfirmDescartar(true)}>Descartar</button>
-          ) : (
-            <button className="btn danger" title="Borra el proyecto abierto" onClick={() => update((s) => { s.projects = s.projects.filter((x) => x.id !== s.activeId); s.activeId = s.projects[0]?.id || ""; return s; })}>Borrar</button>
-          )}
+          {confirmDescartar
+            ? <span className="pcard-delc">¿{active.borrador ? "Descartar borrador" : "Borrar proyecto"}? <button className="btn danger" onClick={active.borrador ? descartarBorrador : () => { update((s) => { s.projects = s.projects.filter((x) => x.id !== s.activeId); s.activeId = s.projects[0]?.id || ""; return s; }); setConfirmDescartar(false); }}>Sí</button><button className="btn ghost" onClick={() => setConfirmDescartar(false)}>No</button></span>
+            : <button className="btn danger" title={active.borrador ? "Descarta este borrador" : "Borra el proyecto abierto"} onClick={() => setConfirmDescartar(true)}>{active.borrador ? "Descartar" : "Borrar"}</button>}
           <button className="btn primary" title={active.borrador ? "Guarda este proyecto y deja la Calculadora lista para el siguiente" : "Re-guarda este proyecto (congela sus reglas con las de hoy)"} onClick={guardarYNuevo}>{active.borrador ? <>Guardar proyecto <ArrowRight size={15} /></> : <>Actualizar <ArrowRight size={15} /></>}</button>
         </div>
-        <label className="pb-month">
-          <input type="checkbox" checked={active.inMonth} onChange={(e) => updateActive((p) => { p.inMonth = e.target.checked; })} /> Cuenta en el mes
-          <span className="tip" data-tip="Si está marcado, este proyecto suma en los totales del Panel de ESTE mes (facturado, utilidad, Banca). Desmárcalo si es de otro mes o aún no arranca."><Info /></span>
-        </label>
       </div>
 
       {reglasDivergen && (
@@ -1129,13 +1129,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} step={1} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, Math.floor(+e.target.value) || 1); })} /></div>
               <div className="field"><label>Arranca</label><input type="date" value={active.fechaInicio ?? todayISO()} onChange={(e) => updateActive((p) => { p.fechaInicio = e.target.value; })} /></div>
             </div>
-            <div className="field"><label>¿Cómo cobras?</label>
-              <div className="chips">
-                <button className="chip-btn" aria-pressed={(active.modoCobro ?? "golpe") === "golpe"} onClick={() => updateActive((p) => { p.modoCobro = "golpe"; })}>De golpe</button>
-                <button className="chip-btn" aria-pressed={active.modoCobro === "mensual"} onClick={() => updateActive((p) => { p.modoCobro = "mensual"; })}>Mensual</button>
-              </div>
-              <p className="hint" style={{ marginTop: 6 }}>{(active.modoCobro ?? "golpe") === "mensual" && (active.plazoMeses ?? 1) > 1 ? <>~{fmtMXN(totalCliente(active) / (active.plazoMeses || 1))}/mes durante {active.plazoMeses} meses.</> : "Todo en uno o dos pagos."}</p>
-            </div>
+            {(active.plazoMeses ?? 1) > 1 && <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>Proyecto de {active.plazoMeses} meses: ~<b>{fmtMXN(totalCliente(active) / (active.plazoMeses || 1))}/mes</b>. El reparto se distribuye en esos meses (lo ves en “Por mes”).</p>}
             <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
             <div className="field"><label>¿Quién trajo este cliente? <span className="tip" data-tip="Decide quién se lleva la comisión (10% del margen) por CONSEGUIR al cliente. No cambia lo que paga el cliente, solo a dónde va ese 10%."><Info /></span></label>
               <div className="chips">
@@ -1312,7 +1306,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
   });
   const cobrado = pagos.reduce((a, x) => a + (+x.monto || 0), 0);
   const rec = pctRecibido(p);
-  const estado: EstadoProyecto = p.estado ?? "cotizacion";
+  const estado: EstadoProyecto = estadoAuto(p);
   const upP = (fn: (x: Proyecto) => void) => update((s) => { const x = s.projects.find((y) => y.id === p.id); if (x) fn(x); return s; });
   // Gastos de este proyecto (salen de su caja).
   const misGastos = gastosDeProyecto(gastos, p.id);
@@ -1330,7 +1324,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
         <span className="pcard-chev">{open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
         <div className="pcard-title">
           <div className="gn">{p.nombre} <span className={"est est-" + estado}>{ESTADO_LABEL[estado]}</span></div>
-          <div className="gt">{p.tipo} · {p.members.length} pers. · {p.conIVA ? "con IVA" : "sin IVA"} · {(p.modoCobro ?? "golpe") === "mensual" ? `mensual ${p.plazoMeses}m` : "de golpe"}{p.clienteNombre ? " · " + p.clienteNombre : ""}</div>
+          <div className="gt">{p.tipo} · {p.members.length} pers. · {p.conIVA ? "con IVA" : "sin IVA"}{(p.plazoMeses ?? 1) > 1 ? ` · ${p.plazoMeses} meses` : ""}{p.clienteNombre ? " · " + p.clienteNombre : ""}</div>
         </div>
         <div className="pcard-right">
           <div className="gv">{fmtMXN(r.t)}</div>
@@ -1357,18 +1351,16 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
             <button className="btn ghost" onClick={() => setReglasOpen(true)}><SlidersHorizontal size={14} /> Ver reglas</button>
             <button className="btn ghost" onClick={() => setGastosOpen(true)}><Receipt size={14} /> Gastos{misGastos.length ? ` (${misGastos.length})` : ""}</button>
             <button className="btn ghost" onClick={() => compartir(`Reparto · ${p.nombre}`, textoReparto())}><Share2 size={14} /> WhatsApp</button>
-            <div className="est-chips">
-              {(["cotizacion", "activo", "cerrado", "cancelado"] as EstadoProyecto[]).map((e) => (
-                <button key={e} className="chip-btn sm" aria-pressed={estado === e} onClick={() => upP((x) => { x.estado = e; })}>{ESTADO_LABEL[e]}</button>
-              ))}
-            </div>
+            {estado === "cancelado"
+              ? <button className="btn ghost" title="Reactivar: el estado vuelve a calcularse solo según lo cobrado" onClick={() => upP((x) => { x.estado = undefined; })}><RotateCcw size={14} /> Reactivar</button>
+              : <button className="btn ghost" title="Marca el proyecto como cancelado (sale de los totales)" onClick={() => upP((x) => { x.estado = "cancelado"; })}><Trash2 size={14} /> Cancelar</button>}
           </div>
 
           <div className="pay-cols">
             <div>
               <h3 className="pay-h">Registrar un pago</h3>
               <PagoForm ticket={r.t} conIVA={!!p.conIVA} cobrado={cobrado}
-                onAdd={(pago) => upP((x) => { x.pagos = [...(x.pagos || []), pago]; if (x.estado === "cotizacion") x.estado = "activo"; })} />
+                onAdd={(pago) => upP((x) => { x.pagos = [...(x.pagos || []), pago]; })} />
               <p className="hint">Cobrado: <b>{fmtMXN(cobrado)}</b> de {fmtMXN(r.t)} · falta <b>{fmtMXN(Math.max(0, r.t - cobrado))}</b>{p.conIVA ? ` (sin IVA; con IVA el total es ${fmtMXN(totalCliente(p))})` : ""}.</p>
             </div>
             <div>
@@ -1813,7 +1805,6 @@ function Facturas({ st, clientes, update }: { st: State; clientes: Cliente[]; up
           ivaCobrado: data.iva ?? undefined, nota: `Factura · ${data.proveedor}`.slice(0, 50),
           facturaRef: data.rfc_emisor || data.proveedor, desembolsado: false,
         }];
-        if ((proj.estado ?? "cotizacion") === "cotizacion") proj.estado = "activo";
         return s;
       });
       setSaved(true);
