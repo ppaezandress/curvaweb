@@ -886,7 +886,7 @@ function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
         <div className="carr-who"><span className="nm">{rw.nombre}</span><span className={"badge " + badgeCls[rw.quien]}>{badgeTxt[rw.quien]}</span></div>
         <button className="carr-arrow" onClick={() => go(1)} aria-label="Siguiente persona">›</button>
       </div>
-      <div className="carr-total">{fmtMXN(rw.total)}<span>en total · {N} meses</span></div>
+      <div className="carr-total"><span key={fmtMXN(rw.total)} className="num-anim">{fmtMXN(rw.total)}</span><span className="carr-tot-lbl">en total · {N} meses</span></div>
       <div className="carr-sub">{varia ? "Varía por mes (agenda) — el detalle está abajo." : `≈ ${fmtMXN(prom)} al mes, parejo los ${N} meses.`}</div>
       <div className="carr-months">
         {rw.porMes.map((v, k) => <div key={k}><span className="mlbl">{mesLabels[k]}</span><b>{fmtMXN(v)}</b></div>)}
@@ -967,7 +967,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // La comisión ahora vive en su propio campo (franjita naranja); se suma aparte al cuadre.
   const leak = r.t - (tT + tE + tC + r.cajaProj + r.banca);
   const mr = r.marginOp / t;
-  const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv">{fmtMXN(v)}</span></div>;
+  const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv"><span key={fmtMXN(v)} className="num-anim">{fmtMXN(v)}</span></span></div>;
 
   // ── Selector de personas (roster) ──
   const personVal = (m: Miembro): string => {
@@ -1081,9 +1081,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                       {incluido && "El precio que escribes YA trae IVA: la app le descuenta el 16% y reparte solo la base."}
                     </p>
                     <div className="iva-box">
-                      <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}>{fmtMXN(base)}</b></div>
-                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? (incluido ? "· descontado del total, para Hacienda" : "· de Hacienda, no se reparte") : ""}</span><span>{fmtMXN(iva)}</span></div>
-                      <div className="iva-row total"><span>Total que paga el cliente</span><b>{fmtMXN(total)}</b></div>
+                      <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}><span key={fmtMXN(base)} className="num-anim">{fmtMXN(base)}</span></b></div>
+                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? (incluido ? "· descontado del total, para Hacienda" : "· de Hacienda, no se reparte") : ""}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
+                      <div className="iva-row total"><span>Total que paga el cliente</span><b><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></b></div>
                     </div>
                     <p className="hint" style={{ marginTop: 8 }}>Bolsa <b>bruta</b> del equipo: <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. De ahí, el sombrero de socio pasa a la Banca; lo <b>neto</b> al equipo se ve en “A dónde va cada peso” y “El desglose”.</p>
                   </div>

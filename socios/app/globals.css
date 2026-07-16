@@ -502,7 +502,7 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .carr-arrow{flex:none;border:1px solid var(--border);background:var(--panel);border-radius:9px;width:30px;height:30px;cursor:pointer;color:var(--ink-2);font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .16s var(--ease)}
 .carr-arrow:hover{border-color:var(--cobalt);color:var(--cobalt)}
 .carr-total{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:800;font-size:26px;margin-top:12px;color:var(--ink)}
-.carr-total span{font-family:var(--font);font-weight:500;font-size:12px;color:var(--ink-2);margin-left:7px}
+.carr-total .carr-tot-lbl{font-family:var(--font);font-weight:500;font-size:12px;color:var(--ink-2);margin-left:7px}
 .carr-sub{font-size:12.5px;color:var(--ink-2);margin:3px 0 10px}
 .carr-months{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--border);padding-top:9px}
 .carr-months>div{display:flex;justify-content:space-between;font-size:12.5px}
