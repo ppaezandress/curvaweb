@@ -1007,6 +1007,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
 }) {
   const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("mes"); // unidad de TODA la Calculadora: por mes (default) vs total del proyecto
   const [verDesglose, setVerDesglose] = useState(false); // detalle (P&L + "a dónde va") oculto por defecto
+  const [reglasDrawer, setReglasDrawer] = useState(false); // panel flotante de Reglas (ajuste en vivo)
   const [confirmDescartar, setConfirmDescartar] = useState(false);
   // "+ Nuevo": si ya hay un borrador en curso, CONTINÚALO (no lo perdemos); solo si no
   // hay ninguno se crea uno en blanco. Así editar otro proyecto nunca borra tu trabajo.
@@ -1322,6 +1323,17 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           )}
         </div>
       </div>
+
+      <button className="fab-reglas" title="Ajustar reglas sin salir (se recalcula en vivo)" onClick={() => setReglasDrawer(true)}><SlidersHorizontal size={16} /> Ajustar reglas</button>
+      {reglasDrawer && (
+        <ReglasDrawer st={st} update={update} setSec={setSec} onClose={() => setReglasDrawer(false)}
+          preview={[
+            { l: porMes ? "CURVA / mes" : "CURVA se queda", v: fmtMXN(r.marginOp * f), c: "--pos" },
+            { l: P.nombreA, v: fmtMXN(r.socioA * f), c: "--c-andres" },
+            { l: P.nombreB, v: fmtMXN(r.socioB * f), c: "--c-balmo" },
+            { l: porMes ? "Banca / mes" : "A la Banca", v: fmtMXN(r.banca * f), c: "--c-banca" },
+          ]} />
+      )}
     </>
   );
 }
@@ -2000,6 +2012,55 @@ function Facturas({ st, clientes, update }: { st: State; clientes: Cliente[]; up
 const rowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: 14 };
 const valStyle: CSSProperties = { fontFamily: "var(--mono)", fontWeight: 700, color: "var(--cobalt)", minWidth: 52, textAlign: "right" };
 const numInput: CSSProperties = { flex: 1.3, textAlign: "right", fontFamily: "var(--mono)", fontWeight: 600 };
+
+/* Drawer flotante de Reglas para ajustar SIN salir de la Calculadora. Edita
+   st.params (las Reglas vivas), así que los números de la Calculadora se mueven
+   al instante. Arriba, un mini-preview de los sueldos del mes que reacciona en
+   vivo mientras arrastras cada perilla. */
+function ReglasDrawer({ st, update, onClose, setSec, preview }: {
+  st: State; update: (fn: (s: State) => State) => void; onClose: () => void; setSec: (s: string) => void;
+  preview: { l: string; v: string; c?: string }[];
+}) {
+  const P = st.params;
+  const setN = (k: keyof Reglas, v: number) => update((s) => { (s.params[k] as number) = v; return s; });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const knob = (k: keyof Reglas, label: string, min: number, max: number, step = 1) => (
+    <div className="rd-knob">
+      <div className="rd-knob-h"><span>{label}</span><span className="rd-knob-v">{P[k] as number}%</span></div>
+      <input type="range" min={min} max={max} step={step} value={P[k] as number} onChange={(e) => setN(k, +e.target.value)} />
+    </div>
+  );
+  return (
+    <div className="rd-wrap" role="dialog" aria-label="Ajustar reglas">
+      <div className="rd-catch" onClick={onClose} />
+      <aside className="rd-panel">
+        <div className="rd-head">
+          <div><b>Ajustar reglas</b><span>los números se mueven en vivo</span></div>
+          <button className="rd-x" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+        <div className="rd-preview">
+          {preview.map((p) => <div key={p.l} className="rd-pv"><span className="rd-pv-l">{p.l}</span><b style={p.c ? { color: `var(${p.c})` } : undefined}><span key={p.v} className="num-anim">{p.v}</span></b></div>)}
+        </div>
+        <div className="rd-body">
+          {knob("alpha", "Cuánto cobra un socio de su trabajo", 0, 100, 5)}
+          {knob("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
+          {knob("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
+          {knob("beta", "Barrido de utilidad a Banca (β)", 0, 50, 5)}
+          {knob("pool", "Bono del Núcleo (% utilidad)", 0, 30)}
+          {knob("imp", "Tasa de ISR", 0, 20, 0.5)}
+          {knob("comisPct", "Comisión de origen (% del margen)", 0, 30)}
+        </div>
+        <div className="rd-foot">
+          <button className="btn ghost" onClick={() => { onClose(); setSec("reglas"); }}><SlidersHorizontal size={14} /> Abrir Reglas completas</button>
+        </div>
+      </aside>
+    </div>
+  );
+}
 
 function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => State) => void }) {
   const P = st.params;
