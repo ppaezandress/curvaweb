@@ -1008,6 +1008,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("mes"); // unidad de TODA la Calculadora: por mes (default) vs total del proyecto
   const [verDesglose, setVerDesglose] = useState(false); // detalle (P&L + "a dónde va") oculto por defecto
   const [reglasDrawer, setReglasDrawer] = useState(false); // panel flotante de Reglas (ajuste en vivo)
+  const [simDrawer, setSimDrawer] = useState(false); // simulación: sueldos del mes con todos los proyectos
   const [confirmDescartar, setConfirmDescartar] = useState(false);
   // "+ Nuevo": si ya hay un borrador en curso, CONTINÚALO (no lo perdemos); solo si no
   // hay ninguno se crea uno en blanco. Así editar otro proyecto nunca borra tu trabajo.
@@ -1274,7 +1275,10 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             <Tile k="k-banca" l={porMes ? "A la Banca / mes" : "A la Banca"} v={fmtMXN(r.banca * f)} p={`ahorro CURVA${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
           </div>
           <div className="card">
-            <h2 style={{ margin: 0 }}>Cuánto cobra cada quien{porMes ? " · al mes" : esMulti ? " · en total" : ""}</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0 }}>Cuánto cobra cada quien{porMes ? " · al mes" : esMulti ? " · en total" : ""}</h2>
+              <button className="btn ghost sm" title="Ve los sueldos del mes de todos, juntando este proyecto con los demás vivos" onClick={() => setSimDrawer(true)}><Users size={14} /> Con los demás</button>
+            </div>
             {porMes ? <Rank rows={rowsMes} /> : <Rank rows={rows} />}
             {esMulti && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
               {porMes
@@ -1334,6 +1338,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             { l: porMes ? "Banca / mes" : "A la Banca", v: fmtMXN(r.banca * f), c: "--c-banca" },
           ]} />
       )}
+      {simDrawer && <SimulacionDrawer st={st} active={active} onClose={() => setSimDrawer(false)} />}
     </>
   );
 }
@@ -2057,6 +2062,74 @@ function ReglasDrawer({ st, update, onClose, setSec, preview }: {
         <div className="rd-foot">
           <button className="btn ghost" onClick={() => { onClose(); setSec("reglas"); }}><SlidersHorizontal size={14} /> Abrir Reglas completas</button>
         </div>
+      </aside>
+    </div>
+  );
+}
+
+/* Simulación: los sueldos del MES de todos, juntando los proyectos vivos + el que
+   se está calculando (aunque sea borrador). Sirve para ver si alguien ya gana mucho
+   sumando todo y decidir si se le ajusta. Reusa repartoPorMes por mes-calendario. */
+function SimulacionDrawer({ st, active, onClose }: { st: State; active: Proyecto; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const vivos = st.projects.filter((p) => !p.borrador && (p.estado ?? "cotizacion") !== "cancelado" && p.id !== active.id);
+  const universo = [...vivos, active]; // TODO lo vivo + este (aunque sea borrador)
+  type SRow = { nombre: string; quien: Quien; byMonth: Record<string, number>; esteMonth: Record<string, number> };
+  const agg: Record<string, SRow> = {};
+  const monthsSet = new Set<string>();
+  universo.forEach((p) => {
+    const R = reglasDe(p, st.params);
+    const rm = repartoPorMes(membersResolved(p, st.roster, R), R);
+    const inicio = p.fechaInicio || todayISO();
+    rm.forEach((mm) => {
+      const ym = addMonths(inicio, mm.mes - 1);
+      monthsSet.add(ym);
+      Object.values(mm.personas).forEach((pe) => {
+        const v = pe.trabajo + pe.extra + pe.comision;
+        if (v <= 0.5) return;
+        const k = pe.nombre + "|" + pe.quien;
+        const rw = (agg[k] = agg[k] || { nombre: pe.nombre, quien: pe.quien, byMonth: {}, esteMonth: {} });
+        rw.byMonth[ym] = (rw.byMonth[ym] || 0) + v;
+        if (p.id === active.id) rw.esteMonth[ym] = (rw.esteMonth[ym] || 0) + v;
+      });
+    });
+  });
+  const months = [...monthsSet].sort();
+  const curYM = todayISO().slice(0, 7);
+  const startYM = (active.fechaInicio || todayISO()).slice(0, 7);
+  const [selYM, setSelYM] = useState(months.includes(startYM) ? startYM : months.includes(curYM) ? curYM : months[0] || curYM);
+  const rows = Object.values(agg)
+    .map((rw) => ({ nombre: rw.nombre, quien: rw.quien, total: rw.byMonth[selYM] || 0, este: rw.esteMonth[selYM] || 0 }))
+    .filter((r) => r.total > 0.5)
+    .sort((a, b) => b.total - a.total || order[a.quien] - order[b.quien]);
+  const max = Math.max(1, ...rows.map((r) => r.total));
+  return (
+    <div className="rd-wrap" role="dialog" aria-label="Simulación de sueldos del mes">
+      <div className="rd-catch" onClick={onClose} />
+      <aside className="rd-panel sim-panel">
+        <div className="rd-head">
+          <div><b>Sueldos del mes · con todo</b><span>este proyecto sumado a los demás vivos</span></div>
+          <button className="rd-x" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+        {months.length > 1 && (
+          <div className="sim-months chips">
+            {months.map((m) => <button key={m} className="chip-btn sm" aria-pressed={m === selYM} onClick={() => setSelYM(m)}>{mesLabel(m)}</button>)}
+          </div>
+        )}
+        <div className="rd-body">
+          {rows.length === 0 ? <div className="hint">Nadie cobra en {mesLabel(selYM)} todavía.</div> : rows.map((r) => (
+            <div key={r.nombre + r.quien} className="sim-row">
+              <div className="sim-top"><span className="nm">{r.nombre}</span><span className={"badge " + badgeCls[r.quien]}>{badgeTxt[r.quien]}</span><span className="sim-amt">{fmtMXN(r.total)}<span className="sim-amt-lbl">/mes</span></span></div>
+              <div className="track"><i style={{ width: Math.max(3, (r.total - r.este) / max * 100) + "%", background: `var(${roleColor[r.quien]})` }} />{r.este > 0.5 && <i className="seg-comis" style={{ width: Math.max(3, r.este / max * 100) + "%", background: "var(--cobalt)" }} />}</div>
+              {r.este > 0.5 && <div className="sim-sub">de este proyecto <b>{fmtMXN(r.este)}</b> · ya tenía {fmtMXN(r.total - r.este)}</div>}
+            </div>
+          ))}
+        </div>
+        <div className="rd-foot"><p className="hint" style={{ margin: 0 }}>La franja azul es lo que <b>este</b> proyecto le suma a cada quien en {mesLabel(selYM)}. Si alguien ya gana mucho, ajústalo con <b>“Ajustar reglas”</b> o bajando su rol.</p></div>
       </aside>
     </div>
   );
