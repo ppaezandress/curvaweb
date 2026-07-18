@@ -1005,7 +1005,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   st: State; active: Proyecto; clientes: Cliente[];
   update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void;
 }) {
-  const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("total"); // "cuánto cobra cada quien": total vs mes a mes
+  const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("mes"); // unidad de TODA la Calculadora: por mes (default) vs total del proyecto
   const [verDesglose, setVerDesglose] = useState(false); // detalle (P&L + "a dónde va") oculto por defecto
   const [confirmDescartar, setConfirmDescartar] = useState(false);
   // "+ Nuevo": si ya hay un borrador en curso, CONTINÚALO (no lo perdemos); solo si no
@@ -1072,11 +1072,19 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // mismo número con reparto parejo, no sirve para comparar). Decisión Andrés 2026-07-19.
   const plazoN = Math.max(1, Math.floor(active.plazoMeses || 1));
   const rowsMes = rows.map((x) => ({ ...x, trabajo: x.trabajo / plazoN, extra: x.extra / plazoN, comision: (x.comision || 0) / plazoN }));
+  // Unidad de TODA la Calculadora. Andrés firma el total pero opera en el MES:
+  // por default se muestra lo del mes (÷ plazo) — tiles, desglose, "a dónde va" —
+  // y el total queda a un clic. `f` escala cualquier monto de proyecto al mes.
+  // Reparto parejo (Método A) ⇒ mes = total ÷ N. Decisión Andrés 2026-07-19.
+  const esMulti = plazoN > 1;
+  const porMes = esMulti && vistaCobro === "mes";
+  const f = porMes ? 1 / plazoN : 1;
+  const uLbl = porMes ? " · al mes" : "";
   let tT = 0, tE = 0, tC = 0; Object.values(r.people).forEach((a) => { tT += a.trabajo; tE += a.extra; tC += a.comision || 0; });
   // La comisión ahora vive en su propio campo (franjita naranja); se suma aparte al cuadre.
   const leak = r.t - (tT + tE + tC + r.cajaProj + r.banca);
   const mr = r.marginOp / t;
-  const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv"><span key={fmtMXN(v)} className="num-anim">{fmtMXN(v)}</span></span></div>;
+  const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv"><span key={fmtMXN(v * f)} className="num-anim">{fmtMXN(v * f)}</span></span></div>;
 
   // ── Selector de personas (roster) ──
   const personVal = (m: Miembro): string => {
@@ -1168,8 +1176,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               const base = active.ticket, iva = conIVA ? base * IVA : 0, total = base + iva;
               return (
                 <>
-                  <div className="field"><label>Precio del proyecto <span className="tip" data-tip="Escribe el número una vez. El botón de abajo decide qué se hace con el IVA; el número se queda igual."><Info /></span></label>
+                  <div className="field"><label>Precio del proyecto <span className="tip" data-tip="Escribe el total firmado una vez. Aunque sea a varios meses, aquí va el total; abajo y a la derecha ves lo del mes. El botón decide qué se hace con el IVA."><Info /></span></label>
                     <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
+                    {plazoN > 1 && <div className="price-mo">= <b>{fmtMXN(total / plazoN)}</b> / mes <span>· {plazoN} meses (total {fmtMXN(total)})</span></div>}
                   </div>
                   <div className="field"><label>Impuestos <span className="tip" data-tip="Cada botón es un interruptor: si no lo picas, no se descuenta. Descontar IVA = el precio que escribes YA trae IVA, la app saca la base (16%) y reparte solo esa base; el IVA es de Hacienda. Descontar ISR = aparta la tasa (editable en Reglas) del neto de socios; no mueve el reparto ni lo que paga el cliente."><Info /></span></label>
                     <div className="chips">
@@ -1190,7 +1199,6 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} step={1} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, Math.floor(+e.target.value) || 1); })} /></div>
               <div className="field"><label>Arranca</label><input type="date" value={active.fechaInicio ?? todayISO()} onChange={(e) => updateActive((p) => { p.fechaInicio = e.target.value; })} /></div>
             </div>
-            {(active.plazoMeses ?? 1) > 1 && <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>Proyecto de {active.plazoMeses} meses: ~<b>{fmtMXN(totalCliente(active) / (active.plazoMeses || 1))}/mes</b>. El reparto se distribuye en esos meses (lo ves en “Por mes”).</p>}
             <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
             {(() => {
               const comisPot = Math.min(Math.max(0, r.marginBruto) * (P.comisPct / 100), P.comisTope);
@@ -1248,29 +1256,29 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
         </div>
 
         <div>
+          {esMulti && (
+            <div className="unit-bar">
+              <span className="unit-cap">Ver</span>
+              <div className="chips">
+                <button className="chip-btn sm" aria-pressed={porMes} onClick={() => setVistaCobro("mes")}>Por mes</button>
+                <button className="chip-btn sm" aria-pressed={!porMes} onClick={() => setVistaCobro("total")}>Total</button>
+              </div>
+              <span className="unit-sub">{porMes ? `todo lo de abajo es del mes · ${plazoN} meses` : `proyecto completo · ${plazoN} meses`}</span>
+            </div>
+          )}
           <div className="tiles rise">
-            <Tile k="k-curva" l="CURVA se queda" v={fmtMXN(r.marginOp)} p={`${pctFmt(r.marginOp / t)} del ingreso`} tip="Lo que le queda a CURVA (utilidad de socios + Banca) después de pagarle al equipo, la comisión y apartar la caja del proyecto." />
-            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(r.socioA)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat)}` : `socio ${P.split}%`} tip={`Todo lo que gana ${P.nombreA} en este proyecto: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
-            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(r.socioB)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat)}` : `socio ${100 - P.split}%`} tip={`Todo lo que gana ${P.nombreB} en este proyecto: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
-            <Tile k="k-banca" l="A la Banca" v={fmtMXN(r.banca)} p="ahorro CURVA" tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
+            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN(r.marginOp * f)} p={`${pctFmt(r.marginOp / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Banca) después de pagarle al equipo, la comisión y apartar la caja del proyecto." />
+            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(r.socioA * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
+            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(r.socioB * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
+            <Tile k="k-banca" l={porMes ? "A la Banca / mes" : "A la Banca"} v={fmtMXN(r.banca * f)} p={`ahorro CURVA${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
           </div>
           <div className="card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <h2 style={{ margin: 0 }}>Cuánto cobra cada quien</h2>
-              {(active.plazoMeses ?? 1) >= 2 && (
-                <div className="chips">
-                  <button className="chip-btn sm" aria-pressed={vistaCobro === "total"} onClick={() => setVistaCobro("total")}>Total</button>
-                  <button className="chip-btn sm" aria-pressed={vistaCobro === "mes"} onClick={() => setVistaCobro("mes")}>Por mes</button>
-                </div>
-              )}
-            </div>
-            {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "mes"
-              ? <Rank rows={rowsMes} />
-              : <Rank rows={rows} />}
-            {(active.plazoMeses ?? 1) >= 2 && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
-              {vistaCobro === "mes"
-                ? <>Lo que gana cada quien <b>por mes</b> (su total ÷ {plazoN} meses). El reparto es parejo, así que cada mes es igual.</>
-                : <>Total de los {active.plazoMeses} meses · pulsa <b>Por mes</b> para comparar el ingreso mensual de cada quien.</>}
+            <h2 style={{ margin: 0 }}>Cuánto cobra cada quien{porMes ? " · al mes" : esMulti ? " · en total" : ""}</h2>
+            {porMes ? <Rank rows={rowsMes} /> : <Rank rows={rows} />}
+            {esMulti && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+              {porMes
+                ? <>Lo que gana cada quien <b>cada mes</b> (parejo los {plazoN} meses). Cambia a <b>Total</b> arriba para ver los {plazoN} meses juntos.</>
+                : <>Total de los {plazoN} meses. Cambia a <b>Por mes</b> arriba para ver el ingreso mensual de cada quien.</>}
             </p>}
             <div className="health" style={{ marginTop: 16 }}>
               <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
@@ -1283,12 +1291,12 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <button className="disclosure" aria-expanded={verDesglose} onClick={() => setVerDesglose((v) => !v)}>
             {verDesglose ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             <span className="disc-t">{verDesglose ? "Ocultar" : "Ver"} el desglose completo</span>
-            <span className="disc-sub">estado de resultados · a dónde va cada peso</span>
+            <span className="disc-sub">{porMes ? "al mes · " : ""}estado de resultados · a dónde va cada peso</span>
           </button>
 
           {verDesglose && (
             <div className="disc-body">
-              <div className="card"><h2>El desglose · estado de resultados</h2>
+              <div className="card"><h2>El desglose · estado de resultados{porMes ? " · al mes" : ""}</h2>
                 {bd("", "Ingreso del proyecto", r.t)}
                 {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
                 {r.disc > 0.5 && bd("sub", "− Sombrero de socio (reserva a Banca)", -r.disc)}
@@ -1306,9 +1314,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
               </div>
               <div className="card">
-                <h2>A dónde va cada peso del ingreso</h2>
-                <div className="stack">{segs.map((s) => <div key={s.k} className="seg" title={`${s.k} ${fmtMXN(s.v)}`} style={{ flex: `0 0 ${s.v / totSeg * 100}%`, background: `var(${s.c})` }} />)}</div>
-                <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v)} className="lv num-anim">{fmtMXN(s.v)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
+                <h2>A dónde va cada peso del ingreso{porMes ? " · al mes" : ""}</h2>
+                <div className="stack">{segs.map((s) => <div key={s.k} className="seg" title={`${s.k} ${fmtMXN(s.v * f)}`} style={{ flex: `0 0 ${s.v / totSeg * 100}%`, background: `var(${s.c})` }} />)}</div>
+                <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v * f)} className="lv num-anim">{fmtMXN(s.v * f)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
               </div>
             </div>
           )}
