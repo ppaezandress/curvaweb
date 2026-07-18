@@ -1000,54 +1000,6 @@ function AgendaEditor({ active, st, P, updateActive }: {
   );
 }
 
-/* ---------------- Reparto mes a mes — carrusel por persona (en la Calculadora) ----
-   En "Por mes", cada persona sale en su propia tarjeta deslizable: cuánto gana AL MES
-   y cuánto EN TOTAL del proyecto (con el detalle mes a mes). Sin agenda = parejo (lo
-   mismo cada mes); con agenda = varía por mes. Los números salen de repartoPorMes
-   (Método A), así que Σ(meses) por persona == su total en compute(). */
-function RepartoMensual({ pr, P }: { pr: Proyecto; P: Reglas }) {
-  const [i, setI] = useState(0);
-  // Floor + casteo idéntico al motor (reparto.ts): un plazo decimal o NaN haría
-  // Array(N) → RangeError y tumbaría la app. Nunca construir Array(N) con N sucio.
-  const N = Math.max(1, Math.floor(+(pr.plazoMeses || 0) || 1));
-  const meses = repartoPorMes(pr, P);
-  const inicio = pr.fechaInicio || todayISO();
-  type Row = { nombre: string; quien: Quien; total: number; porMes: number[] };
-  const map: Record<string, Row> = {};
-  meses.forEach((mm, idx) => {
-    Object.values(mm.personas).forEach((pe) => {
-      const v = pe.trabajo + pe.extra + pe.comision;
-      const k = pe.nombre + "|" + pe.quien;
-      if (!map[k]) map[k] = { nombre: pe.nombre, quien: pe.quien, total: 0, porMes: Array(N).fill(0) };
-      map[k].porMes[idx] += v; map[k].total += v;
-    });
-  });
-  const rows = Object.values(map).filter((r) => r.total > 0.5).sort((a, b) => b.total - a.total || order[a.quien] - order[b.quien]);
-  if (N < 2 || !rows.length) return null;
-  const idx = Math.min(i, rows.length - 1);         // clamp: si cambia el equipo, no se sale
-  const rw = rows[idx];
-  const mesLabels = meses.map((mm) => mesLabel(addMonths(inicio, mm.mes - 1)));
-  const varia = !!pr.agenda;
-  const prom = rw.total / N;
-  const go = (d: number) => setI((rows.length + idx + d) % rows.length);
-  return (
-    <div className="carr">
-      <div className="carr-nav">
-        <button className="carr-arrow" onClick={() => go(-1)} aria-label="Persona anterior">‹</button>
-        <div className="carr-who"><span className="nm">{rw.nombre}</span><span className={"badge " + badgeCls[rw.quien]}>{badgeTxt[rw.quien]}</span></div>
-        <button className="carr-arrow" onClick={() => go(1)} aria-label="Siguiente persona">›</button>
-      </div>
-      <div className="carr-total"><span key={fmtMXN(rw.total)} className="num-anim">{fmtMXN(rw.total)}</span><span className="carr-tot-lbl">en total · {N} meses</span></div>
-      <div className="carr-sub">{varia ? "Varía por mes (agenda) — el detalle está abajo." : `≈ ${fmtMXN(prom)} al mes, parejo los ${N} meses.`}</div>
-      <div className="carr-months">
-        {rw.porMes.map((v, k) => <div key={k}><span className="mlbl">{mesLabels[k]}</span><b>{fmtMXN(v)}</b></div>)}
-      </div>
-      <div className="carr-dots">{rows.map((_, k) => <button key={k} aria-pressed={k === idx} onClick={() => setI(k)} aria-label={`Ver persona ${k + 1}`} />)}</div>
-      <div className="carr-count">Persona {idx + 1} de {rows.length} · desliza para ver a cada quien</div>
-    </div>
-  );
-}
-
 /* ---------------- Calculadora ---------------- */
 function Calculadora({ st, active, clientes, update, updateActive, setSec, setToast }: {
   st: State; active: Proyecto; clientes: Cliente[];
@@ -1115,6 +1067,11 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   ].filter((s) => s.v > 0.5);
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
   const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
+  // "Por mes" = la MISMA comparación (todos lado a lado), pero el monto de cada quien
+  // ÷ meses (promedio mensual). No es el mes-a-mes por persona (ese siempre repite el
+  // mismo número con reparto parejo, no sirve para comparar). Decisión Andrés 2026-07-19.
+  const plazoN = Math.max(1, Math.floor(active.plazoMeses || 1));
+  const rowsMes = rows.map((x) => ({ ...x, trabajo: x.trabajo / plazoN, extra: x.extra / plazoN, comision: (x.comision || 0) / plazoN }));
   let tT = 0, tE = 0, tC = 0; Object.values(r.people).forEach((a) => { tT += a.trabajo; tE += a.extra; tC += a.comision || 0; });
   // La comisión ahora vive en su propio campo (franjita naranja); se suma aparte al cuadre.
   const leak = r.t - (tT + tE + tC + r.cajaProj + r.banca);
@@ -1308,9 +1265,13 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               )}
             </div>
             {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "mes"
-              ? <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />
+              ? <Rank rows={rowsMes} />
               : <Rank rows={rows} />}
-            {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver cuánto cobra cada quien mes por mes (mes 1…{active.plazoMeses}).</p>}
+            {(active.plazoMeses ?? 1) >= 2 && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+              {vistaCobro === "mes"
+                ? <>Lo que gana cada quien <b>por mes</b> (su total ÷ {plazoN} meses). El reparto es parejo, así que cada mes es igual.</>
+                : <>Total de los {active.plazoMeses} meses · pulsa <b>Por mes</b> para comparar el ingreso mensual de cada quien.</>}
+            </p>}
             <div className="health" style={{ marginTop: 16 }}>
               <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
               <span className={"hpill " + (r.marginOp >= r.bolsaOut ? "ok" : "warn")}>{r.marginOp >= r.bolsaOut ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
