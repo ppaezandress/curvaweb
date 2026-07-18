@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, Component, type ReactNode, type CSSProperties } from "react";
+import { useEffect, useState, useCallback, useRef, Component, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
@@ -9,6 +9,7 @@ import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
   cajaLabel, CAJA_ORDER, isSocio,
   repartoPorMes, ticketSinIVA, baseBolsaDesglose, reglasDifierenDinero,
+  todayISO, addMonths, mesLabel, mesDe, membersResolved, reglasDe,
   REGLAS_DEFAULT, IVA, ROLNAME, type Proyecto, type Reglas, type Miembro, type Quien, type Pago, type ReparteMes,
   type EstadoProyecto, type Rol, type CajaKind, type CajaGrupo, type DatosBancarios,
 } from "@/lib/reparto";
@@ -20,7 +21,7 @@ type Cliente = { id: string; nombre: string; estado: string | null };
 // nombre sale de Reglas (nombreA/nombreB), así nunca se desincroniza.
 type RosterPerson = { id: string; nombre: string; quien: Quien };
 type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios };
-const RULES_VERSION = 7; // sube esto cuando una decisión deba re-aplicarse a estados guardados
+const RULES_VERSION = 8; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 // Saldo que YA existía en cada caja de Revolut antes de que la app empezara a
 // contar (el socio lo captura una vez; se SUMA a lo que la app calcula).
 const DEF_SALDOS: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0 };
@@ -31,6 +32,46 @@ const DEF_BANCO: DatosBancarios = {
   cuenta: "157 840 5420", clabe: "012 180 01578405420 4", swift: "BCMRMXMMPYM",
 };
 const mergeBanco = (x: unknown): DatosBancarios => ({ ...DEF_BANCO, ...((x as DatosBancarios) || {}) });
+
+// Firmas de los DOS socios para los comprobantes de pago. Se guardan SOLO en este
+// equipo (localStorage aparte del estado sincronizado) — la Supabase de la app es
+// compartida y PROD, así que las firmas nunca suben al server (HARD RULE).
+// Cada socio firma en su propio equipo (o los dos aquí, si comparten la compu).
+type FirmaSlot = "A" | "B";
+const FIRMA_KEYS: Record<FirmaSlot, string> = { A: "curva_socios_firma_A", B: "curva_socios_firma_B" };
+const loadFirma = (slot: FirmaSlot): string => {
+  try {
+    // Migración: la firma única de antes pasa a ser la de Andrés (slot A).
+    if (slot === "A") {
+      const old = localStorage.getItem("curva_socios_firma");
+      if (old && !localStorage.getItem(FIRMA_KEYS.A)) { localStorage.setItem(FIRMA_KEYS.A, old); localStorage.removeItem("curva_socios_firma"); }
+    }
+    return localStorage.getItem(FIRMA_KEYS[slot]) || "";
+  } catch { return ""; }
+};
+const saveFirma = (slot: FirmaSlot, d: string) => { try { d ? localStorage.setItem(FIRMA_KEYS[slot], d) : localStorage.removeItem(FIRMA_KEYS[slot]); } catch { /* noop */ } };
+// Reescala la firma a máx 600px de ancho y la re-emite como PNG (conserva el
+// fondo transparente si lo trae). Mantiene chico el dataURI en localStorage.
+const compressFirma = (file: File): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 600 / img.width);
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width * scale));
+      c.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = c.getContext("2d");
+      if (!ctx) return reject(new Error("sin canvas"));
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("imagen inválida"));
+    img.src = reader.result as string;
+  };
+  reader.onerror = () => reject(new Error("no se pudo leer"));
+  reader.readAsDataURL(file);
+});
 const DEF_ROSTER: RosterPerson[] = [
   { id: "r_ivana", nombre: "Ivana", quien: "nucleo" },
   { id: "r_lomba", nombre: "Lomba", quien: "nucleo" },
@@ -40,15 +81,6 @@ const DEF_ROSTER: RosterPerson[] = [
 
 const KEY = "curva_socios_v1";
 const uid = () => "p" + Math.random().toString(36).slice(2, 9);
-const todayISO = () => new Date().toISOString().slice(0, 10);
-// Aritmética de meses sobre "YYYY-MM-DD" → "YYYY-MM" (sin líos de zona horaria).
-const addMonths = (iso: string, k: number) => {
-  const [y, m] = iso.split("-").map(Number);
-  const idx = y * 12 + (m - 1) + k;
-  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
-};
-const MES_ABR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-const mesLabel = (ym: string) => { const [y, m] = ym.split("-").map(Number); return `${MES_ABR[m - 1]} ${String(y).slice(2)}`; };
 // Color por caja de destino en las tarjetas de desembolso.
 // Color de cada caja de Revolut (dot en las tarjetas de cajas / tesorería).
 const cajaKindColor: Record<CajaKind, string> = {
@@ -84,7 +116,6 @@ const CAT_GASTO = ["Viáticos", "Comidas", "Transporte", "Herramientas", "Subcon
 const gastosDeProyecto = (gastos: Gasto[], id: string): Gasto[] => gastos.filter((g) => g.proyectoId === id && !g.esIngreso);
 const cajaMonto = (pr: Proyecto): number => Math.max(0, +pr.ticket || 0) * ((pr.cajaPct || 0) / 100);
 const sumaGastos = (gs: Gasto[]): number => gs.reduce((a, g) => a + (+g.m || 0), 0);
-const mesDe = (fecha?: string | null): string => (fecha || "").slice(0, 7); // "YYYY-MM"
 
 // Compartir por el sheet nativo del sistema (WhatsApp, correo, etc.) usando Web Share
 // API en móvil; en desktop o sin soporte cae a wa.me con el texto ya escrito. Así lo
@@ -101,36 +132,6 @@ async function compartir(title: string, text: string) {
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
 }
 
-// Resuelve la identidad de cada miembro desde el roster (fuente de verdad):
-// nombre y tipo (núcleo/socio/nuevo) salen del directorio, no de una copia vieja.
-// Así renombrar a alguien en Reglas se refleja en TODOS los proyectos al instante.
-function membersResolved(pr: Proyecto, roster: RosterPerson[], P: Reglas): Proyecto {
-  const byId = new Map(roster.map((r) => [r.id, r]));
-  const resolve = (m: Miembro): Miembro => {
-    if (m.personId === "socioA") return { ...m, quien: "socioA" as Quien, nombre: P.nombreA, sm: 1 };
-    if (m.personId === "socioB") return { ...m, quien: "socioB" as Quien, nombre: P.nombreB, sm: 1 };
-    const rp = m.personId ? byId.get(m.personId) : undefined;
-    if (rp) return { ...m, quien: rp.quien, nombre: rp.nombre, sm: rp.quien === "nuevo" ? P.smNuevo : 1 };
-    return m; // legacy sin personId: usa lo guardado
-  };
-  const members = pr.members.map(resolve);
-  let agenda = pr.agenda;
-  if (agenda) {
-    const a2: Record<number, Miembro[]> = {};
-    for (const k of Object.keys(agenda)) a2[+k] = (Array.isArray(agenda[+k]) ? agenda[+k] : []).map(resolve);
-    agenda = a2;
-  }
-  return agenda ? { ...pr, members, agenda } : { ...pr, members };
-}
-
-// Reglas con las que se calcula un proyecto. Un proyecto GUARDADO con foto propia
-// (pr.reglas) se calcula con ESA foto — mover perillas en Reglas ya no lo toca. Los
-// NOMBRES sí se toman de las Reglas vivas (renombrar un socio se refleja en todos).
-// Borradores y proyectos sin foto usan las Reglas vivas (params).
-function reglasDe(pr: Proyecto, params: Reglas): Reglas {
-  if (pr.borrador || !pr.reglas) return params;
-  return { ...pr.reglas, nombreA: params.nombreA, nombreB: params.nombreB };
-}
 
 // Aplica las migraciones de campos nuevos a un proyecto (server o local viejo).
 function migrateProject(p: Proyecto): Proyecto {
@@ -234,6 +235,7 @@ export default function App() {
       if ((s.rulesVersion || 0) < 2) { merged.params.pool = 0; }              // apagar bono del Núcleo
       if ((s.rulesVersion || 0) < 3) { merged.params.metaBancaMonto = 48000; } // meta de Banca realista
       if ((s.rulesVersion || 0) < 6) { merged.params.imp = 2.5; }               // ISR realista (RESICO), antes 30% placeholder
+      if ((s.rulesVersion || 0) < 8) { merged.params.imp = 1.5; }               // ISR opcional por proyecto → tasa 1.5% (editable)
       if ((s.rulesVersion || 0) < 4) {                                        // control de pagos: campos nuevos
         merged.projects = merged.projects.map((p) => ({
           ...p,
@@ -276,6 +278,7 @@ export default function App() {
           if (rv < 2) params.pool = 0;
           if (rv < 3) params.metaBancaMonto = 48000;
           if (rv < 6) params.imp = 2.5;   // ISR realista (RESICO), antes 30% placeholder
+          if (rv < 8) params.imp = 1.5;   // ISR opcional por proyecto → tasa 1.5% (editable)
           let projects: Proyecto[] = (srv.projects || []);
           if (rv < 4) projects = projects.map(migrateProject);
           if (rv < 7) projects = freezeLegacyReglas(projects);   // congela guardados del server (verdad PROD)
@@ -415,8 +418,8 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
   // Una sola pasada alimenta: tiles del mes, ranking del mes, flujo y Cortes. Todo
   // "por mes" (devengado), sin mezclar bases de tiempo como antes.
   type PplRow = { nombre: string; quien: Quien; trabajo: number; extra: number; comision: number };
-  type MesAgg = { equipo: number; socios: number; utilSocios: number; banca: number; caja: number; gastos: number; ppl: Record<string, PplRow>; proys: Set<string> };
-  const nuevoMes = (): MesAgg => ({ equipo: 0, socios: 0, utilSocios: 0, banca: 0, caja: 0, gastos: 0, ppl: {}, proys: new Set() });
+  type MesAgg = { equipo: number; socios: number; utilSocios: number; utilSociosISR: number; banca: number; caja: number; gastos: number; ppl: Record<string, PplRow>; proys: Set<string> };
+  const nuevoMes = (): MesAgg => ({ equipo: 0, socios: 0, utilSocios: 0, utilSociosISR: 0, banca: 0, caja: 0, gastos: 0, ppl: {}, proys: new Set() });
   const porMes: Record<string, MesAgg> = {};
   vivos.forEach((p) => {
     const R = reglasDe(p, st.params);
@@ -429,7 +432,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
       Mm.banca += mm.banca; Mm.caja += mm.cajaProyecto; Mm.proys.add(p.id);
       Object.values(mm.personas).forEach((pe) => {
         const v = pe.trabajo + pe.extra + pe.comision;
-        if (isSocio(pe.quien)) { Mm.socios += v; Mm.utilSocios += pe.extra; } else Mm.equipo += v;
+        if (isSocio(pe.quien)) { Mm.socios += v; Mm.utilSocios += pe.extra; if (p.descontarISR) Mm.utilSociosISR += pe.extra; } else Mm.equipo += v;
         const k = pe.nombre + "|" + pe.quien;
         const a = (Mm.ppl[k] = Mm.ppl[k] || { nombre: pe.nombre, quien: pe.quien, trabajo: 0, extra: 0, comision: 0 });
         a.trabajo += pe.trabajo; a.extra += pe.extra; a.comision += pe.comision;
@@ -446,7 +449,9 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
   const selYM = allYM.includes(ymSel) ? ymSel : allYM.includes(curYM) ? curYM : (allYM[0] || curYM);
   const M = porMes[selYM] || nuevoMes();
   const ingresoMes = M.equipo + M.socios + M.banca + M.caja;
-  const netoMes = Math.max(0, M.utilSocios - overhead) * (1 - st.params.imp / 100);
+  // ISR solo sobre la fracción de utilidad de socios que viene de proyectos con "Descontar ISR".
+  const isrFrac = M.utilSocios > 0 ? M.utilSociosISR / M.utilSocios : 0;
+  const netoMes = Math.max(0, M.utilSocios - overhead) * (1 - isrFrac * st.params.imp / 100);
   const rows = Object.values(M.ppl).filter((a) => a.trabajo + a.extra + a.comision > 0.5).sort((a, b) => (b.trabajo + b.extra + b.comision) - (a.trabajo + a.extra + a.comision) || order[a.quien] - order[b.quien]);
   const proysDelMes = vivos.filter((p) => M.proys.has(p.id));
 
@@ -496,7 +501,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
         <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · proyectado`} tip="Lo que los proyectos activos reparten en el mes elegido (equipo + socios + Banca + caja), según su plazo. Es proyectado (devengado), no lo cobrado." />
         <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
         <Tile k="k-banca" l="A la Banca del mes" v={fmtMXN(M.banca)} p="colchón" tip="Lo que va al colchón de CURVA en el mes elegido (caja de ahorro + sombrero de socio)." />
-        <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR aprox." />
+        <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR (solo de los proyectos con “Descontar ISR” activo)." />
       </div>
       <div className="two rise r2">
         <div className="card">
@@ -596,8 +601,103 @@ function DatosCobro({ st, update }: { st: State; update: (fn: (s: State) => Stat
               <input type="text" value={b[k]} onChange={(e) => set(k, e.target.value)} />
             </div>
           ))}
+          <FirmaEditor nombreA={st.params?.nombreA || "Andrés"} nombreB={st.params?.nombreB || "Balmo"} />
         </div>
       )}
+    </div>
+  );
+}
+
+/* Pad para DIBUJAR la firma con el dedo o el mouse. Exporta un PNG transparente
+   con trazo oscuro fijo (#12213f) — así se ve bien sobre el comprobante en blanco
+   sin importar si la app está en claro u oscuro. */
+function FirmaPad({ onSave }: { onSave: (dataUrl: string) => void }) {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  const drawing = useRef(false);
+  const dirty = useRef(false);
+  const last = useRef<{ x: number; y: number } | null>(null);
+  const pos = (e: ReactPointerEvent) => {
+    const c = ref.current!; const r = c.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (c.width / r.width), y: (e.clientY - r.top) * (c.height / r.height) };
+  };
+  const start = (e: ReactPointerEvent) => {
+    e.preventDefault();
+    try { (e.target as Element).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
+    drawing.current = true; last.current = pos(e);
+  };
+  const move = (e: ReactPointerEvent) => {
+    if (!drawing.current) return;
+    const c = ref.current, ctx = c?.getContext("2d");
+    if (!c || !ctx) return;
+    ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#12213f";
+    const p = pos(e); const l = last.current!;
+    ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last.current = p; dirty.current = true;
+  };
+  const end = () => {
+    if (!drawing.current) return;
+    drawing.current = false; last.current = null;
+    if (dirty.current && ref.current) onSave(ref.current.toDataURL("image/png"));
+  };
+  const clear = () => {
+    const c = ref.current, ctx = c?.getContext("2d");
+    if (c && ctx) ctx.clearRect(0, 0, c.width, c.height);
+    dirty.current = false;
+  };
+  return (
+    <div>
+      <canvas ref={ref} width={600} height={170} className="firma-pad"
+        onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerLeave={end} onPointerCancel={end} />
+      <div className="firma-pad-actions">
+        <span className="hint" style={{ margin: 0 }}>Dibuja con el dedo o el mouse.</span>
+        <button type="button" className="btn ghost" onClick={clear}>Borrar trazo</button>
+      </div>
+    </div>
+  );
+}
+
+/* Una ranura de firma por socio. Se guarda device-local (nunca al server). */
+function FirmaSlotEditor({ slot, nombre }: { slot: FirmaSlot; nombre: string }) {
+  const [firma, setFirma] = useState<string>("");
+  const [err, setErr] = useState(false);
+  useEffect(() => { setFirma(loadFirma(slot)); }, [slot]);
+  const onFile = async (f?: File) => {
+    if (!f) return; setErr(false);
+    try { const d = await compressFirma(f); saveFirma(slot, d); setFirma(d); }
+    catch { setErr(true); }
+  };
+  return (
+    <div className="firma-slot">
+      <div className="firma-slot-h">Firma de {nombre || (slot === "A" ? "Socio A" : "Socio B")}</div>
+      {firma ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <img src={firma} alt={`Firma de ${nombre}`} className="firma-preview" />
+          <button type="button" className="btn ghost" onClick={() => { saveFirma(slot, ""); setFirma(""); }}><Trash2 size={14} /> Rehacer</button>
+        </div>
+      ) : (
+        <>
+          <FirmaPad onSave={(d) => { saveFirma(slot, d); setFirma(d); }} />
+          <div className="firma-upload">
+            <span className="hint" style={{ margin: 0 }}>o sube una imagen:</span>
+            <input type="file" accept="image/png,image/jpeg" onChange={(e) => onFile(e.target.files?.[0])} />
+          </div>
+          {err && <p className="hint" style={{ color: "var(--danger)", marginTop: 4 }}>No se pudo leer la imagen. Prueba con un PNG o JPG.</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* Captura de las firmas de los DOS socios para los comprobantes de pago. */
+function FirmaEditor({ nombreA, nombreB }: { nombreA: string; nombreB: string }) {
+  return (
+    <div className="field" style={{ margin: 0, gridColumn: "1 / -1" }}>
+      <label>Firmas para los comprobantes de pago</label>
+      <div className="firma-slots">
+        <FirmaSlotEditor slot="A" nombre={nombreA} />
+        <FirmaSlotEditor slot="B" nombre={nombreB} />
+      </div>
+      <p className="hint" style={{ marginTop: 8 }}>Cada firma se guarda solo en <b>este equipo</b> (no sube al servidor). Cada socio puede firmar en su propia compu. Al generar un comprobante eliges quién firma.</p>
     </div>
   );
 }
@@ -674,7 +774,7 @@ function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
             <Tile k="k-fact" l="Proyectos activos" v={String(proyectosMes.length)} p={proyectosMes.join(" · ") || "—"} tip="Proyectos que están corriendo en el mes seleccionado." />
             <Tile k="k-equipo" l="Al equipo (Núcleo/nuevos)" v={fmtMXN(totalTeam)} p={`promedio ${fmtMXN(teamAvg)}`} tip="Suma del trabajo del equipo (sin socios) en el mes, cruzando todos los proyectos." />
             <Tile k="k-a" l="A los socios" v={fmtMXN(totalSocios)} p="trabajo + utilidad" tip="Lo que ganan los socios este mes (por su trabajo y su utilidad de dueños)." />
-            <Tile k="k-banca" l="ISR reservado" v={pctFmt((P.imp || 0) / 100)} p="sobre el bruto" tip="El % que se aparta para impuestos (editable en Reglas). El neto de cada quien ya lo descuenta." />
+            <Tile k="k-banca" l="Tasa de ISR" v={`${P.imp || 0}%`} p="editable en Reglas" tip="La tasa que se aparta para ISR cuando un proyecto tiene “Descontar ISR” activo. Se prende proyecto por proyecto en la Calculadora; la tasa se edita en Reglas." />
           </div>
 
           <div className="card">
@@ -746,7 +846,10 @@ function Personas({ st }: { st: State }) {
 
   return (
     <>
-      <div className="page-h"><div><h1>Personas</h1><p>El detalle de cada persona: cuánto gana sumando <b>todos</b> los proyectos vivos, por proyecto y pronosticado por mes.</p></div></div>
+      <div className="page-h">
+        <div><h1>Personas</h1><p>El detalle de cada persona: cuánto gana sumando <b>todos</b> los proyectos vivos, por proyecto y pronosticado por mes.</p></div>
+        {rows.length > 0 && <button className="btn ghost" title="Genera una hoja por persona con su estabilidad mes a mes (todos los proyectos)" onClick={() => window.open("/pdf/persona", "_blank")}><FileText size={14} /> PDF de todos</button>}
+      </div>
       {rows.length === 0 ? (
         <div className="card"><p className="hint" style={{ margin: 0 }}>No hay proyectos vivos con reparto todavía. Arma uno en la Calculadora y guárdalo.</p></div>
       ) : (
@@ -771,7 +874,10 @@ function Personas({ st }: { st: State }) {
               <div className="tiles" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
                 <Tile k="k-fact" l={`Este mes · ${mesLabel(curYM)}`} v={fmtMXN(esteMes)} p="proyectado" tip="Lo que gana esta persona en el mes actual, sumando todos sus proyectos (proyectado, Método A)." />
                 <Tile k="k-a" l={`${sel.nombre} · total`} v={fmtMXN(sel.total)} p="todos los proyectos" tip="Todo lo que gana esta persona sumando cada proyecto vivo (bruto, antes de ISR)." />
-                <Tile k="k-curva" l="Neto estimado" v={fmtMXN(sel.neto)} p={`después de ISR (${pctFmt((P.imp || 0) / 100)})`} tip="Lo que le queda tras apartar el ISR reservado en Reglas." />
+                <Tile k="k-curva" l="Neto estimado" v={fmtMXN(sel.neto)} p={`después de ISR (${P.imp || 0}%)`} tip="Lo que le queda tras apartar el ISR — solo de los proyectos con “Descontar ISR” activo." />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button className="btn ghost" title={`Hoja de ${sel.nombre}: estabilidad mes a mes + total`} onClick={() => window.open("/pdf/persona?persona=" + encodeURIComponent(sel.nombre), "_blank")}><FileText size={14} /> PDF de {sel.nombre}</button>
               </div>
               <div className="card">
                 <h2>Por proyecto</h2>
@@ -1109,20 +1215,25 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   <div className="field"><label>Precio del proyecto <span className="tip" data-tip="Escribe el número una vez. El botón de abajo decide qué se hace con el IVA; el número se queda igual."><Info /></span></label>
                     <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
                   </div>
-                  <div className="field"><label>¿Qué hago con el IVA?</label>
+                  <div className="field"><label>Impuestos <span className="tip" data-tip="Cada botón es un interruptor independiente: si no lo picas, no se descuenta nada. IVA = lo que paga el cliente; ISR = lo que apartas del neto de socios."><Info /></span></label>
                     <div className="chips">
-                      <button className="chip-btn" aria-pressed={modo === "sin"} onClick={() => setModo("sin")}>Sin IVA</button>
-                      <button className="chip-btn" aria-pressed={modo === "incluido"} onClick={() => setModo("incluido")}>Descontar IVA</button>
+                      <button className="chip-btn" aria-pressed={conIVA} onClick={() => setModo(conIVA ? "sin" : "incluido")}>Descontar IVA</button>
+                      <button className="chip-btn" aria-pressed={!!active.descontarISR} onClick={() => updateActive((p) => { p.descontarISR = !p.descontarISR; })}>Descontar ISR ({P.imp}%)</button>
                     </div>
                     <p className="hint" style={{ marginTop: 6, marginBottom: 8 }}>
-                      {modo === "sin" && "El precio que escribes no lleva IVA: se reparte tal cual y es lo que paga el cliente."}
-                      {incluido && "El precio que escribes YA trae IVA: la app le descuenta el 16% y reparte solo la base."}
+                      {conIVA
+                        ? "IVA activo: el precio que escribes YA trae IVA — la app le descuenta el 16% y reparte solo la base."
+                        : "IVA apagado: el precio no lleva IVA — se reparte tal cual y es lo que paga el cliente."}
+                      {active.descontarISR
+                        ? ` · ISR activo: se aparta ${P.imp}% del neto de socios.`
+                        : " · ISR apagado: no se descuenta."}
                     </p>
                     <div className="iva-box">
                       <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}><span key={fmtMXN(base)} className="num-anim">{fmtMXN(base)}</span></b></div>
-                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? (incluido ? "· descontado del total, para Hacienda" : "· de Hacienda, no se reparte") : ""}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
+                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? "· descontado del total, para Hacienda" : "· apagado"}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></b></div>
                     </div>
+                    {active.descontarISR && <p className="hint" style={{ marginTop: 8 }}>ISR reservado ({P.imp}%): <b>−{fmtMXN(r.utilKept * P.imp / 100)}</b> del neto de socios (aprox.). No cambia lo que se reparte ni lo que paga el cliente; solo el neto que ves en Personas y El desglose. La tasa se edita en <b>Reglas</b>.</p>}
                     <p className="hint" style={{ marginTop: 8 }}>Bolsa <b>bruta</b> del equipo: <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. De ahí, el sombrero de socio pasa a la Banca; lo <b>neto</b> al equipo se ve en “A dónde va cada peso” y “El desglose”.</p>
                   </div>
                 </>
@@ -1217,8 +1328,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
               {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
               {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
-              {P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}%)`, -(r.utilKept * P.imp / 100))}
-              {P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
+              {active.descontarISR && P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}%)`, -(r.utilKept * P.imp / 100))}
+              {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
             </div>
             <div className="stackcol">
               <div className="card">
@@ -1540,7 +1651,10 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
         <div>
           <b>{fmtMXN(pago.monto)}</b> <span className="hint" style={{ margin: 0 }}>· {pago.fecha}{pago.nota ? " · " + pago.nota : ""}</span>
         </div>
-        <button className="rmv" onClick={onDelete} title="Borrar pago">×</button>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <button className="rmv" title="Recibo de cobro para el cliente" onClick={() => window.open("/pdf/recibo?tipo=cobro&proyecto=" + p.id + "&pago=" + pago.id, "_blank")}><FileText size={13} /></button>
+          <button className="rmv" onClick={onDelete} title="Borrar pago">×</button>
+        </div>
       </div>
       <div className="desemb">
         <div className="desemb-h"><Wallet size={13} /> Reparte este pago en tus cajas de Revolut:</div>
@@ -1746,6 +1860,7 @@ function PagadosLista({ pagados, onDeshacer }: { pagados: { nombre: string; quie
       {open && pagados.map((x) => (
         <div key={x.nombre} className="pagados-r">
           <Check size={13} /> <span className="pg-n">{x.nombre}</span><span className="pg-f">{x.fecha}</span><span className="pg-v">{fmtMXN(x.monto)}</span>
+          <button className="pg-undo" title="Comprobante de pago (con tu firma)" onClick={() => window.open("/pdf/recibo?tipo=pago&persona=" + encodeURIComponent(x.nombre), "_blank")}><FileText size={12} /></button>
           <button className="pg-undo" title="Deshacer (marcar como no pagado)" onClick={() => onDeshacer(x.nombre)}><RotateCcw size={12} /></button>
         </div>
       ))}
@@ -1978,8 +2093,8 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
           {pct("beta", "β — barrer utilidad a la Banca", 0, 50, 5)}
           {pct("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
           {pct("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
-          {pct("imp", "ISR / impuesto (% que reservas)", 0, 20, 0.5)}
-          <p className="hint" style={{ marginTop: -2 }}>El % que apartas para el SAT — solo para ver el <b>neto</b> real (no mueve el reparto). En <b>RESICO</b> Persona Física el ISR va por tramos ~1.0–2.5% del ingreso mensual; arranca en <b>2.5%</b> (el tope, colchón conservador). <b>Confírmalo con tu contadora.</b></p>
+          {pct("imp", "Tasa de ISR (% que reservas)", 0, 20, 0.5)}
+          <p className="hint" style={{ marginTop: -2 }}>La tasa que se aparta para el SAT. Se prende <b>proyecto por proyecto</b> con el botón “Descontar ISR” de la Calculadora (si no lo picas, ese proyecto no descuenta). Solo afecta el <b>neto</b> que ves, no mueve el reparto. En <b>RESICO</b> Persona Física va por tramos ~1.0–2.5%; arranca en <b>1.5%</b>. <b>Confírmalo con tu contadora.</b></p>
         </div>
         <div className="card"><h2>Comisión de origen</h2>
           {pct("comisPct", "% del margen a quien trae el lead", 0, 25)}

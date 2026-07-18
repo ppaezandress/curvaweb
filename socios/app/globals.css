@@ -442,6 +442,18 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .pdf-line{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px}
 .pdf-line:last-child{border-bottom:none}.pdf-line .pl{color:var(--ink-2)}.pdf-line .pv{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 .pdf-foot{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6}
+/* Título de sección y gráfica de estabilidad (hoja por persona) */
+.pdf-h3{font-family:var(--disp);font-weight:700;font-size:14px;color:var(--ink);margin:22px 0 10px;letter-spacing:-.01em}
+.pdf-chart{display:flex;gap:10px;align-items:flex-end;height:150px;overflow-x:auto;padding:8px 0 0;margin-bottom:6px}
+.pdf-bar-col{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:52px}
+.pdf-bar-val{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.pdf-bar{width:28px;background:var(--grad);border-radius:7px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pdf-bar-lbl{font-size:10.5px;color:var(--muted)}
+/* Bloque de firma en los comprobantes de pago */
+.recibo-firma{margin-top:34px;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.recibo-firma-img{height:64px;max-width:240px;object-fit:contain;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.recibo-firma-line{width:240px;height:52px;border-bottom:1.5px solid var(--ink)}
+.recibo-firma-cap{font-size:12px;color:var(--ink-2);border-top:1px solid var(--ink);padding-top:6px;min-width:240px;line-height:1.5}
 /* Ficha bancaria: wordmark (sin isotipo) + campos de cobro */
 .pdf-hero.bank{background:var(--grad)}
 .pdf-word{font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:.14em;opacity:.96;position:relative}
@@ -465,6 +477,21 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .bank-edit{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
 @media(max-width:560px){.bank-edit{grid-template-columns:1fr}}
 
+/* ── Firmas de los socios (dibujar o subir) ── */
+.firma-slots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:560px){.firma-slots{grid-template-columns:1fr}}
+.firma-slot{border:1px solid var(--border-2);border-radius:var(--r-sm);padding:12px;background:var(--panel-2)}
+.firma-slot-h{font-size:12px;font-weight:650;color:var(--ink);margin-bottom:8px}
+/* El pad es "papel" claro fijo (aunque la app esté en oscuro) para que el trazo
+   oscuro se vea al dibujar y el PNG exportado lea bien sobre el comprobante. */
+.firma-pad{width:100%;height:auto;aspect-ratio:600/170;display:block;background:#F4F7FE;border:1.5px dashed color-mix(in srgb,var(--cobalt) 45%,transparent);border-radius:10px;touch-action:none;cursor:crosshair}
+.firma-pad-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
+.firma-upload{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.firma-upload input[type=file]{font-size:12px}
+.firma-preview{height:56px;max-width:100%;object-fit:contain;background:#F4F7FE;border-radius:8px;padding:6px 10px}
+.firma-picker{display:flex;align-items:center;gap:6px;margin-right:auto;font-size:13px;color:var(--ink-2)}
+.firma-picker .btn{padding:6px 12px;font-size:13px}
+
 @media print{
   @page{margin:0}
   body{background:#fff}body::before{display:none}
@@ -472,7 +499,7 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
   .pdf-page{max-width:none;margin:0;padding:0}
   .pdf-sheet{border:none;border-radius:0;margin:0;page-break-after:always;min-height:100vh;box-shadow:none}
   .pdf-sheet:last-child{page-break-after:auto}
-  .pdf-hero,.pdf-role{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pdf-hero,.pdf-role,.pdf-bar,.recibo-firma-img{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 
 /* ── IVA: una sola pregunta + desglose claro (Calculadora) ── */

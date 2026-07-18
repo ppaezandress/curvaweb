@@ -59,6 +59,10 @@ export type Proyecto = {
   // el cliente paga IVA. "sin"=sin IVA · "mas"=tecleas base, cliente paga +16% ·
   // "incluido"=tecleas el total con IVA, la app saca la base. conIVA = ivaModo!="sin".
   ivaModo?: "sin" | "mas" | "incluido";
+  // ISR opcional POR PROYECTO (toggle en la Calculadora, junto al IVA). Si true, el
+  // "neto" de este proyecto descuenta la tasa `imp` de las Reglas VIVAS (1.5% edit.).
+  // Default false → sin ISR ("si no lo picas, no se descuenta"). No mueve el reparto.
+  descontarISR?: boolean;
   estado?: EstadoProyecto;   // default "cotizacion"
   fechaInicio?: string;      // ISO, para proyecciones por mes en el Panel
   pagos?: Pago[];            // historial de cobros
@@ -114,9 +118,10 @@ export type Reglas = {
 export const REGLAS_DEFAULT: Reglas = {
   // pool arranca en 0: el bono del Núcleo es un PENDIENTE (se prende cuando haya
   // equipo de planta y estén seguros de sostenerlo). Decisión 2026-07-09.
-  // imp = ISR reservado. Default 2.5% = tope de RESICO Persona Física (colchón
-  // conservador). Editable en Reglas; confírmalo con la contadora. Decisión 2026-07-10.
-  alpha: 60, pool: 0, beta: 0, split: 60, ahorro: 15, imp: 2.5,
+  // imp = tasa de ISR que se descuenta cuando el proyecto tiene "Descontar ISR"
+  // activo. Default 1.5% (RESICO Persona Física, tramo típico). Editable en Reglas;
+  // confírmalo con la contadora. Decisión 2026-07-18 (ISR opcional por proyecto).
+  alpha: 60, pool: 0, beta: 0, split: 60, ahorro: 15, imp: 1.5,
   comisPct: 10, comisTope: 30000,
   pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
   brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,
@@ -272,7 +277,8 @@ export type ReparteMes = {
 };
 
 // Neto tras reservar ISR (Reglas.imp = % de ISR, editable; RESICO por confirmar).
-export const netoDe = (bruto: number, R: Reglas) => (bruto || 0) * (1 - (+R.imp || 0) / 100);
+// aplicaISR gobierna si se descuenta (viene del toggle por proyecto). Sin él, neto = bruto.
+export const netoDe = (bruto: number, R: Reglas, aplicaISR = true) => (bruto || 0) * (1 - (aplicaISR ? (+R.imp || 0) : 0) / 100);
 
 // Miembros activos en el mes m (1-indexado). Sin agenda → los mismos todos los meses.
 export const miembrosDelMes = (pr: Proyecto, m: number): Miembro[] =>
@@ -330,7 +336,7 @@ export function repartoPorMes(pr: Proyecto, P: Reglas): ReparteMes[] {
       if (hit) hit.comision += comisM;
       else ensure(comisQuien, "nuevo").comision += comisM;
     }
-    Object.values(personas).forEach((p) => { p.neto = netoDe(p.trabajo + p.extra + p.comision, P); });
+    Object.values(personas).forEach((p) => { p.neto = netoDe(p.trabajo + p.extra + p.comision, P, !!pr.descontarISR); });
     out.push({ mes: m, personas, cajaProyecto: cajaProjM, cajaAhorro: cajaAhorroM, banca: bancaM });
   }
   return out;
@@ -463,3 +469,50 @@ export function agrupaCajas(mv: Movimiento[], R: Reglas): CajaGrupo[] {
 export const fmtMXN = (v: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(v || 0);
 export const pctFmt = (x: number) => (x * 100).toFixed(0) + "%";
+
+// ── Helpers compartidos (app + rutas PDF) ──────────────────────────────────────
+// El directorio de personas: fuente de verdad de nombre/tipo de cada integrante.
+export type RosterPerson = { id: string; nombre: string; quien: Quien };
+
+export const todayISO = () => new Date().toISOString().slice(0, 10);
+// Aritmética de meses sobre "YYYY-MM-DD" → "YYYY-MM" (sin líos de zona horaria).
+export const addMonths = (iso: string, k: number): string => {
+  const [y, m] = iso.split("-").map(Number);
+  const idx = y * 12 + (m - 1) + k;
+  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
+};
+const MES_ABR = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+export const mesLabel = (ym: string): string => { const [y, m] = ym.split("-").map(Number); return `${MES_ABR[m - 1]} ${String(y).slice(2)}`; };
+export const mesDe = (fecha?: string | null): string => (fecha || "").slice(0, 7); // "YYYY-MM"
+
+// Resuelve la identidad de cada miembro desde el roster (fuente de verdad): nombre y
+// tipo salen del directorio, no de una copia vieja. Renombrar a alguien en Reglas se
+// refleja en TODOS los proyectos al instante.
+export function membersResolved(pr: Proyecto, roster: RosterPerson[], P: Reglas): Proyecto {
+  const byId = new Map(roster.map((r) => [r.id, r]));
+  const resolve = (m: Miembro): Miembro => {
+    if (m.personId === "socioA") return { ...m, quien: "socioA" as Quien, nombre: P.nombreA, sm: 1 };
+    if (m.personId === "socioB") return { ...m, quien: "socioB" as Quien, nombre: P.nombreB, sm: 1 };
+    const rp = m.personId ? byId.get(m.personId) : undefined;
+    if (rp) return { ...m, quien: rp.quien, nombre: rp.nombre, sm: rp.quien === "nuevo" ? P.smNuevo : 1 };
+    return m; // legacy sin personId: usa lo guardado
+  };
+  const members = pr.members.map(resolve);
+  let agenda = pr.agenda;
+  if (agenda) {
+    const a2: Record<number, Miembro[]> = {};
+    for (const k of Object.keys(agenda)) a2[+k] = (Array.isArray(agenda[+k]) ? agenda[+k] : []).map(resolve);
+    agenda = a2;
+  }
+  return agenda ? { ...pr, members, agenda } : { ...pr, members };
+}
+
+// Reglas con las que se calcula un proyecto. Un proyecto GUARDADO con foto propia
+// (pr.reglas) se calcula con ESA foto — mover perillas en Reglas ya no lo toca. Los
+// NOMBRES sí se toman de las Reglas vivas. Borradores/sin foto usan las Reglas vivas.
+export function reglasDe(pr: Proyecto, params: Reglas): Reglas {
+  if (pr.borrador || !pr.reglas) return params;
+  // La tasa de ISR (imp) NO se congela: es una preferencia de "ver el neto" que
+  // sale siempre de las Reglas vivas (como los nombres), no mueve el reparto.
+  return { ...pr.reglas, nombreA: params.nombreA, nombreB: params.nombreB, imp: params.imp };
+}
