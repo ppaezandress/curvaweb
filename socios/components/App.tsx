@@ -1054,6 +1054,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void;
 }) {
   const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("total"); // "cuánto cobra cada quien": total vs mes a mes
+  const [verDesglose, setVerDesglose] = useState(false); // detalle (P&L + "a dónde va") oculto por defecto
   const [confirmDescartar, setConfirmDescartar] = useState(false);
   // "+ Nuevo": si ya hay un borrador en curso, CONTINÚALO (no lo perdemos); solo si no
   // hay ninguno se crea uno en blanco. Así editar otro proyecto nunca borra tu trabajo.
@@ -1181,9 +1182,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
 
       {reglasDivergen && (
         <div className="alert warn" style={{ marginBottom: 12 }}>
-          Estás calculando con las <b>Reglas de ahora</b> (las cambiaste desde que guardaste este proyecto).
-          En el <b>Panel</b> y en <b>Proyectos</b> sigue congelado con las reglas de cuando lo guardaste;
-          pulsa <b>Actualizar</b> para recongelarlo con las de ahora.
+          Estás calculando con las <b>Reglas de ahora</b>, distintas a las que guardaste. Pulsa <b>Actualizar</b> para recongelar este proyecto con las de hoy.
         </div>
       )}
 
@@ -1215,26 +1214,17 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   <div className="field"><label>Precio del proyecto <span className="tip" data-tip="Escribe el número una vez. El botón de abajo decide qué se hace con el IVA; el número se queda igual."><Info /></span></label>
                     <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
                   </div>
-                  <div className="field"><label>Impuestos <span className="tip" data-tip="Cada botón es un interruptor independiente: si no lo picas, no se descuenta nada. IVA = lo que paga el cliente; ISR = lo que apartas del neto de socios."><Info /></span></label>
+                  <div className="field"><label>Impuestos <span className="tip" data-tip="Cada botón es un interruptor: si no lo picas, no se descuenta. Descontar IVA = el precio que escribes YA trae IVA, la app saca la base (16%) y reparte solo esa base; el IVA es de Hacienda. Descontar ISR = aparta la tasa (editable en Reglas) del neto de socios; no mueve el reparto ni lo que paga el cliente."><Info /></span></label>
                     <div className="chips">
                       <button className="chip-btn" aria-pressed={conIVA} onClick={() => setModo(conIVA ? "sin" : "incluido")}>Descontar IVA</button>
                       <button className="chip-btn" aria-pressed={!!active.descontarISR} onClick={() => updateActive((p) => { p.descontarISR = !p.descontarISR; })}>Descontar ISR ({P.imp}%)</button>
                     </div>
-                    <p className="hint" style={{ marginTop: 6, marginBottom: 8 }}>
-                      {conIVA
-                        ? "IVA activo: el precio que escribes YA trae IVA — la app le descuenta el 16% y reparte solo la base."
-                        : "IVA apagado: el precio no lleva IVA — se reparte tal cual y es lo que paga el cliente."}
-                      {active.descontarISR
-                        ? ` · ISR activo: se aparta ${P.imp}% del neto de socios.`
-                        : " · ISR apagado: no se descuenta."}
-                    </p>
                     <div className="iva-box">
                       <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}><span key={fmtMXN(base)} className="num-anim">{fmtMXN(base)}</span></b></div>
-                      <div className="iva-row muted"><span>IVA (16%) {conIVA ? "· descontado del total, para Hacienda" : "· apagado"}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
+                      <div className="iva-row muted"><span>IVA (16%){conIVA ? "" : " · apagado"}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></b></div>
+                      {active.descontarISR && <div className="iva-row muted"><span>ISR reservado ({P.imp}%) · del neto de socios</span><span key={fmtMXN(r.utilKept * P.imp / 100)} className="num-anim">−{fmtMXN(r.utilKept * P.imp / 100)}</span></div>}
                     </div>
-                    {active.descontarISR && <p className="hint" style={{ marginTop: 8 }}>ISR reservado ({P.imp}%): <b>−{fmtMXN(r.utilKept * P.imp / 100)}</b> del neto de socios (aprox.). No cambia lo que se reparte ni lo que paga el cliente; solo el neto que ves en Personas y El desglose. La tasa se edita en <b>Reglas</b>.</p>}
-                    <p className="hint" style={{ marginTop: 8 }}>Bolsa <b>bruta</b> del equipo: <b style={{ color: "var(--cobalt)" }}>{pctFmt(r.bolsaOut / (r.t || 1))}</b> = {fmtMXN(r.bolsaOut)}. De ahí, el sombrero de socio pasa a la Banca; lo <b>neto</b> al equipo se ve en “A dónde va cada peso” y “El desglose”.</p>
                   </div>
                 </>
               );
@@ -1245,36 +1235,35 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             </div>
             {(active.plazoMeses ?? 1) > 1 && <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>Proyecto de {active.plazoMeses} meses: ~<b>{fmtMXN(totalCliente(active) / (active.plazoMeses || 1))}/mes</b>. El reparto se distribuye en esos meses (lo ves en “Por mes”).</p>}
             <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
-            <div className="field"><label>¿Quién trajo este cliente? <span className="tip" data-tip="Decide quién se lleva la comisión (10% del margen) por CONSEGUIR al cliente. No cambia lo que paga el cliente, solo a dónde va ese 10%."><Info /></span></label>
-              <div className="chips">
-                <button className="chip-btn" aria-pressed={(active.origen || "empresa") === "empresa"} onClick={() => updateActive((p) => { p.origen = "empresa"; })}>La marca</button>
-                <button className="chip-btn" aria-pressed={active.origen === "socio"} onClick={() => updateActive((p) => { p.origen = "socio"; })}>Un socio</button>
-                <button className="chip-btn" aria-pressed={active.origen === "persona"} onClick={() => updateActive((p) => { p.origen = "persona"; })}>Equipo</button>
-              </div>
-              {active.origen === "persona" && (
-                <select style={{ marginTop: 8 }} value={active.origenPersona || ""} onChange={(e) => updateActive((p) => { p.origenPersona = e.target.value; })}>
-                  <option value="">— ¿quién lo trajo? —</option>
-                  {nombresEquipo.map((n, i) => <option key={i} value={n}>{n}</option>)}
-                </select>
-              )}
-              {(() => {
-                const comisPot = Math.min(Math.max(0, r.marginBruto) * (P.comisPct / 100), P.comisTope);
-                const o = active.origen || "empresa";
-                return (
-                  <div className="origen-help">
-                    {o === "empresa" && <><b>La marca lo trajo → sin comisión.</b> El cliente llegó por CURVA (web, inbound, recomendación), no lo consiguió una persona. No se aparta comisión: ese {P.comisPct}% se queda dentro y engorda la <b>utilidad de los socios</b>.</>}
-                    {o === "socio" && <><b>Un socio lo trajo → la comisión va a la Banca.</b> Pagarle comisión a {P.nombreA} o {P.nombreB} le quitaría al otro socio, así que ese {P.comisPct}% (<b>{fmtMXN(comisPot)}</b>) no va a un bolsillo: se guarda en la <b>Banca</b> (el colchón de CURVA). Es la diferencia con “La marca”: aquí sí se aparta el {P.comisPct}% hacia el ahorro.</>}
-                    {o === "persona" && <><b>Alguien del equipo/externo lo trajo → esa persona cobra la comisión.</b> Como no es socio, sí puede cobrar el {P.comisPct}% (<b>{fmtMXN(comisPot)}</b>) por conseguir al cliente, sin diluir a nadie.</>}
+            {(() => {
+              const comisPot = Math.min(Math.max(0, r.marginBruto) * (P.comisPct / 100), P.comisTope);
+              const o = active.origen || "empresa";
+              const detalle = o === "empresa"
+                ? `La marca lo trajo → sin comisión: ese ${P.comisPct}% se queda dentro y engorda la utilidad de los socios.`
+                : o === "socio"
+                ? `Un socio lo trajo → la comisión (${fmtMXN(comisPot)}) va a la Banca, no a un bolsillo — pagársela a un socio le quitaría al otro.`
+                : `Alguien del equipo lo trajo → esa persona cobra la comisión (${fmtMXN(comisPot)}) por conseguir al cliente, sin diluir a nadie.`;
+              return (
+                <div className="field"><label>¿Quién trajo este cliente? <span className="tip" data-tip={`Decide quién se lleva la comisión (${P.comisPct}% del margen) por conseguir al cliente. No cambia lo que paga el cliente, solo a dónde va. · ${detalle}`}><Info /></span></label>
+                  <div className="chips">
+                    <button className="chip-btn" aria-pressed={o === "empresa"} onClick={() => updateActive((p) => { p.origen = "empresa"; })}>La marca</button>
+                    <button className="chip-btn" aria-pressed={o === "socio"} onClick={() => updateActive((p) => { p.origen = "socio"; })}>Un socio</button>
+                    <button className="chip-btn" aria-pressed={o === "persona"} onClick={() => updateActive((p) => { p.origen = "persona"; })}>Equipo</button>
                   </div>
-                );
-              })()}
-            </div>
+                  {o === "persona" && (
+                    <select style={{ marginTop: 8 }} value={active.origenPersona || ""} onChange={(e) => updateActive((p) => { p.origenPersona = e.target.value; })}>
+                      <option value="">— ¿quién lo trajo? —</option>
+                      {nombresEquipo.map((n, i) => <option key={i} value={n}>{n}</option>)}
+                    </select>
+                  )}
+                </div>
+              );
+            })()}
             <div className="field"><label>Caja del proyecto <span style={{ color: "var(--cobalt)", fontFamily: "var(--mono)", fontWeight: 700 }}>{active.cajaPct}%</span></label><input type="range" min={0} max={25} value={active.cajaPct} onChange={(e) => updateActive((p) => { p.cajaPct = +e.target.value; })} /></div>
             <div className="field"><label>Cliente (de Notion)</label><select value={active.clienteId || ""} onChange={(e) => updateActive((p) => { p.clienteId = e.target.value || null; p.clienteNombre = clientes.find((c) => c.id === e.target.value)?.nombre || null; })}><option value="">— sin asignar —</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
           </div>
           <div className="card">
-            <h2>El equipo del proyecto</h2>
-            <p className="hint" style={{ marginTop: 0, marginBottom: 12 }}>Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en <b>Reglas › Personas</b>.</p>
+            <h2>El equipo del proyecto <span className="tip" data-tip="Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en Reglas › Personas."><Info /></span></h2>
             {active.members.map((m, i) => {
               const val = personVal(m);
               return (
@@ -1309,54 +1298,59 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             <Tile k="k-banca" l="A la Banca" v={fmtMXN(r.banca)} p="ahorro CURVA" tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
           </div>
           <div className="card">
-            <h2>A dónde va cada peso del ingreso</h2>
-            <div className="stack">{segs.map((s) => <div key={s.k} className="seg" title={`${s.k} ${fmtMXN(s.v)}`} style={{ flex: `0 0 ${s.v / totSeg * 100}%`, background: `var(${s.c})` }} />)}</div>
-            <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v)} className="lv num-anim">{fmtMXN(s.v)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
-          </div>
-          <div className="two">
-            <div className="card"><h2>El desglose · estado de resultados</h2>
-              {bd("", "Ingreso del proyecto", r.t)}
-              {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
-              {r.disc > 0.5 && bd("sub", "− Sombrero de socio (reserva a Banca)", -r.disc)}
-              {r.comis > 0.5 && bd("sub", `− Comisión de origen ${r.comisBanca > 0.5 ? "(a Banca)" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
-              {bd("eq", "Utilidad bruta", r.t - r.bolsaOut - r.comis)}
-              {bd("sub", "− Caja del proyecto", -r.cajaProj)}
-              {bd("eq", "Utilidad operativa", r.marginOp)}
-              {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (reserva a Banca)", -r.cajaAhorro)}
-              {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
-              {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
-              {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
-              {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
-              {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
-              {active.descontarISR && P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}%)`, -(r.utilKept * P.imp / 100))}
-              {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0 }}>Cuánto cobra cada quien</h2>
+              {(active.plazoMeses ?? 1) >= 2 && (
+                <div className="chips">
+                  <button className="chip-btn sm" aria-pressed={vistaCobro === "total"} onClick={() => setVistaCobro("total")}>Total</button>
+                  <button className="chip-btn sm" aria-pressed={vistaCobro === "mes"} onClick={() => setVistaCobro("mes")}>Por mes</button>
+                </div>
+              )}
             </div>
-            <div className="stackcol">
+            {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "mes"
+              ? <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />
+              : <Rank rows={rows} />}
+            {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver cuánto cobra cada quien mes por mes (mes 1…{active.plazoMeses}).</p>}
+            <div className="health" style={{ marginTop: 16 }}>
+              <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
+              <span className={"hpill " + (r.marginOp >= r.bolsaOut ? "ok" : "warn")}>{r.marginOp >= r.bolsaOut ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
+              <span className={"hpill " + (mr >= 0.4 ? "ok" : mr >= 0.25 ? "warn" : "bad")}>{mr >= 0.4 ? "Sano" : mr >= 0.25 ? "Justo" : "Bajo"} ({pctFmt(mr)})</span>
+              <span className="tip" data-tip="Montos brutos (antes de ISR). El neto real está en el Panel y en Personas."><Info /></span>
+            </div>
+          </div>
+
+          <button className="disclosure" aria-expanded={verDesglose} onClick={() => setVerDesglose((v) => !v)}>
+            {verDesglose ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <span className="disc-t">{verDesglose ? "Ocultar" : "Ver"} el desglose completo</span>
+            <span className="disc-sub">estado de resultados · a dónde va cada peso</span>
+          </button>
+
+          {verDesglose && (
+            <div className="disc-body">
+              <div className="card"><h2>El desglose · estado de resultados</h2>
+                {bd("", "Ingreso del proyecto", r.t)}
+                {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
+                {r.disc > 0.5 && bd("sub", "− Sombrero de socio (reserva a Banca)", -r.disc)}
+                {r.comis > 0.5 && bd("sub", `− Comisión de origen ${r.comisBanca > 0.5 ? "(a Banca)" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
+                {bd("eq", "Utilidad bruta", r.t - r.bolsaOut - r.comis)}
+                {bd("sub", "− Caja del proyecto", -r.cajaProj)}
+                {bd("eq", "Utilidad operativa", r.marginOp)}
+                {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (reserva a Banca)", -r.cajaAhorro)}
+                {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
+                {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
+                {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
+                {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
+                {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
+                {active.descontarISR && P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}%)`, -(r.utilKept * P.imp / 100))}
+                {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
+              </div>
               <div className="card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                  <h2 style={{ margin: 0 }}>Cuánto cobra cada quien</h2>
-                  {(active.plazoMeses ?? 1) >= 2 && (
-                    <div className="chips">
-                      <button className="chip-btn sm" aria-pressed={vistaCobro === "total"} onClick={() => setVistaCobro("total")}>Total</button>
-                      <button className="chip-btn sm" aria-pressed={vistaCobro === "mes"} onClick={() => setVistaCobro("mes")}>Por mes</button>
-                    </div>
-                  )}
-                </div>
-                {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "mes"
-                  ? <RepartoMensual pr={membersResolved(active, st.roster, P)} P={P} />
-                  : <Rank rows={rows} />}
-                {(active.plazoMeses ?? 1) >= 2 && vistaCobro === "total" && <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>Dura {active.plazoMeses} meses · pulsa <b>Por mes</b> para ver cuánto cobra cada quien mes por mes (mes 1…{active.plazoMeses}).</p>}
-              </div>
-              <div className="card"><h2>Salud del ticket</h2>
-                <div className="health">
-                  <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
-                  <span className={"hpill " + (r.marginOp >= r.bolsaOut ? "ok" : "warn")}>{r.marginOp >= r.bolsaOut ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
-                  <span className={"hpill " + (mr >= 0.4 ? "ok" : mr >= 0.25 ? "warn" : "bad")}>{mr >= 0.4 ? "Sano" : mr >= 0.25 ? "Justo" : "Bajo"} ({pctFmt(mr)})</span>
-                </div>
-                <p className="foot"><b>Nota:</b> montos brutos. El neto real está en el Panel.</p>
+                <h2>A dónde va cada peso del ingreso</h2>
+                <div className="stack">{segs.map((s) => <div key={s.k} className="seg" title={`${s.k} ${fmtMXN(s.v)}`} style={{ flex: `0 0 ${s.v / totSeg * 100}%`, background: `var(${s.c})` }} />)}</div>
+                <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v)} className="lv num-anim">{fmtMXN(s.v)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </>
