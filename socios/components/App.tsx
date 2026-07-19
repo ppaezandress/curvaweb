@@ -1366,6 +1366,42 @@ function Proyectos({ st, update, setActive }: { st: State; update: (fn: (s: Stat
   );
 }
 
+/* Progreso mes a mes de un proyecto a plazo: N celdas (mes 1…N con fecha real)
+   que se van llenando conforme se cobra. "Vas en el mes X de N". Automático: los
+   meses cubiertos = % recibido × N (no hay que marcar nada). El monto por celda es
+   el cobro mensual (totalCliente ÷ N). Decisión Andrés 2026-07-19 (auto por lo cobrado). */
+function MesesProgreso({ p, rec }: { p: Proyecto; rec: number }) {
+  const N = Math.max(1, Math.floor(p.plazoMeses || 1));
+  if (N < 2) return null;
+  const inicio = p.fechaInicio || todayISO();
+  const totCli = totalCliente(p);
+  const mensual = totCli / N;
+  const cubiertos = Math.max(0, rec * N);           // meses cubiertos (fraccional)
+  const completo = cubiertos >= N - 0.001;
+  const mesActual = completo ? N : Math.min(N, Math.floor(cubiertos) + 1);
+  return (
+    <div className="meses-prog">
+      <div className="meses-h">
+        <b>{completo ? `Cobrado completo · ${N} de ${N} meses` : `Vas en el mes ${mesActual} de ${N}`}</b>
+        <span>{fmtMXN(rec * totCli)} de {fmtMXN(totCli)} · {fmtMXN(mensual)}/mes</span>
+      </div>
+      <div className="meses-strip">
+        {Array.from({ length: N }, (_, i) => {
+          const fill = Math.min(1, Math.max(0, cubiertos - i));
+          const estado = fill >= 0.999 ? "full" : fill > 0.001 ? "part" : "none";
+          return (
+            <div key={i} className={"mes-cell " + estado} title={`${mesLabel(addMonths(inicio, i))}: ${estado === "full" ? "pagado" : estado === "part" ? "parcial" : "pendiente"}`}>
+              <span className="mes-lbl">{mesLabel(addMonths(inicio, i))}</span>
+              <span className="mes-bar"><i style={{ width: fill * 100 + "%" }} /></span>
+              <span className="mes-amt">{estado === "full" ? "✓ " : estado === "part" ? "◐ " : ""}{fmtMXN(mensual)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setActive }: {
   p: Proyecto; params: Reglas; roster: RosterPerson[]; gastos: Gasto[]; open: boolean; onToggle: () => void;
   update: (fn: (s: State) => State) => void; setActive: (id: string) => void;
@@ -1400,6 +1436,8 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
   });
   const cobrado = pagos.reduce((a, x) => a + (+x.monto || 0), 0);
   const rec = pctRecibido(p);
+  const plN = Math.max(1, Math.floor(p.plazoMeses || 1));
+  const mesAct = rec >= 1 - 0.001 ? plN : Math.min(plN, Math.floor(rec * plN) + 1);
   const estado: EstadoProyecto = estadoAuto(p);
   const upP = (fn: (x: Proyecto) => void) => update((s) => { const x = s.projects.find((y) => y.id === p.id); if (x) fn(x); return s; });
   // Gastos de este proyecto (salen de su caja).
@@ -1422,7 +1460,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
         </div>
         <div className="pcard-right">
           <div className="gv">{fmtMXN(r.t)}</div>
-          <div className="gm">{pctFmt(rec)} cobrado</div>
+          <div className="gm">{plN > 1 ? `mes ${mesAct} de ${plN} · ${pctFmt(rec)}` : `${pctFmt(rec)} cobrado`}</div>
         </div>
         {!confirmDel ? (
           <button className="pcard-del" title="Borrar proyecto" onClick={(e) => { e.stopPropagation(); setConfirmDel(true); }}><Trash2 size={16} /></button>
@@ -1449,6 +1487,8 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
               ? <button className="btn ghost" title="Reactivar: el estado vuelve a calcularse solo según lo cobrado" onClick={() => upP((x) => { x.estado = undefined; })}><RotateCcw size={14} /> Reactivar</button>
               : <button className="btn ghost" title="Marca el proyecto como cancelado (sale de los totales)" onClick={() => upP((x) => { x.estado = "cancelado"; })}><Trash2 size={14} /> Cancelar</button>}
           </div>
+
+          <MesesProgreso p={p} rec={rec} />
 
           <div className="pay-cols">
             <div>
