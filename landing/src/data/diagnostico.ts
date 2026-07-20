@@ -3,13 +3,14 @@
 // Determinístico (sin IA): el score es suma de fichas por categoría. Espejo, no diagnóstico formal.
 // Ver spec en Obsidian: "CURVA - Mini-diagnóstico interactivo (spec)".
 
-export type CatId = 'operacion' | 'estrategia' | 'personas' | 'finanzas';
+export type CatId = 'operacion' | 'estrategia' | 'personas' | 'finanzas' | 'digital';
 export type Eje = 'operativo' | 'estrategico';
 export type ArquetipoId =
   | 'apagafuegos'
   | 'encrucijada'
   | 'motor_sin_tablero'
   | 'equipo_tension'
+  | 'analogico_digital'
   | 'en_la_curva';
 
 export interface Categoria {
@@ -35,17 +36,19 @@ export interface Arquetipo {
   caso: { label: string; href: string };
 }
 
-// 4 categorías. El eje operativo↔estratégico define el "sesgo" secundario del resultado.
-// Colores: cobalto / naranja / cian / marino — separados en matiz y dentro de la paleta
-// "Cobalto & aire" (sin morado). Cambia una var si el núcleo prefiere otro acento.
+// 5 categorías. El eje operativo↔estratégico define el "sesgo" secundario del resultado.
+// Colores: cobalto / naranja / cian / marino / violeta-IA — separados en matiz. El violeta
+// (--color-ai) es el único acento morado permitido y aquí es correcto: Digital ES el frente
+// tech/IA de CURVA. Cambia una var si el núcleo prefiere otro acento.
 export const categorias: Record<CatId, Categoria> = {
-  operacion:  { id: 'operacion',  label: 'Operación',  eje: 'operativo',   arquetipo: 'apagafuegos',       color: 'var(--color-ember)' },
-  estrategia: { id: 'estrategia', label: 'Estrategia', eje: 'estrategico', arquetipo: 'encrucijada',       color: 'var(--color-flare)' },
-  personas:   { id: 'personas',   label: 'Equipo',     eje: 'operativo',   arquetipo: 'equipo_tension',    color: 'var(--color-jade)'  },
-  finanzas:   { id: 'finanzas',   label: 'Finanzas',   eje: 'estrategico', arquetipo: 'motor_sin_tablero', color: 'var(--color-ink)'   },
+  operacion:  { id: 'operacion',  label: 'Operación',  eje: 'operativo',   arquetipo: 'apagafuegos',        color: 'var(--color-ember)' },
+  estrategia: { id: 'estrategia', label: 'Estrategia', eje: 'estrategico', arquetipo: 'encrucijada',        color: 'var(--color-flare)' },
+  personas:   { id: 'personas',   label: 'Equipo',     eje: 'operativo',   arquetipo: 'equipo_tension',     color: 'var(--color-jade)'  },
+  finanzas:   { id: 'finanzas',   label: 'Finanzas',   eje: 'estrategico', arquetipo: 'motor_sin_tablero',  color: 'var(--color-ink)'   },
+  digital:    { id: 'digital',    label: 'Digital',    eje: 'operativo',   arquetipo: 'analogico_digital',  color: 'var(--color-ai)'    },
 };
 
-// 16 fichas (4 por categoría). Redactadas en primera persona, tono dueño de PyME MX.
+// 20 fichas (4 por categoría). Redactadas en primera persona, tono dueño de PyME MX.
 export const fichas: Ficha[] = [
   { id: 'op1', cat: 'operacion',  texto: 'Apago fuegos todo el día y no avanzo en lo importante' },
   { id: 'op2', cat: 'operacion',  texto: 'Todo pasa por mí; si no estoy, se frena' },
@@ -66,6 +69,11 @@ export const fichas: Ficha[] = [
   { id: 'fi2', cat: 'finanzas',   texto: 'No sé cuánto me cuesta cada cliente o producto' },
   { id: 'fi3', cat: 'finanzas',   texto: 'El flujo de caja me trae con el alma en un hilo' },
   { id: 'fi4', cat: 'finanzas',   texto: 'Quiero escalar, pero me da miedo perder el control' },
+
+  { id: 'di1', cat: 'digital',    texto: 'Agendo y confirmo citas a mano, por WhatsApp o teléfono' },
+  { id: 'di2', cat: 'digital',    texto: 'Mi página web está vieja y fea, y no me trae clientes' },
+  { id: 'di3', cat: 'digital',    texto: 'La experiencia de mi cliente se siente anticuada' },
+  { id: 'di4', cat: 'digital',    texto: 'Sigo con papel y Excel; casi todo lo hago manual' },
 ];
 
 // Arquetipos de resultado. `caso` apunta a casos reales existentes (data/casos.ts) por
@@ -95,6 +103,12 @@ export const arquetipos: Record<ArquetipoId, Arquetipo> = {
     necesitas: 'Liderazgo real en tus mandos, cultura sana y una estrategia para retener al talento.',
     caso: { label: 'Cómo trabajamos negocio, estructura y cultura', href: '/consultoria/transformacion-de-negocio' },
   },
+  analogico_digital: {
+    nombre: 'Analógico en un Mundo Digital',
+    lectura: 'Tu operación corre en papel, Excel y WhatsApp mientras tus clientes ya viven en lo digital. Cada proceso manual es tiempo, ventas y experiencia que se te escapan.',
+    necesitas: 'Digitalizar lo que hoy haces a mano: agenda, atención al cliente, tu presencia en línea y tus procesos. Automatizar sin perder el trato humano.',
+    caso: { label: 'De tarjetas de papel a operación 100% digital', href: '/consultoria/transformacion-digital#innovation' },
+  },
   en_la_curva: {
     nombre: 'En la Curva',
     lectura: 'Tienes varios frentes moviéndose a la vez. Estás, literalmente, en plena curva del cambio.',
@@ -113,7 +127,7 @@ export interface Resultado {
 
 // Lógica de scoring pura (testeable, sin DOM). La usa el script del componente.
 export function calcular(seleccion: string[]): Resultado {
-  const porCat: Record<CatId, number> = { operacion: 0, estrategia: 0, personas: 0, finanzas: 0 };
+  const porCat: Record<CatId, number> = { operacion: 0, estrategia: 0, personas: 0, finanzas: 0, digital: 0 };
   for (const id of seleccion) {
     const f = fichas.find((x) => x.id === id);
     if (f) porCat[f.cat]++;
@@ -127,8 +141,8 @@ export function calcular(seleccion: string[]): Resultado {
   const arquetipo: ArquetipoId =
     lideres.length === 1 ? categorias[lideres[0]].arquetipo : 'en_la_curva';
 
-  // Sesgo del eje (dato secundario).
-  const opuntos = porCat.operacion + porCat.personas;
+  // Sesgo del eje (dato secundario). Digital cuenta como operativo (toca el día a día).
+  const opuntos = porCat.operacion + porCat.personas + porCat.digital;
   const espuntos = porCat.estrategia + porCat.finanzas;
   const eje: Eje = espuntos > opuntos ? 'estrategico' : 'operativo';
 

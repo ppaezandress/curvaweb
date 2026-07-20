@@ -3,7 +3,7 @@
 // mouse, aura que sigue el cursor, partículas + relámpago al seleccionar, medidor de tormenta.
 // Al revelar: colapso al centro + flash + amanece el arquetipo. Idempotente (astro:page-load).
 import { track } from '@vercel/analytics';
-import { calcular, arquetipos, categorias, type CatId } from '../data/diagnostico';
+import { calcular, arquetipos, categorias, fichas, type CatId } from '../data/diagnostico';
 
 export function initDiagnostico(): void {
   const root = document.getElementById('diagnostico');
@@ -97,7 +97,7 @@ export function initDiagnostico(): void {
     const n = seleccion.size;
     if (submit) submit.disabled = n === 0;
     if (count) count.innerHTML = n === 0 ? 'Aún nada' : `<b>${n}</b> ${n === 1 ? 'seleccionada' : 'seleccionadas'}`;
-    const p = Math.min(n / 16, 1);
+    const p = Math.min(n / fichas.length, 1);
     if (chargeFill) chargeFill.style.width = `${p * 100}%`;
     if (charge) charge.setAttribute('data-level', n >= 6 ? 'alta' : 'media');
     if (tint) tint.style.opacity = String(Math.min(n / 8, 1) * 0.95);
