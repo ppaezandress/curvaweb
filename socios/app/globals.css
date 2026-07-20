@@ -439,6 +439,8 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .pdf-role{display:inline-block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--cobalt);background:var(--cobalt-soft);padding:6px 12px;border-radius:8px}
 .pdf-amount{font-family:var(--disp);font-weight:700;font-size:42px;color:var(--ink);margin:18px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
 .pdf-amount .pdf-cur{font-size:20px;color:var(--muted);font-weight:600;margin-left:5px}
+.pdf-permes{font-family:var(--mono);font-size:16px;color:var(--ink-2);margin:0 0 10px;font-variant-numeric:tabular-nums}
+.pdf-permes b{color:var(--cobalt)}
 .pdf-line{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px}
 .pdf-line:last-child{border-bottom:none}.pdf-line .pl{color:var(--ink-2)}.pdf-line .pv{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 .pdf-foot{margin-top:22px;font-size:12px;color:var(--muted);line-height:1.6}

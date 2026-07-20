@@ -77,6 +77,7 @@ export default function PdfReparto() {
     .sort((a, b) => (baseOf(b) + cm(b)) - (baseOf(a) + cm(a)));
   const fecha = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
   const hayComis = Object.values(r.people).some((a) => (a.comision || 0) > 0.5);
+  const plazoN = Math.max(1, Math.floor(proj.plazoMeses || 1)); // para mostrar el reparto al mes
 
   return (
     <div className="pdf-page">
@@ -107,7 +108,8 @@ export default function PdfReparto() {
             <div className="pdf-body">
               <span className="pdf-role">{soloComis ? "Comisión por traer el cliente" : rol}</span>
               <div className="pdf-amount">{fmtMXN(tot)}<span className="pdf-cur">MXN</span></div>
-              <div className="pdf-foot" style={{ marginTop: 0, marginBottom: 22 }}>{soloComis ? "Tu comisión por traer este cliente." : soloPago ? "Tu pago por el trabajo en este proyecto." : "Lo que ganas en este proyecto."}</div>
+              {plazoN > 1 && <div className="pdf-permes">≈ <b>{fmtMXN(tot / plazoN)}</b> / mes · {plazoN} meses parejos</div>}
+              <div className="pdf-foot" style={{ marginTop: 0, marginBottom: 22 }}>{soloComis ? "Tu comisión por traer este cliente." : soloPago ? "Tu pago por el trabajo en este proyecto." : plazoN > 1 ? `Lo que ganas en este proyecto (${fmtMXN(tot)} en total, repartido en ${plazoN} meses).` : "Lo que ganas en este proyecto."}</div>
 
               {base > 0.5 && a.trabajo > 0.5 && <div className="pdf-line"><span className="pl">Por tu trabajo ({rol})</span><span className="pv">{fmtMXN(a.trabajo)}</span></div>}
               {base > 0.5 && a.extra > 0.5 && <div className="pdf-line"><span className="pl">{esSocio ? "Utilidad de socio" : "Bono del Núcleo"}</span><span className="pv">{fmtMXN(a.extra)}</span></div>}
