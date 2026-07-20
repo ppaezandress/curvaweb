@@ -1051,7 +1051,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // congelada (pr.reglas) solo gobierna cómo se ve el proyecto en Panel/Proyectos/PDF;
   // aquí, al "Actualizar", se recongela con las de ahora. Si el proyecto guardado activo
   // tiene reglas distintas a las vivas, se muestra un aviso (reglasDivergen) abajo.
-  const P = st.params, r = compute(membersResolved(active, st.roster, P), P), t = r.t || 1;
+  const P = st.params, activeRes = membersResolved(active, st.roster, P), r = compute(activeRes, P), t = r.t || 1;
+  const resMembers = activeRes.members; // miembros con nombre/tipo resueltos (para ver su sueldo)
+  const sociosNeg = r.manualDelta > 0.5 && (r.sAutil + r.sButil) < -0.5; // pagaste de más: socios en rojo
   const reglasDivergen = !active.borrador && !!active.reglas && reglasDifierenDinero(active.reglas, st.params);
   // "Equipo" = lo que REALMENTE aterriza en la Masa salarial por trabajar: la bolsa
   // menos el "sombrero de socio" (disc), que no se queda en el equipo sino que se va a
@@ -1059,7 +1061,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // del equipo COINCIDA en las dos vistas (antes barra=35% vs desglose=41%, bug de Balmo).
   // Comisión y bono del Núcleo se pintan como franjas propias (no dentro de Equipo) para
   // que barra y desglose sean idénticas franja por franja. Todo suma el ingreso exacto.
-  const equipoNeto = r.bolsaOut - r.disc;
+  const equipoNeto = r.bolsaOut - r.disc + r.manualDelta; // pago real al equipo (incluye ajustes a mano)
   const segs = [
     { k: "Equipo", v: equipoNeto, c: "--c-equipo" },
     { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
@@ -1085,7 +1087,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   let tT = 0, tE = 0, tC = 0; Object.values(r.people).forEach((a) => { tT += a.trabajo; tE += a.extra; tC += a.comision || 0; });
   // La comisión ahora vive en su propio campo (franjita naranja); se suma aparte al cuadre.
   const leak = r.t - (tT + tE + tC + r.cajaProj + r.banca);
-  const mr = r.marginOp / t;
+  const mr = (r.marginOp - r.manualDelta) / t; // margen real que se queda CURVA (tras ajustes a mano)
   const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv"><span key={fmtMXN(v * f)} className="num-anim">{fmtMXN(v * f)}</span></span></div>;
 
   // ── Selector de personas (roster) ──
@@ -1233,6 +1235,13 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             <h2>El equipo del proyecto <span className="tip" data-tip="Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en Reglas › Personas."><Info /></span></h2>
             {active.members.map((m, i) => {
               const val = personVal(m);
+              const res = resMembers[i];
+              const team = res && !isSocio(res.quien);
+              const pay = team ? (r.people[res.nombre + "|" + res.quien]?.trabajo || 0) : 0;
+              const mensual = plazoN > 1 ? pay / plazoN : pay;
+              const manual = typeof m.montoManual === "number";
+              const setManual = (mesVal: number) => updateActive((p) => { p.members[i].montoManual = Math.max(0, Math.round(mesVal)) * plazoN; p.manualOK = false; });
+              const clearManual = () => updateActive((p) => { delete p.members[i].montoManual; p.manualOK = false; });
               return (
               <div className="member2" key={i}>
                 <select value={val} onChange={(e) => choosePerson(i, e.target.value)}>
@@ -1249,9 +1258,19 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   </div>
                   <button className="rmv" title="Quitar del proyecto" onClick={() => updateActive((p) => { p.members.splice(i, 1); })}>×</button>
                 </div>
+                {team && (
+                  <div className={"member-pay" + (manual ? " on" : "")}>
+                    <span className="mp-l">Gana{plazoN > 1 ? "/mes" : ""} {manual && <b className="mp-tag">a mano</b>}</span>
+                    <div className="money-in sm"><span>$</span><input type="number" min={0} value={Math.round(mensual)} onChange={(e) => setManual(+e.target.value || 0)} title="Escribe cuánto quieres que gane; el resto se ajusta y el extra sale de la utilidad de los socios." /></div>
+                    <button className="mp-auto" disabled={!manual} title={manual ? "Volver al cálculo automático" : "Cálculo automático"} onClick={clearManual}>{manual ? "auto" : "auto ✓"}</button>
+                  </div>
+                )}
               </div>
               );
             })}
+            {Math.abs(r.manualDelta) > 0.5 && <p className="hint" style={{ marginTop: 4, color: sociosNeg ? "var(--danger)" : undefined }}>{sociosNeg ? "⚠ " : ""}Ajuste a mano: {r.manualDelta > 0
+              ? <><b>{fmtMXN(r.manualDelta)}</b> extra al equipo, sale de la utilidad de {P.nombreA} y {P.nombreB}{sociosNeg ? " — les queda en NEGATIVO, estás pagando más de lo que deja el proyecto." : "."}</>
+              : <><b>{fmtMXN(-r.manualDelta)}</b> menos al equipo — esa utilidad vuelve a {P.nombreA} y {P.nombreB}.</>}</p>}
             <button className="add" onClick={addMember}>+ Agregar persona</button>
           </div>
           <AgendaEditor active={active} st={st} P={P} updateActive={updateActive} />
@@ -1269,7 +1288,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             </div>
           )}
           <div className="tiles rise">
-            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN(r.marginOp * f)} p={`${pctFmt(r.marginOp / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Banca) después de pagarle al equipo, la comisión y apartar la caja del proyecto." />
+            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN((r.marginOp - r.manualDelta) * f)} p={`${pctFmt((r.marginOp - r.manualDelta) / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Banca) después de pagarle al equipo (incluye ajustes manuales), la comisión y apartar la caja del proyecto." />
             <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(r.socioA * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
             <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(r.socioB * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
             <Tile k="k-banca" l={porMes ? "A la Banca / mes" : "A la Banca"} v={fmtMXN(r.banca * f)} p={`ahorro CURVA${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
@@ -1287,7 +1306,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             </p>}
             <div className="health" style={{ marginTop: 16 }}>
               <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
-              <span className={"hpill " + (r.marginOp >= r.bolsaOut ? "ok" : "warn")}>{r.marginOp >= r.bolsaOut ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
+              <span className={"hpill " + ((r.marginOp - r.manualDelta) >= (r.bolsaOut + r.manualDelta) ? "ok" : "warn")}>{(r.marginOp - r.manualDelta) >= (r.bolsaOut + r.manualDelta) ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
               <span className={"hpill " + (mr >= 0.4 ? "ok" : mr >= 0.25 ? "warn" : "bad")}>{mr >= 0.4 ? "Sano" : mr >= 0.25 ? "Justo" : "Bajo"} ({pctFmt(mr)})</span>
               <span className="tip" data-tip="Montos brutos (antes de ISR). El neto real está en el Panel y en Personas."><Info /></span>
             </div>
@@ -1312,6 +1331,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (reserva a Banca)", -r.cajaAhorro)}
                 {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
                 {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
+                {Math.abs(r.manualDelta) > 0.5 && bd("sub", r.manualDelta > 0 ? "− Extra al equipo (a mano)" : "+ Menos sueldo al equipo (a mano)", -r.manualDelta)}
                 {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
                 {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
                 {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
@@ -1438,6 +1458,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
   const rec = pctRecibido(p);
   const plN = Math.max(1, Math.floor(p.plazoMeses || 1));
   const mesAct = rec >= 1 - 0.001 ? plN : Math.min(plN, Math.floor(rec * plN) + 1);
+  const manualN = p.members.filter((m) => typeof m.montoManual === "number").length; // sueldos tocados a mano
   const estado: EstadoProyecto = estadoAuto(p);
   const upP = (fn: (x: Proyecto) => void) => update((s) => { const x = s.projects.find((y) => y.id === p.id); if (x) fn(x); return s; });
   // Gastos de este proyecto (salen de su caja).
@@ -1455,7 +1476,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
       <div className="pcard-head" onClick={onToggle}>
         <span className="pcard-chev">{open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
         <div className="pcard-title">
-          <div className="gn">{p.nombre} <span className={"est est-" + estado}>{ESTADO_LABEL[estado]}</span></div>
+          <div className="gn">{p.nombre} <span className={"est est-" + estado}>{ESTADO_LABEL[estado]}</span>{manualN > 0 && !p.manualOK && <span className="est est-manual" title={`Sueldos a mano · falta que ${params.nombreB} autorice`}>a mano</span>}</div>
           <div className="gt">{p.tipo} · {p.members.length} pers. · {p.conIVA ? "con IVA" : "sin IVA"}{(p.plazoMeses ?? 1) > 1 ? ` · ${p.plazoMeses} meses` : ""}{p.clienteNombre ? " · " + p.clienteNombre : ""}</div>
         </div>
         <div className="pcard-right">
@@ -1476,6 +1497,14 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
 
       {open && (
         <div className="pcard-body">
+          {manualN > 0 && (
+            p.manualOK
+              ? <div className="manual-ok"><Check size={14} /> Sueldos ajustados a mano ({manualN}) · <b>autorizado por {params.nombreB}</b></div>
+              : <div className="manual-warn">
+                  <span><AlertTriangle size={15} /> Este proyecto tiene <b>{manualN} sueldo{manualN !== 1 ? "s" : ""} tocado{manualN !== 1 ? "s" : ""} a mano</b>. Requiere el visto bueno de {params.nombreB}.</span>
+                  <button className="btn primary" onClick={() => upP((x) => { x.manualOK = true; })}><Check size={14} /> {params.nombreB}: autorizar</button>
+                </div>
+          )}
           <div className="pcard-actions">
             <button className="btn ghost" onClick={() => setActive(p.id)}><Calculator size={14} /> Editar</button>
             <button className="btn ghost" onClick={() => setPdfOpen(true)}><FileText size={14} /> PDF de reparto</button>

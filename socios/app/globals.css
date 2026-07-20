@@ -488,6 +488,25 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .price-mo b{color:var(--cobalt)}
 .price-mo span{font-family:var(--sans);font-weight:400;font-size:12.5px;color:var(--muted)}
 
+/* ── Sueldo editable a mano por persona (Calculadora) ── */
+.member2{flex-wrap:wrap}
+.member-pay{display:flex;align-items:center;gap:8px;width:100%;margin-top:2px;padding-top:8px;border-top:1px dashed var(--border-2)}
+.member-pay .mp-l{font-size:12px;color:var(--muted);font-weight:600;min-width:64px}
+.member-pay.on .mp-l{color:var(--cobalt)}
+.mp-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--cobalt);background:var(--cobalt-soft);padding:1px 6px;border-radius:6px;margin-left:4px}
+.money-in.sm{flex:1;max-width:150px}
+.money-in.sm input{padding:7px 9px;font-size:13px}
+.mp-auto{border:1px solid var(--border-2);background:var(--panel);color:var(--ink-2);font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;cursor:pointer}
+.mp-auto:hover:not(:disabled){background:var(--panel-2);color:var(--ink)}
+.mp-auto:disabled{opacity:.5;cursor:default}
+/* Autorización de cambios manuales (Proyectos) */
+.manual-warn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--warn,#E0A800) 55%,transparent);border-radius:var(--r-sm);background:color-mix(in srgb,var(--warn,#E0A800) 12%,transparent);font-size:13.5px;color:var(--ink)}
+.manual-warn>span{display:flex;align-items:center;gap:8px}
+.manual-warn svg{color:var(--warn,#E0A800);flex:none}
+.manual-ok{display:flex;align-items:center;gap:8px;margin:0 0 14px;padding:10px 14px;border-radius:var(--r-sm);background:var(--panel-2);font-size:13px;color:var(--ink-2)}
+.manual-ok svg{color:var(--pos)}
+.est-manual{background:color-mix(in srgb,var(--warn,#E0A800) 18%,transparent);color:var(--warn,#E0A800)}
+
 /* ── Progreso mes a mes de un proyecto (Proyectos) ── */
 .meses-prog{margin:4px 0 16px;padding:14px;border:1px solid var(--border-2);border-radius:var(--r-sm);background:var(--panel-2)}
 .meses-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}

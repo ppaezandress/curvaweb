@@ -10,7 +10,10 @@ export type Quien = "socioA" | "socioB" | "nucleo" | "nuevo";
 
 export const ROLNAME = { P: "Piloto", E: "Especialista", A: "Apoyo" } as const;
 
-export type Miembro = { rol: Rol; quien: Quien; nombre: string; sm: number; personId?: string };
+// montoManual: sueldo TOTAL del proyecto fijado A MANO para este miembro (solo equipo,
+// no socios). Si está, reemplaza lo calculado; la diferencia sale de la utilidad de los
+// socios (Banca intacta). Se reparte parejo entre los meses que la persona trabaja.
+export type Miembro = { rol: Rol; quien: Quien; nombre: string; sm: number; personId?: string; montoManual?: number };
 
 // Cómo se cobra el proyecto y en cuánto tiempo (control de pagos del día a día).
 export type ModoCobro = "golpe" | "mensual";
@@ -78,6 +81,9 @@ export type Proyecto = {
   // vivas al calcular, para que renombrar un socio siga reflejándose en todos.
   // Ausente en borradores y en proyectos viejos pre-congelado (usan las Reglas vivas).
   reglas?: Reglas;
+  // Autorización de cambios MANUALES de sueldo (montoManual en algún miembro). Cuando
+  // se guarda un proyecto tocado a mano queda pendiente hasta que Balmo lo autorice.
+  manualOK?: boolean;
 };
 
 // Datos bancarios para cobro (ficha que se le manda al cliente). Es info de
@@ -188,6 +194,7 @@ export type Resultado = {
   cajaProj: number; marginOp: number; cajaAhorro: number; poolAmt: number; utilKept: number; utilSwept: number;
   disc: number; socioA: number; socioB: number; sAseat: number; sBseat: number; sAutil: number; sButil: number;
   banca: number; people: Record<string, Persona>;
+  manualDelta: number; // extra pagado a mano al equipo, tomado de la utilidad de socios (0 si no hay override)
 };
 
 export function compute(pr: Proyecto, P: Reglas): Resultado {
@@ -207,6 +214,15 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
     if (isSocio(m.quien)) { pay[i] = (P.alpha / 100) * g; disc += (1 - P.alpha / 100) * g; if (m.quien === "socioA") sAseat += pay[i]; else sBseat += pay[i]; }
     else { pay[i] = g; }
   });
+  // Overrides manuales (solo equipo): fijas el sueldo TOTAL de alguien; la diferencia
+  // (manualDelta) se paga de más al equipo y sale de la utilidad de los socios más abajo.
+  let manualDelta = 0;
+  mem.forEach((m, i) => {
+    if (!isSocio(m.quien) && typeof m.montoManual === "number" && m.montoManual >= 0) {
+      manualDelta += m.montoManual - pay[i];
+      pay[i] = m.montoManual;
+    }
+  });
   const bolsaOut = bb, marginBruto = t - bolsaOut;
   // Comisión de origen — regla blindada: un socio-originador NUNCA la cobra a su
   // bolsillo (diluye al otro socio), va a la Banca. Solo Núcleo/externo la cobra.
@@ -225,7 +241,10 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
   const nucleo = mem.filter((m) => m.quien === "nucleo");
   const poolAmt = nucleo.length ? utilidad * (P.pool / 100) : 0;
   const poolEach = nucleo.length ? poolAmt / nucleo.length : 0;
-  const utilRest = utilidad - poolAmt, utilKept = utilRest * (1 - P.beta / 100), utilSwept = utilRest * (P.beta / 100);
+  const utilRest = utilidad - poolAmt, utilSwept = utilRest * (P.beta / 100);
+  // El extra manual pagado al equipo (manualDelta) se descuenta de lo que se quedan los
+  // socios (Banca intacta). Puede quedar negativo: "estás pagando más de lo que deja el proyecto".
+  const utilKept = utilRest * (1 - P.beta / 100) - manualDelta;
   const sAutil = utilKept * (P.split / 100), sButil = utilKept * (1 - P.split / 100);
   const banca = cajaAhorro + disc + utilSwept + comisBanca;
   const people: Record<string, Persona> = {};
@@ -252,7 +271,7 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
     if (existing) people[existing].comision += comisPaid;
     else people[quien + "|comis"] = { nombre: quien, quien: "nuevo", roles: ["comisión"], trabajo: 0, extra: 0, comision: comisPaid };
   }
-  return { t, bolsaOut, marginBruto, comis, comisPaid, comisBanca, cajaProj, marginOp, cajaAhorro, poolAmt, utilKept, utilSwept, disc, socioA: sAseat + sAutil, socioB: sBseat + sButil, sAseat, sBseat, sAutil, sButil, banca, people };
+  return { t, bolsaOut, marginBruto, comis, comisPaid, comisBanca, cajaProj, marginOp, cajaAhorro, poolAmt, utilKept, utilSwept, disc, socioA: sAseat + sAutil, socioB: sBseat + sButil, sAseat, sBseat, sAutil, sButil, banca, people, manualDelta };
 }
 
 // ── Reparto POR MES (Método A: bolsa anclada al total, distribuida en el tiempo) ──
@@ -311,6 +330,18 @@ export function repartoPorMes(pr: Proyecto, P: Reglas): ReparteMes[] {
   const comisM = res.comisPaid > 0.5 ? res.comisPaid * per : 0;
   const comisQuien = (pr.origenPersona || "Quien lo trajo").trim();
 
+  // Overrides manuales: cuántos meses trabaja cada persona (para repartir su sueldo fijo
+  // parejo) y el monto manual por persona. Los socios ya salen reducidos vía res.sAutil.
+  const mesesPresente: Record<string, number> = {};
+  const manualDe: Record<string, number> = {};
+  for (const { slots } of perMonth) {
+    for (const s of slots) {
+      const key = nm(s.mem) + "|" + s.mem.quien;
+      mesesPresente[key] = (mesesPresente[key] || 0) + 1;
+      if (!isSocio(s.mem.quien) && typeof s.mem.montoManual === "number" && s.mem.montoManual >= 0) manualDe[key] = s.mem.montoManual;
+    }
+  }
+
   const out: ReparteMes[] = [];
   for (const { m, slots } of perMonth) {
     const personas: Record<string, PersonaMes> = {};
@@ -320,10 +351,16 @@ export function repartoPorMes(pr: Proyecto, P: Reglas): ReparteMes[] {
       return personas[k];
     };
     // trabajo (bolsa) por slot del mes; el socio cobra alpha%, el resto va a la Banca.
+    // Si la persona tiene sueldo manual, se le pone su monto fijo parejo entre sus meses.
     for (const s of slots) {
-      const g = s.w * vpw, p = ensure(nm(s.mem), s.mem.quien);
+      const key = nm(s.mem) + "|" + s.mem.quien, p = ensure(nm(s.mem), s.mem.quien);
       p.roles.push(ROLNAME[s.mem.rol]);
-      p.trabajo += isSocio(s.mem.quien) ? (P.alpha / 100) * g : g;
+      if (!isSocio(s.mem.quien) && key in manualDe) {
+        p.trabajo += manualDe[key] / (mesesPresente[key] || 1);
+      } else {
+        const g = s.w * vpw;
+        p.trabajo += isSocio(s.mem.quien) ? (P.alpha / 100) * g : g;
+      }
     }
     // extra: utilidad de socios (siempre) + pool del Núcleo activo ese mes.
     ensure(P.nombreA, "socioA").extra += sAutilM;
