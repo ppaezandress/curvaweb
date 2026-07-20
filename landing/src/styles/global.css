@@ -839,16 +839,37 @@ html:not(.js) .od-reel {
 .hero-ai-card { box-shadow: 0 30px 80px -32px rgba(15, 30, 61, 0.5); }
 .hero-ai-log { max-height: min(38vh, 22rem); scroll-behavior: smooth; }
 
-/* Orbe IA del header: esfera con gradiente + destello interno */
+/* Orbe IA del header: esfera con gradiente + destello interno. Está VIVA:
+   respira (scale + glow), la luz interna deriva sin parar y la chispa palpita.
+   Todo transform/opacity/box-shadow sobre un nodo de 28px → costo de paint nulo. */
 .hero-ai-orb {
-  position: relative; flex-shrink: 0;
+  position: relative; flex-shrink: 0; overflow: hidden;
   width: 1.75rem; height: 1.75rem; border-radius: 9999px;
   display: grid; place-items: center; color: #fff;
   background: radial-gradient(120% 120% at 30% 25%, #93c5fd 0%, #2563eb 45%, #1d4ed8 100%);
   box-shadow: 0 4px 14px -4px rgba(37, 99, 235, 0.7), inset 0 1px 2px rgba(255,255,255,0.5);
+  animation: hero-orb-breathe 5s ease-in-out infinite;
+  will-change: transform;
 }
-.hero-ai-orb svg { width: .9rem; height: .9rem; filter: drop-shadow(0 0 3px rgba(255,255,255,0.6)); animation: hero-orb-spark 3.4s ease-in-out infinite; }
+/* Luz interna que deriva: hace que la esfera parezca líquida/viva (transform → compositor). */
+.hero-ai-orb::before {
+  content: ""; position: absolute; inset: -35%; border-radius: 9999px; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,255,255,0.55), rgba(147,197,253,0.25) 45%, transparent 72%);
+  animation: hero-orb-shine 6s ease-in-out infinite;
+  will-change: transform;
+}
+.hero-ai-orb svg { position: relative; z-index: 1; width: .9rem; height: .9rem; filter: drop-shadow(0 0 3px rgba(255,255,255,0.6)); animation: hero-orb-spark 3.4s ease-in-out infinite; }
 @keyframes hero-orb-spark { 0%, 100% { opacity: .85; transform: rotate(0) scale(1); } 50% { opacity: 1; transform: rotate(20deg) scale(1.12); } }
+@keyframes hero-orb-breathe {
+  0%, 100% { transform: scale(1);    box-shadow: 0 4px 14px -4px rgba(37, 99, 235, 0.7),  inset 0 1px 2px rgba(255,255,255,0.5); }
+  50%      { transform: scale(1.07); box-shadow: 0 7px 22px -4px rgba(37, 99, 235, 0.9),  inset 0 1px 2px rgba(255,255,255,0.65); }
+}
+@keyframes hero-orb-shine {
+  0%   { transform: translate(-16%, -14%); }
+  33%  { transform: translate(14%, -8%); }
+  66%  { transform: translate(8%, 14%); }
+  100% { transform: translate(-16%, -14%); }
+}
 
 /* Badge "Impulsado por IA" con brillo que barre */
 .hero-ai-badge {
@@ -935,6 +956,8 @@ html:not(.js) .od-reel {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-ai-ring { animation: none; }
+  .hero-ai-orb { animation: none; }
+  .hero-ai-orb::before { animation: none; }
   .hero-ai-orb svg, .hero-ai-badge { animation: none; }
   .hero-ai-live { animation: none; opacity: 0.8; }
   .hero-ai-caret { animation: none; opacity: 1; }
