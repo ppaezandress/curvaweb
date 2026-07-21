@@ -526,7 +526,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
         </div>
         <div className="prog-lbl" style={{ marginBottom: 4 }}><span>Cobrado: <b>{fmtMXN(sCobrado)}</b></span><span>Por cobrar: <b>{fmtMXN(porCobrar)}</b></span></div>
         <div className="prog"><i style={{ width: Math.min(100, sCobrado / (sTicket || 1) * 100) + "%" }} /></div>
-        <h2 style={{ marginTop: 22 }}>Flujo de ingresos por mes</h2>
+        <h3>Flujo de ingresos por mes</h3>
         {mesesFlujo.length ? (
           <div className="flow">
             {mesesFlujo.map((m) => (
@@ -1898,7 +1898,7 @@ function DeudaRow({ d, onPagar }: { d: Deuda; onPagar: () => void }) {
           ? <button className="btn primary sm" onClick={onPagar}><ArrowRight size={13} /> Transferir</button>
           : <span className="d-wait">esperando liquidar</span>}
       </div>
-      {n > 0 && <button className="deuda-toggle" onClick={() => setOpen(!open)}>{open ? "ocultar" : "ver de qué proyectos"} ({n})</button>}
+      {n > 0 && <button className="deuda-toggle" onClick={() => setOpen(!open)}>{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}{open ? "ocultar" : "ver de qué proyectos"} ({n})</button>}
       {open && (
         <div className="deuda-det">
           {d.listos.map((x, i) => <div key={"l" + i} className="dd"><span className="dd-dot ok" /> {x.nombre}<span className="dd-v">{fmtMXN(x.monto)}</span></div>)}

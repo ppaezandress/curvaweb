@@ -113,6 +113,8 @@ body::before{
 /* ── Tarjetas (vidrio) ── */
 .card{background:var(--glass);backdrop-filter:blur(var(--blur)) saturate(1.25);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.25);border:1px solid var(--border);border-top-color:var(--glass-edge);border-radius:var(--r-card);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
 .card h2{font-size:11px;font-weight:700;color:var(--muted);margin:0 0 16px;letter-spacing:.08em;text-transform:uppercase}
+/* Sub-encabezado real dentro de una card (no micro-caps: para no "enterrar" secciones) */
+.card h3{font-size:13px;font-weight:650;color:var(--ink-2);margin:24px 0 12px;letter-spacing:-.01em}
 .grid{display:grid;grid-template-columns:348px 1fr;gap:18px;align-items:start}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 .grid>.sidec{position:sticky;top:22px}
@@ -405,7 +407,8 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .d-listo{font-family:var(--mono);font-weight:700;color:var(--pos);font-size:14px}
 .d-acum{font-size:11px;color:var(--muted);font-weight:500}
 .d-wait{font-size:11.5px;color:var(--muted);font-style:italic;white-space:nowrap}
-.deuda-toggle{background:none;border:none;color:var(--cobalt);font-size:11.5px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:var(--sans)}
+.deuda-toggle{display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--cobalt);font-size:11.5px;font-weight:600;cursor:pointer;padding:6px 0 0;font-family:var(--sans)}
+.deuda-toggle svg{transition:transform .18s var(--ease)}
 .deuda-det{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:5px}
 .dd{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-2)}
 .dd-dot{width:7px;height:7px;border-radius:50%;flex:none}
