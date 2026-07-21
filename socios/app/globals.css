@@ -12,11 +12,13 @@
   /* Aurora base (claro) — cielo cobalto muy claro; el fondo real lo pinta body::before */
   --bg:#EAF0FB; --panel:#FFFFFF; --panel-2:#F4F7FE; --panel-3:#E7EEFA;
   --border:#DEE7F5; --border-2:#CAD7EC;
-  --ink:#0F1E3D; --ink-2:#33456A; --muted:#7286A8;
+  --ink:#0F1E3D; --ink-2:#33456A; --muted:#5A6E92;
   --cobalt:#2563EB; --cobalt-600:#1D4ED8; --cobalt-soft:#E4EDFD;
   --cyan:#0EA5C4; --cyan-soft:#DDF2F8; --sky:#5B93F0;
   --flare:#EA6A0C; --flare-soft:#FBEADB;
   --pos:#0F9D6B; --pos-soft:#DCF3EA; --warn:#B5720A; --warn-soft:#FAEFD8; --neg:#D6455B; --neg-soft:#FBE6E9;
+  /* Aliases: usados en varios lados sin estar definidos (bug de color rojo invisible + fuente) */
+  --danger:var(--neg); --font:var(--sans);
   --grad:linear-gradient(135deg,#2563EB 0%,#3B82F6 48%,#38BDF8 100%);
   --grad-soft:linear-gradient(135deg,#EAF1FE 0%,#E6F4FA 100%);
   --c-equipo:#64789C; --c-caja:#EA6A0C; --c-banca:#0EA5C4; --c-andres:#2563EB; --c-balmo:#5B93F0; --c-reserva:#0E9488;
@@ -54,6 +56,16 @@
 html{background:var(--bg)}
 body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-.005em;overflow-x:hidden}
 
+/* Foco de teclado visible en TODO lo interactivo (a11y — antes solo inputs lo tenían) */
+*:focus{outline:none}
+a:focus-visible,button:focus-visible,.btn:focus-visible,.chip-btn:focus-visible,.nav a:focus-visible,
+.disclosure:focus-visible,.fab-reglas:focus-visible,.rmv:focus-visible,.deuda-toggle:focus-visible,
+.pg-undo:focus-visible,.add:focus-visible,.carr-arrow:focus-visible,[tabindex]:focus-visible,
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2.5px solid var(--cobalt);outline-offset:2px;border-radius:6px;
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
 /* ── Aurora de fondo (cobalto & aire): dos blooms suaves que respiran ── */
 body::before{
   content:"";position:fixed;inset:-20%;z-index:-1;pointer-events:none;
@@ -82,12 +94,15 @@ body::before{
 .logo b{font-family:var(--disp);font-weight:700;font-size:16.5px;letter-spacing:-.01em}.logo b span{color:var(--muted);font-weight:600}
 .nav{display:flex;flex-direction:column;gap:3px;flex:1}
 @media(max-width:840px){.nav{flex-direction:row;flex-wrap:wrap;flex:none}.logo{padding:0 8px 0 0;margin:0}}
-.nav a{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-sm);color:var(--ink-2);font-weight:550;font-size:14px;cursor:pointer;transition:background .16s var(--ease),color .16s;user-select:none;position:relative}
-.nav a:hover{background:var(--panel-2);color:var(--ink)}
-.nav a.on{background:var(--cobalt-soft);color:var(--cobalt);font-weight:650}
-.nav a.on::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;border-radius:3px;background:var(--cobalt)}
-.nav a svg{width:18px;height:18px;flex:none;stroke-width:1.9}
+.nav a,.nav button{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-sm);color:var(--ink-2);font-weight:550;font-size:14px;cursor:pointer;transition:background .16s var(--ease),color .16s;user-select:none;position:relative;width:100%;text-align:left;border:none;background:transparent;font-family:inherit}
+.nav a:hover,.nav button:hover{background:var(--panel-2);color:var(--ink)}
+.nav a.on,.nav button.on{background:var(--cobalt-soft);color:var(--cobalt);font-weight:650}
+.nav a.on::before,.nav button.on::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;border-radius:3px;background:var(--cobalt)}
+.nav a svg,.nav button svg{width:18px;height:18px;flex:none;stroke-width:1.9}
+@media(max-width:840px){.nav a,.nav button{width:auto}.nav a.on::before,.nav button.on::before{display:none}}
 .side-foot{padding:13px 10px 2px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+.theme-toggle{border:none;background:transparent;color:var(--cobalt);font-weight:600;font-family:inherit;font-size:12px;cursor:pointer;padding:2px 0}
+.theme-toggle:hover{text-decoration:underline}
 @media(max-width:840px){.side-foot{display:none}}
 .main{padding:28px 32px 100px;max-width:1180px;width:100%}
 @media(max-width:600px){.main{padding:20px 16px 80px}}

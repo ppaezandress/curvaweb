@@ -378,17 +378,17 @@ export default function App() {
         </div>
         <nav className="nav">
           {NAV.map(({ k, label, Icon }) => (
-            <a key={k} className={sec === k ? "on" : ""} onClick={() => setSec(k)}><Icon /> {label}</a>
+            <button key={k} type="button" className={sec === k ? "on" : ""} aria-current={sec === k ? "page" : undefined} onClick={() => setSec(k)}><Icon /> {label}</button>
           ))}
         </nav>
         <div className="side-foot">
           Andrés &amp; Balmo · source of truth<br />
-          <span style={{ cursor: "pointer", color: "var(--cobalt)", fontWeight: 600 }} onClick={() => {
+          <button type="button" className="theme-toggle" onClick={() => {
             const cur = document.documentElement.getAttribute("data-theme");
             const next = cur === "dark" ? "light" : "dark";
             document.documentElement.setAttribute("data-theme", next);
             try { localStorage.setItem("curva_theme", next); } catch { /* noop */ }
-          }}>Cambiar tema</span>
+          }}>Cambiar tema</button>
         </div>
       </aside>
 
@@ -784,7 +784,7 @@ function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
               <div className="rank">
                 {rows.map((a, i) => {
                   const tot = totOf(a), fl = flagOf(a);
-                  const dot = fl === "bad" ? "#e5484d" : fl === "warn" ? "#f5a524" : "var(--pos)";
+                  const dot = fl === "bad" ? "var(--neg)" : fl === "warn" ? "var(--warn)" : "var(--pos)";
                   return (
                     <div key={i} className="rk">
                       <div className="who">
@@ -1237,7 +1237,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <div className="card">
             <h2>El equipo del proyecto <span className="tip" data-tip="Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en Reglas › Personas."><Info /></span></h2>
             <div className={"team-impact" + (hayManual ? " on" : "")}>
-              <div className="ti-item"><span>CURVA se queda{porMes ? "/mes" : ""}</span><b><span key={fmtMXN((r.marginOp - r.manualDelta) * f)} className="num-anim">{fmtMXN((r.marginOp - r.manualDelta) * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.marginOp * f)}</em>}</div>
+              <div className="ti-item"><span>CURVA{porMes ? "/mes" : ""}</span><b><span key={fmtMXN((r.marginOp - r.manualDelta) * f)} className="num-anim">{fmtMXN((r.marginOp - r.manualDelta) * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.marginOp * f)}</em>}</div>
               <div className="ti-item"><span>{P.nombreA}</span><b style={{ color: r.socioA < -0.5 ? "var(--danger)" : "var(--c-andres)" }}><span key={fmtMXN(r.socioA * f)} className="num-anim">{fmtMXN(r.socioA * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioA * f)}</em>}</div>
               <div className="ti-item"><span>{P.nombreB}</span><b style={{ color: r.socioB < -0.5 ? "var(--danger)" : "var(--c-balmo)" }}><span key={fmtMXN(r.socioB * f)} className="num-anim">{fmtMXN(r.socioB * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioB * f)}</em>}</div>
             </div>
