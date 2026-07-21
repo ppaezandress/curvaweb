@@ -491,7 +491,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
       {allYM.length > 0 && (
         <div className="proj-bar" style={{ flexWrap: "wrap" }}>
           <div className="pb-group"><span className="pb-cap"><CalendarRange size={13} style={{ verticalAlign: -2 }} /> Mes</span>
-            <div className="chips">
+            <div className="chips scroll">
               {allYM.map((m) => <button key={m} className="chip-btn" aria-pressed={m === selYM} onClick={() => setYmSel(m)}>{mesLabel(m)}</button>)}
             </div>
           </div>
@@ -764,7 +764,7 @@ function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
         <>
           <div className="proj-bar" style={{ flexWrap: "wrap" }}>
             <div className="pb-group"><span className="pb-cap"><CalendarRange size={13} style={{ verticalAlign: -2 }} /> Mes</span>
-              <div className="chips">
+              <div className="chips scroll">
                 {allYM.map((m) => <button key={m} className="chip-btn" aria-pressed={m === sel} onClick={() => setYm(m)}>{mesLabel(m)}</button>)}
               </div>
             </div>
@@ -779,7 +779,7 @@ function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
 
           <div className="card">
             <h2>Reparto del mes por persona</h2>
-            <p className="hint" style={{ marginTop: 0 }}>Ordenado de mayor a menor. El <b>semáforo</b> avisa si alguien del equipo se dispara respecto al promedio (🟡 &gt;1.6× · 🔴 &gt;2×). Los socios no se marcan: su utilidad es por diseño.</p>
+            <p className="hint" style={{ marginTop: 0 }}>Ordenado de mayor a menor. El <b>semáforo</b> avisa si alguien del equipo se dispara respecto al promedio (<span style={{ color: "var(--warn)", fontWeight: 700 }}>●</span> &gt;1.6× · <span style={{ color: "var(--neg)", fontWeight: 700 }}>●</span> &gt;2×). Los socios no se marcan: su utilidad es por diseño.</p>
             {rows.length === 0 ? <div className="hint">Nadie trabaja proyectos este mes.</div> : (
               <div className="rank">
                 {rows.map((a, i) => {
@@ -1256,7 +1256,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   <optgroup label="Socios"><option value="socioA">{P.nombreA}</option><option value="socioB">{P.nombreB}</option></optgroup>
                   {st.roster.length > 0 && <optgroup label="Equipo">{st.roster.map((rp) => <option key={rp.id} value={rp.id}>{rp.nombre}</option>)}</optgroup>}
                   {val === "__cur" && <option value="__cur">{m.nombre || "— sin asignar —"}</option>}
-                  <option value="__new">➕ Nueva persona…</option>
+                  <option value="__new">+ Nueva persona…</option>
                 </select>
                 <div className="member-rol">
                   <div className="chips">
@@ -1276,7 +1276,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               </div>
               );
             })}
-            {Math.abs(r.manualDelta) > 0.5 && <p className="hint" style={{ marginTop: 4, color: sociosNeg ? "var(--danger)" : undefined }}>{sociosNeg ? "⚠ " : ""}Ajuste a mano: {r.manualDelta > 0
+            {Math.abs(r.manualDelta) > 0.5 && <p className="hint" style={{ marginTop: 4, color: sociosNeg ? "var(--danger)" : undefined, fontWeight: sociosNeg ? 600 : undefined }}>Ajuste a mano: {r.manualDelta > 0
               ? <><b>{fmtMXN(r.manualDelta)}</b> extra al equipo, sale de la utilidad de {P.nombreA} y {P.nombreB}{sociosNeg ? " — les queda en NEGATIVO, estás pagando más de lo que deja el proyecto." : "."}</>
               : <><b>{fmtMXN(-r.manualDelta)}</b> menos al equipo — esa utilidad vuelve a {P.nombreA} y {P.nombreB}.</>}</p>}
             <button className="add" onClick={addMember}>+ Agregar persona</button>
@@ -1421,7 +1421,7 @@ function MesesProgreso({ p, rec }: { p: Proyecto; rec: number }) {
             <div key={i} className={"mes-cell " + estado} title={`${mesLabel(addMonths(inicio, i))}: ${estado === "full" ? "pagado" : estado === "part" ? "parcial" : "pendiente"}`}>
               <span className="mes-lbl">{mesLabel(addMonths(inicio, i))}</span>
               <span className="mes-bar"><i style={{ width: fill * 100 + "%" }} /></span>
-              <span className="mes-amt">{estado === "full" ? "✓ " : estado === "part" ? "◐ " : ""}{fmtMXN(mensual)}</span>
+              <span className="mes-amt">{fmtMXN(mensual)}</span>
             </div>
           );
         })}
@@ -2193,7 +2193,7 @@ function SimulacionDrawer({ st, active, onClose }: { st: State; active: Proyecto
           <button className="rd-x" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
         {months.length > 1 && (
-          <div className="sim-months chips">
+          <div className="sim-months chips scroll">
             {months.map((m) => <button key={m} className="chip-btn sm" aria-pressed={m === selYM} onClick={() => setSelYM(m)}>{mesLabel(m)}</button>)}
           </div>
         )}

@@ -148,6 +148,12 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .est-chips .chip-btn:hover,.chips-loose .chip-btn:hover{border-color:var(--cobalt);color:var(--cobalt)}
 .est-chips .chip-btn[aria-pressed=true],.chips-loose .chip-btn[aria-pressed=true]{background:var(--cobalt);border-color:var(--cobalt);color:#fff;box-shadow:0 3px 9px -3px color-mix(in srgb,var(--cobalt) 55%,transparent)}
 .chip-btn.sm{flex:none;padding:6px 11px;font-size:11.5px}
+/* Variante para selectores de MES (muchos): scroll horizontal en vez de segmented apretado */
+.chips.scroll{overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;scrollbar-width:thin;scrollbar-color:var(--border-2) transparent;scroll-snap-type:x proximity}
+.chips.scroll .chip-btn{flex:0 0 auto;padding:8px 14px;scroll-snap-align:start}
+.chips.scroll::-webkit-scrollbar{height:6px}
+.chips.scroll::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:99px}
+.chips.scroll::-webkit-scrollbar-track{background:transparent}
 
 /* ── Botones ── */
 .btn{padding:10px 15px;font-size:13px;font-weight:600;cursor:pointer;border-radius:var(--r-sm);border:1px solid var(--border-2);background:var(--panel);color:var(--ink);transition:all .16s var(--ease);font-family:var(--sans);display:inline-flex;align-items:center;gap:6px}
@@ -321,7 +327,9 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .pcard-delc .btn{padding:7px 12px}
 .pcard-prog{height:4px;background:var(--panel-3)}
 .pcard-prog i{display:block;height:100%;background:var(--grad);transition:width .6s var(--ease)}
-.pcard-body{padding:20px;border-top:1px solid var(--border);background:var(--glass-2)}
+.pcard-body{padding:20px;border-top:1px solid var(--border);background:var(--glass-2);animation:pcardIn .24s var(--ease)}
+@keyframes pcardIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.pcard-body{animation:none}}
 .pcard-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
 .est{font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.03em}
 .est-cotizacion{background:var(--panel-3);color:var(--muted)}
@@ -410,7 +418,9 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 
 /* ── Modal de exportar PDF por persona ── */
 .pdf-modal-bg{position:fixed;inset:0;z-index:50;background:rgba(15,30,61,.42);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fade .18s var(--ease)}
-.pdf-modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-card);padding:18px;width:100%;max-width:420px;box-shadow:var(--shadow-2);max-height:82vh;overflow:auto}
+.pdf-modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-card);padding:18px;width:100%;max-width:420px;box-shadow:var(--shadow-2);max-height:82vh;overflow:auto;animation:modalIn .22s var(--ease)}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.pdf-modal{animation:none}}
 .pdf-modal-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
 .pdf-modal-list{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
 .pdf-mr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 10px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;transition:background .2s var(--ease),border-color .2s var(--ease)}

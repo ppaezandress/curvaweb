@@ -110,8 +110,10 @@ export default function PdfRecibo() {
       <div className="pdf-toolbar">
         <div className="firma-picker">
           <span>Firma de:</span>
-          <button className={"btn" + (signer === "A" ? " primary" : "")} onClick={() => setSigner("A")}>{state!.params.nombreA}</button>
-          <button className={"btn" + (signer === "B" ? " primary" : "")} onClick={() => setSigner("B")}>{state!.params.nombreB}</button>
+          <div className="chips">
+            <button className="chip-btn" aria-pressed={signer === "A"} onClick={() => setSigner("A")}>{state!.params.nombreA}</button>
+            <button className="chip-btn" aria-pressed={signer === "B"} onClick={() => setSigner("B")}>{state!.params.nombreB}</button>
+          </div>
         </div>
         <button className="btn" onClick={() => window.close()}>Cerrar</button>
         <button className="btn primary" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
