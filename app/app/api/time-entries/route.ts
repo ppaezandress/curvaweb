@@ -187,7 +187,11 @@ export async function POST(req: Request) {
 // cada quien solo puede quitar SUS propias sesiones; un admin puede quitar cualquiera.
 type NotionPageMeta = {
   parent?: { database_id?: string };
-  properties?: { Persona?: { rich_text?: { plain_text?: string }[] } };
+  properties?: {
+    Persona?: { rich_text?: { plain_text?: string }[] };
+    Minutos?: { number?: number | null };
+    Inicio?: { date?: { start?: string | null } | null };
+  };
 };
 
 export async function DELETE(req: Request) {
@@ -215,5 +219,53 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false, error: "No se pudo quitar el tiempo" }, { status: 500 });
+  }
+}
+
+// PATCH: corrige (reduce) los minutos de una sesión ya registrada. Casos reales: se te
+// olvidó parar el cronómetro y corrió de más (Balmori: 22h; Emiliano: junta de 7h). Reglas:
+// cada quien edita SOLO sus propias sesiones (o admin), y SOLO hacia ABAJO — nunca inflar
+// horas (la edición al alza queda prohibida por diseño, así no hace falta aprobación). El
+// "Fin" se recalcula = Inicio + minutos para que el historial quede coherente.
+const TimeEditSchema = z.object({ id: z.string(), minutes: z.number() });
+
+export async function PATCH(req: Request) {
+  const auth = await requireSession();
+  if (!auth.ok) return auth.response;
+  if (!notionConfigured() || !DB) return NextResponse.json({ ok: false, skipped: true });
+
+  const valid = TimeEditSchema.safeParse(await req.json().catch(() => ({})));
+  if (!valid.success) return NextResponse.json({ ok: false, error: "Datos inválidos" }, { status: 400 });
+  const { id, minutes } = valid.data;
+  const newMinutes = Math.round(minutes * 10) / 10;
+  if (!(newMinutes > 0)) return NextResponse.json({ ok: false, error: "Los minutos deben ser mayores a 0" }, { status: 400 });
+
+  const persona = await getPersona(auth.sb, auth.user.id);
+  try {
+    const page = await notionFetch<NotionPageMeta>(`/pages/${id}`);
+    if ((page.parent?.database_id || "").replace(/-/g, "") !== DB.replace(/-/g, "")) {
+      return NextResponse.json({ ok: false, error: "Registro no encontrado" }, { status: 404 });
+    }
+    const owner = (page.properties?.Persona?.rich_text?.[0]?.plain_text || "").trim();
+    if (!persona?.is_admin && owner !== (persona?.name || "").trim()) {
+      return NextResponse.json({ ok: false, error: "No puedes editar el tiempo de otra persona" }, { status: 403 });
+    }
+    // Solo hacia abajo: nunca permitir subir el tiempo (anti-inflado).
+    const current = page.properties?.Minutos?.number ?? 0;
+    if (current > 0 && newMinutes > current) {
+      return NextResponse.json({ ok: false, error: "El tiempo solo se puede reducir, no aumentar" }, { status: 400 });
+    }
+    const startIso = page.properties?.Inicio?.date?.start;
+    const properties: Record<string, unknown> = { Minutos: { number: newMinutes } };
+    // Recalcula el Fin para que cuadre con la nueva duración (si hay Inicio válido).
+    if (startIso) {
+      const endMs = new Date(startIso).getTime() + newMinutes * 60000;
+      properties["Fin"] = { date: { start: new Date(endMs).toISOString() } };
+    }
+    await notionFetch(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ properties }) });
+    invalidateTimeCaches();
+    return NextResponse.json({ ok: true, minutes: newMinutes });
+  } catch {
+    return NextResponse.json({ ok: false, error: "No se pudo editar el tiempo" }, { status: 500 });
   }
 }

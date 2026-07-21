@@ -37,6 +37,9 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
   const myName = currentUserId ? memberById[currentUserId]?.name : undefined;
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // "Editar tiempo": qué sesión se está corrigiendo y a cuántos minutos.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editMin, setEditMin] = useState<number>(0);
 
   // Archiva la sesión en Notion (endpoint DELETE) y refresca el total de la tarea. Optimista:
   // la quitamos de la vista al instante y la devolvemos si el servidor falla.
@@ -61,6 +64,31 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
     } finally {
       setBusyId(null);
       setConfirmId(null);
+    }
+  };
+
+  // Editar (reducir) el tiempo de una sesión: se te olvidó parar el cronómetro y corrió de
+  // más. Solo hacia abajo (el server lo valida). Optimista, con reversión si falla.
+  const editEntry = async (id: string, minutes: number) => {
+    const orig = records.find((r) => r.id === id)?.minutes ?? 0;
+    if (!(minutes > 0) || minutes >= orig) { setEditId(null); return; } // sin cambio o al alza → no-op
+    setBusyId(id);
+    const snapshot = records;
+    setRecords((rs) => rs.map((r) => (r.id === id ? { ...r, minutes } : r)));
+    try {
+      const res = await fetch("/api/time-entries", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, minutes }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) { setRecords(snapshot); toast(j.error || "No se pudo editar el tiempo", { tone: "error" }); }
+      else { toast("Tiempo actualizado"); reload(); }
+    } catch {
+      setRecords(snapshot);
+      toast("No se pudo editar el tiempo", { tone: "error" });
+    } finally {
+      setBusyId(null);
+      setEditId(null);
     }
   };
 
@@ -227,28 +255,55 @@ export function TaskDetailDrawer({ taskId, open, onClose }: { taskId: string; op
                         : r.origin === "manual"
                           ? <span className="inline-flex items-center gap-1 rounded-full bg-surface px-1.5 py-0.5 text-caption font-medium text-muted"><Pencil size={10} /> A mano</span>
                           : null}
-                      <span className="tabular flex items-center gap-1 text-xs font-semibold text-fg"><Clock3 size={12} className="text-muted" /> {formatDuration((r.minutes || 0) * 60)}</span>
-                      {/* Quitar tiempo: solo tus propias sesiones (o admin). Confirmación inline
-                          para no borrar por error; sin diálogo nativo (bloquea la app). */}
-                      {(isAdmin || r.person === myName) && (
-                        confirmId === r.id ? (
-                          <span className="flex shrink-0 items-center gap-1">
-                            <button onClick={() => deleteEntry(r.id)} disabled={busyId === r.id}
-                              className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-1 text-caption font-semibold text-danger transition hover:bg-danger/20 focus-ring disabled:opacity-50">
-                              {busyId === r.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} Quitar
-                            </button>
-                            <button onClick={() => setConfirmId(null)} disabled={busyId === r.id}
-                              className="rounded-full px-2 py-1 text-caption font-medium text-muted transition hover:bg-surface-2 focus-ring">
-                              No
-                            </button>
-                          </span>
-                        ) : (
-                          <button onClick={() => setConfirmId(r.id)}
-                            className="shrink-0 rounded-full p-1.5 text-muted transition hover:bg-danger/10 hover:text-danger focus-ring"
-                            aria-label="Quitar esta sesión" title="Quitar esta sesión">
-                            <Trash2 size={13} />
+                      {/* Editor inline de minutos (solo hacia abajo): "corrió de más, bájalo". */}
+                      {editId === r.id ? (
+                        <span className="flex shrink-0 items-center gap-1">
+                          <input type="number" min={1} max={r.minutes || undefined} value={editMin}
+                            onChange={(e) => setEditMin(Number(e.target.value))}
+                            className="tabular w-14 rounded-lg border border-line px-2 py-0.5 text-right text-xs outline-none focus-ring focus:border-accent" />
+                          <span className="text-caption text-muted">min</span>
+                          <button onClick={() => editEntry(r.id, editMin)} disabled={busyId === r.id}
+                            className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-caption font-semibold text-accent transition hover:bg-accent/20 focus-ring disabled:opacity-50">
+                            {busyId === r.id ? <Loader2 size={11} className="animate-spin" /> : "Guardar"}
                           </button>
-                        )
+                          <button onClick={() => setEditId(null)} disabled={busyId === r.id}
+                            className="rounded-full px-2 py-1 text-caption font-medium text-muted transition hover:bg-surface-2 focus-ring">
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <>
+                          <span className="tabular flex items-center gap-1 text-xs font-semibold text-fg"><Clock3 size={12} className="text-muted" /> {formatDuration((r.minutes || 0) * 60)}</span>
+                          {/* Editar (reducir) y Quitar: solo tus propias sesiones (o admin).
+                              Confirmación inline para no borrar por error; sin diálogo nativo. */}
+                          {(isAdmin || r.person === myName) && (
+                            confirmId === r.id ? (
+                              <span className="flex shrink-0 items-center gap-1">
+                                <button onClick={() => deleteEntry(r.id)} disabled={busyId === r.id}
+                                  className="inline-flex items-center gap-1 rounded-full bg-danger/10 px-2 py-1 text-caption font-semibold text-danger transition hover:bg-danger/20 focus-ring disabled:opacity-50">
+                                  {busyId === r.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />} Quitar
+                                </button>
+                                <button onClick={() => setConfirmId(null)} disabled={busyId === r.id}
+                                  className="rounded-full px-2 py-1 text-caption font-medium text-muted transition hover:bg-surface-2 focus-ring">
+                                  No
+                                </button>
+                              </span>
+                            ) : (
+                              <span className="flex shrink-0 items-center gap-0.5">
+                                <button onClick={() => { setEditId(r.id); setEditMin(r.minutes || 0); }}
+                                  className="rounded-full p-1.5 text-muted transition hover:bg-accent/10 hover:text-accent focus-ring"
+                                  aria-label="Editar el tiempo (reducir)" title="Editar el tiempo (solo se puede reducir)">
+                                  <Pencil size={13} />
+                                </button>
+                                <button onClick={() => setConfirmId(r.id)}
+                                  className="rounded-full p-1.5 text-muted transition hover:bg-danger/10 hover:text-danger focus-ring"
+                                  aria-label="Quitar esta sesión" title="Quitar esta sesión">
+                                  <Trash2 size={13} />
+                                </button>
+                              </span>
+                            )
+                          )}
+                        </>
                       )}
                     </div>
                   );
