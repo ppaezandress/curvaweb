@@ -211,18 +211,22 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
   mem.forEach((m, i) => {
     const sm = isSocio(m.quien) ? 1 : (+m.sm || 1);
     const g = PESO[m.rol] * sm * vpw;
-    if (isSocio(m.quien)) { pay[i] = (P.alpha / 100) * g; disc += (1 - P.alpha / 100) * g; if (m.quien === "socioA") sAseat += pay[i]; else sBseat += pay[i]; }
+    if (isSocio(m.quien)) { pay[i] = (P.alpha / 100) * g; disc += (1 - P.alpha / 100) * g; }
     else { pay[i] = g; }
   });
-  // Overrides manuales (solo equipo): fijas el sueldo TOTAL de alguien; la diferencia
-  // (manualDelta) se paga de más al equipo y sale de la utilidad de los socios más abajo.
+  // Overrides manuales (equipo Y socios): fijas el pago de trabajo de alguien; la
+  // diferencia (manualDelta) sale de la utilidad de los socios más abajo. Para un socio,
+  // montoManual fija su "sombrero" (pago por trabajar el proyecto); el barrido a Banca
+  // (disc) queda igual.
   let manualDelta = 0;
   mem.forEach((m, i) => {
-    if (!isSocio(m.quien) && typeof m.montoManual === "number" && m.montoManual >= 0) {
+    if (typeof m.montoManual === "number" && m.montoManual >= 0) {
       manualDelta += m.montoManual - pay[i];
       pay[i] = m.montoManual;
     }
   });
+  // Sombrero de socio = su pago final por trabajar (base o fijado a mano).
+  mem.forEach((m, i) => { if (m.quien === "socioA") sAseat += pay[i]; else if (m.quien === "socioB") sBseat += pay[i]; });
   const bolsaOut = bb, marginBruto = t - bolsaOut;
   // Comisión de origen — regla blindada: un socio-originador NUNCA la cobra a su
   // bolsillo (diluye al otro socio), va a la Banca. Solo Núcleo/externo la cobra.
@@ -338,7 +342,7 @@ export function repartoPorMes(pr: Proyecto, P: Reglas): ReparteMes[] {
     for (const s of slots) {
       const key = nm(s.mem) + "|" + s.mem.quien;
       mesesPresente[key] = (mesesPresente[key] || 0) + 1;
-      if (!isSocio(s.mem.quien) && typeof s.mem.montoManual === "number" && s.mem.montoManual >= 0) manualDe[key] = s.mem.montoManual;
+      if (typeof s.mem.montoManual === "number" && s.mem.montoManual >= 0) manualDe[key] = s.mem.montoManual;
     }
   }
 
@@ -355,7 +359,7 @@ export function repartoPorMes(pr: Proyecto, P: Reglas): ReparteMes[] {
     for (const s of slots) {
       const key = nm(s.mem) + "|" + s.mem.quien, p = ensure(nm(s.mem), s.mem.quien);
       p.roles.push(ROLNAME[s.mem.rol]);
-      if (!isSocio(s.mem.quien) && key in manualDe) {
+      if (key in manualDe) {
         p.trabajo += manualDe[key] / (mesesPresente[key] || 1);
       } else {
         const g = s.w * vpw;

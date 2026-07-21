@@ -1244,8 +1244,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             {active.members.map((m, i) => {
               const val = personVal(m);
               const res = resMembers[i];
-              const team = res && !isSocio(res.quien);
-              const pay = team ? (r.people[res.nombre + "|" + res.quien]?.trabajo || 0) : 0;
+              const esSocioM = !!res && isSocio(res.quien); // socio trabajando el proyecto
+              const pay = res ? (r.people[res.nombre + "|" + res.quien]?.trabajo || 0) : 0; // pago por trabajar (sombrero si es socio)
               const mensual = plazoN > 1 ? pay / plazoN : pay;
               const manual = typeof m.montoManual === "number";
               const setManual = (mesVal: number) => updateActive((p) => { p.members[i].montoManual = Math.max(0, Math.round(mesVal)) * plazoN; p.manualOK = false; });
@@ -1266,9 +1266,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   </div>
                   <button className="rmv" title="Quitar del proyecto" onClick={() => updateActive((p) => { p.members.splice(i, 1); })}>×</button>
                 </div>
-                {team && (
+                {res && (
                   <div className={"member-pay" + (manual ? " on" : "")}>
-                    <span className="mp-l">Gana{plazoN > 1 ? "/mes" : ""} {manual && <b className="mp-tag">a mano</b>}</span>
+                    <span className="mp-l">{esSocioM ? "Tu trabajo" : "Gana"}{plazoN > 1 ? "/mes" : ""} {manual && <b className="mp-tag">a mano</b>}<span className="tip" data-tip={esSocioM ? "Lo que cobras por TRABAJAR este proyecto (tu sombrero) — aparte de tu utilidad de socio. Edítalo a mano; la diferencia sale de la utilidad de los socios." : "Lo que gana por trabajar. Edítalo a mano y el extra sale de la utilidad de los socios."}><Info /></span></span>
                     <div className="money-in sm"><span>$</span><input type="number" min={0} value={Math.round(mensual)} onChange={(e) => setManual(+e.target.value || 0)} title="Escribe cuánto quieres que gane; el resto se ajusta y el extra sale de la utilidad de los socios." /></div>
                     <button className="mp-auto" disabled={!manual} title={manual ? "Volver al cálculo automático" : "Cálculo automático"} onClick={clearManual}>{manual ? "auto" : "auto ✓"}</button>
                   </div>
