@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { ListTodo, Users, Building2, Search, Inbox, Check, Building, CalendarClock, CircleDot, Plus } from "lucide-react";
+import { ListTodo, Users, Building2, Search, Inbox, Check, Building, CalendarClock, CircleDot, Plus, UserPlus } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { type Task } from "@/lib/mock-data";
@@ -47,19 +47,28 @@ export default function TareasPage() {
   const [showNew, setShowNew] = useState(false);
   const [clientFilter, setClientFilter] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>("todos");
+  const [leadsOnly, setLeadsOnly] = useState(false);
 
   const clientOf = (t: Task) => (t.internal ? INTERNAL : t.clientId || projectById[t.projectId]?.clientId || NO_CLIENT);
   const clientName = (id: string) => (id === INTERNAL ? "Interno (CURVA)" : id === NO_CLIENT ? "Sin cliente" : clientById[id]?.name || "Cliente");
   const secsOf = (items: Task[]) => items.reduce((a, t) => a + t.baselineSeconds + sessionSecondsForTask(t.id), 0);
+  // Una tarea es de un LEAD si su cliente resuelto tiene estado "Lead" en el CRM (#Emiliano):
+  // ver solo las tareas ligadas a prospectos, no a clientes activos.
+  const isLeadTask = (t: Task) => {
+    const cid = t.internal ? "" : (t.clientId || projectById[t.projectId]?.clientId || "");
+    return cid ? clientById[cid]?.status === "Lead" : false;
+  };
 
   const base = useMemo(() => (view === "all" ? tasks : tasks.filter((t) => isAssignedTo(t, currentUserId))), [tasks, view, currentUserId]);
   const visibleAll = useMemo(() => base.filter((t) => showDone || !isDone(t.status)), [base, showDone]);
-  // Filtro por rango de fecha (#51) — se aplica antes del filtro por cliente, para que
-  // el sidebar de clientes y sus conteos reflejen el "cuándo" seleccionado.
-  const visible = useMemo(
-    () => (dateRange === "todos" ? visibleAll : visibleAll.filter((t) => inDateRange(t.dueDate, dateRange))),
-    [visibleAll, dateRange],
-  );
+  // Filtros por rango de fecha (#51) y por Leads — se aplican antes del filtro por cliente,
+  // para que el sidebar de clientes y sus conteos reflejen lo seleccionado.
+  const visible = useMemo(() => {
+    let v = dateRange === "todos" ? visibleAll : visibleAll.filter((t) => inDateRange(t.dueDate, dateRange));
+    if (leadsOnly) v = v.filter(isLeadTask);
+    return v;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleAll, dateRange, leadsOnly, projectById, clientById]);
 
   // Sidebar de clientes (siempre visible) — cuenta sobre lo visible (ya filtrado por fecha).
   const clientsWithCounts = useMemo(() => {
@@ -90,22 +99,35 @@ export default function TareasPage() {
   };
 
   const groups = useMemo(() => {
-    const byUrg = (a: Task, b: Task) => Number(isDone(a.status)) - Number(isDone(b.status)) || prioRank(b) - prioRank(a);
+    // Orden: Done al final, luego por fecha de entrega (vence antes primero; sin fecha al
+    // final) y a igualdad de fecha por prioridad. Emiliano pedía que respete cómo se ven en
+    // Notion; la API de Notion no expone el orden manual de una vista, así que ordenamos por
+    // vencimiento + prioridad, que es el criterio más común y estable.
+    const byDuePrio = (a: Task, b: Task) => {
+      const d = Number(isDone(a.status)) - Number(isDone(b.status));
+      if (d) return d;
+      const ma = dueDateMs(a.dueDate), mb = dueDateMs(b.dueDate);
+      if (ma == null && mb == null) return prioRank(b) - prioRank(a);
+      if (ma == null) return 1;
+      if (mb == null) return -1;
+      if (ma !== mb) return ma - mb;
+      return prioRank(b) - prioRank(a);
+    };
     if (group === "cliente") {
       const m = new Map<string, Task[]>();
       scoped.forEach((t) => { const c = clientOf(t); (m.get(c) || m.set(c, []).get(c)!).push(t); });
-      return [...m.entries()].map(([id, items]) => ({ key: id, label: clientName(id), bar: "bg-accent", items: [...items].sort(byUrg) })).sort((a, b) => b.items.length - a.items.length);
+      return [...m.entries()].map(([id, items]) => ({ key: id, label: clientName(id), bar: "bg-accent", items: [...items].sort(byDuePrio) })).sort((a, b) => b.items.length - a.items.length);
     }
     if (group === "estado") {
       const m = new Map<string, Task[]>();
       scoped.forEach((t) => { const s = (t.status || "—").toUpperCase(); (m.get(s) || m.set(s, []).get(s)!).push(t); });
-      return [...m.entries()].map(([s, items]) => ({ key: s, label: s, bar: isDone(s) ? "bg-success" : "bg-accent", items: [...items].sort(byUrg) }))
+      return [...m.entries()].map(([s, items]) => ({ key: s, label: s, bar: isDone(s) ? "bg-success" : "bg-accent", items: [...items].sort(byDuePrio) }))
         .sort((a, b) => { const ia = STATUS_ORDER.indexOf(a.key), ib = STATUS_ORDER.indexOf(b.key); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
     }
-    // urgencia
+    // urgencia — dentro de cada franja, por fecha y prioridad
     const open = scoped.filter((t) => !isDone(t.status));
     const out: { key: string; label: string; bar: string; items: Task[] }[] = URGENCY
-      .map((s) => ({ key: s.key as string, label: s.label as string, bar: s.bar as string, items: open.filter((t) => horizon(t) === s.key).sort((a, b) => prioRank(b) - prioRank(a)) }))
+      .map((s) => ({ key: s.key as string, label: s.label as string, bar: s.bar as string, items: open.filter((t) => horizon(t) === s.key).sort(byDuePrio) }))
       .filter((s) => s.items.length > 0);
     if (showDone) { const done = scoped.filter((t) => isDone(t.status)); if (done.length) out.push({ key: "hechas", label: "Hechas", bar: "bg-success", items: done }); }
     return out;
@@ -140,9 +162,10 @@ export default function TareasPage() {
         <button onClick={() => setShowNew(true)} className="btn-magnetic inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:opacity-90 focus-ring"><Plus size={15} /> Nueva tarea</button>
       </div>
 
-      {/* Filtro por cuándo vence (#51) — chips scrollables en móvil */}
+      {/* Filtro por cuándo vence (#51) — chips scrollables en móvil (en desktop viven en el
+          menú izquierdo). */}
       {!searchResults && (
-        <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5">
+        <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5 lg:hidden">
           <span className="shrink-0 pr-1 text-xs font-semibold text-muted">Cuándo</span>
           {DATE_RANGES.map((r) => (
             <button
@@ -169,6 +192,22 @@ export default function TareasPage() {
           {/* Sidebar de clientes — SIEMPRE visible (es como navegas por cliente) */}
           <aside className="hidden w-52 shrink-0 lg:block">
             <div className="sticky top-20 space-y-0.5">
+              {/* Cuándo (fecha de entrega): hoy / mañana / esta semana / próxima / mes… */}
+              <p className="px-3 pb-1 text-xs font-semibold text-muted">Cuándo</p>
+              <div className="flex flex-wrap gap-1 px-1 pb-2">
+                {DATE_RANGES.map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setDateRange(r.key)}
+                    className={`rounded-full px-2.5 py-1 text-caption font-medium transition focus-ring ${dateRange === r.key ? "bg-ink text-white" : "border border-line bg-surface text-muted hover:border-accent/40 hover:text-fg"}`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              {/* Solo leads: tareas ligadas a prospectos del CRM (estado "Lead"). */}
+              <SidebarItem icon={<UserPlus size={15} />} label="Solo leads" count={visibleAll.filter(isLeadTask).length} active={leadsOnly} onClick={() => { setLeadsOnly((v) => !v); setClientFilter(null); }} />
+              <div className="my-2 border-t border-line/60" />
               <SidebarItem icon={<Inbox size={15} />} label="Todos" count={visible.length} active={!clientFilter} onClick={() => setClientFilter(null)} />
               <p className="px-3 pb-1 pt-4 text-xs font-semibold text-muted">Clientes</p>
               <div className="max-h-[60vh] space-y-0.5 overflow-y-auto pr-1">

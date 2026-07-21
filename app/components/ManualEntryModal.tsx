@@ -94,6 +94,7 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
   );
   const [earlyFor, setEarlyFor] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
   // [3] Anti doble-registro: cargamos los registros existentes para avisar si el nuevo
   // se encima con otro en la misma tarea (p. ej. una junta que otra persona ya registró).
   const [records, setRecords] = useState<{ taskId: string; person: string; start: string; minutes: number }[]>([]);
@@ -129,6 +130,29 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
   }, [taskQuery, tasks, clientId]);
 
   const selectedTask = taskId ? tasks.find((t) => t.id === taskId) : undefined;
+
+  // Crear una tarea al vuelo desde el buscador: "salió una tarea inesperada y quiero registrar
+  // su tiempo" (feedback de Diana/Balmori). Reusa POST /api/tasks; al volver, la selecciona.
+  const createTask = async () => {
+    const name = taskQuery.trim();
+    if (!name || creatingTask) return;
+    setCreatingTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, clientId: clientId || undefined }),
+      });
+      const j = await res.json().catch(() => ({} as { ok?: boolean; id?: string }));
+      if (res.ok && j.ok && j.id) {
+        await reload(); // trae la tarea nueva a useData().tasks
+        setTaskId(j.id);
+        setTaskQuery("");
+        setTaskFocused(false);
+      }
+    } finally {
+      setCreatingTask(false);
+    }
+  };
 
   // Completitud: al elegir una tarea, hereda su cliente y su pilar automáticamente
   // (mata "Sin cliente" y presiembra el pilar del tipo de la tarea — #47).
@@ -363,7 +387,7 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
                 placeholder="Buscar o elegir tarea reciente…"
                 className={inputCls}
               />
-              {(taskFocused || taskQuery) && taskMatches.length > 0 && (
+              {(taskFocused || taskQuery) && (taskMatches.length > 0 || taskQuery.trim()) && (
                 <div className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-control border border-line bg-[var(--surface-solid)] shadow-float">
                   {!taskQuery && <p className="px-3 pt-2 pb-1 text-caption font-semibold text-muted">Recientes</p>}
                   {taskMatches.map((t) => {
@@ -375,6 +399,18 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
                       </button>
                     );
                   })}
+                  {/* Crear al vuelo: registra una tarea nueva en Notion y la selecciona. */}
+                  {taskQuery.trim() && (
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={createTask}
+                      disabled={creatingTask}
+                      className="flex w-full items-center gap-2 border-t border-line px-3 py-2 text-left text-sm font-medium text-accent hover:bg-accent/5 disabled:opacity-50"
+                    >
+                      {creatingTask ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                      <span className="truncate">Crear «{taskQuery.trim()}»</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
