@@ -103,17 +103,21 @@ export function initDiagnostico(): void {
     if (tint) tint.style.opacity = String(Math.min(n / 8, 1) * 0.95);
   };
 
-  // Rayo minimalista al SELECCIONAR: una hebra fina que "cae" sobre la ficha (le picas a la
-  // tormenta). Un solo <span> por toque, se autolimpia → sin churn de la ráfaga de partículas.
-  const spawnBolt = (x: number, y: number) => {
+  // Relámpago DE FONDO al SELECCIONAR: un destello suave detrás de las tarjetas (la tormenta
+  // se enciende y la ficha translúcida brilla desde atrás). Sin bolt dibujado encima. Doble
+  // parpadeo (como un relámpago real) y se apaga. Un <span> por toque, se autolimpia.
+  const spawnStorm = (x: number, y: number) => {
     if (reduce || !overlay) return;
-    const b = document.createElement('span');
-    b.className = 'dx-bolt';
-    b.style.left = `${x}px`;
-    b.style.top = `${y}px`;
-    b.innerHTML = '<svg viewBox="0 0 24 44" fill="none" aria-hidden="true"><path d="M15 2 L7 24 L13 24 L9 42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    overlay.appendChild(b);
-    setTimeout(() => b.remove(), 820);
+    // 1) parpadeo tenue de TODO el cielo (el relámpago ilumina la tormenta un instante).
+    const sky = document.createElement('span');
+    sky.className = 'dx-storm-sky';
+    // 2) bloom localizado y brillante DETRÁS de la ficha tocada.
+    const s = document.createElement('span');
+    s.className = 'dx-storm';
+    s.style.left = `${x}px`;
+    s.style.top = `${y}px`;
+    overlay.append(sky, s);
+    setTimeout(() => { sky.remove(); s.remove(); }, 760);
   };
 
   clouds.forEach((cloud) => {
@@ -129,8 +133,8 @@ export function initDiagnostico(): void {
         cloud.setAttribute('aria-pressed', 'true');
         // Punto del toque: coords del mouse, o el centro de la ficha (teclado/sin coords).
         const me = e as MouseEvent;
-        if (me.clientX || me.clientY) spawnBolt(me.clientX, me.clientY);
-        else { const r = cloud.getBoundingClientRect(); spawnBolt(r.left + r.width / 2, r.top + r.height / 2); }
+        if (me.clientX || me.clientY) spawnStorm(me.clientX, me.clientY);
+        else { const r = cloud.getBoundingClientRect(); spawnStorm(r.left + r.width / 2, r.top + r.height / 2); }
       }
       syncDock();
     });

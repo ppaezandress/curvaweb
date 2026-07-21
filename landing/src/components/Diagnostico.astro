@@ -419,28 +419,51 @@ const entrada = (i: number) => {
   }
 </style>
 
-<!-- GLOBAL: el rayo lo crea el JS con createElement, así que su CSS NO puede ser scoped
+<!-- GLOBAL: el destello lo crea el JS con createElement, así que su CSS NO puede ser scoped
      (Astro no le pondría el atributo de scope al elemento dinámico → el selector no matchea).
      Por eso vive aquí en un bloque is:global. -->
 <style is:global>
-  /* Rayo minimalista al tocar una ficha: hebra fina que "cae" sobre la nube, se dibuja rápido
-     y se apaga. Elegante, sin rebote ni caricatura. La punta queda en el punto tocado. */
-  .dx-bolt {
-    position: fixed; z-index: 95; pointer-events: none; margin: -2rem 0 0 -0.6rem;
-    color: #eaf7ff; will-change: transform, opacity;
-    filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.55));
-    animation: dx-bolt-in 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  /* Relámpago de FONDO al tocar una ficha: un destello suave DETRÁS de las tarjetas (z:1, los
+     paneles son z:3). La ficha translúcida se enciende desde atrás como cuando un relámpago
+     alumbra tras las nubes. Doble parpadeo (como un rayo real) y se apaga. Gradiente suave
+     (sin blur → el scale va por el compositor, 60fps). */
+  .dx-storm {
+    position: fixed; z-index: 1; pointer-events: none;
+    width: 36rem; height: 36rem; margin: -18rem 0 0 -18rem; border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(224, 244, 255, 0.7) 0%,
+      rgba(125, 211, 252, 0.4) 24%,
+      rgba(56, 189, 248, 0.18) 46%,
+      rgba(37, 99, 235, 0.07) 62%,
+      transparent 73%);
+    mix-blend-mode: screen; will-change: opacity, transform;
+    animation: dx-storm-flash 0.64s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
   }
-  .dx-bolt svg { width: 1.2rem; height: 2rem; display: block; }
-  .dx-bolt path { stroke-dasharray: 62; stroke-dashoffset: 62; animation: dx-bolt-draw 0.17s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
-  @keyframes dx-bolt-draw { to { stroke-dashoffset: 0; } }
-  @keyframes dx-bolt-in {
-    0%   { opacity: 0; transform: translateY(6px) scale(0.8); }
-    18%  { opacity: 1; }
-    55%  { opacity: 0.95; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-8px) scale(1.04); }
+  /* Parpadeo tenue de todo el cielo: el relámpago ilumina la tormenta un instante. */
+  .dx-storm-sky {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(120% 85% at 50% 22%, rgba(191, 231, 255, 0.24), rgba(56, 189, 248, 0.07) 45%, transparent 70%);
+    mix-blend-mode: screen; will-change: opacity;
+    animation: dx-sky-flick 0.5s ease-out forwards;
+  }
+  /* Doble destello con parpadeo intermedio = firma visual de un relámpago, pero suave. */
+  @keyframes dx-storm-flash {
+    0%   { opacity: 0;    transform: scale(0.72); }
+    8%   { opacity: 1;    transform: scale(0.9); }
+    16%  { opacity: 0.25; }
+    26%  { opacity: 0.9;  transform: scale(1.02); }
+    40%  { opacity: 0.5; }
+    100% { opacity: 0;    transform: scale(1.16); }
+  }
+  @keyframes dx-sky-flick {
+    0%   { opacity: 0; }
+    7%   { opacity: 1; }
+    14%  { opacity: 0.15; }
+    24%  { opacity: 0.85; }
+    45%  { opacity: 0; }
+    100% { opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .dx-bolt { animation: none; opacity: 0; }
+    .dx-storm, .dx-storm-sky { animation: none; opacity: 0; }
   }
 </style>
