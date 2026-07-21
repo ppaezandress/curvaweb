@@ -95,6 +95,17 @@ const spark = 'M0,44 C40,42 70,30 120,18 C170,7 210,8 260,3';
 <style>
   /* Los gradientes .accent-* viven en global.css (compartidos con Caminos). */
 
+  /* Fondo de la sección: "wash" azul (Cobalto & aire) para que las tarjetas blancas
+     resalten en vez de ser muchos blancos seguidos. Claro arriba (titular oscuro legible),
+     más azul al centro (detrás de las tarjetas) y vuelve a aclarar abajo para fundir con
+     la siguiente sección. Glows cobalto/cian en esquinas para dar profundidad. */
+  #impacto {
+    background:
+      radial-gradient(55rem 38rem at 88% 14%, rgba(56, 189, 248, 0.20), transparent 60%),
+      radial-gradient(50rem 42rem at 6% 86%, rgba(37, 99, 235, 0.22), transparent 62%),
+      linear-gradient(180deg, #eef3fb 0%, #d8e6fc 30%, #bcd4f5 55%, #d2e2fb 80%, #eef3fb 100%);
+  }
+
   /* ── Flip card: frente = dolor, reverso = solución + cifra ── */
   .flip-card { perspective: 1400px; }
   .flip-inner {
