@@ -291,7 +291,9 @@ const entrada = (i: number) => {
     --cat: var(--color-ember);
     position: relative; text-align: left; padding: 1.05rem 1.1rem; border-radius: 1.4rem 1.6rem 1.5rem 1.7rem;
     color: rgba(255,255,255,.9); font-size: .92rem; line-height: 1.3; font-weight: 500; cursor: pointer;
-    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.13);
+    /* Azul translúcido (Cobalto & aire): tono claro pero más presente que el gris de antes. */
+    background: linear-gradient(158deg, rgba(96,165,250,.17), rgba(37,99,235,.11));
+    border: 1px solid rgba(125,211,252,.22);
     box-shadow: 0 14px 30px -18px rgba(0,0,0,.5), inset 0 1px 1px rgba(255,255,255,.14);
     /* Sin backdrop-filter: 16 cards con blur en un contenedor animado = jank (repaints).
        Sobre la atmósfera oscura, el fondo translúcido se ve casi idéntico y va a 60fps. */
@@ -332,6 +334,24 @@ const entrada = (i: number) => {
 
   /* partículas de selección (creadas por JS). Sin box-shadow: el glow encarece el paint. */
   .dx-particle { position: fixed; z-index: 5; width: .5rem; height: .5rem; border-radius: 50%; pointer-events: none; will-change: transform, opacity; }
+
+  /* Rayo minimalista al tocar una ficha (creado por JS): hebra fina que "cae" sobre la nube,
+     se dibuja rápido y se apaga. Elegante, sin rebote ni caricatura. La punta queda en el toque. */
+  .dx-bolt {
+    position: fixed; z-index: 6; pointer-events: none; margin: -1.55rem 0 0 -.45rem;
+    color: #dff2ff; will-change: transform, opacity;
+    filter: drop-shadow(0 0 5px rgba(125,211,252,.85)) drop-shadow(0 0 12px rgba(56,189,248,.45));
+    animation: dx-bolt-in .52s var(--e-out) forwards;
+  }
+  .dx-bolt svg { width: .9rem; height: 1.55rem; display: block; }
+  .dx-bolt path { stroke-dasharray: 62; stroke-dashoffset: 62; animation: dx-bolt-draw .15s cubic-bezier(.7,0,.3,1) forwards; }
+  @keyframes dx-bolt-draw { to { stroke-dashoffset: 0; } }
+  @keyframes dx-bolt-in {
+    0%   { opacity: 0; transform: translateY(5px) scale(.85); }
+    20%  { opacity: 1; }
+    45%  { opacity: .95; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-7px) scale(1.03); }
+  }
 
   /* ---- dock / botón revelar ---- */
   .dx-dock { display: flex; justify-content: center; }

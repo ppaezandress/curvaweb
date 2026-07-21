@@ -103,18 +103,34 @@ export function initDiagnostico(): void {
     if (tint) tint.style.opacity = String(Math.min(n / 8, 1) * 0.95);
   };
 
+  // Rayo minimalista al SELECCIONAR: una hebra fina que "cae" sobre la ficha (le picas a la
+  // tormenta). Un solo <span> por toque, se autolimpia → sin churn de la ráfaga de partículas.
+  const spawnBolt = (x: number, y: number) => {
+    if (reduce || !overlay) return;
+    const b = document.createElement('span');
+    b.className = 'dx-bolt';
+    b.style.left = `${x}px`;
+    b.style.top = `${y}px`;
+    b.innerHTML = '<svg viewBox="0 0 24 44" fill="none" aria-hidden="true"><path d="M15 2 L7 24 L13 24 L9 42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    overlay.appendChild(b);
+    setTimeout(() => b.remove(), 640);
+  };
+
   clouds.forEach((cloud) => {
-    cloud.addEventListener('click', () => {
+    cloud.addEventListener('click', (e) => {
       const id = cloud.dataset.id!;
       const on = cloud.getAttribute('aria-pressed') === 'true';
       if (on) {
         seleccion.delete(id);
         cloud.setAttribute('aria-pressed', 'false');
       } else {
-        // Feedback de selección = solo CSS (pop + glow + check): compositor-friendly, 60fps.
-        // Se quitó el burst de partículas y el strike() por click (DOM churn + reflow = jank).
+        // Feedback de selección = CSS (pop + glow + check) + un rayo fino en el punto tocado.
         seleccion.add(id);
         cloud.setAttribute('aria-pressed', 'true');
+        // Punto del toque: coords del mouse, o el centro de la ficha (teclado/sin coords).
+        const me = e as MouseEvent;
+        if (me.clientX || me.clientY) spawnBolt(me.clientX, me.clientY);
+        else { const r = cloud.getBoundingClientRect(); spawnBolt(r.left + r.width / 2, r.top + r.height / 2); }
       }
       syncDock();
     });
