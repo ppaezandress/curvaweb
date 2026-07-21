@@ -1072,36 +1072,46 @@ html:not(.js) .od-reel {
 }
 .pg-hint svg { flex-shrink: 0; }
 
-/* ── Columna / spine ── */
-.pg-list { position: relative; padding-left: 0.25rem; }
-/* Riel punteado (dolor): entrecortado, se apaga con CURVA */
-.pg-list::before {
-  content: ""; position: absolute; left: 1rem; top: 1.9rem; bottom: 1.9rem; width: 2px;
-  background-image: repeating-linear-gradient(to bottom, var(--color-sand-300) 0 5px, transparent 5px 12px);
-  transition: opacity 0.5s;
-}
-/* Columna que se DIBUJA de arriba a abajo con un pulso al activar CURVA */
-.pg-list::after {
-  content: ""; position: absolute; left: 1rem; top: 1.9rem; bottom: 1.9rem; width: 2px;
-  transform: translateX(-1px) scaleY(0); transform-origin: top;
-  background: linear-gradient(to bottom, var(--pg-blue), var(--pg-sky));
-  border-radius: 2px; box-shadow: 0 0 14px color-mix(in srgb, var(--pg-blue) 45%, transparent);
-  opacity: 0; transition: opacity 0.3s, transform 0.9s var(--ease-pitch);
-}
-#pg-toggle:checked ~ .pg-list::before { opacity: 0; }
-#pg-toggle:checked ~ .pg-list::after { opacity: 1; transform: translateX(-1px) scaleY(1); }
+/* ── Columna / spine: segmentos nodo→nodo (no un spine suelto sobre la lista) ── */
+.pg-list { position: relative; display: flex; flex-direction: column; gap: 0.55rem; padding-left: 0.25rem; }
 
 /* ── Cada par (papel) ── */
 .pg-item {
-  display: grid; grid-template-columns: 2rem 1fr; gap: 1rem; align-items: start;
-  margin: 0.55rem 0;
+  display: grid; grid-template-columns: 2rem 1fr; gap: 1rem; align-items: stretch;
   --stagger: calc(var(--i) * 80ms);
 }
-.pg-rail { display: flex; justify-content: center; padding-top: 1.35rem; }
+/* Carril estirado a la altura de la tarjeta → el segmento puede llegar al siguiente nodo. */
+.pg-rail { position: relative; align-self: stretch; display: flex; justify-content: center; padding-top: 1.35rem; }
+
+/* Segmento conector: nace en el centro de ESTE nodo (top: padding 1.35 + medio dot 0.575)
+   y baja hasta el centro del siguiente (alto del item + gap 0.55). left:50% = centro del
+   carril = centro del nodo, sin números mágicos. El último item no dibuja (content: none). */
+.pg-rail::before, .pg-rail::after {
+  content: ""; position: absolute; z-index: 0; width: 2px;
+  left: 50%; top: 1.925rem; height: calc(100% + 0.55rem);
+}
+.pg-item:last-child .pg-rail::before,
+.pg-item:last-child .pg-rail::after { content: none; }
+/* Estado DOLOR: punteado gris, se apaga con CURVA */
+.pg-rail::before {
+  transform: translateX(-50%);
+  background-image: repeating-linear-gradient(to bottom, var(--color-sand-300) 0 5px, transparent 5px 12px);
+  transition: opacity 0.4s;
+}
+/* Estado CURVA: sólido azul, se DIBUJA de arriba a abajo con pulso escalonado */
+.pg-rail::after {
+  transform: translateX(-50%) scaleY(0); transform-origin: top;
+  background: linear-gradient(to bottom, var(--pg-blue), var(--pg-sky));
+  border-radius: 2px; box-shadow: 0 0 12px color-mix(in srgb, var(--pg-blue) 42%, transparent);
+  opacity: 0; transition: opacity 0.3s, transform 0.8s var(--ease-pitch);
+  transition-delay: var(--stagger);
+}
+#pg-toggle:checked ~ .pg-list .pg-rail::before { opacity: 0; }
+#pg-toggle:checked ~ .pg-list .pg-rail::after { opacity: 1; transform: translateX(-50%) scaleY(1); }
 
 /* Nodo */
 .pg-dot {
-  position: relative; height: 1.15rem; width: 1.15rem; border-radius: 9999px;
+  position: relative; z-index: 1; height: 1.15rem; width: 1.15rem; border-radius: 9999px;
   background: #fff; border: 2px solid var(--color-sand-300);
   box-shadow: 0 0 0 4px var(--color-sand-50);
   display: grid; place-items: center; color: #fff;
