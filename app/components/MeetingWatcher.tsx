@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarClock, Check, X, Video } from "lucide-react";
+import { CalendarClock, Check, X, Video, Minus, Plus } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { Modal } from "@/components/Modal";
@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/Avatar";
 import { suggestForMeeting } from "@/lib/meeting-match";
 import { refreshTimeRecords } from "@/lib/use-time-records";
+import { formatDuration } from "@/lib/format";
 import type { TimeRecord } from "@/lib/notion/fetchers";
 import { cn } from "@/lib/cn";
+
+const DUR_PRESETS = [15, 30, 45, 60, 90];
 
 type GEvent = { id: string; title: string; start: number; end: number; attendees: string[]; hangoutLink?: string };
 
@@ -25,6 +28,9 @@ export function MeetingWatcher() {
   const [projectId, setProjectId] = useState<string>("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  // Duración EDITABLE: el calendario aparta un slot (p. ej. 60 min) pero la junta pudo durar
+  // menos/más (feedback de Balmori/Emiliano: "duró media hora, no me deja cambiar los 60").
+  const [minutes, setMinutes] = useState(0);
 
   const me = currentUserId ? members.find((m) => m.id === currentUserId) : undefined;
 
@@ -53,6 +59,25 @@ export function MeetingWatcher() {
     setPicked(ids);
   }, [pending, suggestion, currentUserId]);
 
+  // Duración inicial = el slot del calendario; el usuario la puede ajustar antes de registrar.
+  useEffect(() => {
+    if (pending) setMinutes(Math.max(5, Math.round((pending.end - pending.start) / 60000)));
+  }, [pending]);
+
+  // Proyectos agrupados para el desplegable: por cliente, luego "Interno CURVA" (sin cliente).
+  // Antes era una lista plana enorme, "horrible de buscar" (feedback de Balmori).
+  const projectGroups = useMemo(() => {
+    const groups = new Map<string, typeof projects>();
+    const internal: typeof projects = [];
+    for (const p of projects) {
+      if (p.clientId && clientById[p.clientId]) {
+        const arr = groups.get(p.clientId);
+        if (arr) arr.push(p); else groups.set(p.clientId, [p]);
+      } else internal.push(p);
+    }
+    return { groups: [...groups.entries()], internal };
+  }, [projects, clientById]);
+
   // Polling de eventos
   useEffect(() => {
     if (!currentUserId) return;
@@ -79,7 +104,6 @@ export function MeetingWatcher() {
 
   if (!pending) return null;
 
-  const minutes = Math.round((pending.end - pending.start) / 60000);
   // Todo el equipo, con los detectados/tú arriba: así puedes registrar la junta también
   // para invitados que el detector no reconoció por correo.
   const teammates = members
@@ -108,7 +132,8 @@ export function MeetingWatcher() {
           taskName: pending.title,
           area: "Junta",
           startedAt: pending.start,
-          endedAt: pending.end,
+          // Fin derivado de la duración EDITADA (no del slot crudo del calendario).
+          endedAt: pending.start + minutes * 60000,
           attendees,
         }),
       }).then((r) => r.json()).catch(() => ({} as { records?: TimeRecord[] }));
@@ -136,7 +161,31 @@ export function MeetingWatcher() {
         </span>
         <div className="min-w-0">
           <p className="truncate font-semibold text-fg">{pending.title}</p>
-          <p className="text-xs text-muted">{minutes} min{pending.hangoutLink ? " · videollamada" : ""}</p>
+          <p className="text-xs text-muted">apartaste {Math.round((pending.end - pending.start) / 60000)} min{pending.hangoutLink ? " · videollamada" : ""}</p>
+        </div>
+      </div>
+
+      {/* Duración real editable: el slot es solo el punto de partida. */}
+      <label className="mb-1.5 block text-sm font-semibold text-muted">¿Cuánto duró de verdad?</label>
+      <div className="mb-4 rounded-card border border-line bg-surface-2 p-3">
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={() => setMinutes((m) => Math.max(5, m - 15))}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent active:scale-90 focus-ring" aria-label="15 minutos menos">
+            <Minus size={16} />
+          </button>
+          <span className="tabular min-w-24 text-center font-display text-xl font-bold text-fg">{formatDuration(minutes * 60)}</span>
+          <button onClick={() => setMinutes((m) => m + 15)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-muted transition hover:border-accent hover:text-accent active:scale-90 focus-ring" aria-label="15 minutos más">
+            <Plus size={16} />
+          </button>
+        </div>
+        <div className="mt-2.5 flex flex-wrap justify-center gap-1.5">
+          {DUR_PRESETS.map((m) => (
+            <button key={m} onClick={() => setMinutes(m)}
+              className={cn("rounded-full px-2.5 py-1 text-caption font-semibold transition active:scale-95", minutes === m ? "bg-accent text-white" : "border border-line bg-surface text-muted hover:border-accent hover:text-accent")}>
+              {m < 60 ? `${m}m` : `${m / 60}h${m % 60 ? " " + (m % 60) + "m" : ""}`}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -144,9 +193,16 @@ export function MeetingWatcher() {
       <select value={projectId} onChange={(e) => setProjectId(e.target.value)}
         className="mb-1 w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm outline-none focus-ring focus:border-accent">
         <option value="">— Sin proyecto (solo cliente/área) —</option>
-        {projects.map((p) => (
-          <option key={p.id} value={p.id}>{clientById[p.clientId]?.name ? `${clientById[p.clientId].name} · ` : ""}{p.name}</option>
+        {projectGroups.groups.map(([cid, ps]) => (
+          <optgroup key={cid} label={clientById[cid]?.name || "Cliente"}>
+            {ps.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+          </optgroup>
         ))}
+        {projectGroups.internal.length > 0 && (
+          <optgroup label="Interno CURVA">
+            {projectGroups.internal.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+          </optgroup>
+        )}
       </select>
       {suggestion?.label && <p className="mb-4 text-xs text-accent">Sugerido por el título: {suggestion.label}</p>}
 

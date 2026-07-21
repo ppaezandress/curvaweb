@@ -41,7 +41,10 @@ export function NotionSync() {
         .then((r) => r.json().catch(() => ({ ok: false })))
         .then((j: { ok?: boolean; id?: string }) => {
           if (j && j.ok !== false) {
-            markEntryPosted(e.id, j.id); // confirmado: guarda el id de Notion
+            // Guardamos el baseline (rollup) de la tarea EN ESTE INSTANTE (antes de que el
+            // reload lo incluya): la reconciliación espera a que crezca al menos este tramo
+            // para dejar de contarlo localmente (evita el vaciado por lag de indexado).
+            markEntryPosted(e.id, j.id, task?.baselineSeconds ?? 0);
           } else {
             inFlight.current.delete(e.id); // fallo real → reintenta al próximo ciclo
           }
@@ -57,7 +60,12 @@ export function NotionSync() {
   // Solo nos importa dispararlo cuando cambia el baseline (tasks) o el source, no en cada
   // recreación de reconcileEntries.
   useEffect(() => {
-    if (source === "notion") reconcileEntries();
+    if (source !== "notion") return;
+    // Baseline por tarea (segundos) del reload recién llegado: la reconciliación solo marca
+    // `synced` los tramos que el baseline ya absorbió (no antes → evita el vaciado del total).
+    const baselineByTask: Record<string, number> = {};
+    for (const t of tasks) baselineByTask[t.id] = t.baselineSeconds ?? 0;
+    reconcileEntries(baselineByTask);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks, source]);
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Play, Pause, X, Sparkles, Hand, ArrowDownLeft, CircleCheck } from "lucide-react";
+import { Play, Pause, X, Sparkles, Hand, ArrowDownLeft, CircleCheck, Trash2 } from "lucide-react";
 import { useApp, useLiveElapsed } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
 import { useCoworking } from "@/lib/use-coworking";
@@ -104,20 +104,29 @@ function ManualRow({ taskId }: { taskId: string }) {
   const { taskById, clientById, projectById, reload } = useData();
   const task = taskById[taskId];
   const [marking, setMarking] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  // Terminar la tarea directo desde el dock (sin ir a la tarjeta). Pausa + Done.
+  // Terminar la tarea directo desde el dock (sin ir a la tarjeta). Cierra (registra + saca
+  // del dock) y marca Done. Antes solo llamaba pause() y NO closeTask() → la tarea seguía
+  // apareciendo "En pausa" abajo aunque le dieras Terminar (queja de Ivana/Balmori/Emiliano).
   const terminar = async () => {
     if (marking) return;
     setMarking(true);
-    // Congela el total AHORA (antes de pause()/reload()): el reconcile contra Notion
-    // vaciaría el tramo recién cerrado antes de que el baseline lo absorba (mostraba 1m).
+    // Congela el total AHORA (antes de cerrar/reload): el reconcile contra Notion vaciaría el
+    // tramo recién cerrado antes de que el baseline lo absorba (mostraba 1m).
     const totalAtDone = totalLive;
     try {
-      pause();
+      closeTask(taskId); // detiene + registra el tramo Y lo saca del dock
       await fetch("/api/tasks", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ taskId, status: "DONE" }) });
       celebrate(taskId, task?.name || "Tarea", totalAtDone);
       await reload();
     } finally { setMarking(false); }
+  };
+
+  // Descartar: parar sin registrar (picaste la tarea sin querer). Pide confirmación una vez.
+  const descartar = () => {
+    if (!confirmDiscard) { setConfirmDiscard(true); return; }
+    closeTask(taskId, { discard: true });
   };
   const totalLive = (task?.baselineSeconds ?? 0) + sessionSecondsForTask(taskId) + elapsed;
   const project = task ? projectById[task.projectId] : undefined;
@@ -181,13 +190,33 @@ function ManualRow({ taskId }: { taskId: string }) {
       >
         <CircleCheck size={15} /> <span className="hidden sm:inline">Terminar</span>
       </button>
-      <button
-        onClick={() => closeTask(taskId)}
-        className="shrink-0 rounded-md p-1 text-muted/70 transition hover:bg-surface-2 hover:text-fg"
-        aria-label="Cerrar"
-      >
-        <X size={14} />
-      </button>
+      {confirmDiscard ? (
+        <span className="inline-flex shrink-0 items-center gap-1">
+          <button
+            onClick={descartar}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-danger px-3 text-xs font-bold text-white transition hover:opacity-90 focus-ring"
+            title="Descartar sin registrar"
+          >
+            <Trash2 size={14} /> Descartar
+          </button>
+          <button
+            onClick={() => setConfirmDiscard(false)}
+            className="shrink-0 rounded-md p-1 text-muted/70 transition hover:bg-surface-2 hover:text-fg"
+            aria-label="Cancelar"
+          >
+            <X size={14} />
+          </button>
+        </span>
+      ) : (
+        <button
+          onClick={descartar}
+          className="shrink-0 rounded-md p-1 text-muted/70 transition hover:bg-surface-2 hover:text-danger"
+          aria-label="Descartar (parar sin registrar)"
+          title="Descartar: parar sin registrar"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
     </div>
   );
 }

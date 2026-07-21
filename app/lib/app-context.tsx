@@ -32,6 +32,10 @@ export type TimeEntry = {
   posted?: boolean;
   synced?: boolean;
   notionId?: string;
+  // Baseline (rollup "Horas registradas", en segundos) de la tarea EN EL MOMENTO en que
+  // NotionSync confirmó la escritura de este tramo. Sirve para no marcar `synced` hasta que
+  // el baseline haya CRECIDO lo suficiente para absorber el tramo (Notion indexa con lag).
+  baselineAtPost?: number;
 };
 
 type ActiveTimer = {
@@ -72,8 +76,8 @@ type AppState = {
   start: (taskId: string) => void;
   stop: () => void;
   removeEntry: (id: string) => void; // quitar un registro mal medido
-  markEntryPosted: (id: string, notionId?: string) => void; // NotionSync confirmó la escritura
-  reconcileEntries: () => void; // llamar al llegar baseline fresco (reload de Notion)
+  markEntryPosted: (id: string, notionId?: string, baselineAtPost?: number) => void; // NotionSync confirmó la escritura
+  reconcileEntries: (baselineByTask?: Record<string, number>) => void; // baseline fresco de Notion (por tarea, en segundos)
 
   // Timer "olvidado" detectado al reabrir (corría > 8h). Se avisa y NO se cuenta solo.
   staleTimer: ActiveTimer;
@@ -96,7 +100,7 @@ type AppState = {
   openTask: (taskId: string) => void;
   switchTo: (taskId: string) => void;
   pause: () => void;
-  closeTask: (taskId: string) => void;
+  closeTask: (taskId: string, opts?: { discard?: boolean }) => void;
 
   // Revisión de inactividad al pausar
   pendingReview: PendingReview;
@@ -140,6 +144,11 @@ const DEFAULT_GRACE_SECONDS = 300; // escritorio (Tauri), con idle del sistema
 const BROWSER_GRACE_SECONDS = 6 * 3600; // navegador: prácticamente no marca inactivo
 // Timer "olvidado": si al reabrir el cronómetro llevaba más de esto, no se cuenta solo.
 const STALE_TIMER_MS = 8 * 3600 * 1000;
+// Tolerancia (segundos) al comparar el baseline de Notion contra los tramos locales: el
+// rollup "Horas registradas" suma "Minutos" redondeados a 1 decimal (0.1 min = 6 s), así que
+// el baseline puede quedar unos segundos por debajo del tramo real. Absorbe ese redondeo sin
+// marcar `synced` demasiado pronto (lo que vaciaría el total → el bug de "Continuar = 0 min").
+const SYNC_TOLERANCE_SECONDS = 10;
 function isTauri() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
@@ -536,21 +545,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Quitar un registro de tiempo ya guardado (p. ej. uno mal medido).
   const removeEntry = (id: string) => setEntries((e) => e.filter((x) => x.id !== id));
 
-  // NotionSync confirmó la escritura del tramo (guardamos el id de la página de Notion).
-  // Sigue contando localmente hasta que un reload traiga el baseline actualizado.
-  const markEntryPosted = (id: string, notionId?: string) =>
-    setEntries((e) => e.map((x) => (x.id === id ? { ...x, posted: true, notionId } : x)));
+  // NotionSync confirmó la escritura del tramo (guardamos el id de la página de Notion y el
+  // baseline de la tarea EN ESE INSTANTE, para saber cuánto debe crecer antes de dar por
+  // sincronizado el tramo). Sigue contando localmente hasta que el baseline lo absorba.
+  const markEntryPosted = (id: string, notionId?: string, baselineAtPost?: number) =>
+    setEntries((e) => e.map((x) => (x.id === id ? { ...x, posted: true, notionId, baselineAtPost } : x)));
 
-  // Reconciliación: se llama cuando llega baseline fresco de Notion (reload de /api/data).
-  // 1) Los tramos ya posteados pasan a synced → dejan de sumarse localmente por-tarea (el
-  //    baseline ya los incluye) sin flicker, porque el salto del baseline y este flip ocurren
-  //    en el mismo reload. 2) Poda los synced de días PREVIOS (ya no aportan a "hoy" y evitan
-  //    que localStorage crezca sin fin); los de hoy se conservan para "Registrado hoy".
-  const reconcileEntries = () =>
+  // Reconciliación: se llama cuando llega baseline fresco de Notion (reload de /api/data),
+  // recibiendo el baseline por tarea (segundos). Un tramo posteado pasa a `synced` (deja de
+  // sumarse localmente) SOLO cuando el baseline de su tarea creció lo suficiente para incluirlo
+  // — antes se marcaba synced en cuanto se posteaba, pero el rollup de Notion indexa con lag,
+  // así que el tramo se vaciaba del total ANTES de que el baseline lo tuviera → "Continuar = 0
+  // min" / la celebración mostraba "1m". Por tarea, en orden cronológico, se acumulan los
+  // tramos pendientes y se marcan synced mientras el crecimiento del baseline (desde el
+  // baseline observado al postear el más antiguo) los cubra; si no crecen aún, se quedan
+  // locales (cuentan) y se reintenta en el próximo reload. Sin baseline (fallback), conserva el
+  // comportamiento previo. Luego poda los synced de días PREVIOS (no aportan a "hoy").
+  const reconcileEntries = (baselineByTask?: Record<string, number>) =>
     setEntries((e) => {
       const today = dayKey(Date.now());
+      const toSync = new Set<string>();
+      if (baselineByTask) {
+        const byTask = new Map<string, TimeEntry[]>();
+        for (const x of e) {
+          if (x.posted && !x.synced) {
+            const arr = byTask.get(x.taskId);
+            if (arr) arr.push(x);
+            else byTask.set(x.taskId, [x]);
+          }
+        }
+        for (const [taskId, list] of byTask) {
+          const base = baselineByTask[taskId] ?? 0;
+          const sorted = [...list].sort((a, b) => a.endedAt - b.endedAt);
+          const minAtPost = Math.min(...sorted.map((x) => x.baselineAtPost ?? 0));
+          const growth = base - minAtPost;
+          let acc = 0;
+          for (const x of sorted) {
+            acc += x.seconds;
+            if (growth >= acc - SYNC_TOLERANCE_SECONDS) toSync.add(x.id);
+            else break; // el baseline aún no cubre este tramo → los siguientes tampoco
+          }
+        }
+      } else {
+        for (const x of e) if (x.posted && !x.synced) toSync.add(x.id);
+      }
       return e
-        .map((x) => (x.posted && !x.synced ? { ...x, synced: true } : x))
+        .map((x) => (toSync.has(x.id) ? { ...x, synced: true } : x))
         .filter((x) => !(x.synced && dayKey(x.endedAt) !== today));
     });
   // Descartar el aviso de "timer olvidado" (no cuenta ese tiempo).
@@ -561,8 +601,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setOpenTasks((p) => (p.includes(taskId) ? p : [...p, taskId]));
   const switchTo = (taskId: string) => start(taskId);
   const pause = () => stop();
-  const closeTask = (taskId: string) => {
-    if (activeRef.current?.taskId === taskId) stop();
+  // Cerrar una tarea del dock. Por defecto registra el tramo en curso (stop). Con
+  // { discard:true } lo DESCARTA sin registrar: para cuando picaste una tarea sin querer y
+  // el cronómetro arrancó (feedback de Diana: "empezó a contar, ¿cómo la paro?").
+  const closeTask = (taskId: string, opts?: { discard?: boolean }) => {
+    if (activeRef.current?.taskId === taskId) {
+      if (opts?.discard) { setActive(null); resetRun(Date.now()); }
+      else stop();
+    }
     if (aiActiveRef.current.some((a) => a.taskId === taskId)) stopAI(taskId);
     setOpenTasks((p) => p.filter((t) => t !== taskId));
   };

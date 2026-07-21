@@ -43,17 +43,19 @@ const dayLabel = (key: string) => {
 const labelHour = (min: number) => { const h = Math.floor(min / 60) % 24; const ap = h < 12 ? "a" : "p"; const h12 = h % 12 === 0 ? 12 : h % 12; return `${h12}${ap}`; };
 const labelHourMin = (min: number) => { const h = Math.floor(min / 60) % 24; const m = ((min % 60) + 60) % 60; const ap = h < 12 ? "a" : "p"; const h12 = h % 12 === 0 ? 12 : h % 12; return m === 0 ? `${h12}${ap}` : `${h12}:${pad(m)}${ap}`; };
 
-// Ventana de la timeline interactiva: 6:00 → 24:00.
-const WIN_S = 6 * 60;
+// Ventana de la timeline interactiva: 0:00 → 24:00 (cubre el día completo; antes arrancaba en
+// las 6:00 y no se podía arrastrar antes — feedback de Balmori: "la barra va de 6 a 12").
+const WIN_S = 0;
 const WIN_E = 24 * 60;
 const SPAN = WIN_E - WIN_S;
 const pct = (m: number) => Math.max(0, Math.min(100, ((m - WIN_S) / SPAN) * 100));
 const BANDS = [
-  { from: 6 * 60, to: 12 * 60, cls: "bg-warn dark:bg-warn/10" },   // mañana
+  { from: 0, to: 6 * 60, cls: "bg-indigo-50 dark:bg-indigo-400/10" },       // madrugada
+  { from: 6 * 60, to: 12 * 60, cls: "bg-warn dark:bg-warn/10" },            // mañana
   { from: 12 * 60, to: 18 * 60, cls: "bg-sky-50 dark:bg-sky-400/10" },      // tarde
   { from: 18 * 60, to: 24 * 60, cls: "bg-indigo-50 dark:bg-indigo-400/10" }, // noche
 ];
-const TICKS = [6, 9, 12, 15, 18, 21, 24].map((h) => h * 60);
+const TICKS = [0, 4, 8, 12, 16, 20, 24].map((h) => h * 60);
 
 export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolean; onClose: () => void; presetTaskId?: string }) {
   const { currentUserId } = useApp();
@@ -381,7 +383,25 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
       </div>
 
       <Field label="Fecha">
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+        {/* Accesos rápidos a días pasados: registrar algo de ayer/antier que se olvidó
+            anotar (feedback de Balmori: "si olvidé registrar una de ayer, no me deja"). */}
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {[
+            { label: "Hoy", key: dayKey(Date.now()) },
+            { label: "Ayer", key: dayKey(Date.now() - 86_400_000) },
+            { label: "Antier", key: dayKey(Date.now() - 2 * 86_400_000) },
+          ].map(({ label, key }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setDate(key)}
+              className={`rounded-full px-3 py-1 text-caption font-semibold transition active:scale-95 ${date === key ? "bg-accent text-white" : "border border-line bg-surface text-muted hover:border-accent hover:text-accent"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <input type="date" value={date} max={dayKey(Date.now())} onChange={(e) => setDate(e.target.value)} className={inputCls} />
       </Field>
 
       {/* Asistentes — 1 toque; minutos solo si "se fue antes" */}
