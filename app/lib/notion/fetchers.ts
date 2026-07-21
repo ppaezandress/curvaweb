@@ -183,7 +183,10 @@ async function getCurvaDataUncached(): Promise<CurvaData> {
     id: u.id,
     name: u.name || "—",
     short: initials(u.name),
-    role: u.email || "Equipo CURVA",
+    // La People API de Notion NO expone puesto/rol → antes se rellenaba con el email y en
+    // /ajustes "el rol era el correo" (Balmori #1). Fallback genérico correcto; el puesto real
+    // vendría de una propiedad en Team Tracker (pendiente de cablear con su nombre exacto).
+    role: "Equipo CURVA",
     email: u.email || "",
     color: MEMBER_COLORS[i % MEMBER_COLORS.length],
   }));

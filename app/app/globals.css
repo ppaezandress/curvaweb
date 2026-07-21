@@ -86,11 +86,11 @@
   --text-caption--font-weight: 500;
 
   /* Piso de legibilidad: la app usa masivamente los text-xs/text-sm por defecto de
-     Tailwind (no los tokens). Subimos el piso — feedback del equipo: "los textos
-     chicos deben estar más grandes". xs 12→13px (= caption), sm 14→14.5px. */
-  --text-xs: 0.8125rem;
-  --text-xs--line-height: 1.45;
-  --text-sm: 0.90625rem;
+     Tailwind (no los tokens). Subimos el piso — feedback de Balmori: "los textos chicos
+     deben estar más grandes". Segundo empujón: xs 13→13.5px, sm 14.5→15px (= body). */
+  --text-xs: 0.84375rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.9375rem;
   --text-sm--line-height: 1.5;
 }
 

@@ -28,6 +28,10 @@ export function RachasBoard() {
   }, []);
 
   const board = useMemo(() => {
+    // "Días activos" se muestra ACOTADO al mes en curso: el histórico de 180 días incluía
+    // datos viejos/de prueba y decía "5 días" cuando el usuario llevaba 1 (Ivana). La racha
+    // (current/longest) sigue usando todo el histórico, que es lo correcto para una racha.
+    const monthPrefix = dayKey(Date.now()).slice(0, 7); // "YYYY-MM"
     const byPerson = new Map<string, Set<string>>();
     records.forEach((r) => {
       if (!r.start || !r.person) return;
@@ -37,8 +41,9 @@ export function RachasBoard() {
     return [...byPerson.entries()]
       .map(([person, days]) => {
         const s = computeStreak(days);
+        const activeMonth = [...days].filter((d) => d.startsWith(monthPrefix)).length;
         const member = members.find((m) => m.name === person);
-        return { person, member, ...s };
+        return { person, member, activeMonth, ...s };
       })
       .sort((a, b) => b.current - a.current || b.longest - a.longest);
   }, [records, members]);
@@ -133,7 +138,7 @@ export function RachasBoard() {
                 {b.member ? <Avatar member={b.member} size={32} /> : <span className="h-8 w-8 rounded-full bg-surface-2" />}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-fg">{b.person}{isMe ? " (tú)" : ""}</p>
-                  <p className="text-xs text-muted">Récord {b.longest}d · {b.activeDays} días activos</p>
+                  <p className="text-xs text-muted">Récord {b.longest}d · {b.activeMonth} {b.activeMonth === 1 ? "día activo" : "días activos"} este mes</p>
                 </div>
                 {badge && <span title={badge.label} className="text-accent"><badge.icon size={16} /></span>}
                 <span className="tabular flex items-center gap-1 font-display text-lg font-bold text-fg">

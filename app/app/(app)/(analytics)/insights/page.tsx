@@ -112,6 +112,20 @@ function Analisis() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [myRecords, range, taskById, projectById, clientById],
   );
+  // Desglose por TIPO DE ACTIVIDAD (junta / llamada / visita / trabajo enfocado) — viene del
+  // campo "Área" de cada registro, no del tipo de tarea (Balmori #18: "un desglose más cool,
+  // en juntas, llamadas, visitas presenciales"). bucketize no agrupa por esto, se computa aquí.
+  const byActivity = useMemo(() => {
+    const ACT_COLORS = ["var(--color-curva-purple)", "var(--color-curva-blue)", "var(--color-curva-teal)", "var(--color-curva-pink)", "var(--color-curva-indigo)"];
+    const m = new Map<string, number>();
+    for (const r of inRange) {
+      const k = r.activity || "Trabajo enfocado";
+      m.set(k, (m.get(k) || 0) + (r.minutes || 0));
+    }
+    return [...m.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, min], i) => ({ key: label, label, total: min, color: ACT_COLORS[i % ACT_COLORS.length] }));
+  }, [inRange]);
 
   // Serie total (para el sparkline del KPI de horas).
   const totalSpark = useMemo(
@@ -228,8 +242,9 @@ function Analisis() {
 
           {/* Desgloses */}
           <div className="grid gap-3 lg:grid-cols-2">
-            <BreakdownCard title="Por área de trabajo" series={byArea} icon />
+            <BreakdownCard title="Por tipo de actividad" series={byActivity} icon />
             <BreakdownCard title="Por cliente" series={byClient} />
+            <BreakdownCard title="Por pilar / área de trabajo" series={byArea} />
           </div>
         </>
       )}

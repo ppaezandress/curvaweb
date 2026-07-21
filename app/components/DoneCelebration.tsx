@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Camera, X, Check, RefreshCw } from "lucide-react";
 import { useCelebrate } from "@/lib/celebrate-context";
@@ -13,6 +13,50 @@ const CELEBRATE_SPRING = { type: "spring" as const, stiffness: 300, damping: 22 
 
 const EMOJIS = ["🔥", "🎉", "😮‍💨", "💪", "🧠", "😴", "🙌", "😅"];
 const PHRASES = ["¡Tarea cerrada!", "¡Bien hecho!", "Una menos 💥", "¡A celebrar!", "¡Lo lograste!"];
+
+// Confetti premium: partículas de colores de marca cayendo con deriva + giro (motion, GPU
+// transforms). Se generan una vez al montar (el modal solo se monta al celebrar).
+const CONFETTI_COLORS = [
+  "var(--color-curva-purple)", "var(--color-curva-indigo)",
+  "var(--color-curva-blue)", "var(--color-curva-teal)", "var(--color-curva-pink)",
+];
+function ConfettiBurst() {
+  const pieces = useMemo(
+    () => Array.from({ length: 46 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      delay: Math.random() * 0.25,
+      duration: 1.8 + Math.random() * 1.3,
+      drift: (Math.random() - 0.5) * 180,
+      rotate: (Math.random() - 0.5) * 800,
+      size: 6 + Math.random() * 8,
+      round: Math.random() > 0.5,
+    })),
+    [],
+  );
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {pieces.map((p) => (
+        <motion.span
+          key={p.id}
+          initial={{ y: "-10vh", x: 0, rotate: 0, opacity: 0 }}
+          animate={{ y: "112vh", x: p.drift, rotate: p.rotate, opacity: [0, 1, 1, 0.85] }}
+          transition={{ duration: p.duration, delay: p.delay, ease: "easeIn" }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.round ? p.size : p.size * 0.5,
+            backgroundColor: p.color,
+            borderRadius: p.round ? "9999px" : "2px",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function DoneCelebration() {
   const { celebrating, dismiss } = useCelebrate();
@@ -106,14 +150,10 @@ export function DoneCelebration() {
       exit="hidden"
       className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
     >
-      {/* confetti emoji simple */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {Array.from({ length: 14 }).map((_, i) => (
-          <span key={i} className="confetti" style={{ left: `${(i * 7 + 4) % 100}%`, animationDelay: `${(i % 7) * 0.15}s` }}>
-            {EMOJIS[i % EMOJIS.length]}
-          </span>
-        ))}
-      </div>
+      {/* Confetti: ráfaga de partículas con los colores de marca (reemplaza los emojis CSS
+          "chafos" — feedback de Balmori). */}
+      <ConfettiBurst />
+
 
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.94 }}
