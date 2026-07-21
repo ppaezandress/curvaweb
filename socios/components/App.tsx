@@ -1054,6 +1054,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   const P = st.params, activeRes = membersResolved(active, st.roster, P), r = compute(activeRes, P), t = r.t || 1;
   const resMembers = activeRes.members; // miembros con nombre/tipo resueltos (para ver su sueldo)
   const sociosNeg = r.manualDelta > 0.5 && (r.sAutil + r.sButil) < -0.5; // pagaste de más: socios en rojo
+  const hayManual = resMembers.some((m) => typeof m.montoManual === "number"); // ¿algún sueldo tocado a mano?
+  // Cálculo SIN ajustes a mano, para mostrar "era → ahora" (cuánto cambió tu utilidad).
+  const rBase = hayManual ? compute({ ...activeRes, members: activeRes.members.map((m) => { const c = { ...m }; delete c.montoManual; return c; }) }, P) : r;
   const reglasDivergen = !active.borrador && !!active.reglas && reglasDifierenDinero(active.reglas, st.params);
   // "Equipo" = lo que REALMENTE aterriza en la Masa salarial por trabajar: la bolsa
   // menos el "sombrero de socio" (disc), que no se queda en el equipo sino que se va a
@@ -1233,6 +1236,11 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           </div>
           <div className="card">
             <h2>El equipo del proyecto <span className="tip" data-tip="Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en Reglas › Personas."><Info /></span></h2>
+            <div className={"team-impact" + (hayManual ? " on" : "")}>
+              <div className="ti-item"><span>CURVA se queda{porMes ? "/mes" : ""}</span><b><span key={fmtMXN((r.marginOp - r.manualDelta) * f)} className="num-anim">{fmtMXN((r.marginOp - r.manualDelta) * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.marginOp * f)}</em>}</div>
+              <div className="ti-item"><span>{P.nombreA}</span><b style={{ color: r.socioA < -0.5 ? "var(--danger)" : "var(--c-andres)" }}><span key={fmtMXN(r.socioA * f)} className="num-anim">{fmtMXN(r.socioA * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioA * f)}</em>}</div>
+              <div className="ti-item"><span>{P.nombreB}</span><b style={{ color: r.socioB < -0.5 ? "var(--danger)" : "var(--c-balmo)" }}><span key={fmtMXN(r.socioB * f)} className="num-anim">{fmtMXN(r.socioB * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioB * f)}</em>}</div>
+            </div>
             {active.members.map((m, i) => {
               const val = personVal(m);
               const res = resMembers[i];
