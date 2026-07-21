@@ -1202,11 +1202,13 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 </>
               );
             })()}
+            <div className="grp-sep">Forma del proyecto</div>
             <div className="two" style={{ gap: 12 }}>
               <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} step={1} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, Math.floor(+e.target.value) || 1); })} /></div>
               <div className="field"><label>Arranca</label><input type="date" value={active.fechaInicio ?? todayISO()} onChange={(e) => updateActive((p) => { p.fechaInicio = e.target.value; })} /></div>
             </div>
             <div className="field"><label>Tipo</label><div className="chips">{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <button key={tp} className="chip-btn" aria-pressed={active.tipo === tp} onClick={() => updateActive((p) => { p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{tp[0].toUpperCase() + tp.slice(1)}</button>)}</div></div>
+            <div className="grp-sep">Origen &amp; caja</div>
             {(() => {
               const comisPot = Math.min(Math.max(0, r.marginBruto) * (P.comisPct / 100), P.comisTope);
               const o = active.origen || "empresa";
@@ -1232,6 +1234,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               );
             })()}
             <div className="field"><label>Caja del proyecto <span style={{ color: "var(--cobalt)", fontFamily: "var(--mono)", fontWeight: 700 }}>{active.cajaPct}%</span></label><input type="range" min={0} max={25} value={active.cajaPct} onChange={(e) => updateActive((p) => { p.cajaPct = +e.target.value; })} /></div>
+            <div className="grp-sep">Cliente</div>
             <div className="field"><label>Cliente (de Notion)</label><select value={active.clienteId || ""} onChange={(e) => updateActive((p) => { p.clienteId = e.target.value || null; p.clienteNombre = clientes.find((c) => c.id === e.target.value)?.nombre || null; })}><option value="">— sin asignar —</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
           </div>
           <div className="card">
@@ -1709,7 +1712,7 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
           <b>{fmtMXN(pago.monto)}</b> <span className="hint" style={{ margin: 0 }}>· {pago.fecha}{pago.nota ? " · " + pago.nota : ""}</span>
         </div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-          <button className="rmv" title="Recibo de cobro para el cliente" onClick={() => window.open("/pdf/recibo?tipo=cobro&proyecto=" + p.id + "&pago=" + pago.id, "_blank")}><FileText size={13} /></button>
+          <button className="icon-btn" title="Recibo de cobro para el cliente" onClick={() => window.open("/pdf/recibo?tipo=cobro&proyecto=" + p.id + "&pago=" + pago.id, "_blank")}><FileText size={13} /></button>
           <button className="rmv" onClick={onDelete} title="Borrar pago">×</button>
         </div>
       </div>
@@ -1917,7 +1920,7 @@ function PagadosLista({ pagados, onDeshacer }: { pagados: { nombre: string; quie
       {open && pagados.map((x) => (
         <div key={x.nombre} className="pagados-r">
           <Check size={13} /> <span className="pg-n">{x.nombre}</span><span className="pg-f">{x.fecha}</span><span className="pg-v">{fmtMXN(x.monto)}</span>
-          <button className="pg-undo" title="Comprobante de pago (con tu firma)" onClick={() => window.open("/pdf/recibo?tipo=pago&persona=" + encodeURIComponent(x.nombre), "_blank")}><FileText size={12} /></button>
+          <button className="icon-btn" title="Comprobante de pago (con tu firma)" onClick={() => window.open("/pdf/recibo?tipo=pago&persona=" + encodeURIComponent(x.nombre), "_blank")}><FileText size={12} /></button>
           <button className="pg-undo" title="Deshacer (marcar como no pagado)" onClick={() => onDeshacer(x.nombre)}><RotateCcw size={12} /></button>
         </div>
       ))}

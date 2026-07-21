@@ -327,7 +327,7 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .pcard-delc .btn{padding:7px 12px}
 .pcard-prog{height:4px;background:var(--panel-3)}
 .pcard-prog i{display:block;height:100%;background:var(--grad);transition:width .6s var(--ease)}
-.pcard-body{padding:20px;border-top:1px solid var(--border);background:var(--glass-2);animation:pcardIn .24s var(--ease)}
+.pcard-body{padding:20px;border-top:1px solid var(--border);background:var(--panel-2);animation:pcardIn .24s var(--ease)}
 @keyframes pcardIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.pcard-body{animation:none}}
 .pcard-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
@@ -346,6 +346,12 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .pago-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
 .pago-head .rmv{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;padding:0 6px;border-radius:6px;line-height:1}
 .pago-head .rmv:hover{background:var(--neg-soft);color:var(--neg)}
+/* Botón de icono NEUTRO (acciones no destructivas: abrir PDF, etc.) — hover cobalto, no rojo */
+.icon-btn{border:none;background:transparent;color:var(--muted);cursor:pointer;padding:5px 7px;border-radius:7px;line-height:1;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.icon-btn:hover{background:var(--cobalt-soft);color:var(--cobalt)}
+/* Separador de grupo con etiqueta (agrupa formularios densos en bloques escaneables) */
+.grp-sep{display:flex;align-items:center;gap:10px;margin:20px 0 10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.grp-sep::after{content:"";flex:1;height:1px;background:var(--border)}
 .desemb{background:var(--grad-soft);border:1px solid var(--border);border-radius:12px;padding:13px 14px}
 .desemb-h{font-size:11px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:6px;margin-bottom:10px;letter-spacing:.03em;text-transform:uppercase}
 .mv{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:13px}
