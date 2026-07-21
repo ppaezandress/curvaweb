@@ -34,11 +34,12 @@ export function initHeroCanvas() {
   // envolvente cStrength (0→1) que entra al mover y se DESVANECE al salir
   // (sin teletransporte → sin "snap-back").
   let tx = -9999, ty = -9999, cxp = -9999, cyp = -9999;
-  let cStrength = 0, cActive = false;
+  let cStrength = 0, cActive = false, hasMoved = false;
+  let pox = 0, poy = 0; // desplazamiento de parallax global (mouse) suavizado
   const onMove = (e: PointerEvent) => {
     const r = canvas.getBoundingClientRect();
     tx = e.clientX - r.left; ty = e.clientY - r.top;
-    cActive = true;
+    cActive = true; hasMoved = true;
   };
   const onLeave = () => { cActive = false; };
 
@@ -87,10 +88,10 @@ export function initHeroCanvas() {
   function pointForces(x: number, y: number): [number, number, number] {
     if (cStrength < 0.001) return [x, y, 0];
     const dx = x - cxp, dy = y - cyp;
-    const R = Math.min(W, H) * 0.17;
+    const R = Math.min(W, H) * 0.22;
     const g = Math.exp(-(dx * dx + dy * dy) / (2 * R * R)) * cStrength;
     if (g < 0.002) return [x, y, 0];
-    const dyPull = -dy * g * 0.5; // curva S suave, sin esquinas
+    const dyPull = -dy * g * 0.7; // curva S suave, sin esquinas
     return [x, y + dyPull, g];
   }
 
@@ -124,9 +125,15 @@ export function initHeroCanvas() {
 
     // Envolvente + suavizado del cursor.
     const target = cActive ? 1 : 0;
-    cStrength += (target - cStrength) * (cActive ? 0.07 : 0.03);
-    cxp += (tx - cxp) * 0.10;
-    cyp += (ty - cyp) * 0.10;
+    cStrength += (target - cStrength) * (cActive ? 0.10 : 0.03);
+    cxp += (tx - cxp) * 0.14;
+    cyp += (ty - cyp) * 0.14;
+    // Parallax global: TODO el campo de líneas deriva con el mouse (se siente vivo aun
+    // cuando el cursor pasa por el centro despejado). Vuelve al reposo al salir el cursor.
+    const pxTarget = (hasMoved && cActive) ? (tx / W - 0.5) : 0;
+    const pyTarget = (hasMoved && cActive) ? (ty / H - 0.5) : 0;
+    pox += (pxTarget - pox) * 0.09;
+    poy += (pyTarget - poy) * 0.09;
 
     ctx!.clearRect(0, 0, W, H);
     ctx!.lineCap = 'round';
@@ -135,9 +142,12 @@ export function initHeroCanvas() {
     for (const s of strands) {
       const pts: [number, number][] = [];
       let boost = 0;
+      const depthPar = 0.6 + s.depth * 0.9; // las hebras "cercanas" se mueven más → parallax con profundidad
       for (let k = 0; k <= n; k++) {
         const nx = k / n;
-        const [px, py, infl] = pointForces(nx * W, pointY(s, nx, t, settle));
+        // parallax: sube/baja con mouse-Y y se inclina con mouse-X (sin huecos en los bordes)
+        const oy = poy * 24 * depthPar + pox * 14 * (nx - 0.5) * 2 * depthPar;
+        const [px, py, infl] = pointForces(nx * W, pointY(s, nx, t, settle) + oy);
         pts.push([px, py]);
         if (infl > boost) boost = infl;
       }
