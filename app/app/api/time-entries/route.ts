@@ -169,7 +169,7 @@ export async function POST(req: Request) {
     const minutes = Math.round((Number(b.seconds) / 60) * 10) / 10;
     const inactiveMinutes = b.inactiveSeconds ? (Number(b.inactiveSeconds) / 60) : 0;
     const id = await createRow({
-      taskId, clientId, taskName, area,
+      taskId, clientId, taskName, area, pilar,
       userName: persona?.name || "",
       startedAt, endedAt, minutes, inactiveMinutes,
       mode: b.mode === "ai" ? "ai" : "manual",

@@ -15,6 +15,7 @@ import { computePulse } from "@/lib/pulse";
 import { useTimeRecords } from "@/lib/use-time-records";
 import { ScoreRing } from "@/components/ui/ScoreRing";
 import { TaskCard } from "@/components/TaskCard";
+import { TodayMeetings } from "@/components/TodayMeetings";
 import { NewTaskModal } from "@/components/NewTaskModal";
 import { DayDetailDrawer } from "@/components/DayDetailDrawer";
 import { openManualEntry } from "@/lib/manual-entry";
@@ -380,6 +381,9 @@ export default function HomePage() {
         <div className="space-y-4">
           {/* Trabajado hoy — lo primero del vistazo, sube en vivo; clic abre el detalle del día */}
           <TodayHoursCard baseSeconds={todayBaseSeconds} live={activeStartedToday} onOpen={() => setShowDay(true)} />
+
+          {/* Juntas de hoy (tu calendario vive aquí) — no renderiza si no hay GCal conectado */}
+          <TodayMeetings />
 
           {/* Pulso compacto — con ayuda "¿qué es esto?" (fuera del Link, HTML válido) */}
           <div className="rounded-card border border-line bg-surface p-5 shadow-soft transition hover:border-accent/40">

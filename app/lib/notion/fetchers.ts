@@ -170,7 +170,10 @@ async function getCurvaDataUncached(): Promise<CurvaData> {
       weight: (statusName(pg, "Esfuerzo") || undefined) as Task["weight"],
       priority: (selName(pg, "Prioridad") || undefined) as Task["priority"],
       internal: P(pg, "Interno")?.checkbox ?? false,
-      dueDate: P(pg, "Due date")?.date?.start || undefined,
+      // Deadline EFECTIVO: si "Due date" es un RANGO (empieza hoy, termina en una semana), el
+      // vencimiento es el FIN, no el inicio (Balmori #16: se marcaba "vence hoy" y no era). Sin
+      // rango (solo start), se usa start como siempre.
+      dueDate: P(pg, "Due date")?.date?.end || P(pg, "Due date")?.date?.start || undefined,
       createdAt: P(pg, "Fecha de creación")?.created_time || undefined,
     };
   });

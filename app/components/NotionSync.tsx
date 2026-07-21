@@ -11,7 +11,7 @@ import { useData } from "@/lib/data-context";
 // NO marca el tramo como enviado y lo reintenta en el siguiente ciclo (no se pierde tiempo).
 export function NotionSync() {
   const { entries, markEntryPosted, reconcileEntries } = useApp();
-  const { taskById, source, tasks } = useData();
+  const { taskById, taskTypeById, source, tasks } = useData();
   const sessionStart = useRef<number>(Date.now());
   const inFlight = useRef<Set<string>>(new Set());
 
@@ -31,6 +31,9 @@ export function NotionSync() {
         body: JSON.stringify({
           taskId: e.taskId,
           taskName: task?.name || "",
+          // Pilar heredado de la tarea (su "Tipo" en Notion) → medir el tiempo del cronómetro
+          // por pilar igual que el registro manual (antes solo el manual lo mandaba).
+          pilar: task?.typeId ? taskTypeById[task.typeId]?.label : undefined,
           startedAt: e.startedAt,
           endedAt: e.endedAt,
           seconds: e.seconds,
@@ -53,7 +56,7 @@ export function NotionSync() {
           inFlight.current.delete(e.id); // red caída → reintenta
         });
     });
-  }, [entries, taskById, source, markEntryPosted]);
+  }, [entries, taskById, taskTypeById, source, markEntryPosted]);
 
   // Cuando llega baseline fresco de Notion (cambia la lista de tareas tras un reload), los
   // tramos ya posteados pasan a contarse por el baseline y se dejan de sumar localmente.
