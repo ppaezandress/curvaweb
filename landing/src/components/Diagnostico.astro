@@ -335,23 +335,6 @@ const entrada = (i: number) => {
   /* partículas de selección (creadas por JS). Sin box-shadow: el glow encarece el paint. */
   .dx-particle { position: fixed; z-index: 5; width: .5rem; height: .5rem; border-radius: 50%; pointer-events: none; will-change: transform, opacity; }
 
-  /* Rayo minimalista al tocar una ficha (creado por JS): hebra fina que "cae" sobre la nube,
-     se dibuja rápido y se apaga. Elegante, sin rebote ni caricatura. La punta queda en el toque. */
-  .dx-bolt {
-    position: fixed; z-index: 6; pointer-events: none; margin: -1.55rem 0 0 -.45rem;
-    color: #dff2ff; will-change: transform, opacity;
-    filter: drop-shadow(0 0 5px rgba(125,211,252,.85)) drop-shadow(0 0 12px rgba(56,189,248,.45));
-    animation: dx-bolt-in .52s var(--e-out) forwards;
-  }
-  .dx-bolt svg { width: .9rem; height: 1.55rem; display: block; }
-  .dx-bolt path { stroke-dasharray: 62; stroke-dashoffset: 62; animation: dx-bolt-draw .15s cubic-bezier(.7,0,.3,1) forwards; }
-  @keyframes dx-bolt-draw { to { stroke-dashoffset: 0; } }
-  @keyframes dx-bolt-in {
-    0%   { opacity: 0; transform: translateY(5px) scale(.85); }
-    20%  { opacity: 1; }
-    45%  { opacity: .95; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-7px) scale(1.03); }
-  }
 
   /* ---- dock / botón revelar ---- */
   .dx-dock { display: flex; justify-content: center; }
@@ -433,5 +416,31 @@ const entrada = (i: number) => {
     .dx-result.lit .dx-sun { animation: none; opacity: .5; }
     .dx-result.lit .dx-result-inner > * { animation: none; opacity: 1; transform: none; }
     .dx-urg-fill, .dx-charge-fill { transition: none; }
+  }
+</style>
+
+<!-- GLOBAL: el rayo lo crea el JS con createElement, así que su CSS NO puede ser scoped
+     (Astro no le pondría el atributo de scope al elemento dinámico → el selector no matchea).
+     Por eso vive aquí en un bloque is:global. -->
+<style is:global>
+  /* Rayo minimalista al tocar una ficha: hebra fina que "cae" sobre la nube, se dibuja rápido
+     y se apaga. Elegante, sin rebote ni caricatura. La punta queda en el punto tocado. */
+  .dx-bolt {
+    position: fixed; z-index: 95; pointer-events: none; margin: -2rem 0 0 -0.6rem;
+    color: #eaf7ff; will-change: transform, opacity;
+    filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.95)) drop-shadow(0 0 16px rgba(56, 189, 248, 0.55));
+    animation: dx-bolt-in 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+  .dx-bolt svg { width: 1.2rem; height: 2rem; display: block; }
+  .dx-bolt path { stroke-dasharray: 62; stroke-dashoffset: 62; animation: dx-bolt-draw 0.17s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+  @keyframes dx-bolt-draw { to { stroke-dashoffset: 0; } }
+  @keyframes dx-bolt-in {
+    0%   { opacity: 0; transform: translateY(6px) scale(0.8); }
+    18%  { opacity: 1; }
+    55%  { opacity: 0.95; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-8px) scale(1.04); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dx-bolt { animation: none; opacity: 0; }
   }
 </style>

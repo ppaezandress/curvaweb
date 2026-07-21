@@ -113,7 +113,7 @@ export function initDiagnostico(): void {
     b.style.top = `${y}px`;
     b.innerHTML = '<svg viewBox="0 0 24 44" fill="none" aria-hidden="true"><path d="M15 2 L7 24 L13 24 L9 42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     overlay.appendChild(b);
-    setTimeout(() => b.remove(), 640);
+    setTimeout(() => b.remove(), 820);
   };
 
   clouds.forEach((cloud) => {
