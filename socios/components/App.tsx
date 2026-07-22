@@ -1311,6 +1311,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             {(() => {
               const comisPot = Math.min(Math.max(0, r.marginBruto) * (P.comisPct / 100), P.comisTope);
               const o = active.origen || "empresa";
+              const comisEsManual = typeof active.comisManual === "number";
               const detalle = o === "empresa"
                 ? `La marca lo trajo → sin comisión: ese ${P.comisPct}% se queda dentro y engorda la utilidad de los socios.`
                 : o === "socio"
@@ -1328,6 +1329,13 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                       <option value="">— ¿quién lo trajo? —</option>
                       {nombresEquipo.map((n, i) => <option key={i} value={n}>{n}</option>)}
                     </select>
+                  )}
+                  {o !== "empresa" && (
+                    <div className={"member-pay" + (comisEsManual ? " on" : "")} style={{ marginTop: 10 }}>
+                      <span className="mp-l">Comisión {comisEsManual && <b className="mp-tag">a mano</b>}<span className="tip" data-tip={`Por default es el ${P.comisPct}% del margen (tope ${fmtMXN(P.comisTope)}). Ponla a mano si solo aplica al primer pago o quieres otro monto.`}><Info /></span></span>
+                      <div className="money-in sm"><span>$</span><input type="number" min={0} value={Math.round(r.comis)} onChange={(e) => updateActive((p) => { p.comisManual = Math.max(0, Math.round(+e.target.value || 0)); })} title="Escribe la comisión exacta (ej. solo la del primer pago)." /></div>
+                      <button className="mp-auto" disabled={!comisEsManual} title={comisEsManual ? `Volver al ${P.comisPct}% automático` : "Cálculo automático"} onClick={() => updateActive((p) => { delete p.comisManual; })}>{comisEsManual ? "auto" : "auto ✓"}</button>
+                    </div>
                   )}
                 </div>
               );

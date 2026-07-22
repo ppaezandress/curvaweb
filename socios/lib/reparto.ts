@@ -66,6 +66,9 @@ export type Proyecto = {
   // "neto" de este proyecto descuenta la tasa `imp` de las Reglas VIVAS (1.5% edit.).
   // Default false → sin ISR ("si no lo picas, no se descuenta"). No mueve el reparto.
   descontarISR?: boolean;
+  // Comisión de origen fijada a mano (override del cálculo %). Solo aplica si hay
+  // comisión (origen socio/persona). Ideal para "solo el primer pago". Decisión Andrés 2026-07-23.
+  comisManual?: number;
   estado?: EstadoProyecto;   // default "cotizacion"
   fechaInicio?: string;      // ISO, para proyecciones por mes en el Panel
   pagos?: Pago[];            // historial de cobros
@@ -239,7 +242,10 @@ export function compute(pr: Proyecto, P: Reglas): Resultado {
   // con docs_stress_test_origen.py (la fuga era hasta $30k/proyecto).
   const trajoSocio = pr.origen === "persona" && (pr.origenPersona === P.nombreA || pr.origenPersona === P.nombreB);
   const comisWho = pr.origen === "persona" ? (trajoSocio ? "banca" : "equipo") : pr.origen === "socio" ? "banca" : pr.comisWho;
-  const comis = comisOn ? Math.min(marginBruto * (P.comisPct / 100), P.comisTope) : 0;
+  // Comisión: calculada (% del margen con tope) o fijada A MANO (pr.comisManual).
+  const comisCalc = Math.min(marginBruto * (P.comisPct / 100), P.comisTope);
+  const comisMan = typeof pr.comisManual === "number" && pr.comisManual >= 0;
+  const comis = comisOn ? (comisMan ? pr.comisManual! : comisCalc) : 0;
   const comisBanca = comisOn && comisWho === "banca" ? comis : 0;
   const comisPaid = comisOn && comisWho === "equipo" ? comis : 0;
   const cajaProj = t * (pr.cajaPct / 100);
