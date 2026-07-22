@@ -107,6 +107,16 @@ body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14.5px;line-hei
 .atn-t{flex:1;font-size:13.5px;font-weight:500}.atn-t b{font-weight:750}
 .atn-row>svg:last-child{color:var(--muted);flex:none}
 @media(max-width:760px){.meta-nums b{font-size:26px}}
+/* Bitácora / últimos movimientos (historial compartido) */
+.bita{display:flex;flex-direction:column}
+.bita-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border)}
+.bita-row:last-child{border-bottom:none}
+.bita-dot{width:7px;height:7px;border-radius:99px;flex:none;background:var(--muted)}
+.bita-dot.a{background:var(--c-andres)}.bita-dot.b{background:var(--c-balmo)}
+.bita-t{flex:1;font-size:13.5px;color:var(--ink-2);min-width:0}
+.bita-t b{color:var(--ink);font-weight:650}
+.bita-det{color:var(--ink);font-weight:500}
+.bita-ago{font-size:12px;color:var(--muted);font-family:var(--mono);white-space:nowrap;flex:none}
 
 /* Foco de teclado visible en TODO lo interactivo (a11y — antes solo inputs lo tenían) */
 *:focus{outline:none}

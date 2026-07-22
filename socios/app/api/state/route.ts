@@ -34,6 +34,7 @@ export async function GET() {
         rulesVersion: (kvMap.rulesVersion as number) ?? null,
         saldosIniciales: kvMap.saldosIniciales || null,
         banco: kvMap.banco || null,
+        bitacora: kvMap.bitacora || null,
       },
     });
   } catch (e) {
@@ -50,6 +51,7 @@ type SyncBody = {
   rulesVersion?: number;
   saldosIniciales?: unknown;
   banco?: unknown;
+  bitacora?: unknown;
 };
 
 export async function POST(req: Request) {
@@ -75,6 +77,7 @@ export async function POST(req: Request) {
     if (body.rulesVersion !== undefined) kvRows.push({ k: "rulesVersion", v: body.rulesVersion, updated_at: now });
     if (body.saldosIniciales !== undefined) kvRows.push({ k: "saldosIniciales", v: body.saldosIniciales, updated_at: now });
     if (body.banco !== undefined) kvRows.push({ k: "banco", v: body.banco, updated_at: now });
+    if (body.bitacora !== undefined) kvRows.push({ k: "bitacora", v: body.bitacora, updated_at: now });
     if (kvRows.length) ops.push(sb.from("socios_kv").upsert(kvRows, { onConflict: "k" }).then((r) => ({ error: r.error as unknown })));
 
     const results = await Promise.all(ops);

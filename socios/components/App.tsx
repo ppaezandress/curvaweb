@@ -20,7 +20,9 @@ type Cliente = { id: string; nombre: string; estado: string | null };
 // reutilizas en cualquier proyecto. Los socios A/B no viven aquí: son fijos y su
 // nombre sale de Reglas (nombreA/nombreB), así nunca se desincroniza.
 type RosterPerson = { id: string; nombre: string; quien: Quien };
-type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios };
+// Evento de la bitácora (historial compartido): quién hizo qué y cuándo. Se sincroniza.
+type LogEvent = { id: string; ts: number; who: "A" | "B" | null; act: string; det: string };
+type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios; bitacora?: LogEvent[] };
 const RULES_VERSION = 8; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 // Saldo que YA existía en cada caja de Revolut antes de que la app empezara a
 // contar (el socio lo captura una vez; se SUMA a lo que la app calcula).
@@ -155,15 +157,15 @@ const freezeLegacyReglas = (projects: Proyecto[]): Proyecto[] =>
   projects.map((p) => (p.borrador || p.reglas) ? p : { ...p, reglas: { ...REGLAS_DEFAULT } });
 
 // Fotografía del estado para diffear qué cambió antes de sincronizar.
-type Snapshot = { projects: Record<string, string>; params: string; gastos: string; roster: string; rulesVersion: number; saldos: string; banco: string };
+type Snapshot = { projects: Record<string, string>; params: string; gastos: string; roster: string; rulesVersion: number; saldos: string; banco: string; bitacora: string };
 function snapshotOf(s: State): Snapshot {
   const projects: Record<string, string> = {};
   s.projects.filter((p) => !p.borrador).forEach((p) => { projects[p.id] = JSON.stringify(p); });
-  return { projects, params: JSON.stringify(s.params), gastos: JSON.stringify(s.gastos), roster: JSON.stringify(s.roster || []), rulesVersion: s.rulesVersion || RULES_VERSION, saldos: JSON.stringify(mergeSaldos(s.saldosIniciales)), banco: JSON.stringify(mergeBanco(s.banco)) };
+  return { projects, params: JSON.stringify(s.params), gastos: JSON.stringify(s.gastos), roster: JSON.stringify(s.roster || []), rulesVersion: s.rulesVersion || RULES_VERSION, saldos: JSON.stringify(mergeSaldos(s.saldosIniciales)), banco: JSON.stringify(mergeBanco(s.banco)), bitacora: JSON.stringify(s.bitacora || []) };
 }
 function hayPendientes(s: State, snap: Snapshot): boolean {
   const cur = snapshotOf(s);
-  if (cur.params !== snap.params || cur.gastos !== snap.gastos || cur.roster !== snap.roster || cur.rulesVersion !== snap.rulesVersion || cur.saldos !== snap.saldos || cur.banco !== snap.banco) return true;
+  if (cur.params !== snap.params || cur.gastos !== snap.gastos || cur.roster !== snap.roster || cur.rulesVersion !== snap.rulesVersion || cur.saldos !== snap.saldos || cur.banco !== snap.banco || cur.bitacora !== snap.bitacora) return true;
   const ids = new Set([...Object.keys(cur.projects), ...Object.keys(snap.projects)]);
   for (const id of ids) if (cur.projects[id] !== snap.projects[id]) return true;
   return false;
@@ -316,7 +318,7 @@ export default function App() {
             const drafts = (prev?.projects || []).filter((p) => p.borrador);   // el borrador es local, no viene del server
             const all = [...projects, ...drafts];
             const activeId = prev && all.some((p) => p.id === prev.activeId) ? prev.activeId : (all[0]?.id || "");
-            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? prev?.saldosIniciales), banco: mergeBanco(srv.banco ?? prev?.banco) };
+            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? prev?.saldosIniciales), banco: mergeBanco(srv.banco ?? prev?.banco), bitacora: (srv.bitacora as LogEvent[]) ?? prev?.bitacora ?? [] };
             syncedRef.current = snapshotOf(next);
             return next;
           });
@@ -351,6 +353,7 @@ export default function App() {
       if (snap.rulesVersion !== cur.rulesVersion) body.rulesVersion = st.rulesVersion;
       if (snap.saldos !== cur.saldos) body.saldosIniciales = mergeSaldos(st.saldosIniciales);
       if (snap.banco !== cur.banco) body.banco = mergeBanco(st.banco);
+      if (snap.bitacora !== cur.bitacora) body.bitacora = st.bitacora || [];
       if (Object.keys(body).length === 0) return;
       fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
         .then((r) => r.json()).then((d) => { if (d.ok) syncedRef.current = cur; }).catch(() => {});
@@ -376,7 +379,7 @@ export default function App() {
             const drafts = (curr?.projects || []).filter((p) => p.borrador);
             const all = [...projects, ...drafts];
             const activeId = curr && all.some((p) => p.id === curr.activeId) ? curr.activeId : (all[0]?.id || "");
-            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? curr?.saldosIniciales), banco: mergeBanco(srv.banco ?? curr?.banco) };
+            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? curr?.saldosIniciales), banco: mergeBanco(srv.banco ?? curr?.banco), bitacora: (srv.bitacora as LogEvent[]) ?? curr?.bitacora ?? [] };
             syncedRef.current = snapshotOf(next);
             return next;
           });
@@ -396,6 +399,8 @@ export default function App() {
   const overhead = st.gastos.filter((g) => !g.proyectoId).reduce((s, g) => s + (+g.m || 0), 0);
   const update = (fn: (s: State) => State) => setSt((prev) => (prev ? fn(structuredClone(prev)) : prev));
   const updateActive = (fn: (p: Proyecto) => void) => update((s) => { const p = s.projects.find((x) => x.id === s.activeId); if (p) fn(p); return s; });
+  // Bitácora compartida: registra quién (yo) hizo qué. Se guarda al frente, cap 120.
+  const log = (act: string, det: string) => update((s) => { s.bitacora = [{ id: uid(), ts: Date.now(), who: yo, act, det }, ...(s.bitacora || [])].slice(0, 120); return s; });
 
   if (!yo) return <IdentityGate nombreA={st.params.nombreA} nombreB={st.params.nombreB} onPick={elegirYo} />;
   const yoNombre = yo === "A" ? st.params.nombreA : st.params.nombreB;
@@ -427,11 +432,11 @@ export default function App() {
       <main className="main">
         <ErrorBoundary key={sec}>
           {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={setSec} />}
-          {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} />}
-          {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
+          {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
+          {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} log={log} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
           {sec === "mimes" && <MiMes st={st} setSec={setSec} yoNombre={yoNombre} />}
           {sec === "personas" && <Personas st={st} />}
-          {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} />}
+          {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} log={log} />}
           {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
           {sec === "reglas" && <ReglasView st={st} update={update} />}
         </ErrorBoundary>
@@ -442,6 +447,15 @@ export default function App() {
 }
 
 /* ---------------- Panel ---------------- */
+// "hace X" para la bitácora. Date.now() es válido en el navegador (no en workflows).
+function agoStr(ts: number): string {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return "ahora";
+  const m = Math.floor(s / 60); if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60); if (h < 24) return `hace ${h} h`;
+  const d = Math.floor(h / 24); if (d < 7) return `hace ${d} d`;
+  return new Date(ts).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+}
 function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead: number; update: (fn: (s: State) => State) => void; yoNombre?: string; setSec?: (s: string) => void }) {
   const meta = metaBanca(st.params);
   const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
@@ -624,6 +638,23 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
         </div>
       )}
 
+      {(st.bitacora || []).length > 0 && (
+        <div className="card rise">
+          <h2>Últimos movimientos</h2>
+          <div className="bita">
+            {(st.bitacora || []).slice(0, 8).map((e) => {
+              const quien = e.who === "A" ? st.params.nombreA : e.who === "B" ? st.params.nombreB : "Alguien";
+              return (
+                <div key={e.id} className="bita-row">
+                  <span className={"bita-dot " + (e.who === "A" ? "a" : e.who === "B" ? "b" : "")} />
+                  <span className="bita-t"><b>{quien}</b> {e.act}{e.det ? <> · <span className="bita-det">{e.det}</span></> : null}</span>
+                  <span className="bita-ago">{agoStr(e.ts)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <DatosCobro st={st} update={update} />
     </>
   );
@@ -1066,9 +1097,9 @@ function AgendaEditor({ active, st, P, updateActive }: {
 }
 
 /* ---------------- Calculadora ---------------- */
-function Calculadora({ st, active, clientes, update, updateActive, setSec, setToast }: {
+function Calculadora({ st, active, clientes, update, updateActive, setSec, setToast, log }: {
   st: State; active: Proyecto; clientes: Cliente[];
-  update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void;
+  update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void; log?: (act: string, det: string) => void;
 }) {
   const [vistaCobro, setVistaCobro] = useState<"total" | "mes">("mes"); // unidad de TODA la Calculadora: por mes (default) vs total del proyecto
   const [verDesglose, setVerDesglose] = useState(false); // detalle (P&L + "a dónde va") oculto por defecto
@@ -1099,6 +1130,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
       return s;
     });
     setToast(eraBorrador ? `“${nombre}” guardado` : `“${nombre}” actualizado`);
+    log?.(eraBorrador ? "guardó un proyecto" : "actualizó un proyecto", nombre);
     setSec("proyectos");
   };
   if (!active) return (
@@ -1440,7 +1472,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
 }
 
 /* ---------------- Proyectos (control de pagos) ---------------- */
-function Proyectos({ st, update, setActive, otroNombre }: { st: State; update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string }) {
+function Proyectos({ st, update, setActive, otroNombre, log }: { st: State; update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string; log?: (act: string, det: string) => void }) {
   const [open, setOpen] = useState<string | null>(st.activeId);
   const visibles = st.projects.filter((p) => !p.borrador);   // los borradores viven solo en la Calculadora
   // Si ya hay un borrador en curso, contínualo (no lo perdemos); si no, crea uno en blanco.
@@ -1455,7 +1487,7 @@ function Proyectos({ st, update, setActive, otroNombre }: { st: State; update: (
           </div>
         )}
         {visibles.map((p) => (
-          <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} gastos={st.gastos} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} otroNombre={otroNombre} />
+          <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} gastos={st.gastos} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} otroNombre={otroNombre} log={log} />
         ))}
       </div>
     </>
@@ -1498,9 +1530,9 @@ function MesesProgreso({ p, rec }: { p: Proyecto; rec: number }) {
   );
 }
 
-function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setActive, otroNombre }: {
+function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setActive, otroNombre, log }: {
   p: Proyecto; params: Reglas; roster: RosterPerson[]; gastos: Gasto[]; open: boolean; onToggle: () => void;
-  update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string;
+  update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string; log?: (act: string, det: string) => void;
 }) {
   const autoriza = otroNombre || params.nombreB; // quién debe dar el visto bueno (el OTRO socio)
   const [confirmDel, setConfirmDel] = useState(false);
@@ -1579,7 +1611,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
               ? <div className="manual-ok"><Check size={14} /> Sueldos ajustados a mano ({manualN}) · <b>autorizado por {autoriza}</b></div>
               : <div className="manual-warn">
                   <span><AlertTriangle size={15} /> Este proyecto tiene <b>{manualN} sueldo{manualN !== 1 ? "s" : ""} tocado{manualN !== 1 ? "s" : ""} a mano</b>. Requiere el visto bueno de {autoriza}.</span>
-                  <button className="btn primary" onClick={() => upP((x) => { x.manualOK = true; })}><Check size={14} /> {autoriza}: autorizar</button>
+                  <button className="btn primary" onClick={() => { upP((x) => { x.manualOK = true; }); log?.("autorizó sueldos a mano", p.nombre); }}><Check size={14} /> {autoriza}: autorizar</button>
                 </div>
           )}
           <div className="pcard-actions">
@@ -1600,7 +1632,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
             <div>
               <h3 className="pay-h">Registrar un pago</h3>
               <PagoForm ticket={r.t} conIVA={!!p.conIVA} cobrado={cobrado}
-                onAdd={(pago) => upP((x) => { x.pagos = [...(x.pagos || []), pago]; })} />
+                onAdd={(pago) => { upP((x) => { x.pagos = [...(x.pagos || []), pago]; }); log?.("registró un pago", `${fmtMXN(pago.monto)} en ${p.nombre}`); }} />
               <p className="hint">Cobrado: <b>{fmtMXN(cobrado)}</b> de {fmtMXN(r.t)} · falta <b>{fmtMXN(Math.max(0, r.t - cobrado))}</b>{p.conIVA ? ` (sin IVA; con IVA el total es ${fmtMXN(totalCliente(p))})` : ""}.</p>
             </div>
             <div>
@@ -1830,7 +1862,7 @@ type Deuda = {
   acums: { id: string; nombre: string; monto: number; rec: number }[];
 };
 
-function Cajas({ st, update, setSec }: { st: State; update: (fn: (s: State) => State) => void; setSec: (s: string) => void }) {
+function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State) => State) => void; setSec: (s: string) => void; log?: (act: string, det: string) => void }) {
   const P = st.params;
   const proyectos = st.projects.filter((p) => !p.borrador);
   const [editSaldos, setEditSaldos] = useState(false);
@@ -1891,10 +1923,10 @@ function Cajas({ st, update, setSec }: { st: State; update: (fn: (s: State) => S
   const totalAcum = filas.reduce((a, d) => a + d.acum, 0);
   const hayPagos = proyectos.some((p) => (p.pagos || []).length > 0);
 
-  const pagarPersona = (nombre: string, ids: string[]) => update((s) => {
+  const pagarPersona = (nombre: string, ids: string[]) => { update((s) => {
     ids.forEach((id) => { const p = s.projects.find((x) => x.id === id); if (p) p.equipoPagado = { ...(p.equipoPagado || {}), [nombre]: todayISO() }; });
     return s;
-  });
+  }); log?.("transfirió al equipo", `a ${nombre}`); };
   const deshacer = (nombre: string) => update((s) => {
     s.projects.forEach((p) => { if (p.equipoPagado && p.equipoPagado[nombre]) { const e = { ...p.equipoPagado }; delete e[nombre]; p.equipoPagado = e; } });
     return s;
