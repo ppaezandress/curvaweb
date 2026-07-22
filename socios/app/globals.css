@@ -56,6 +56,34 @@
 html{background:var(--bg)}
 body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-.005em;overflow-x:hidden}
 
+/* ── Puerta de identidad "¿Quién eres?" ── */
+.id-gate{min-height:100dvh;display:grid;place-items:center;padding:24px}
+.id-card{width:100%;max-width:440px;background:var(--glass);border:1px solid var(--glass-edge);border-radius:var(--r-hero);
+  box-shadow:var(--shadow-2);backdrop-filter:blur(var(--blur));padding:34px 32px;text-align:center;animation:rise .5s var(--ease)}
+.id-logo{display:inline-flex;align-items:center;gap:9px;margin-bottom:22px}
+.id-logo svg{width:26px;height:26px;color:var(--cobalt)}
+.id-logo b{font-family:var(--disp);font-weight:700;font-size:17px}.id-logo b span{color:var(--muted);font-weight:600}
+.id-card h1{font-family:var(--disp);font-size:26px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}
+.id-card>p{color:var(--ink-2);font-size:14.5px;margin:0 0 24px;max-width:34ch;margin-inline:auto}
+.id-pick{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.id-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 14px;border:1px solid var(--border-2);
+  border-radius:var(--r-card);background:var(--panel);cursor:pointer;transition:transform .16s var(--ease),border-color .16s,box-shadow .16s}
+.id-btn:hover{transform:translateY(-3px);box-shadow:var(--shadow-2)}
+.id-btn.a:hover{border-color:var(--c-andres)}.id-btn.b:hover{border-color:var(--c-balmo)}
+.id-av{width:52px;height:52px;border-radius:99px;display:grid;place-items:center;font-family:var(--disp);font-weight:700;
+  font-size:22px;color:#fff}
+.id-btn.a .id-av{background:var(--c-andres)}.id-btn.b .id-av{background:var(--c-balmo)}
+.id-btn b{font-size:15px;font-weight:700}
+.id-btn em{font-style:normal;font-size:12px;color:var(--muted);font-weight:600}
+.id-foot{font-size:12px;color:var(--muted);margin:20px 0 0!important}
+/* Tag de identidad en el sidebar + "tú" en Mi mes */
+.yo-tag{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:var(--ink-2)}
+.yo-tag b{color:var(--ink)}
+.yo-dot{width:8px;height:8px;border-radius:99px;flex:none}
+.yo-dot.a{background:var(--c-andres)}.yo-dot.b{background:var(--c-balmo)}
+.yo-pill{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--cobalt);padding:1px 7px;border-radius:99px}
+.rk.yo{background:var(--cobalt-soft);border-radius:var(--r-sm);margin:0 -8px;padding-left:8px;padding-right:8px}
+
 /* Foco de teclado visible en TODO lo interactivo (a11y — antes solo inputs lo tenían) */
 *:focus{outline:none}
 a:focus-visible,button:focus-visible,.btn:focus-visible,.chip-btn:focus-visible,.nav a:focus-visible,

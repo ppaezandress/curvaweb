@@ -173,7 +173,7 @@ function newProject(name: string): Proyecto {
   return {
     id: uid(), nombre: name, ticket: 80000, tipo: "trazo", cajaPct: 10, comisOn: true, comisWho: "banca", origen: "empresa", inMonth: true,
     members: [{ rol: "P", quien: "socioA", nombre: "Andrés", sm: 1, personId: "socioA" }, { rol: "E", quien: "nucleo", nombre: "Ivana", sm: 1, personId: "r_ivana" }],
-    plazoMeses: 1, modoCobro: "golpe", conIVA: false, estado: "cotizacion", fechaInicio: todayISO(), pagos: [],
+    plazoMeses: 1, modoCobro: "golpe", conIVA: false, descontarISR: true, estado: "cotizacion", fechaInicio: todayISO(), pagos: [],
   };
 }
 // Nombre y borrador nuevo para el "formulario" de la Calculadora.
@@ -216,11 +216,39 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { err: boolean }>
   }
 }
 
+/* Puerta de identidad: "¿Quién eres?" — elige socio al entrar (device-local, sin
+   permisos). Personaliza Mi mes, firma de PDF, saludo y a quién le toca autorizar. */
+function IdentityGate({ nombreA, nombreB, onPick }: { nombreA: string; nombreB: string; onPick: (v: "A" | "B") => void }) {
+  return (
+    <div className="id-gate">
+      <div className="id-card">
+        <div className="id-logo">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M2 19 C7 19 8 15 12 10 C15 6 18 4 22 4" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" /><circle cx={22} cy={4} r={2} fill="currentColor" /></svg>
+          <b>CURVA <span>Socios</span></b>
+        </div>
+        <h1>¿Quién eres?</h1>
+        <p>Entra como socio para ver lo tuyo — tu mes, tu firma y qué te toca revisar.</p>
+        <div className="id-pick">
+          <button type="button" className="id-btn a" onClick={() => onPick("A")}><span className="id-av">{(nombreA || "A").charAt(0)}</span><b>{nombreA}</b><em>Soy yo</em></button>
+          <button type="button" className="id-btn b" onClick={() => onPick("B")}><span className="id-av">{(nombreB || "B").charAt(0)}</span><b>{nombreB}</b><em>Soy yo</em></button>
+        </div>
+        <p className="id-foot">Solo se guarda en este equipo. Puedes cambiarlo cuando quieras.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [st, setSt] = useState<State | null>(null);
   const [sec, setSec] = useState<string>("panel");
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  // Identidad del socio en ESTE equipo (device-local). "A"=Andrés, "B"=Balmo. Sin
+  // permisos (todo en conjunto): solo personaliza "Mi mes", el saludo, la firma de PDF
+  // y a quién le toca autorizar. Decisión Andrés 2026-07-22.
+  const [yo, setYo] = useState<"A" | "B" | null>(null);
+  useEffect(() => { try { const v = localStorage.getItem("curva_yo"); if (v === "A" || v === "B") setYo(v); } catch { /* noop */ } }, []);
+  const elegirYo = (v: "A" | "B" | null) => { setYo(v); try { if (v) localStorage.setItem("curva_yo", v); else localStorage.removeItem("curva_yo"); } catch { /* noop */ } };
   const cloudRef = useRef<boolean>(false);        // ¿Supabase disponible? (verdad compartida)
   const syncedRef = useRef<Snapshot | null>(null); // última foto que ya está en el server
 
@@ -369,6 +397,10 @@ export default function App() {
   const update = (fn: (s: State) => State) => setSt((prev) => (prev ? fn(structuredClone(prev)) : prev));
   const updateActive = (fn: (p: Proyecto) => void) => update((s) => { const p = s.projects.find((x) => x.id === s.activeId); if (p) fn(p); return s; });
 
+  if (!yo) return <IdentityGate nombreA={st.params.nombreA} nombreB={st.params.nombreB} onPick={elegirYo} />;
+  const yoNombre = yo === "A" ? st.params.nombreA : st.params.nombreB;
+  const otroNombre = yo === "A" ? st.params.nombreB : st.params.nombreA;
+
   return (
     <div className="app">
       <aside className="side">
@@ -382,7 +414,7 @@ export default function App() {
           ))}
         </nav>
         <div className="side-foot">
-          Andrés &amp; Balmo · source of truth<br />
+          <div className="yo-tag"><span className={"yo-dot " + (yo === "A" ? "a" : "b")} />Soy <b>{yoNombre}</b> · <button type="button" className="theme-toggle" onClick={() => elegirYo(null)}>cambiar</button></div>
           <button type="button" className="theme-toggle" onClick={() => {
             const cur = document.documentElement.getAttribute("data-theme");
             const next = cur === "dark" ? "light" : "dark";
@@ -394,10 +426,10 @@ export default function App() {
 
       <main className="main">
         <ErrorBoundary key={sec}>
-          {sec === "panel" && <Panel st={st} overhead={overhead} update={update} />}
+          {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} />}
           {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} />}
-          {sec === "proyectos" && <Proyectos st={st} update={update} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
-          {sec === "mimes" && <MiMes st={st} setSec={setSec} />}
+          {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
+          {sec === "mimes" && <MiMes st={st} setSec={setSec} yoNombre={yoNombre} />}
           {sec === "personas" && <Personas st={st} />}
           {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} />}
           {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
@@ -410,7 +442,7 @@ export default function App() {
 }
 
 /* ---------------- Panel ---------------- */
-function Panel({ st, overhead, update }: { st: State; overhead: number; update: (fn: (s: State) => State) => void }) {
+function Panel({ st, overhead, update, yoNombre }: { st: State; overhead: number; update: (fn: (s: State) => State) => void; yoNombre?: string }) {
   const meta = metaBanca(st.params);
   const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
 
@@ -487,7 +519,7 @@ function Panel({ st, overhead, update }: { st: State; overhead: number; update: 
 
   return (
     <>
-      <div className="page-h"><div><h1>Panel</h1><p>El estado de CURVA, mes a mes. Elige el mes para ver sus números (proyectado según el plazo de cada proyecto).</p></div></div>
+      <div className="page-h"><div><h1>{yoNombre ? `Hola, ${yoNombre}` : "Panel"}</h1><p>El estado de CURVA, mes a mes. Elige el mes para ver sus números (proyectado según el plazo de cada proyecto).</p></div></div>
       {allYM.length > 0 && (
         <div className="proj-bar" style={{ flexWrap: "wrap" }}>
           <div className="pb-group"><span className="pb-cap"><CalendarRange size={13} style={{ verticalAlign: -2 }} /> Mes</span>
@@ -708,7 +740,7 @@ function FirmaEditor({ nombreA, nombreB }: { nombreA: string; nombreB: string })
    justo. El semáforo marca a quien se dispara respecto al promedio del EQUIPO
    (los socios no cuentan para el flag: su utilidad es por diseño, no injusticia). */
 type AggMes = { nombre: string; quien: Quien; trabajo: number; extra: number; comision: number; neto: number; proyectos: string[] };
-function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
+function MiMes({ st, setSec, yoNombre }: { st: State; setSec: (s: string) => void; yoNombre?: string }) {
   const P = st.params;
   const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
   // Reparto por mes de cada proyecto, indexado por mes-calendario "YYYY-MM".
@@ -785,11 +817,13 @@ function MiMes({ st, setSec }: { st: State; setSec: (s: string) => void }) {
                 {rows.map((a, i) => {
                   const tot = totOf(a), fl = flagOf(a);
                   const dot = fl === "bad" ? "var(--neg)" : fl === "warn" ? "var(--warn)" : "var(--pos)";
+                  const esYo = !!yoNombre && a.nombre === yoNombre;
                   return (
-                    <div key={i} className="rk">
+                    <div key={i} className={"rk" + (esYo ? " yo" : "")}>
                       <div className="who">
                         <span title={fl === "bad" ? "Gana >2× el promedio del equipo" : fl === "warn" ? "Gana >1.6× el promedio" : "En rango"} style={{ width: 8, height: 8, borderRadius: 99, background: dot, display: "inline-block", flex: "0 0 auto" }} />
                         <span className="nm" title={a.proyectos.join(" · ")}>{a.nombre}</span>
+                        {esYo && <span className="yo-pill">tú</span>}
                         <span className={"badge " + badgeCls[a.quien]}>{badgeTxt[a.quien]}</span>
                       </div>
                       <div className="track"><i style={{ width: Math.max(3, tot / max * 100) + "%", background: `var(${roleColor[a.quien]})` }} /></div>
@@ -1375,7 +1409,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
 }
 
 /* ---------------- Proyectos (control de pagos) ---------------- */
-function Proyectos({ st, update, setActive }: { st: State; update: (fn: (s: State) => State) => void; setActive: (id: string) => void }) {
+function Proyectos({ st, update, setActive, otroNombre }: { st: State; update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string }) {
   const [open, setOpen] = useState<string | null>(st.activeId);
   const visibles = st.projects.filter((p) => !p.borrador);   // los borradores viven solo en la Calculadora
   // Si ya hay un borrador en curso, contínualo (no lo perdemos); si no, crea uno en blanco.
@@ -1390,7 +1424,7 @@ function Proyectos({ st, update, setActive }: { st: State; update: (fn: (s: Stat
           </div>
         )}
         {visibles.map((p) => (
-          <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} gastos={st.gastos} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} />
+          <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} gastos={st.gastos} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} otroNombre={otroNombre} />
         ))}
       </div>
     </>
@@ -1433,10 +1467,11 @@ function MesesProgreso({ p, rec }: { p: Proyecto; rec: number }) {
   );
 }
 
-function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setActive }: {
+function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setActive, otroNombre }: {
   p: Proyecto; params: Reglas; roster: RosterPerson[]; gastos: Gasto[]; open: boolean; onToggle: () => void;
-  update: (fn: (s: State) => State) => void; setActive: (id: string) => void;
+  update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string;
 }) {
+  const autoriza = otroNombre || params.nombreB; // quién debe dar el visto bueno (el OTRO socio)
   const [confirmDel, setConfirmDel] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [reglasOpen, setReglasOpen] = useState(false);
@@ -1487,7 +1522,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
       <div className="pcard-head" onClick={onToggle}>
         <span className="pcard-chev">{open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
         <div className="pcard-title">
-          <div className="gn">{p.nombre} <span className={"est est-" + estado}>{ESTADO_LABEL[estado]}</span>{manualN > 0 && !p.manualOK && <span className="est est-manual" title={`Sueldos a mano · falta que ${params.nombreB} autorice`}>a mano</span>}</div>
+          <div className="gn">{p.nombre} <span className={"est est-" + estado}>{ESTADO_LABEL[estado]}</span>{manualN > 0 && !p.manualOK && <span className="est est-manual" title={`Sueldos a mano · falta que ${autoriza} autorice`}>a mano</span>}</div>
           <div className="gt">{p.tipo} · {p.members.length} pers. · {p.conIVA ? "con IVA" : "sin IVA"}{(p.plazoMeses ?? 1) > 1 ? ` · ${p.plazoMeses} meses` : ""}{p.clienteNombre ? " · " + p.clienteNombre : ""}</div>
         </div>
         <div className="pcard-right">
@@ -1510,10 +1545,10 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
         <div className="pcard-body">
           {manualN > 0 && (
             p.manualOK
-              ? <div className="manual-ok"><Check size={14} /> Sueldos ajustados a mano ({manualN}) · <b>autorizado por {params.nombreB}</b></div>
+              ? <div className="manual-ok"><Check size={14} /> Sueldos ajustados a mano ({manualN}) · <b>autorizado por {autoriza}</b></div>
               : <div className="manual-warn">
-                  <span><AlertTriangle size={15} /> Este proyecto tiene <b>{manualN} sueldo{manualN !== 1 ? "s" : ""} tocado{manualN !== 1 ? "s" : ""} a mano</b>. Requiere el visto bueno de {params.nombreB}.</span>
-                  <button className="btn primary" onClick={() => upP((x) => { x.manualOK = true; })}><Check size={14} /> {params.nombreB}: autorizar</button>
+                  <span><AlertTriangle size={15} /> Este proyecto tiene <b>{manualN} sueldo{manualN !== 1 ? "s" : ""} tocado{manualN !== 1 ? "s" : ""} a mano</b>. Requiere el visto bueno de {autoriza}.</span>
+                  <button className="btn primary" onClick={() => upP((x) => { x.manualOK = true; })}><Check size={14} /> {autoriza}: autorizar</button>
                 </div>
           )}
           <div className="pcard-actions">

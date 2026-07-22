@@ -45,6 +45,7 @@ export default function PdfRecibo() {
       setQ({ tipo: sp.get("tipo") || "", persona: sp.get("persona") || "", proyecto: sp.get("proyecto") || "", pago: sp.get("pago") || "" });
       const f = (sp.get("firma") || "").toUpperCase();
       if (f === "A" || f === "B") setSigner(f);
+      else { try { const yo = localStorage.getItem("curva_yo"); if (yo === "A" || yo === "B") setSigner(yo); } catch { /* noop */ } } // firma por default = socio logueado
     } catch { /* noop */ }
     setFirmas({ A: readFirma("A"), B: readFirma("B") });
     try {
