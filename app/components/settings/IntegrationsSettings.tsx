@@ -5,6 +5,7 @@ import { Sparkles, Database, RefreshCw, Loader2, Check } from "lucide-react";
 import { useApp } from "@/lib/app-context";
 import { PILOT } from "@/lib/pilot-flags";
 import { Toggle } from "@/components/ui/Toggle";
+import { GestureSettings } from "@/components/settings/GestureSettings";
 import { ClaudeCodeConnect } from "@/components/ClaudeCodeConnect";
 import { ClaudeDesktopConnect } from "@/components/ClaudeDesktopConnect";
 import { SpotifyConnect } from "@/components/SpotifyConnect";
@@ -48,6 +49,9 @@ export function IntegrationsSettings() {
           </div>
         </div>
       )}
+
+      {/* Control por gestos (cámara, 100% local) */}
+      <GestureSettings />
 
       {/* Contexto y cultura */}
       <div>

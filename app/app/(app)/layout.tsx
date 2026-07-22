@@ -16,6 +16,7 @@ import { StaleTimerNotice } from "@/components/StaleTimerNotice";
 import { DesktopBridge } from "@/components/DesktopBridge";
 import { NotionSync } from "@/components/NotionSync";
 import { Hotkeys } from "@/components/Hotkeys";
+import { GestureControl } from "@/components/GestureControl";
 import { DoneCelebration } from "@/components/DoneCelebration";
 import { MusicProbe } from "@/components/MusicProbe";
 import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
@@ -86,6 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <DesktopBridge />
       <NotionSync />
       <Hotkeys />
+      <GestureControl />
       <DoneCelebration />
       <MusicProbe />
       <PresenceHeartbeat />

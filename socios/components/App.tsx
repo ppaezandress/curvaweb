@@ -1196,6 +1196,10 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // La comisión ahora vive en su propio campo (franjita naranja); se suma aparte al cuadre.
   const leak = r.t - (tT + tE + tC + r.cajaProj + r.banca);
   const mr = (r.marginOp - r.manualDelta) / t; // margen real que se queda CURVA (tras ajustes a mano)
+  // ISR = % sobre la facturación (base). Sale de la utilidad de socios ANTES de dividir
+  // entre ellos, así sus montos ya son netos. El ISR NO se reparte (se va al SAT).
+  const isrRes = active.descontarISR && P.imp > 0 ? isrReservaDe(r.t, P) : 0;
+  const netoSocios = r.utilKept - isrRes; // utilidad de socios ya sin ISR
   const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv"><span key={fmtMXN(v * f)} className="num-anim">{fmtMXN(v * f)}</span></span></div>;
 
   // ── Selector de personas (roster) ──
@@ -1461,11 +1465,11 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
                 {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
                 {Math.abs(r.manualDelta) > 0.5 && bd("sub", r.manualDelta > 0 ? "− Extra al equipo (a mano)" : "+ Menos sueldo al equipo (a mano)", -r.manualDelta)}
-                {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
-                {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
-                {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
-                {active.descontarISR && P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}% de la facturación)`, -isrReservaDe(r.t, P))}
-                {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept - isrReservaDe(r.t, P))}
+                {bd(isrRes > 0.5 ? "eq" : "strong", "Utilidad a repartir (socios)", r.utilKept)}
+                {isrRes > 0.5 && bd("sub", `− ISR reservado (${P.imp}% de la facturación) · al SAT, no se reparte`, -isrRes)}
+                {isrRes > 0.5 && bd("strong", "Utilidad NETA a repartir (socios)", netoSocios)}
+                {bd("sub", `→ ${P.nombreA} (${P.split}%)`, netoSocios * P.split / 100)}
+                {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, netoSocios * (100 - P.split) / 100)}
               </div>
               <div className="card">
                 <h2>A dónde va cada peso del ingreso{porMes ? " · al mes" : ""}</h2>

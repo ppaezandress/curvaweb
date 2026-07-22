@@ -43,3 +43,8 @@ next-env.d.ts
 
 # skills instaladas por el CLI de skills (no commitear)
 /.agents/
+
+# assets de MediaPipe para el control por gestos (~40 MB de wasm + el modelo de 7.5 MB).
+# Los genera `npm run prebuild` desde node_modules y el modelo público de Google, así que no
+# tiene sentido cargarlos en git. Ver scripts/mediapipe-assets.mjs.
+/public/mediapipe/

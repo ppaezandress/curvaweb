@@ -7,13 +7,17 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 
 export type ToastTone = "success" | "error" | "info";
-type Toast = { id: number; message: string; tone: ToastTone };
+// `action` sirve para ofrecer un arrepentimiento inmediato ("Deshacer"). Nació para el
+// control por gestos: si la cámara entiende mal, deshacer tiene que estar a un clic y no
+// obligar a nadie a ir a arreglar su historial a mano.
+export type ToastAction = { label: string; onClick: () => void };
+type Toast = { id: number; message: string; tone: ToastTone; action?: ToastAction };
 
 let listeners: ((t: Toast) => void)[] = [];
 let counter = 0;
 
-export function toast(message: string, opts?: { tone?: ToastTone }) {
-  const t: Toast = { id: ++counter, message, tone: opts?.tone ?? "info" };
+export function toast(message: string, opts?: { tone?: ToastTone; action?: ToastAction }) {
+  const t: Toast = { id: ++counter, message, tone: opts?.tone ?? "info", action: opts?.action };
   listeners.forEach((l) => l(t));
 }
 
@@ -50,6 +54,14 @@ export function Toaster() {
           >
             <Icon size={17} className={`mt-0.5 shrink-0 ${cls}`} />
             <span className="min-w-0 flex-1">{t.message}</span>
+            {t.action && (
+              <button
+                onClick={() => { t.action?.onClick(); dismiss(t.id); }}
+                className="focus-ring shrink-0 rounded-md px-1.5 py-0.5 text-sm font-semibold text-accent transition hover:bg-accent/10"
+              >
+                {t.action.label}
+              </button>
+            )}
             <button onClick={() => dismiss(t.id)} aria-label="Cerrar" className="focus-ring -mr-1 shrink-0 rounded-md p-0.5 text-muted transition hover:text-fg">
               <X size={15} />
             </button>

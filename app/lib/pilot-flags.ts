@@ -10,6 +10,10 @@ export const PILOT = {
   aiTime: process.env.NEXT_PUBLIC_AI_TIME === "1",
   // Herramientas de dev/admin (ej. botón "Sincronizar a Postgres"). Off para usuarios del piloto.
   devTools: process.env.NEXT_PUBLIC_DEV_TOOLS === "1",
+  // Control del cronómetro por gestos de la mano (cámara). Off en el piloto: primero lo
+  // prueba Andrés en uso real; si convence, se abre al equipo con opt-in. Aunque el flag esté
+  // encendido, la cámara NO se prende sin que la persona la active a mano en Ajustes.
+  gestures: process.env.NEXT_PUBLIC_GESTURES === "1",
   // Chat in-app (Mensajes). VISIBLE por defecto (lo queremos en el piloto, mejorado).
   // Reversible: NEXT_PUBLIC_HIDE_MESSAGES=1 lo esconde si algún día estorba.
   messages: process.env.NEXT_PUBLIC_HIDE_MESSAGES !== "1",
