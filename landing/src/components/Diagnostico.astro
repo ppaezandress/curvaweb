@@ -427,43 +427,50 @@ const entrada = (i: number) => {
      paneles son z:3). La ficha translúcida se enciende desde atrás como cuando un relámpago
      alumbra tras las nubes. Doble parpadeo (como un rayo real) y se apaga. Gradiente suave
      (sin blur → el scale va por el compositor, 60fps). */
-  .dx-storm {
+  /* Relámpago REAL detrás de las tarjetas (z:1 < paneles z:3) + mix-blend screen → brilla
+     DENTRO de la tormenta y a través de la ficha translúcida. Canal irregular con una
+     bifurcación (no un zigzag de ícono), fino, con glow en capas, y doble parpadeo como un
+     rayo de verdad. La punta cae en el punto tocado; el canal sube tras la ficha. */
+  .dx-strike-bolt {
     position: fixed; z-index: 1; pointer-events: none;
-    width: 36rem; height: 36rem; margin: -18rem 0 0 -18rem; border-radius: 50%;
-    background: radial-gradient(circle,
-      rgba(224, 244, 255, 0.7) 0%,
-      rgba(125, 211, 252, 0.4) 24%,
-      rgba(56, 189, 248, 0.18) 46%,
-      rgba(37, 99, 235, 0.07) 62%,
-      transparent 73%);
-    mix-blend-mode: screen; will-change: opacity, transform;
-    animation: dx-storm-flash 0.64s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+    margin: -6.6rem 0 0 -1.1rem; color: #eef9ff; will-change: opacity;
+    filter:
+      drop-shadow(0 0 2px rgba(238, 249, 255, 0.95))
+      drop-shadow(0 0 8px rgba(125, 211, 252, 0.85))
+      drop-shadow(0 0 20px rgba(56, 189, 248, 0.5));
+    mix-blend-mode: screen;
+    animation: dx-strike-flick 0.5s ease-out forwards;
   }
-  /* Parpadeo tenue de todo el cielo: el relámpago ilumina la tormenta un instante. */
-  .dx-storm-sky {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    background: radial-gradient(120% 85% at 50% 22%, rgba(191, 231, 255, 0.24), rgba(56, 189, 248, 0.07) 45%, transparent 70%);
-    mix-blend-mode: screen; will-change: opacity;
-    animation: dx-sky-flick 0.5s ease-out forwards;
-  }
-  /* Doble destello con parpadeo intermedio = firma visual de un relámpago, pero suave. */
-  @keyframes dx-storm-flash {
-    0%   { opacity: 0;    transform: scale(0.72); }
-    8%   { opacity: 1;    transform: scale(0.9); }
-    16%  { opacity: 0.25; }
-    26%  { opacity: 0.9;  transform: scale(1.02); }
-    40%  { opacity: 0.5; }
-    100% { opacity: 0;    transform: scale(1.16); }
-  }
-  @keyframes dx-sky-flick {
+  .dx-strike-bolt svg { width: 2.2rem; height: 6.6rem; display: block; }
+  .dx-strike-bolt path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 240; stroke-dashoffset: 240; animation: dx-strike-draw 0.12s linear forwards; }
+  .dx-strike-bolt path.main { stroke-width: 1.6; }
+  .dx-strike-bolt path.fork { stroke-width: 1.1; opacity: 0.75; animation-delay: 0.05s; }
+  @keyframes dx-strike-draw { to { stroke-dashoffset: 0; } }
+  /* Doble parpadeo = firma de un relámpago (destello, casi apaga, re-destella, se apaga). */
+  @keyframes dx-strike-flick {
     0%   { opacity: 0; }
-    7%   { opacity: 1; }
-    14%  { opacity: 0.15; }
-    24%  { opacity: 0.85; }
-    45%  { opacity: 0; }
+    9%   { opacity: 1; }
+    18%  { opacity: 0.28; }
+    30%  { opacity: 0.95; }
+    52%  { opacity: 0.12; }
     100% { opacity: 0; }
   }
+
+  /* Resplandor suave del impacto, detrás del canal (donde cae el rayo). */
+  .dx-strike-glow {
+    position: fixed; z-index: 1; pointer-events: none;
+    width: 15rem; height: 15rem; margin: -7.5rem 0 0 -7.5rem; border-radius: 50%;
+    background: radial-gradient(circle, rgba(206, 236, 255, 0.5), rgba(56, 189, 248, 0.14) 40%, transparent 68%);
+    mix-blend-mode: screen; will-change: opacity, transform;
+    animation: dx-strike-glow-a 0.55s ease-out forwards;
+  }
+  @keyframes dx-strike-glow-a {
+    0%   { opacity: 0;   transform: scale(0.6); }
+    15%  { opacity: 0.9; }
+    32%  { opacity: 0.4; }
+    100% { opacity: 0;   transform: scale(1.12); }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .dx-storm, .dx-storm-sky { animation: none; opacity: 0; }
+    .dx-strike-bolt, .dx-strike-glow { animation: none; opacity: 0; }
   }
 </style>

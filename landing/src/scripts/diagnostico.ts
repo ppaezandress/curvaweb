@@ -108,16 +108,22 @@ export function initDiagnostico(): void {
   // parpadeo (como un relámpago real) y se apaga. Un <span> por toque, se autolimpia.
   const spawnStorm = (x: number, y: number) => {
     if (reduce || !overlay) return;
-    // 1) parpadeo tenue de TODO el cielo (el relámpago ilumina la tormenta un instante).
-    const sky = document.createElement('span');
-    sky.className = 'dx-storm-sky';
-    // 2) bloom localizado y brillante DETRÁS de la ficha tocada.
-    const s = document.createElement('span');
-    s.className = 'dx-storm';
-    s.style.left = `${x}px`;
-    s.style.top = `${y}px`;
-    overlay.append(sky, s);
-    setTimeout(() => { sky.remove(); s.remove(); }, 760);
+    // Resplandor de impacto (detrás) + canal de relámpago irregular con bifurcación.
+    const glow = document.createElement('span');
+    glow.className = 'dx-strike-glow';
+    glow.style.left = `${x}px`;
+    glow.style.top = `${y}px`;
+    const bolt = document.createElement('span');
+    bolt.className = 'dx-strike-bolt';
+    bolt.style.left = `${x}px`;
+    bolt.style.top = `${y}px`;
+    bolt.innerHTML =
+      '<svg viewBox="0 0 40 120" fill="none" aria-hidden="true">' +
+      '<path class="main" d="M23 3 L16 27 L25 33 L15 55 L23 61 L13 85 L20 91 L10 118"/>' +
+      '<path class="fork" d="M15 55 L6 71 L11 77"/>' +
+      '</svg>';
+    overlay.append(glow, bolt);
+    setTimeout(() => { glow.remove(); bolt.remove(); }, 700);
   };
 
   clouds.forEach((cloud) => {
