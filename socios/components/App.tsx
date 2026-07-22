@@ -1298,11 +1298,11 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                       <button className="chip-btn" aria-pressed={!!active.descontarISR} onClick={() => updateActive((p) => { p.descontarISR = !p.descontarISR; })}>Descontar ISR ({P.imp}%)</button>
                     </div>
                     <div className="iva-box">
-                      <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}><span key={fmtMXN(base)} className="num-anim">{fmtMXN(base)}</span></b></div>
+                      <div className="iva-row"><span>Base (sin IVA){!active.descontarISR && <> <b className="iva-tag">se reparte</b></>}</span><b style={{ color: "var(--cobalt)" }}><span key={fmtMXN(base)} className="num-anim">{fmtMXN(base)}</span></b></div>
                       <div className="iva-row muted"><span>IVA (16%){conIVA ? "" : " · apagado"}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></b></div>
                       {active.descontarISR && <div className="iva-row muted"><span>ISR reservado ({P.imp}% de la base) · para el SAT</span><span key={fmtMXN(isrReservaDe(r.t, P))} className="num-anim">−{fmtMXN(isrReservaDe(r.t, P))}</span></div>}
-                      {active.descontarISR && P.imp > 0 && <div className="iva-row total"><span>Te queda (después de IVA e ISR)</span><b style={{ color: "var(--pos)" }}><span key={fmtMXN(base - isrReservaDe(base, P))} className="num-anim">{fmtMXN(base - isrReservaDe(base, P))}</span></b></div>}
+                      {active.descontarISR && P.imp > 0 && <div className="iva-row total"><span>Se reparte <b className="iva-tag">después de ISR</b></span><b style={{ color: "var(--pos)" }}><span key={fmtMXN(base - isrReservaDe(base, P))} className="num-anim">{fmtMXN(base - isrReservaDe(base, P))}</span></b></div>}
                     </div>
                   </div>
                 </>
