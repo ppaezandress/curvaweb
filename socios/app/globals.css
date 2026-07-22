@@ -417,7 +417,9 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .grp-sep{display:flex;align-items:center;gap:10px;margin:20px 0 10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .grp-sep::after{content:"";flex:1;height:1px;background:var(--border)}
 .desemb{background:var(--grad-soft);border:1px solid var(--border);border-radius:12px;padding:13px 14px}
-.desemb-h{font-size:11px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:6px;margin-bottom:10px;letter-spacing:.03em;text-transform:uppercase}
+.desemb-h{font-size:11px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;letter-spacing:.03em;text-transform:uppercase}
+.desemb-h>span{display:flex;align-items:center;gap:6px}
+.desemb-h .btn{text-transform:none;letter-spacing:0}
 .mv{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:13px}
 .mv-dot{width:10px;height:10px;border-radius:3px;flex:none}
 .mv-l{color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

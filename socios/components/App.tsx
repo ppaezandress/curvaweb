@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, Component, type ReactNode, ty
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange, Users, Share2,
+  Scale, CalendarRange, Users, Share2, Copy,
 } from "lucide-react";
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
@@ -1805,6 +1805,20 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
 }) {
   const d = desembolsoDePago(p, params, idx);
   const cajas = agrupaCajas(d.movimientos, params);
+  const [copied, setCopied] = useState(false);
+  const listaTexto = () => {
+    const L: string[] = [`Transferencias · ${p.nombre} · pago ${fmtMXN(pago.monto)}`, "─────────────"];
+    cajas.forEach((c) => {
+      L.push(`${c.label}: ${fmtMXN(c.total)}`);
+      if (c.caja === "masaSalarial") c.detalle.forEach((dt) => L.push(`   · ${dt.nombre}${dt.concepto !== "sueldo" ? " (" + dt.concepto + ")" : ""}: ${fmtMXN(dt.monto)}`));
+    });
+    return L.join("\n");
+  };
+  const copiar = () => {
+    const txt = listaTexto();
+    const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1800); };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(done, done); else done();
+  };
   return (
     <div className={"pago" + (pago.desembolsado ? " done" : "")}>
       <div className="pago-head">
@@ -1817,7 +1831,9 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
         </div>
       </div>
       <div className="desemb">
-        <div className="desemb-h"><Wallet size={13} /> Reparte este pago en tus cajas de Revolut:</div>
+        <div className="desemb-h"><span><Wallet size={13} /> Reparte este pago en tus cajas de Revolut:</span>
+          <button className="btn ghost sm" onClick={copiar} title="Copia la lista exacta de transferencias para seguirla en Revolut">{copied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar lista</>}</button>
+        </div>
         {cajas.map((c) => <CajaLine key={c.caja} c={c} />)}
       </div>
       <button className={"btn " + (pago.desembolsado ? "ok-btn" : "primary")} style={{ width: "100%", marginTop: 8 }} onClick={onToggleDesemb}>
