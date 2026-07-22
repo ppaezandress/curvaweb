@@ -1455,19 +1455,19 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             <div className="disc-body">
               <div className="card"><h2>El desglose · estado de resultados{porMes ? " · al mes" : ""}</h2>
                 {bd("", "Ingreso del proyecto", r.t)}
+                {isrRes > 0.5 && bd("sub", `− ISR (${P.imp}% · RESICO, al SAT — no se reparte)`, -isrRes)}
+                {isrRes > 0.5 && bd("eq", "Queda para repartir (después de ISR)", r.t - isrRes)}
                 {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
                 {r.disc > 0.5 && bd("sub", "− Sombrero de socio (reserva a Banca)", -r.disc)}
                 {r.comis > 0.5 && bd("sub", `− Comisión de origen ${r.comisBanca > 0.5 ? "(a Banca)" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
-                {bd("eq", "Utilidad bruta", r.t - r.bolsaOut - r.comis)}
+                {bd("eq", "Utilidad bruta", r.t - isrRes - r.bolsaOut - r.comis)}
                 {bd("sub", "− Caja del proyecto", -r.cajaProj)}
-                {bd("eq", "Utilidad operativa", r.marginOp)}
+                {bd("eq", "Utilidad operativa", r.marginOp - isrRes)}
                 {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (reserva a Banca)", -r.cajaAhorro)}
                 {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
                 {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
                 {Math.abs(r.manualDelta) > 0.5 && bd("sub", r.manualDelta > 0 ? "− Extra al equipo (a mano)" : "+ Menos sueldo al equipo (a mano)", -r.manualDelta)}
-                {bd(isrRes > 0.5 ? "eq" : "strong", "Utilidad a repartir (socios)", r.utilKept)}
-                {isrRes > 0.5 && bd("sub", `− ISR reservado (${P.imp}% de la facturación) · al SAT, no se reparte`, -isrRes)}
-                {isrRes > 0.5 && bd("strong", "Utilidad NETA a repartir (socios)", netoSocios)}
+                {bd("strong", `Utilidad a repartir (socios)${isrRes > 0.5 ? " · ya sin ISR" : ""}`, netoSocios)}
                 {bd("sub", `→ ${P.nombreA} (${P.split}%)`, netoSocios * P.split / 100)}
                 {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, netoSocios * (100 - P.split) / 100)}
               </div>
