@@ -113,6 +113,8 @@ export type Reglas = {
   smNuevo: number;    // 0.7
   // Banca — meta del colchón (monto directo; el piso mensual del Núcleo se eliminó)
   metaBancaMonto: number; // 48000
+  // Meta de FACTURACIÓN mensual (el sueño de ventas del mes). Se compara contra lo COBRADO.
+  metaFacturacion: number; // 200000
   // Caja del proyecto — % por defecto según el tipo de proyecto. El modelo usa
   // pr.cajaPct (por proyecto, editable en la Calculadora); esto es solo el DEFAULT que
   // se aplica al elegir el tipo. Editable en Reglas para que los socios lo muevan.
@@ -134,6 +136,7 @@ export const REGLAS_DEFAULT: Reglas = {
   umbral1: 40000, umbral2: 80000, umbral3: 150000,
   smNuevo: 0.7,
   metaBancaMonto: 48000,
+  metaFacturacion: 200000,
   cajaTrazo: 10, cajaTrayectoria: 8, cajaAlianza: 15,
   nombreA: "Andrés", nombreB: "Balmo",
 };

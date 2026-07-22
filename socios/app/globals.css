@@ -84,6 +84,30 @@ body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14.5px;line-hei
 .yo-pill{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--cobalt);padding:1px 7px;border-radius:99px}
 .rk.yo{background:var(--cobalt-soft);border-radius:var(--r-sm);margin:0 -8px;padding-left:8px;padding-right:8px}
 
+/* ── Centro de mando del Panel: meta de facturación + qué necesita tu atención ── */
+.meta-hero{background:var(--grad);color:#fff;border-radius:var(--r-card);padding:20px 22px;display:flex;flex-direction:column;gap:11px;box-shadow:var(--shadow-2)}
+.meta-hero-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.meta-cap{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.92}
+.meta-pct{font-family:var(--mono);font-weight:800;font-size:15px}
+.meta-nums{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.meta-nums b{font-family:var(--disp);font-size:32px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.meta-nums span{font-size:13px;opacity:.88}
+.meta-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.28);overflow:hidden}
+.meta-bar i{display:block;height:100%;background:#fff;border-radius:99px;transition:width .6s var(--ease)}
+.meta-foot{font-size:13px;opacity:.94}
+.atn-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-card);padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.atn-head{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+.atn-empty{display:flex;align-items:center;gap:8px;color:var(--pos);font-weight:600;font-size:14px;padding:6px 0}
+.atn-list{display:flex;flex-direction:column;gap:8px}
+.atn-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:11px 12px;border:1px solid var(--border-2);border-radius:var(--r-sm);background:var(--panel-2);cursor:pointer;transition:background .15s,border-color .15s;color:var(--ink);font-family:inherit}
+.atn-row:hover{background:var(--panel-3);border-color:color-mix(in srgb,var(--cobalt) 40%,transparent)}
+.atn-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
+.atn-ic.warn{background:var(--warn-soft);color:var(--warn)}
+.atn-ic.cob{background:var(--cobalt-soft);color:var(--cobalt)}
+.atn-t{flex:1;font-size:13.5px;font-weight:500}.atn-t b{font-weight:750}
+.atn-row>svg:last-child{color:var(--muted);flex:none}
+@media(max-width:760px){.meta-nums b{font-size:26px}}
+
 /* Foco de teclado visible en TODO lo interactivo (a11y — antes solo inputs lo tenían) */
 *:focus{outline:none}
 a:focus-visible,button:focus-visible,.btn:focus-visible,.chip-btn:focus-visible,.nav a:focus-visible,

@@ -426,7 +426,7 @@ export default function App() {
 
       <main className="main">
         <ErrorBoundary key={sec}>
-          {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} />}
+          {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={setSec} />}
           {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} />}
           {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
           {sec === "mimes" && <MiMes st={st} setSec={setSec} yoNombre={yoNombre} />}
@@ -442,7 +442,7 @@ export default function App() {
 }
 
 /* ---------------- Panel ---------------- */
-function Panel({ st, overhead, update, yoNombre }: { st: State; overhead: number; update: (fn: (s: State) => State) => void; yoNombre?: string }) {
+function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead: number; update: (fn: (s: State) => State) => void; yoNombre?: string; setSec?: (s: string) => void }) {
   const meta = metaBanca(st.params);
   const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
 
@@ -494,11 +494,13 @@ function Panel({ st, overhead, update, yoNombre }: { st: State; overhead: number
   proysDelMes.forEach((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
 
   // ── Proyección acumulada (todos los proyectos vivos, a valor completo) ──
-  let sAndres = 0, sBalmo = 0, sEquipo = 0, sBancaAll = 0, sCobrado = 0, sTicket = 0;
+  let sAndres = 0, sBalmo = 0, sEquipo = 0, sBancaAll = 0, sCobrado = 0, sTicket = 0, proysPorCobrar = 0;
   vivos.forEach((p) => {
     const rr = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params));
     sTicket += rr.t;
-    sCobrado += (p.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0);
+    const cobP = (p.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0);
+    sCobrado += cobP;
+    if (cobP > 0.5 && cobP < rr.t - 0.5) proysPorCobrar++;
     sBancaAll += rr.banca;
     Object.values(rr.people).forEach((a) => {
       const v = a.trabajo + a.extra + (a.comision || 0);
@@ -506,6 +508,13 @@ function Panel({ st, overhead, update, yoNombre }: { st: State; overhead: number
     });
   });
   const porCobrar = Math.max(0, sTicket - sCobrado);
+  // Facturación REAL cobrada en el mes seleccionado vs la meta de ventas del mes.
+  const cobradoMes = st.projects.filter((p) => !p.borrador).reduce((s, p) => s + (p.pagos || []).filter((x) => mesDe(x.fecha) === selYM).reduce((a, x) => a + (+x.monto || 0), 0), 0);
+  const metaFact = +st.params.metaFacturacion || 0;
+  const factPct = metaFact > 0 ? cobradoMes / metaFact : 0;
+  // Pendientes por atender (para el centro de mando).
+  const porAutorizar = vivos.filter((p) => p.members.some((m) => typeof m.montoManual === "number") && !p.manualOK).length;
+  const bancaCorta = M.banca < meta;
 
   // Flujo por mes (= ingreso del mes) y Cortes: derivados de porMes (todo devengado).
   const flujoVal = (x: MesAgg) => x.equipo + x.socios + x.banca + x.caja;
@@ -529,6 +538,28 @@ function Panel({ st, overhead, update, yoNombre }: { st: State; overhead: number
           </div>
         </div>
       )}
+
+      <div className="two rise" style={{ marginBottom: 18, alignItems: "stretch" }}>
+        <div className="meta-hero">
+          <div className="meta-hero-top"><span className="meta-cap">Meta de facturación · {mesLabel(selYM)}</span><span className="meta-pct">{pctFmt(Math.min(1, factPct))}</span></div>
+          <div className="meta-nums"><b>{fmtMXN(cobradoMes)}</b><span>cobrado de {fmtMXN(metaFact)}</span></div>
+          <div className="meta-bar"><i style={{ width: Math.min(100, factPct * 100) + "%" }} /></div>
+          <div className="meta-foot">{cobradoMes >= metaFact ? "¡Meta del mes cumplida!" : `Faltan ${fmtMXN(Math.max(0, metaFact - cobradoMes))} para el sueño del mes.`}</div>
+        </div>
+        <div className="atn-card">
+          <div className="atn-head">Qué necesita tu atención</div>
+          {(porAutorizar + proysPorCobrar + (bancaCorta ? 1 : 0)) === 0 ? (
+            <div className="atn-empty"><Check size={16} /> Todo al día. Nada pendiente.</div>
+          ) : (
+            <div className="atn-list">
+              {porAutorizar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t"><b>{porAutorizar}</b> proyecto{porAutorizar !== 1 ? "s" : ""} por autorizar (sueldos a mano)</span><ChevronRight size={15} /></button>}
+              {proysPorCobrar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic cob"><Wallet size={15} /></span><span className="atn-t"><b>{proysPorCobrar}</b> proyecto{proysPorCobrar !== 1 ? "s" : ""} por cobrar · falta {fmtMXN(porCobrar)}</span><ChevronRight size={15} /></button>}
+              {bancaCorta && <button className="atn-row" onClick={() => setSec?.("cajas")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t">La Banca de {mesLabel(selYM)} va corta para la meta del colchón</span><ChevronRight size={15} /></button>}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="tiles rise">
         <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · proyectado`} tip="Lo que los proyectos activos reparten en el mes elegido (equipo + socios + Banca + caja), según su plazo. Es proyectado (devengado), no lo cobrado." />
         <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
@@ -2393,6 +2424,7 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         <div className="card"><h2>Banca y seniority</h2>
           {mult("smNuevo", "Seniority de un integrante nuevo")}
           {money("metaBancaMonto", "Meta de la Banca (colchón)")}
+          {money("metaFacturacion", "Meta de facturación del mes (venta)")}
           <p className="foot">El colchón de emergencia de CURVA y el trampolín para pasar a alguien a nómina. Sugerido ~$48k (1 nómina medio año). Súbelo cuando crezcan.</p>
         </div>
         <div className="card"><h2>Nombres de los socios</h2>
