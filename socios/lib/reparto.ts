@@ -87,6 +87,8 @@ export type Proyecto = {
   // Autorización de cambios MANUALES de sueldo (montoManual en algún miembro). Cuando
   // se guarda un proyecto tocado a mano queda pendiente hasta que Balmo lo autorice.
   manualOK?: boolean;
+  // Cotización: qué se le vende al cliente (alcance/entregables), para el PDF de propuesta.
+  cotScope?: string;
 };
 
 // Datos bancarios para cobro (ficha que se le manda al cliente). Es info de
