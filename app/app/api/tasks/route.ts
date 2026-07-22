@@ -3,6 +3,7 @@ import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
 import { requireSession } from "@/lib/auth/guard";
+import { logError } from "@/lib/observability";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,8 @@ export async function POST(req: Request) {
     });
     revalidateTag("curva-data", "max"); // refresca la lista de tareas cacheada
     return NextResponse.json({ ok: true, id: page.id });
-  } catch {
+  } catch (e) {
+    await logError("api/tasks POST", e, { userId: auth.user.id });
     return NextResponse.json({ ok: false, error: "No se pudo procesar la tarea" }, { status: 500 });
   }
 }
@@ -106,7 +108,8 @@ export async function PATCH(req: Request) {
     });
     revalidateTag("curva-data", "max");
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    await logError("api/tasks PATCH", e, { userId: auth.user.id });
     return NextResponse.json({ ok: false, error: "No se pudo procesar la tarea" }, { status: 500 });
   }
 }

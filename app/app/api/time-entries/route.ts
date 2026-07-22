@@ -4,6 +4,7 @@ import { z } from "zod";
 import { notionFetch, notionConfigured } from "@/lib/notion/client";
 import { getTimeRecords, type TimeRecord } from "@/lib/notion/fetchers";
 import { requireSession, getPersona } from "@/lib/auth/guard";
+import { logError, logWarn, messageOf } from "@/lib/observability";
 
 // Un registro de tiempo cambia el historial (time-entries) Y el rollup "Horas registradas"
 // de la tarea (baseline en curva-data) → invalidamos ambos para que el próximo reload traiga
@@ -52,7 +53,10 @@ export async function GET() {
     const persona = await getPersona(auth.sb, auth.user.id);
     const safe = persona?.is_admin ? records : redactForNonAdmin(records, persona?.name || "");
     return NextResponse.json({ records: safe });
-  } catch {
+  } catch (e) {
+    // Devolver [] es correcto para la UI (degrada a vacío), pero callarlo NO: un fallo aquí
+    // hace ver a todo el equipo con cero horas y antes no dejaba rastro.
+    await logError("api/time-entries GET", e, { userId: auth.user.id });
     return NextResponse.json({ records: [] });
   }
 }
@@ -110,6 +114,11 @@ async function createRow(props: {
     if ((props.mode || props.pilar || props.origin) && /Modo|Pilar|Origen|is not a property|does not exist|validation_error/i.test(String(e))) {
       const { Modo, Pilar, Origen, ...rest } = properties as { Modo?: unknown; Pilar?: unknown; Origen?: unknown };
       void Modo; void Pilar; void Origen;
+      // El tiempo se salva, pero perdemos Modo/Pilar/Origen: hay que saberlo (= alguien
+      // borró o renombró una propiedad en la DB de Notion).
+      await logWarn("api/time-entries createRow", "registro sin propiedades opcionales (Modo/Pilar/Origen)", {
+        reason: messageOf(e),
+      });
       return (await post(rest)).id;
     }
     throw e;
@@ -127,12 +136,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, skipped: true });
   }
   const persona = await getPersona(auth.sb, auth.user.id);
+  // Fuera del try para que el log del catch pueda decir QUÉ se intentaba registrar.
+  let reqBody: z.infer<typeof TimeEntrySchema> | undefined;
   try {
     const valid = TimeEntrySchema.safeParse(await req.json());
     if (!valid.success) {
       return NextResponse.json({ ok: false, error: "Datos inválidos", issues: valid.error.issues }, { status: 400 });
     }
     const b = valid.data;
+    reqBody = b;
     const { taskId, clientId, taskName, area, pilar, startedAt, endedAt } = b;
 
     // Modo manual con asistentes ("A mano"). Devolvemos también los registros creados
@@ -177,7 +189,18 @@ export async function POST(req: Request) {
     });
     invalidateTimeCaches();
     return NextResponse.json({ ok: true, id });
-  } catch {
+  } catch (e) {
+    // El error más caro de la app: aquí se PIERDE tiempo ya medido. Se registra con el
+    // contexto suficiente para reconstruir la sesión a mano si hace falta.
+    await logError("api/time-entries POST", e, {
+      userId: auth.user.id,
+      person: persona?.name,
+      taskId: reqBody?.taskId,
+      startedAt: reqBody?.startedAt,
+      endedAt: reqBody?.endedAt,
+      seconds: reqBody?.seconds,
+      attendees: reqBody?.attendees?.length,
+    });
     return NextResponse.json({ ok: false, error: "No se pudo registrar el tiempo" });
   }
 }
@@ -217,7 +240,8 @@ export async function DELETE(req: Request) {
     await notionFetch(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ archived: true }) });
     invalidateTimeCaches();
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    await logError("api/time-entries DELETE", e, { userId: auth.user.id, person: persona?.name, entryId: id });
     return NextResponse.json({ ok: false, error: "No se pudo quitar el tiempo" }, { status: 500 });
   }
 }
@@ -265,7 +289,10 @@ export async function PATCH(req: Request) {
     await notionFetch(`/pages/${id}`, { method: "PATCH", body: JSON.stringify({ properties }) });
     invalidateTimeCaches();
     return NextResponse.json({ ok: true, minutes: newMinutes });
-  } catch {
+  } catch (e) {
+    await logError("api/time-entries PATCH", e, {
+      userId: auth.user.id, person: persona?.name, entryId: id, newMinutes,
+    });
     return NextResponse.json({ ok: false, error: "No se pudo editar el tiempo" }, { status: 500 });
   }
 }

@@ -192,6 +192,7 @@ function initialState(): State {
 const NAV = [
   { k: "panel", label: "Panel", Icon: LayoutDashboard },
   { k: "calculadora", label: "Calculadora", Icon: Calculator },
+  { k: "cotizador", label: "Cotizador", Icon: FileText },
   { k: "proyectos", label: "Proyectos", Icon: FolderKanban },
   { k: "mimes", label: "Mi mes", Icon: Scale },
   { k: "personas", label: "Personas", Icon: Users },
@@ -435,6 +436,7 @@ export default function App() {
         <ErrorBoundary key={sec}>
           {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={setSec} />}
           {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
+          {sec === "cotizador" && <Cotizador st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
           {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} log={log} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
           {sec === "mimes" && <MiMes st={st} setSec={setSec} yoNombre={yoNombre} />}
           {sec === "personas" && <Personas st={st} />}
@@ -1481,6 +1483,225 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           ]} />
       )}
       {simDrawer && <SimulacionDrawer st={st} active={active} onClose={() => setSimDrawer(false)} />}
+    </>
+  );
+}
+
+/* ---------------- Cotizador (precio ↔ lo que gana cada quien) ---------------- */
+// Sección hermana de la Calculadora: MISMO proyecto activo, pero enfocada en UNA
+// decisión — ¿cuánto cobrar? Pones el precio y ves, lado a lado, lo que paga el
+// cliente y lo que gana cada quien. El explorador "¿y si cobras…?" recalcula el
+// reparto a varios precios para no cotizar ni de más ni de menos. Los parámetros
+// finos (comisión, ISR, caja, reglas) viven en la Calculadora. Decisión Andrés 2026-07-23.
+function Cotizador({ st, active, clientes, update, updateActive, setSec, setToast, log }: {
+  st: State; active: Proyecto; clientes: Cliente[];
+  update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void; log?: (act: string, det: string) => void;
+}) {
+  const nuevoBorrador = () => update((s) => {
+    const ex = s.projects.find((x) => x.borrador);
+    if (ex) { s.activeId = ex.id; return s; }
+    const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id;
+    return s;
+  });
+  const guardar = () => {
+    const cur0 = st.projects.find((x) => x.id === st.activeId);
+    const eraBorrador = !!cur0?.borrador;
+    const nombre = (cur0?.nombre || "El proyecto").trim();
+    update((s) => {
+      const cur = s.projects.find((x) => x.id === s.activeId);
+      if (cur) { cur.borrador = false; cur.reglas = { ...s.params }; }
+      if (eraBorrador) { const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id; }
+      return s;
+    });
+    setToast(eraBorrador ? `“${nombre}” guardado` : `“${nombre}” actualizado`);
+    log?.(eraBorrador ? "guardó un proyecto" : "actualizó un proyecto", nombre);
+  };
+  if (!active) return (
+    <>
+      <div className="page-h"><div><h1>Cotizador</h1><p>Pon el precio y ve, al instante, lo que gana cada quien.</p></div></div>
+      <div className="card" style={{ textAlign: "center", padding: "44px 24px" }}>
+        <p className="hint" style={{ marginTop: 0, marginBottom: 14 }}>No tienes proyectos todavía.</p>
+        <button className="btn primary" onClick={nuevoBorrador}>+ Crear el primero</button>
+      </div>
+    </>
+  );
+
+  const P = st.params;
+  const activeRes = membersResolved(active, st.roster, P);
+  const r = compute(activeRes, P);
+  const t = r.t || 1;
+  const plazoN = Math.max(1, Math.floor(active.plazoMeses || 1));
+  const conIVA = active.ivaModo === "incluido" || (active.ivaModo !== "sin" && !!active.conIVA);
+  const base = active.ticket;
+  const total = conIVA ? Math.round(base * (1 + IVA) * 100) / 100 : base;
+  const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
+  const mr = (r.marginOp - r.manualDelta) / t;           // margen que se queda CURVA
+  const curva = r.marginOp - r.manualDelta;
+
+  // Explorador: recalcula el reparto a varios precios (misma base ± %). Al hacer
+  // clic fija ese precio. Así ves de un vistazo el costo de cobrar de menos.
+  const puntos = [-0.15, -0.1, 0, 0.1, 0.2, 0.3];
+  const explor = puntos.map((d) => {
+    const nt = Math.max(0, Math.round(base * (1 + d)));
+    const rr = compute(membersResolved({ ...active, ticket: nt }, st.roster, P), P);
+    return { d, nt, tot: conIVA ? Math.round(nt * (1 + IVA)) : nt, curva: rr.marginOp - rr.manualDelta, mr: (rr.marginOp - rr.manualDelta) / (rr.t || 1) };
+  });
+
+  // ── Selector de personas (mismo patrón que la Calculadora) ──
+  const personVal = (m: Miembro): string => {
+    if (m.personId === "socioA" || m.quien === "socioA") return "socioA";
+    if (m.personId === "socioB" || m.quien === "socioB") return "socioB";
+    if (m.personId && st.roster.some((rp) => rp.id === m.personId)) return m.personId;
+    const byName = st.roster.find((rp) => rp.nombre === m.nombre);
+    return byName ? byName.id : "__cur";
+  };
+  const choosePerson = (i: number, id: string) => {
+    if (id === "__cur") return;
+    if (id === "__new") {
+      update((s) => {
+        const np: RosterPerson = { id: uid(), nombre: "Nueva persona", quien: "nucleo" };
+        s.roster.push(np);
+        const proj = s.projects.find((x) => x.id === s.activeId);
+        if (proj && proj.members[i]) { const m = proj.members[i]; m.personId = np.id; m.nombre = np.nombre; m.quien = "nucleo"; m.sm = 1; }
+        return s;
+      });
+      return;
+    }
+    updateActive((p) => {
+      const m = p.members[i]; if (!m) return;
+      if (id === "socioA") { m.personId = "socioA"; m.quien = "socioA"; m.nombre = P.nombreA; m.sm = 1; }
+      else if (id === "socioB") { m.personId = "socioB"; m.quien = "socioB"; m.nombre = P.nombreB; m.sm = 1; }
+      else { const rp = st.roster.find((rp2) => rp2.id === id); if (rp) { m.personId = rp.id; m.quien = rp.quien; m.nombre = rp.nombre; m.sm = rp.quien === "nuevo" ? P.smNuevo : 1; } }
+    });
+  };
+  const addMember = () => updateActive((p) => {
+    const used = new Set(p.members.map((m) => m.personId));
+    const rp = st.roster.find((rp2) => !used.has(rp2.id)) || st.roster[0];
+    if (rp) p.members.push({ rol: "A", quien: rp.quien, nombre: rp.nombre, sm: rp.quien === "nuevo" ? P.smNuevo : 1, personId: rp.id });
+    else p.members.push({ rol: "A", quien: "socioA", nombre: P.nombreA, sm: 1, personId: "socioA" });
+  });
+
+  const setModo = (m: "sin" | "incluido") => updateActive((p) => {
+    const oldIncluido = p.ivaModo === "incluido";
+    const visible = oldIncluido ? Math.round(p.ticket * (1 + IVA) * 100) / 100 : p.ticket;
+    p.ivaModo = m; p.conIVA = m !== "sin";
+    p.ticket = m === "incluido" ? Math.round(ticketSinIVA(visible) * 100) / 100 : visible;
+  });
+  const inputVal = conIVA ? Math.round(base * (1 + IVA) * 100) / 100 : base;
+  const onTicket = (v: number) => updateActive((p) => { p.ticket = conIVA ? Math.round(ticketSinIVA(v) * 100) / 100 : v; });
+
+  return (
+    <>
+      <div className="page-h"><div><h1>Cotizador</h1><p>Pon el precio y mira, al instante, lo que gana cada quien.</p></div></div>
+      <div className="proj-bar">
+        <div className="pb-group">
+          <span className="pb-cap">Proyecto</span>
+          <select value={active.id} onChange={(e) => update((s) => { s.activeId = e.target.value; return s; })}>
+            {st.projects.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.borrador ? " · sin guardar" : ""}</option>)}
+          </select>
+        </div>
+        <div className="pb-group grow">
+          <span className="pb-cap">Nombre</span>
+          <input type="text" value={active.nombre} placeholder="Cliente o proyecto" onChange={(e) => updateActive((p) => { p.nombre = e.target.value; })} />
+        </div>
+        <div className="pb-actions">
+          <button className="btn" title="Empieza (o continúa) un borrador" onClick={nuevoBorrador}><Plus size={15} /> Nuevo</button>
+          <button className="btn primary" title={active.borrador ? "Guarda este proyecto" : "Re-guarda con las reglas de hoy"} onClick={guardar}>{active.borrador ? <>Guardar <ArrowRight size={15} /></> : <>Actualizar <ArrowRight size={15} /></>}</button>
+        </div>
+      </div>
+
+      {/* El corazón del Cotizador: precio al cliente ↔ lo que se reparte, lado a lado. */}
+      <div className="cotz-hero rise">
+        <div className="cotz-side pays">
+          <span className="cotz-lbl">El cliente paga</span>
+          <span className="cotz-big"><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></span>
+          <span className="cotz-sub">{conIVA ? "IVA incluido" : "sin IVA"}{plazoN > 1 ? ` · ${plazoN} pagos de ${fmtMXN(total / plazoN)}` : ""}</span>
+        </div>
+        <div className="cotz-flow"><ArrowRight size={20} /></div>
+        <div className="cotz-side keeps">
+          <span className="cotz-lbl">CURVA se queda</span>
+          <span className="cotz-big"><span key={fmtMXN(curva)} className="num-anim">{fmtMXN(curva)}</span></span>
+          <span className="cotz-sub">{pctFmt(mr)} del ingreso · {P.nombreA} {fmtMXN(r.socioA)} · {P.nombreB} {fmtMXN(r.socioB)}</span>
+        </div>
+      </div>
+
+      <div className="grid rise">
+        <div className="sidec">
+          <div className="card">
+            <h2>La propuesta</h2>
+            <div className="field"><label>Cliente</label><select value={active.clienteId || ""} onChange={(e) => updateActive((p) => { p.clienteId = e.target.value || null; p.clienteNombre = clientes.find((c) => c.id === e.target.value)?.nombre || null; })}><option value="">— sin asignar —</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
+            <div className="field"><label>Precio</label>
+              <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
+              <div className="chips" style={{ marginTop: 8 }}>
+                <button className="chip-btn" aria-pressed={conIVA} onClick={() => setModo(conIVA ? "sin" : "incluido")}>{conIVA ? "El precio ya trae IVA" : "El precio no lleva IVA"}</button>
+              </div>
+            </div>
+            <div className="two" style={{ gap: 12 }}>
+              <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} step={1} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, Math.floor(+e.target.value) || 1); })} /></div>
+              <div className="field"><label>Tipo</label><select value={active.tipo} onChange={(e) => updateActive((p) => { const tp = e.target.value as "trazo" | "trayectoria" | "alianza"; p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <option key={tp} value={tp}>{tp[0].toUpperCase() + tp.slice(1)}</option>)}</select></div>
+            </div>
+            <div className="field"><label>¿Qué le vendes? <span className="tip" data-tip="Los entregables, uno por línea. Aparecen en la cotización que le mandas al cliente."><Info /></span></label>
+              <textarea value={active.cotScope || ""} placeholder={"Un entregable por línea…"} rows={4} onChange={(e) => updateActive((p) => { p.cotScope = e.target.value; })} className="cotz-scope" />
+            </div>
+            <button className="btn ghost" style={{ width: "100%" }} onClick={() => window.open("/pdf/cotizacion?proyecto=" + active.id, "_blank")} disabled={active.borrador} title={active.borrador ? "Guarda el proyecto primero" : "Cotización lista para el cliente"}><FileText size={15} /> Cotización para el cliente</button>
+          </div>
+          <div className="card">
+            <h2>Quién iría en el equipo <span className="tip" data-tip="Elige a cada persona; la app ya sabe si es socio o Núcleo. Afina sueldos, comisión e ISR en la Calculadora."><Info /></span></h2>
+            {active.members.map((m, i) => {
+              const val = personVal(m);
+              return (
+                <div className="member2" key={i}>
+                  <select value={val} onChange={(e) => choosePerson(i, e.target.value)}>
+                    <optgroup label="Socios"><option value="socioA">{P.nombreA}</option><option value="socioB">{P.nombreB}</option></optgroup>
+                    {st.roster.length > 0 && <optgroup label="Equipo">{st.roster.map((rp) => <option key={rp.id} value={rp.id}>{rp.nombre}</option>)}</optgroup>}
+                    {val === "__cur" && <option value="__cur">{m.nombre || "— sin asignar —"}</option>}
+                    <option value="__new">+ Nueva persona…</option>
+                  </select>
+                  <div className="member-rol">
+                    <div className="chips">
+                      {(["P", "E", "A"] as Rol[]).map((rl) => (
+                        <button key={rl} className="chip-btn" aria-pressed={m.rol === rl} onClick={() => updateActive((p) => { p.members[i].rol = rl; })}>{ROLNAME[rl]}</button>
+                      ))}
+                    </div>
+                    <button className="rmv" title="Quitar del proyecto" onClick={() => updateActive((p) => { p.members.splice(i, 1); })}>×</button>
+                  </div>
+                </div>
+              );
+            })}
+            <button className="add" onClick={addMember}>+ Agregar persona</button>
+            <p className="hint" style={{ marginBottom: 0 }}>Afina sueldos, comisión e ISR en la <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setSec("calculadora")}>Calculadora</b>.</p>
+          </div>
+        </div>
+
+        <div>
+          <div className="card">
+            <h2>Se reparte así{plazoN > 1 ? " · en total" : ""}</h2>
+            <Rank rows={rows} />
+            {plazoN > 1 && <p className="hint" style={{ marginBottom: 0 }}>Total de los {plazoN} meses. El promedio mensual está en la Calculadora.</p>}
+          </div>
+          <div className="card">
+            <h2>¿Y si cobras…? <span className="tip" data-tip="Mismo equipo, distinto precio. La barra crece con los pesos que se queda CURVA; el color marca si el margen es sano. Haz clic en una fila para fijar ese precio."><Info /></span></h2>
+            <div className="cotz-explor">
+              <div className="cx-head"><span>Precio al cliente</span><span>Lo que entra a CURVA</span><span>Se queda</span></div>
+              {(() => {
+                const maxCurva = Math.max(1, ...explor.map((e) => e.curva));
+                return explor.map((e, i) => {
+                  const isCur = Math.abs(e.d) < 0.001;
+                  const col = e.mr >= 0.4 ? "var(--pos)" : e.mr >= 0.25 ? "var(--warn)" : "var(--neg)";
+                  return (
+                    <button key={i} className={"cx-row" + (isCur ? " cur" : "")} onClick={() => { if (!isCur) updateActive((p) => { p.ticket = e.nt; }); }} disabled={isCur} title={isCur ? "Precio actual" : "Fijar este precio"}>
+                      <span className="cx-price">{fmtMXN(e.tot)}<em>{e.d === 0 ? "hoy" : (e.d > 0 ? "+" : "") + Math.round(e.d * 100) + "%"}</em></span>
+                      <span className="cx-bar"><i style={{ width: Math.max(4, Math.min(100, e.curva / maxCurva * 100)) + "%", background: col }} /></span>
+                      <span className="cx-curva" style={{ color: col }}>{fmtMXN(e.curva)}<em>{pctFmt(e.mr)} margen</em></span>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+            <p className="hint" style={{ marginBottom: 0 }}>El margen % casi no cambia con el precio (todo escala parejo). Lo que sí cambia son los <b>pesos</b> que entran: cobrar de menos es dinero que dejas en la mesa.</p>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
