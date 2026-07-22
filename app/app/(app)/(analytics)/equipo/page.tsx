@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { AdminOnly } from "@/components/AdminOnly";
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Users, Wallet, Gauge, Flame, Building2, CheckSquare, Receipt, Activity, TrendingUp, Loader2, Sparkles, Settings2, Download, Printer } from "lucide-react";
+import { Clock, Users, Wallet, Gauge, Flame, Building2, CheckSquare, Receipt, Activity, TrendingUp, Loader2, Sparkles, Settings2, Download, Printer, ChevronRight } from "lucide-react";
 import { useData } from "@/lib/data-context";
 import { formatHours } from "@/lib/format";
 import { useRates, money } from "@/lib/rates";
@@ -384,13 +385,17 @@ function EquipoView() {
             <h2 className="mb-1 flex items-center gap-2 font-display text-xl font-bold text-fg">
               <Users size={20} /> Por persona
             </h2>
-            <p className="mb-4 text-sm text-muted">Carga, foco y constancia de cada quien en el periodo.</p>
+            <p className="mb-4 text-sm text-muted">Carga, foco y constancia de cada quien en el periodo. <b className="text-fg">Clic en alguien</b> para ver en qué se le fue el tiempo.</p>
             <div className="grid gap-4 md:grid-cols-2">
               {people.map((p) => {
                 const dpct = p.prevMinutes && p.prevMinutes > 0 ? Math.round(((p.minutes - p.prevMinutes) / p.prevMinutes) * 100) : null;
                 const member = memberByName[p.name];
-                return (
-                  <div key={p.name} className="rounded-card border border-line bg-surface p-5 shadow-soft">
+                // La tarjeta entera es un enlace: la queja era justamente que se veía el
+                // total de cada quien pero no se podía entrar a ver EN QUÉ se le fue.
+                const href = member ? `/equipo/${encodeURIComponent(member.id)}` : null;
+                const cardClass = `block rounded-card border border-line bg-surface p-5 shadow-soft transition ${href ? "hover:border-accent/40 hover:shadow-float focus-ring" : ""}`;
+                const body = (
+                  <>
                     <div className="flex items-center gap-3">
                       <Avatar member={member} name={p.name} size={40} />
                       <div className="min-w-0 flex-1">
@@ -403,6 +408,7 @@ function EquipoView() {
                           <p className={`text-xs font-semibold ${dpct > 0 ? "text-success" : "text-muted"}`}>{dpct > 0 ? "↑" : "↓"} {Math.abs(dpct)}%</p>
                         )}
                       </div>
+                      {href && <ChevronRight size={16} className="shrink-0 text-muted/60" aria-hidden />}
                     </div>
                     <Meter value={p.minutes} max={maxP} label={`${p.name}: ${formatHours(p.minutes * 60)}`} className="mt-3" />
 
@@ -421,7 +427,13 @@ function EquipoView() {
                       <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-1 text-muted"><Building2 size={11} /> {p.topClient}</span>
                       {p.aiMin > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-1 text-accent"><Sparkles size={11} /> {Math.round((p.aiMin / p.minutes) * 100)}% IA</span>}
                     </div>
-                  </div>
+                    {href && <p className="mt-3 text-caption font-medium text-accent">Ver su detalle →</p>}
+                  </>
+                );
+                return href ? (
+                  <Link key={p.name} href={href} className={cardClass}>{body}</Link>
+                ) : (
+                  <div key={p.name} className={cardClass}>{body}</div>
                 );
               })}
             </div>

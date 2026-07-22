@@ -62,7 +62,7 @@ type Maps = {
   taskTypeById: Record<string, TaskType>;
 };
 
-function groupBy(sessions: DaySession[], keyOf: (s: DaySession) => { key: string; label: string; sublabel?: string; color?: string }, total: number): Group[] {
+export function groupBy(sessions: DaySession[], keyOf: (s: DaySession) => { key: string; label: string; sublabel?: string; color?: string }, total: number): Group[] {
   const m = new Map<string, Group>();
   const order: string[] = [];
   for (const s of sessions) {
@@ -77,13 +77,10 @@ function groupBy(sessions: DaySession[], keyOf: (s: DaySession) => { key: string
   return out;
 }
 
-export function buildDaySessions(
-  input: { records: TimeRecord[]; recentEntries: TimeRecord[]; entries: LocalEntry[]; myName: string; dayStart: number; now: number },
-  maps: Maps,
-): DaySession[] {
-  const { records, recentEntries, entries, myName, dayStart, now } = input;
-  const dayEnd = dayStart + 86_400_000;
-  const meta = (taskId: string) => {
+// Metadatos de una tarea (proyecto, cliente, pilar, facturable) — la misma resolución para
+// el análisis del día y el de una persona en un rango (lib/person-analytics.ts).
+export function metaFor(maps: Maps) {
+  return (taskId: string) => {
     const t = taskId ? maps.taskById[taskId] : undefined;
     const p = t ? maps.projectById[t.projectId] : undefined;
     const c = t ? maps.clientById[t.clientId] || (p ? maps.clientById[p.clientId] : undefined) : undefined;
@@ -99,6 +96,17 @@ export function buildDaySessions(
       weight: t?.weight,
     };
   };
+}
+
+export type { Maps };
+
+export function buildDaySessions(
+  input: { records: TimeRecord[]; recentEntries: TimeRecord[]; entries: LocalEntry[]; myName: string; dayStart: number; now: number },
+  maps: Maps,
+): DaySession[] {
+  const { records, recentEntries, entries, myName, dayStart, now } = input;
+  const dayEnd = dayStart + 86_400_000;
+  const meta = metaFor(maps);
   const clean = (a?: string) => (a && a.trim() ? a.trim() : "Trabajo enfocado");
 
   const known = new Set<string>();
