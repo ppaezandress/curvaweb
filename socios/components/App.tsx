@@ -1716,14 +1716,113 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec, setToas
 }
 
 /* ---------------- Proyectos (control de pagos) ---------------- */
+// El "gorro" (rol) de cada quien, con color propio para el tablero.
+const GORRA_COLOR: Record<Rol, string> = { P: "--cobalt", E: "--c-banca", A: "--muted" };
+const GORRA_SHORT: Record<Rol, string> = { P: "Piloto", E: "Especialista", A: "Apoyo" };
+const inicial = (n: string) => (n || "?").trim().slice(0, 1).toUpperCase();
+
+/* Tablero del equipo: matriz personas × proyectos, cada celda con la "gorra"
+   (Piloto/Especialista/Apoyo) a color. Ordenado por carga (más chamba arriba,
+   libres abajo). Responde de un vistazo: ¿dónde está cada quien y quién trae
+   más o menos carga? Encargo Andrés 2026-07-23. */
+function TableroEquipo({ st }: { st: State }) {
+  const P = st.params;
+  const PESO: Record<Rol, number> = { P: P.pesoP, E: P.pesoE, A: P.pesoA };
+  const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
+
+  type Alloc = { rol: Rol; monto: number; cerrado: boolean };
+  type Row = { key: string; nombre: string; quien: Quien; allocs: Record<string, Alloc>; carga: number; monto: number; nproy: number };
+  const rowsMap: Record<string, Row> = {};
+  vivos.forEach((p) => {
+    const R = reglasDe(p, P);
+    const res = membersResolved(p, st.roster, R);
+    const r = compute(res, R);
+    const cerrado = (p.estado ?? "") === "cerrado";
+    res.members.forEach((m) => {
+      const key = m.nombre + "|" + m.quien;
+      const row = rowsMap[key] || (rowsMap[key] = { key, nombre: m.nombre, quien: m.quien, allocs: {}, carga: 0, monto: 0, nproy: 0 });
+      const monto = r.people[key]?.trabajo || 0;
+      const ex = row.allocs[p.id];
+      // Si aparece dos veces en el proyecto, nos quedamos con la gorra de más peso.
+      if (!ex) { row.allocs[p.id] = { rol: m.rol, monto, cerrado }; row.nproy += 1; row.monto += monto; }
+      else if (PESO[m.rol] > PESO[ex.rol]) ex.rol = m.rol;
+    });
+  });
+  // Personas del roster sin proyecto → disponibles (para ver "quién tiene menos chamba").
+  st.roster.forEach((rp) => { const key = rp.nombre + "|" + rp.quien; if (!rowsMap[key]) rowsMap[key] = { key, nombre: rp.nombre, quien: rp.quien, allocs: {}, carga: 0, monto: 0, nproy: 0 }; });
+  Object.values(rowsMap).forEach((row) => { row.carga = Object.values(row.allocs).reduce((s, a) => s + PESO[a.rol], 0); });
+  const rows = Object.values(rowsMap).sort((a, b) => b.carga - a.carga || b.nproy - a.nproy || order[a.quien] - order[b.quien] || a.nombre.localeCompare(b.nombre));
+  const maxCarga = Math.max(1, ...rows.map((r) => r.carga));
+  const conChamba = rows.filter((r) => r.nproy > 0);
+  const libres = rows.filter((r) => r.nproy === 0);
+  const cargaClass = (c: number) => c === 0 ? "libre" : c >= maxCarga * 0.66 ? "alta" : c >= maxCarga * 0.34 ? "media" : "baja";
+  const cols = `minmax(140px,190px) repeat(${Math.max(1, vivos.length)}, minmax(96px,1fr)) minmax(116px,140px)`;
+
+  if (vivos.length === 0) return <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}><p className="hint" style={{ marginTop: 0 }}>Aún no hay proyectos con equipo. Arma uno en la <b>Calculadora</b>.</p></div>;
+
+  return (
+    <div className="teamboard rise">
+      <div className="tb-legend">
+        <span className="tb-leg-t">Gorras:</span>
+        {(["P", "E", "A"] as Rol[]).map((rl) => <span key={rl} className="tb-leg-item"><span className="gorra-dot" style={{ background: `var(${GORRA_COLOR[rl]})` }} />{ROLNAME[rl]}</span>)}
+        <span className="tb-leg-sep" />
+        <span className="tb-leg-t">Carga = suma del peso de sus gorras. Más chamba arriba.</span>
+      </div>
+      <div className="tb-scroll">
+        <div className="tb-grid" style={{ gridTemplateColumns: cols }}>
+          {/* Encabezado */}
+          <div className="tb-h tb-sticky">Persona</div>
+          {vivos.map((p) => <div key={p.id} className="tb-h tb-proj"><span className="tb-proj-n">{p.nombre}</span><span className="tb-proj-m">{p.members.length} pers.{(p.estado ?? "") === "cerrado" ? " · cerrado" : ""}</span></div>)}
+          <div className="tb-h tb-carga-h">Carga</div>
+          {/* Filas con chamba */}
+          {conChamba.map((row) => (
+            <div className="tb-rowc" key={row.key} style={{ display: "contents" }}>
+              <div className="tb-person tb-sticky">
+                <span className="tb-avatar" style={{ background: `color-mix(in srgb, var(${roleColor[row.quien]}) 18%, transparent)`, color: `var(${roleColor[row.quien]})` }}>{inicial(row.nombre)}</span>
+                <span className="tb-pn"><b>{row.nombre}</b><span className={"badge " + badgeCls[row.quien]}>{badgeTxt[row.quien]}</span></span>
+              </div>
+              {vivos.map((p) => { const a = row.allocs[p.id]; return (
+                <div key={p.id} className="tb-cell">
+                  {a ? <span className={"gorra g-" + a.rol + (a.cerrado ? " cerr" : "")} style={{ background: `color-mix(in srgb, var(${GORRA_COLOR[a.rol]}) 15%, transparent)`, color: `var(${GORRA_COLOR[a.rol]})`, borderColor: `color-mix(in srgb, var(${GORRA_COLOR[a.rol]}) 35%, transparent)` }} title={`${GORRA_SHORT[a.rol]} · ${fmtMXN(a.monto)}`}>{ROLNAME[a.rol]}</span> : <span className="tb-empty">·</span>}
+                </div>
+              ); })}
+              <div className="tb-carga">
+                <div className={"tb-bar " + cargaClass(row.carga)}><i style={{ width: Math.max(6, row.carga / maxCarga * 100) + "%" }} /></div>
+                <span className="tb-carga-n">{row.nproy} proy · {fmtMXN(row.monto)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {libres.length > 0 && (
+        <div className="tb-libres">
+          <span className="tb-libres-t">Disponibles · sin proyecto ahora</span>
+          <div className="tb-libres-list">
+            {libres.map((row) => <span key={row.key} className="tb-libre-chip"><span className="tb-avatar sm" style={{ background: `color-mix(in srgb, var(${roleColor[row.quien]}) 18%, transparent)`, color: `var(${roleColor[row.quien]})` }}>{inicial(row.nombre)}</span>{row.nombre}</span>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Proyectos({ st, update, setActive, otroNombre, log }: { st: State; update: (fn: (s: State) => State) => void; setActive: (id: string) => void; otroNombre?: string; log?: (act: string, det: string) => void }) {
   const [open, setOpen] = useState<string | null>(st.activeId);
+  const [vista, setVista] = useState<"pagos" | "equipo">("pagos");
   const visibles = st.projects.filter((p) => !p.borrador);   // los borradores viven solo en la Calculadora
   // Si ya hay un borrador en curso, contínualo (no lo perdemos); si no, crea uno en blanco.
   const nuevo = () => { const ex = st.projects.find((x) => x.borrador); if (ex) { setActive(ex.id); return; } const nb = makeDraft(st.projects); update((s) => { s.projects.push(nb); return s; }); setActive(nb.id); };
   return (
     <>
-      <div className="page-h"><div><h1>Proyectos</h1><p>Registra cada pago que entra y te digo cuánto mandar a cada caja.</p></div><button className="btn primary" onClick={nuevo}><Plus size={15} /> Nuevo</button></div>
+      <div className="page-h"><div><h1>Proyectos</h1><p>{vista === "pagos" ? "Registra cada pago que entra y te digo cuánto mandar a cada caja." : "Dónde está cada quien y quién trae más o menos carga."}</p></div>{vista === "pagos" && <button className="btn primary" onClick={nuevo}><Plus size={15} /> Nuevo</button>}</div>
+      <div className="unit-bar" style={{ marginBottom: 16 }}>
+        <span className="unit-cap">Ver</span>
+        <div className="chips">
+          <button className="chip-btn sm" aria-pressed={vista === "pagos"} onClick={() => setVista("pagos")}>Pagos</button>
+          <button className="chip-btn sm" aria-pressed={vista === "equipo"} onClick={() => setVista("equipo")}>Equipo · tablero</button>
+        </div>
+      </div>
+      {vista === "equipo" ? <TableroEquipo st={st} /> : (
       <div className="proj-list rise">
         {visibles.length === 0 && (
           <div className="card" style={{ textAlign: "center", padding: "40px 24px" }}>
@@ -1734,6 +1833,7 @@ function Proyectos({ st, update, setActive, otroNombre, log }: { st: State; upda
           <ProyectoCard key={p.id} p={p} params={st.params} roster={st.roster} gastos={st.gastos} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} update={update} setActive={setActive} otroNombre={otroNombre} log={log} />
         ))}
       </div>
+      )}
     </>
   );
 }
