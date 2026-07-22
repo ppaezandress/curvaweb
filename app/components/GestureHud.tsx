@@ -42,9 +42,10 @@ export function GestureHud({ candidate, progress, cooling, hint, videoRef, onSto
       className={
         standalone
           ? "inline-flex"
-          : // Sobre el dock del cronómetro, a la derecha. En móvil no se ofrece: la cámara
-            // frontal del teléfono no es el contexto de esta función.
-            "pointer-events-none fixed bottom-4 right-4 z-40 hidden sm:flex"
+          : // A la derecha, por ENCIMA del botón de Feedback (que en escritorio vive en
+            // bottom-5 right-4): si se pisan, el HUD tapa una acción del producto. En móvil
+            // no se ofrece — la cámara frontal del teléfono no es el contexto de esto.
+            "pointer-events-none fixed bottom-20 right-4 z-40 hidden sm:flex"
       }
     >
       <motion.div
@@ -140,7 +141,7 @@ export function GestureError({ message, onDismiss }: { message: string; onDismis
       initial="hidden"
       animate="visible"
       exit="exit"
-      className="pointer-events-auto fixed bottom-4 right-4 z-40 hidden max-w-xs items-start gap-2.5 rounded-hero border border-line bg-surface px-4 py-3 text-sm text-fg shadow-float sm:flex"
+      className="pointer-events-auto fixed bottom-20 right-4 z-40 hidden max-w-xs items-start gap-2.5 rounded-hero border border-line bg-surface px-4 py-3 text-sm text-fg shadow-float sm:flex"
     >
       <VideoOff size={16} className="mt-0.5 shrink-0 text-muted" />
       <span className="min-w-0 flex-1">{message}</span>

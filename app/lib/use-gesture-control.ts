@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { HandLandmarker } from "@mediapipe/tasks-vision";
 import { gestureFrom, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
+import { reportClientError } from "@/lib/report-error";
 
 // Motor del control por gestos. Todo ocurre DENTRO del navegador: se lee la cámara, se buscan
 // las manos y se decide el comando. Ningún cuadro se guarda ni se envía a ningún lado.
@@ -102,6 +103,9 @@ export function useGestureControl(opts: {
     if (status !== "starting") return;
 
     let cancelled = false;
+    // Dónde falló: el motor de reconocimiento o la cámara. Cambia por completo qué se le
+    // dice a la persona (y qué puede hacer al respecto).
+    let stage: "engine" | "camera" = "engine";
 
     (async () => {
       try {
@@ -122,6 +126,7 @@ export function useGestureControl(opts: {
         const landmarker = await build("GPU").catch(() => build("CPU"));
         if (cancelled) { landmarker.close(); return; }
         landmarkerRef.current = landmarker;
+        stage = "camera";
 
         // Resolución baja a propósito: para contar dedos sobra, y cuesta mucho menos.
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -142,16 +147,26 @@ export function useGestureControl(opts: {
       } catch (e) {
         if (cancelled) return;
         teardown();
+        // Al usuario se le dice qué pasó y qué puede hacer; el detalle técnico se va a la
+        // bitácora. Volcar el mensaje crudo de MediaPipe o del navegador ("Not supported")
+        // no ayuda a nadie.
         const name = e instanceof DOMException ? e.name : "";
         if (name === "NotAllowedError" || name === "SecurityError") {
           setStatus("denied");
           setError("No diste permiso de cámara. Puedes activarlo en el candado de la barra de direcciones.");
-        } else if (name === "NotFoundError") {
+        } else if (stage === "camera") {
           setStatus("unsupported");
-          setError("No encontré ninguna cámara conectada.");
+          setError(
+            name === "NotFoundError"
+              ? "No encontré ninguna cámara conectada."
+              : "No pude usar la cámara. Revisa que no la tenga tomada otra app (Zoom, Meet, Photo Booth).",
+          );
+          reportClientError("gesture-camera", e, { stage });
         } else {
+          // Falla del motor de reconocimiento, casi siempre WebGL no disponible.
           setStatus("unsupported");
-          setError(e instanceof Error ? e.message : "No se pudo iniciar el control por gestos.");
+          setError("Tu navegador no pudo iniciar el reconocimiento de manos. Suele ser la aceleración por hardware desactivada; en Chrome está en Configuración → Sistema.");
+          reportClientError("gesture-engine", e, { stage });
         }
       }
     })();
