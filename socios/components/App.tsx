@@ -8,7 +8,7 @@ import {
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
   cajaLabel, CAJA_ORDER, isSocio,
-  repartoPorMes, ticketSinIVA, baseBolsaDesglose, reglasDifierenDinero,
+  repartoPorMes, ticketSinIVA, baseBolsaDesglose, reglasDifierenDinero, isrReservaDe,
   todayISO, addMonths, mesLabel, mesDe, membersResolved, reglasDe,
   REGLAS_DEFAULT, IVA, ROLNAME, type Proyecto, type Reglas, type Miembro, type Quien, type Pago, type ReparteMes,
   type EstadoProyecto, type Rol, type CajaKind, type CajaGrupo, type DatosBancarios,
@@ -468,21 +468,24 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   // Una sola pasada alimenta: tiles del mes, ranking del mes, flujo y Cortes. Todo
   // "por mes" (devengado), sin mezclar bases de tiempo como antes.
   type PplRow = { nombre: string; quien: Quien; trabajo: number; extra: number; comision: number };
-  type MesAgg = { equipo: number; socios: number; utilSocios: number; utilSociosISR: number; banca: number; caja: number; gastos: number; ppl: Record<string, PplRow>; proys: Set<string> };
-  const nuevoMes = (): MesAgg => ({ equipo: 0, socios: 0, utilSocios: 0, utilSociosISR: 0, banca: 0, caja: 0, gastos: 0, ppl: {}, proys: new Set() });
+  type MesAgg = { equipo: number; socios: number; utilSocios: number; baseISR: number; banca: number; caja: number; gastos: number; ppl: Record<string, PplRow>; proys: Set<string> };
+  const nuevoMes = (): MesAgg => ({ equipo: 0, socios: 0, utilSocios: 0, baseISR: 0, banca: 0, caja: 0, gastos: 0, ppl: {}, proys: new Set() });
   const porMes: Record<string, MesAgg> = {};
   vivos.forEach((p) => {
     const R = reglasDe(p, st.params);
     const rm = repartoPorMes(membersResolved(p, st.roster, R), R);
     const inicio = p.fechaInicio || todayISO();
+    const plazoNp = Math.max(1, Math.floor(p.plazoMeses || 1));
     rm.forEach((mm) => {
       const ym = addMonths(inicio, mm.mes - 1);
       const Mm = (porMes[ym] = porMes[ym] || nuevoMes());
       // mm.banca YA incluye la caja de ahorro; la caja es solo la del proyecto.
       Mm.banca += mm.banca; Mm.caja += mm.cajaProyecto; Mm.proys.add(p.id);
+      // ISR = % sobre la FACTURACIÓN (base): acumula la porción del ticket de este mes.
+      if (p.descontarISR) Mm.baseISR += (Math.max(0, +p.ticket || 0)) / plazoNp;
       Object.values(mm.personas).forEach((pe) => {
         const v = pe.trabajo + pe.extra + pe.comision;
-        if (isSocio(pe.quien)) { Mm.socios += v; Mm.utilSocios += pe.extra; if (p.descontarISR) Mm.utilSociosISR += pe.extra; } else Mm.equipo += v;
+        if (isSocio(pe.quien)) { Mm.socios += v; Mm.utilSocios += pe.extra; } else Mm.equipo += v;
         const k = pe.nombre + "|" + pe.quien;
         const a = (Mm.ppl[k] = Mm.ppl[k] || { nombre: pe.nombre, quien: pe.quien, trabajo: 0, extra: 0, comision: 0 });
         a.trabajo += pe.trabajo; a.extra += pe.extra; a.comision += pe.comision;
@@ -499,9 +502,10 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   const selYM = allYM.includes(ymSel) ? ymSel : allYM.includes(curYM) ? curYM : (allYM[0] || curYM);
   const M = porMes[selYM] || nuevoMes();
   const ingresoMes = M.equipo + M.socios + M.banca + M.caja;
-  // ISR solo sobre la fracción de utilidad de socios que viene de proyectos con "Descontar ISR".
-  const isrFrac = M.utilSocios > 0 ? M.utilSociosISR / M.utilSocios : 0;
-  const netoMes = Math.max(0, M.utilSocios - overhead) * (1 - isrFrac * st.params.imp / 100);
+  // ISR = % sobre la facturación de los proyectos con "Descontar ISR" (base × tasa),
+  // apartado del neto de socios. Antes se calculaba mal sobre la utilidad de socios.
+  const isrReservaMes = M.baseISR * st.params.imp / 100;
+  const netoMes = Math.max(0, M.utilSocios - overhead - isrReservaMes);
   const rows = Object.values(M.ppl).filter((a) => a.trabajo + a.extra + a.comision > 0.5).sort((a, b) => (b.trabajo + b.extra + b.comision) - (a.trabajo + a.extra + a.comision) || order[a.quien] - order[b.quien]);
   const proysDelMes = vivos.filter((p) => M.proys.has(p.id));
 
@@ -582,7 +586,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
         <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · proyectado`} tip="Lo que los proyectos activos reparten en el mes elegido (equipo + socios + Banca + caja), según su plazo. Es proyectado (devengado), no lo cobrado." />
         <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
         <Tile k="k-banca" l="A la Banca del mes" v={fmtMXN(M.banca)} p="colchón" tip="Lo que va al colchón de CURVA en el mes elegido (caja de ahorro + sombrero de socio)." />
-        <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR (solo de los proyectos con “Descontar ISR” activo)." />
+        <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR (tasa sobre la facturación de los proyectos con “Descontar ISR” activo)." />
       </div>
       <div className="two rise r2">
         <div className="card">
@@ -1288,7 +1292,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                     <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
                     {plazoN > 1 && <div className="price-mo">= <b>{fmtMXN(total / plazoN)}</b> / mes <span>· {plazoN} meses (total {fmtMXN(total)})</span></div>}
                   </div>
-                  <div className="field"><label>Impuestos <span className="tip" data-tip="Cada botón es un interruptor: si no lo picas, no se descuenta. Descontar IVA = el precio que escribes YA trae IVA, la app saca la base (16%) y reparte solo esa base; el IVA es de Hacienda. Descontar ISR = aparta la tasa (editable en Reglas) del neto de socios; no mueve el reparto ni lo que paga el cliente."><Info /></span></label>
+                  <div className="field"><label>Impuestos <span className="tip" data-tip="Cada botón es un interruptor: si no lo picas, no se descuenta. Descontar IVA = el precio que escribes YA trae IVA, la app saca la base (16%) y reparte solo esa base; el IVA es de Hacienda. Descontar ISR = aparta la tasa (editable en Reglas) sobre tu facturación (la base, sin IVA) para el SAT; sale del neto de socios y no mueve el reparto ni lo que paga el cliente."><Info /></span></label>
                     <div className="chips">
                       <button className="chip-btn" aria-pressed={conIVA} onClick={() => setModo(conIVA ? "sin" : "incluido")}>Descontar IVA</button>
                       <button className="chip-btn" aria-pressed={!!active.descontarISR} onClick={() => updateActive((p) => { p.descontarISR = !p.descontarISR; })}>Descontar ISR ({P.imp}%)</button>
@@ -1297,7 +1301,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                       <div className="iva-row"><span>Base (sin IVA) <b className="iva-tag">se reparte</b></span><b style={{ color: "var(--cobalt)" }}><span key={fmtMXN(base)} className="num-anim">{fmtMXN(base)}</span></b></div>
                       <div className="iva-row muted"><span>IVA (16%){conIVA ? "" : " · apagado"}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></b></div>
-                      {active.descontarISR && <div className="iva-row muted"><span>ISR reservado ({P.imp}%) · del neto de socios</span><span key={fmtMXN(r.utilKept * P.imp / 100)} className="num-anim">−{fmtMXN(r.utilKept * P.imp / 100)}</span></div>}
+                      {active.descontarISR && <div className="iva-row muted"><span>ISR reservado ({P.imp}% de la base) · para el SAT</span><span key={fmtMXN(isrReservaDe(r.t, P))} className="num-anim">−{fmtMXN(isrReservaDe(r.t, P))}</span></div>}
                     </div>
                   </div>
                 </>
@@ -1459,8 +1463,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {bd("strong", "Utilidad a repartir (socios)", r.utilKept)}
                 {bd("sub", `→ ${P.nombreA} (${P.split}%)`, r.sAutil)}
                 {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, r.sButil)}
-                {active.descontarISR && P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}%)`, -(r.utilKept * P.imp / 100))}
-                {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept * (1 - P.imp / 100))}
+                {active.descontarISR && P.imp > 0 && bd("sub", `− ISR reservado (${P.imp}% de la facturación)`, -isrReservaDe(r.t, P))}
+                {active.descontarISR && P.imp > 0 && bd("strong", "Utilidad NETA a repartir", r.utilKept - isrReservaDe(r.t, P))}
               </div>
               <div className="card">
                 <h2>A dónde va cada peso del ingreso{porMes ? " · al mes" : ""}</h2>
@@ -2620,7 +2624,7 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
           {pct("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
           {pct("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
           {pct("imp", "Tasa de ISR (% que reservas)", 0, 20, 0.5)}
-          <p className="hint" style={{ marginTop: -2 }}>La tasa que se aparta para el SAT. Se prende <b>proyecto por proyecto</b> con el botón “Descontar ISR” de la Calculadora (si no lo picas, ese proyecto no descuenta). Solo afecta el <b>neto</b> que ves, no mueve el reparto. En <b>RESICO</b> Persona Física va por tramos ~1.0–2.5%; arranca en <b>1.5%</b>. <b>Confírmalo con tu contadora.</b></p>
+          <p className="hint" style={{ marginTop: -2 }}>La tasa que se aparta para el SAT, calculada sobre tu <b>facturación</b> (la base, sin IVA) — así lo grava RESICO. Se prende <b>proyecto por proyecto</b> con el botón “Descontar ISR” de la Calculadora (si no lo picas, ese proyecto no descuenta). Sale del <b>neto de socios</b> y no mueve el reparto. En <b>RESICO</b> Persona Física va por tramos ~1.0–2.5%; arranca en <b>1.5%</b>. <b>Confírmalo con tu contadora.</b></p>
         </div>
         <div className="card"><h2>Comisión de origen</h2>
           {pct("comisPct", "% del margen a quien trae el lead", 0, 25)}

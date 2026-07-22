@@ -313,6 +313,11 @@ export type ReparteMes = {
 // Neto tras reservar ISR (Reglas.imp = % de ISR, editable; RESICO por confirmar).
 // aplicaISR gobierna si se descuenta (viene del toggle por proyecto). Sin él, neto = bruto.
 export const netoDe = (bruto: number, R: Reglas, aplicaISR = true) => (bruto || 0) * (1 - (aplicaISR ? (+R.imp || 0) : 0) / 100);
+// ISR que CURVA aparta para el SAT: % sobre la FACTURACIÓN (la base t, sin IVA), NO
+// sobre la utilidad de socios. En RESICO el ISR grava el INGRESO total, así que es un
+// solo monto por proyecto = base × tasa. Sale del neto de socios (son quienes lo pagan).
+// Decisión Andrés 2026-07-23 (antes se calculaba mal, sobre utilKept → apartaba de menos).
+export const isrReservaDe = (t: number, R: Reglas, aplica = true) => aplica ? Math.max(0, +t || 0) * (+R.imp || 0) / 100 : 0;
 
 // Miembros activos en el mes m (1-indexado). Sin agenda → los mismos todos los meses.
 export const miembrosDelMes = (pr: Proyecto, m: number): Miembro[] =>
