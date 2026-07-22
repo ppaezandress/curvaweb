@@ -129,7 +129,7 @@ export const REGLAS_DEFAULT: Reglas = {
   // imp = tasa de ISR que se descuenta cuando el proyecto tiene "Descontar ISR"
   // activo. Default 1.5% (RESICO Persona Física, tramo típico). Editable en Reglas;
   // confírmalo con la contadora. Decisión 2026-07-18 (ISR opcional por proyecto).
-  alpha: 60, pool: 0, beta: 0, split: 60, ahorro: 15, imp: 1.5,
+  alpha: 60, pool: 10, beta: 0, split: 60, ahorro: 15, imp: 1.5,
   comisPct: 10, comisTope: 30000,
   pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
   brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,

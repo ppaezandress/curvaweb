@@ -23,7 +23,7 @@ type RosterPerson = { id: string; nombre: string; quien: Quien };
 // Evento de la bitácora (historial compartido): quién hizo qué y cuándo. Se sincroniza.
 type LogEvent = { id: string; ts: number; who: "A" | "B" | null; act: string; det: string };
 type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios; bitacora?: LogEvent[] };
-const RULES_VERSION = 8; // sube esto cuando una decisión deba re-aplicarse a estados guardados
+const RULES_VERSION = 9; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 // Saldo que YA existía en cada caja de Revolut antes de que la app empezara a
 // contar (el socio lo captura una vez; se SUMA a lo que la app calcula).
 const DEF_SALDOS: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0 };
@@ -266,6 +266,7 @@ export default function App() {
       if ((s.rulesVersion || 0) < 3) { merged.params.metaBancaMonto = 48000; } // meta de Banca realista
       if ((s.rulesVersion || 0) < 6) { merged.params.imp = 2.5; }               // ISR realista (RESICO), antes 30% placeholder
       if ((s.rulesVersion || 0) < 8) { merged.params.imp = 1.5; }               // ISR opcional por proyecto → tasa 1.5% (editable)
+      if ((s.rulesVersion || 0) < 9) { merged.params.pool = 10; }               // Bono del Núcleo encendido al 10% (decisión Andrés 2026-07-23)
       if ((s.rulesVersion || 0) < 4) {                                        // control de pagos: campos nuevos
         merged.projects = merged.projects.map((p) => ({
           ...p,
@@ -309,6 +310,7 @@ export default function App() {
           if (rv < 3) params.metaBancaMonto = 48000;
           if (rv < 6) params.imp = 2.5;   // ISR realista (RESICO), antes 30% placeholder
           if (rv < 8) params.imp = 1.5;   // ISR opcional por proyecto → tasa 1.5% (editable)
+          if (rv < 9) params.pool = 10;   // Bono del Núcleo encendido al 10%
           let projects: Proyecto[] = (srv.projects || []);
           if (rv < 4) projects = projects.map(migrateProject);
           if (rv < 7) projects = freezeLegacyReglas(projects);   // congela guardados del server (verdad PROD)
@@ -2483,11 +2485,10 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         <p className="foot"><b>Núcleo</b> = gente de planta (cobra completo). <b>Nuevo</b> = junior en formación (cobra ×{P.smNuevo} mientras sube). Renombrar aquí actualiza a esa persona en todos los proyectos.</p>
       </div>
 
-      <div className="card" style={{ borderStyle: "dashed", opacity: 0.95 }}>
-        <h2>A futuro — aún no activo</h2>
-        <p className="hint" style={{ marginTop: 0 }}>Cosas que el modelo puede hacer, pero que <b>hoy dejamos apagadas</b> para salir e ir iterando sin prometer de más. Préndelas cuando estén seguros.</p>
-        {pct("pool", "Bono del Núcleo — % de la ganancia repartido al equipo de planta", 0, 25)}
-        <p className="foot">Es un extra para la gente de planta (Ivana, Lomba, Yannick, Diana) además de su pago por trabajo. Se prende cuando tengan un Núcleo fijo y la Banca lo aguante. Hoy en <b>0%</b> = no reparte bono.</p>
+      <div className="card">
+        <h2>Bono del Núcleo</h2>
+        {pct("pool", "Bono del Núcleo — % de la utilidad de socios para el Núcleo", 0, 25)}
+        <p className="foot">Un extra para tu gente de planta (Núcleo) <b>además</b> de su pago por trabajo. Sale de tu utilidad y la de {P.nombreB}, y se reparte en partes iguales entre el Núcleo. {P.pool > 0 ? <>Prendido al <b>{P.pool}%</b>.</> : "Hoy apagado."} Aplica a proyectos <b>nuevos</b>; los ya guardados conservan su reparto congelado.</p>
       </div>
 
       <div className="card reset-card">
