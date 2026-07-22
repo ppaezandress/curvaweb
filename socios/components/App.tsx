@@ -1302,6 +1302,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                       <div className="iva-row muted"><span>IVA (16%){conIVA ? "" : " · apagado"}</span><span key={fmtMXN(iva)} className="num-anim">{fmtMXN(iva)}</span></div>
                       <div className="iva-row total"><span>Total que paga el cliente</span><b><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></b></div>
                       {active.descontarISR && <div className="iva-row muted"><span>ISR reservado ({P.imp}% de la base) · para el SAT</span><span key={fmtMXN(isrReservaDe(r.t, P))} className="num-anim">−{fmtMXN(isrReservaDe(r.t, P))}</span></div>}
+                      {active.descontarISR && P.imp > 0 && <div className="iva-row total"><span>Te queda (después de IVA e ISR)</span><b style={{ color: "var(--pos)" }}><span key={fmtMXN(base - isrReservaDe(base, P))} className="num-anim">{fmtMXN(base - isrReservaDe(base, P))}</span></b></div>}
                     </div>
                   </div>
                 </>
