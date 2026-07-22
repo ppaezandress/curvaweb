@@ -103,27 +103,17 @@ export function initDiagnostico(): void {
     if (tint) tint.style.opacity = String(Math.min(n / 8, 1) * 0.95);
   };
 
-  // Relámpago DE FONDO al SELECCIONAR: un destello suave detrás de las tarjetas (la tormenta
-  // se enciende y la ficha translúcida brilla desde atrás). Sin bolt dibujado encima. Doble
-  // parpadeo (como un relámpago real) y se apaga. Un <span> por toque, se autolimpia.
-  const spawnStorm = (x: number, y: number) => {
-    if (reduce || !overlay) return;
-    // Resplandor de impacto (detrás) + canal de relámpago irregular con bifurcación.
-    const glow = document.createElement('span');
-    glow.className = 'dx-strike-glow';
-    glow.style.left = `${x}px`;
-    glow.style.top = `${y}px`;
-    const bolt = document.createElement('span');
-    bolt.className = 'dx-strike-bolt';
-    bolt.style.left = `${x}px`;
-    bolt.style.top = `${y}px`;
-    bolt.innerHTML =
-      '<svg viewBox="0 0 40 120" fill="none" aria-hidden="true">' +
-      '<path class="main" d="M23 3 L16 27 L25 33 L15 55 L23 61 L13 85 L20 91 L10 118"/>' +
-      '<path class="fork" d="M15 55 L6 71 L11 77"/>' +
-      '</svg>';
-    overlay.append(glow, bolt);
-    setTimeout(() => { glow.remove(); bolt.remove(); }, 700);
+  // Realce de toque: un brillo suave que NACE donde tocas y se asienta en la ficha (contenido,
+  // sin caricatura). Fija --rx/--ry (punto tocado, %) y reinicia la animación con un class toggle.
+  const tapGlow = (cloud: HTMLElement, e: MouseEvent) => {
+    if (reduce) return;
+    const r = cloud.getBoundingClientRect();
+    const rx = (e.clientX ? ((e.clientX - r.left) / r.width) * 100 : 50);
+    const ry = (e.clientY ? ((e.clientY - r.top) / r.height) * 100 : 50);
+    cloud.style.setProperty('--rx', `${rx}%`);
+    cloud.style.setProperty('--ry', `${ry}%`);
+    cloud.classList.remove('dx-tap');
+    requestAnimationFrame(() => requestAnimationFrame(() => cloud.classList.add('dx-tap')));
   };
 
   clouds.forEach((cloud) => {
@@ -133,14 +123,12 @@ export function initDiagnostico(): void {
       if (on) {
         seleccion.delete(id);
         cloud.setAttribute('aria-pressed', 'false');
+        cloud.classList.remove('dx-tap');
       } else {
-        // Feedback de selección = CSS (pop + glow + check) + un rayo fino en el punto tocado.
+        // Feedback de selección = CSS (pop + glow + check) + realce suave desde el punto tocado.
         seleccion.add(id);
         cloud.setAttribute('aria-pressed', 'true');
-        // Punto del toque: coords del mouse, o el centro de la ficha (teclado/sin coords).
-        const me = e as MouseEvent;
-        if (me.clientX || me.clientY) spawnStorm(me.clientX, me.clientY);
-        else { const r = cloud.getBoundingClientRect(); spawnStorm(r.left + r.width / 2, r.top + r.height / 2); }
+        tapGlow(cloud, e as MouseEvent);
       }
       syncDock();
     });

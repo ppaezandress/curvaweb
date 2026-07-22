@@ -321,11 +321,22 @@ const entrada = (i: number) => {
   }
   .dx-cloud[aria-pressed="true"] .dx-cloud-shape { opacity: 1; }
   @keyframes dx-cloud-pop { 0%{transform:scale(.97)} 40%{transform:scale(1.06)} 70%{transform:scale(.99)} 100%{transform:scale(1)} }
-  .dx-cloud-check { position: absolute; top: -.6rem; right: -.4rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--cat); box-shadow: 0 6px 16px -4px var(--cat); transform: scale(0); transition: transform .35s var(--e-out); }
+  .dx-cloud-check { position: absolute; z-index: 2; top: -.6rem; right: -.4rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--cat); box-shadow: 0 6px 16px -4px var(--cat); transform: scale(0); transition: transform .35s var(--e-out); }
   .dx-cloud[aria-pressed="true"] .dx-cloud-check { transform: scale(1); }
   .dx-cloud-check svg { width: .85rem; height: .85rem; stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .4s var(--e-out) .1s; }
   .dx-cloud[aria-pressed="true"] .dx-cloud-check svg { stroke-dashoffset: 0; }
-  .dx-cloud-text { position: relative; }
+  .dx-cloud-text { position: relative; z-index: 2; }
+
+  /* Realce de toque: brillo suave que NACE en el punto tocado (--rx/--ry set por JS) y se
+     asienta. Contenido en la ficha (inset:0), debajo del texto/check. Reiniciable via .dx-tap. */
+  .dx-cloud::after {
+    content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(9rem 9rem at var(--rx, 50%) var(--ry, 50%),
+      rgba(224, 244, 255, 0.55), rgba(125, 211, 252, 0.16) 42%, transparent 70%);
+    opacity: 0;
+  }
+  .dx-cloud.dx-tap::after { animation: dx-tap-glow 0.6s var(--e-out); }
+  @keyframes dx-tap-glow { 0% { opacity: 0; } 22% { opacity: 0.9; } 100% { opacity: 0; } }
 
   /* colapso al revelar */
   .dx-cloudfield.collapsing .dx-cloud { transition: transform .6s var(--e-io), opacity .6s var(--e-out), filter .6s; animation: none; }
@@ -416,61 +427,5 @@ const entrada = (i: number) => {
     .dx-result.lit .dx-sun { animation: none; opacity: .5; }
     .dx-result.lit .dx-result-inner > * { animation: none; opacity: 1; transform: none; }
     .dx-urg-fill, .dx-charge-fill { transition: none; }
-  }
-</style>
-
-<!-- GLOBAL: el destello lo crea el JS con createElement, así que su CSS NO puede ser scoped
-     (Astro no le pondría el atributo de scope al elemento dinámico → el selector no matchea).
-     Por eso vive aquí en un bloque is:global. -->
-<style is:global>
-  /* Relámpago de FONDO al tocar una ficha: un destello suave DETRÁS de las tarjetas (z:1, los
-     paneles son z:3). La ficha translúcida se enciende desde atrás como cuando un relámpago
-     alumbra tras las nubes. Doble parpadeo (como un rayo real) y se apaga. Gradiente suave
-     (sin blur → el scale va por el compositor, 60fps). */
-  /* Relámpago REAL detrás de las tarjetas (z:1 < paneles z:3) + mix-blend screen → brilla
-     DENTRO de la tormenta y a través de la ficha translúcida. Canal irregular con una
-     bifurcación (no un zigzag de ícono), fino, con glow en capas, y doble parpadeo como un
-     rayo de verdad. La punta cae en el punto tocado; el canal sube tras la ficha. */
-  .dx-strike-bolt {
-    position: fixed; z-index: 1; pointer-events: none;
-    margin: -6.6rem 0 0 -1.1rem; color: #eef9ff; will-change: opacity;
-    filter:
-      drop-shadow(0 0 2px rgba(238, 249, 255, 0.95))
-      drop-shadow(0 0 8px rgba(125, 211, 252, 0.85))
-      drop-shadow(0 0 20px rgba(56, 189, 248, 0.5));
-    mix-blend-mode: screen;
-    animation: dx-strike-flick 0.5s ease-out forwards;
-  }
-  .dx-strike-bolt svg { width: 2.2rem; height: 6.6rem; display: block; }
-  .dx-strike-bolt path { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 240; stroke-dashoffset: 240; animation: dx-strike-draw 0.12s linear forwards; }
-  .dx-strike-bolt path.main { stroke-width: 1.6; }
-  .dx-strike-bolt path.fork { stroke-width: 1.1; opacity: 0.75; animation-delay: 0.05s; }
-  @keyframes dx-strike-draw { to { stroke-dashoffset: 0; } }
-  /* Doble parpadeo = firma de un relámpago (destello, casi apaga, re-destella, se apaga). */
-  @keyframes dx-strike-flick {
-    0%   { opacity: 0; }
-    9%   { opacity: 1; }
-    18%  { opacity: 0.28; }
-    30%  { opacity: 0.95; }
-    52%  { opacity: 0.12; }
-    100% { opacity: 0; }
-  }
-
-  /* Resplandor suave del impacto, detrás del canal (donde cae el rayo). */
-  .dx-strike-glow {
-    position: fixed; z-index: 1; pointer-events: none;
-    width: 15rem; height: 15rem; margin: -7.5rem 0 0 -7.5rem; border-radius: 50%;
-    background: radial-gradient(circle, rgba(206, 236, 255, 0.5), rgba(56, 189, 248, 0.14) 40%, transparent 68%);
-    mix-blend-mode: screen; will-change: opacity, transform;
-    animation: dx-strike-glow-a 0.55s ease-out forwards;
-  }
-  @keyframes dx-strike-glow-a {
-    0%   { opacity: 0;   transform: scale(0.6); }
-    15%  { opacity: 0.9; }
-    32%  { opacity: 0.4; }
-    100% { opacity: 0;   transform: scale(1.12); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .dx-strike-bolt, .dx-strike-glow { animation: none; opacity: 0; }
   }
 </style>
