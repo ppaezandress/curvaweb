@@ -628,15 +628,15 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
       <div className="tiles rise">
         <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · ${vista === "real" ? "cobrado real" : "proyectado"}`} tip={vista === "real" ? "Lo que de VERDAD entró en el mes elegido (los pagos cobrados), repartido entre equipo + socios + Banca + caja." : "Lo que los proyectos activos reparten en el mes elegido según su plazo (proyectado/devengado), no lo cobrado."} />
         <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
-        <Tile k="k-banca" l="A la Banca del mes" v={fmtMXN(M.banca)} p="colchón" tip="Lo que va al colchón de CURVA en el mes elegido (caja de ahorro + sombrero de socio)." />
+        <Tile k="k-banca" l="Al colchón del mes" v={fmtMXN(M.banca)} p="Caja de ahorro + Banca" tip="El ahorro total de CURVA este mes. Son DOS cuentas de Revolut: la Caja de ahorro (el % que apartas de cada proyecto) y La Banca (el sombrero de socio, solo cuando tú o Balmo trabajan). El Panel las suma; en Cajas van por separado." />
         <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR (tasa sobre la facturación de los proyectos con “Descontar ISR” activo)." />
       </div>
       <div className="two rise r2">
         <div className="card">
-          <h2>Banca — colchón de CURVA</h2>
+          <h2>Colchón de CURVA (ahorro)</h2>
           <div className="prog"><i style={{ width: Math.min(100, M.banca / (meta || 1) * 100) + "%" }} /></div>
           <div className="prog-lbl"><span>{mesLabel(selYM)}: <b>{fmtMXN(M.banca)}</b></span><span>Meta mensual: <b>{fmtMXN(meta)}</b></span></div>
-          <p className="foot">La Banca la alimentan el sombrero de socio y la caja de ahorro. Colchón de emergencia de CURVA y trampolín para pasar a alguien a nómina. Meta por mes: <b>{fmtMXN(meta)}</b>.</p>
+          <p className="foot">El ahorro de CURVA se guarda en <b>dos cuentas</b>: la <b>Caja de ahorro</b> (un % del margen de cada proyecto) y <b>La Banca</b> (el sombrero de socio, cuando tú o Balmo trabajan un proyecto). Juntas son el colchón de emergencia y el trampolín para pasar a alguien a nómina. Meta por mes: <b>{fmtMXN(meta)}</b>.</p>
         </div>
         <div className="card"><h2>Alertas</h2>{alerts.map((a, i) => <div key={i} className={"alert " + a[0]}>{a[1]}</div>)}</div>
       </div>
