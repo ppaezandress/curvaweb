@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Camera, CameraOff } from "lucide-react";
 import { useGestureControl } from "@/lib/use-gesture-control";
 import { unlockAudio, playForAction } from "@/lib/gestures/sound";
-import { isSoundOn } from "@/lib/gesture-prefs";
+import { isSoundOn, markOnboarded } from "@/lib/gesture-prefs";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/recognizer";
 
 // Laboratorio del control por gestos. Existe para UNA decisión honesta: ¿el modelo entrenado
@@ -84,7 +84,7 @@ export default function LabGestosPage() {
           </p>
         </div>
         <button
-          onClick={running ? stop : () => { unlockAudio(); start(); }}
+          onClick={running ? stop : () => { unlockAudio(); markOnboarded(); start(); }}
           className={`focus-ring inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
             running ? "border border-line bg-surface text-fg hover:border-danger/40 hover:text-danger" : "bg-accent text-white hover:opacity-90"
           }`}
