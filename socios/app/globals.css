@@ -694,35 +694,7 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .firma-picker{display:flex;align-items:center;gap:6px;margin-right:auto;font-size:13px;color:var(--ink-2)}
 .firma-picker .btn{padding:6px 12px;font-size:13px}
 
-@media print{
-  @page{size:A4;margin:10mm 13mm}
-  html{background:#fff}body{background:#fff}body::before{display:none}
-  .side,.pdf-toolbar{display:none!important}
-  .pdf-page{max-width:none;margin:0;padding:0}
-  /* Sin min-height:100vh (forzaba página completa y desbordaba). El contenido fluye y
-     cada bloque se mantiene entero → nada se parte a la mitad entre páginas. */
-  .pdf-sheet{border:none;border-radius:0;margin:0;box-shadow:none;page-break-after:always}
-  .pdf-sheet:last-child{page-break-after:auto}
-  .pdf-hero{padding:14px 30px}
-  .pdf-body{padding:13px 30px 8px}
-  /* compactar para que un reporte típico (4 proyectos) quepa en UNA página */
-  .pdf-role{padding:5px 11px}
-  .pdf-amount{font-size:32px;margin:8px 0 2px}
-  .pdf-h3{margin:10px 0 5px}
-  .pmr-stats{margin:3px 0 5px}.pmr-stat{padding:8px 11px}
-  .pmr-chart{height:96px}
-  .pdf-foot{font-size:11px}
-  .pmr-leg{margin-bottom:2px}
-  .pmr-stack{margin-bottom:6px}
-  .pmr-proj{padding:6px 0}
-  .pmr-outlook{margin-top:8px;padding:10px 14px}
-  .pdf-foot{margin-top:10px;line-height:1.5}
-  /* No partir secciones/bloques a la mitad */
-  .pmr-block,.pmr-head,.pmr-sec,.pmr-chart,.pmr-stack,.pmr-comp-leg,.pmr-stats,.pmr-stat,.pmr-proj,.pmr-outlook,.pdf-foot,.pdf-amount,.pdf-line,.recibo-firma{break-inside:avoid}
-  /* Mantener un título con lo que sigue, y la gráfica/barra con su leyenda */
-  .pdf-h3,.pdf-role,.pmr-chart,.pmr-stack,.pmr-leg{break-after:avoid}
-  .pdf-hero,.pdf-role,.pdf-bar,.pmr-bar,.pmr-gorra,.pmr-dot,.pmr-stack>div,.pmr-outlook,.recibo-firma-img{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-}
+
 
 /* ── IVA: una sola pregunta + desglose claro (Calculadora) ── */
 .iva-box{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;margin-top:2px}
@@ -945,3 +917,34 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .cot-area-edit{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .cot-area-name{flex:1;min-width:0}
 @media(max-width:560px){.cot-cfg-grid{grid-template-columns:1fr}}
+
+/* ==== IMPRESIÓN — al FINAL para que sus overrides ganen a las reglas base ==== */
+@media print{
+  @page{size:A4;margin:10mm 13mm}
+  html{background:#fff}body{background:#fff}body::before{display:none}
+  .side,.pdf-toolbar{display:none!important}
+  .pdf-page{max-width:none;margin:0;padding:0}
+  /* Sin min-height:100vh (forzaba página completa y desbordaba). El contenido fluye y
+     cada bloque se mantiene entero → nada se parte a la mitad entre páginas. */
+  .pdf-sheet{border:none;border-radius:0;margin:0;box-shadow:none;page-break-after:always}
+  .pdf-sheet:last-child{page-break-after:auto}
+  .pdf-hero{padding:14px 30px}
+  .pdf-body{padding:13px 30px 8px}
+  /* compactar para que un reporte típico (4 proyectos) quepa en UNA página */
+  .pdf-role{padding:5px 11px}
+  .pdf-amount{font-size:32px;margin:8px 0 2px}
+  .pdf-h3{margin:10px 0 5px}
+  .pmr-stats{margin:3px 0 5px}.pmr-stat{padding:8px 11px}
+  .pmr-chart{height:96px}
+  .pdf-foot{font-size:11px}
+  .pmr-leg{margin-bottom:2px}
+  .pmr-stack{margin-bottom:6px}
+  .pmr-proj{padding:6px 0}
+  .pmr-outlook{margin-top:8px;padding:10px 14px}
+  .pdf-foot{margin-top:10px;line-height:1.5}
+  /* No partir secciones/bloques a la mitad */
+  .pmr-block,.pmr-head,.pmr-sec,.pmr-chart,.pmr-stack,.pmr-comp-leg,.pmr-stats,.pmr-stat,.pmr-proj,.pmr-outlook,.pdf-foot,.pdf-amount,.pdf-line,.recibo-firma{break-inside:avoid}
+  /* Mantener un título con lo que sigue, y la gráfica/barra con su leyenda */
+  .pdf-h3,.pdf-role,.pmr-chart,.pmr-stack,.pmr-leg{break-after:avoid}
+  .pdf-hero,.pdf-role,.pdf-bar,.pmr-bar,.pmr-gorra,.pmr-dot,.pmr-stack>div,.pmr-outlook,.recibo-firma-img{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
