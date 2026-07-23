@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Camera, CameraOff } from "lucide-react";
-import { useApp } from "@/lib/app-context";
 import { useGestureControl } from "@/lib/use-gesture-control";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 
@@ -18,7 +17,6 @@ import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocab
 const ORDER: Gesture[] = ["uno", "dos", "tres", "cuatro", "palma", "puno"];
 
 export default function LabGestosPage() {
-  const { isAdmin, adminResolved } = useApp();
   const [log, setLog] = useState<{ g: Gesture; at: string }[]>([]);
   const [fps, setFps] = useState(0);
   const [counts, setCounts] = useState<Partial<Record<Gesture, number>>>({});
@@ -46,10 +44,6 @@ export default function LabGestosPage() {
     return () => { alive = false; v.cancelVideoFrameCallback?.(id); clearInterval(iv); };
   }, [status, videoRef]);
 
-  if (adminResolved && !isAdmin) {
-    return <p className="text-sm text-muted">Esta página es del laboratorio interno.</p>;
-  }
-
   const running = status === "running";
 
   return (
@@ -59,10 +53,10 @@ export default function LabGestosPage() {
           <Link href="/ajustes" className="mb-2 inline-flex items-center gap-1.5 text-caption text-muted transition hover:text-fg">
             <ArrowLeft size={13} /> Ajustes
           </Link>
-          <h1 className="font-display text-2xl font-bold text-fg">Laboratorio · gestos</h1>
+          <h1 className="font-display text-2xl font-bold text-fg">Practicar los gestos</h1>
           <p className="mt-1 max-w-prose text-sm text-muted">
-            Prueba el reconocimiento con tu cámara y tu luz. Aquí <b>no se mide tiempo</b>: nada de
-            lo que hagas toca tus tareas ni tu historial.
+            Agárrale el modo con tu cámara y tu luz. Aquí <b>no se mide tiempo</b>: nada de lo que
+            hagas toca tus tareas ni tu historial, así que prueba lo que quieras.
           </p>
         </div>
         <button
@@ -109,6 +103,18 @@ export default function LabGestosPage() {
         </div>
 
         <div className="space-y-4">
+          <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
+            <p className="text-caption font-semibold text-muted">Qué hace cada seña</p>
+            <ul className="mt-2 space-y-1 text-caption text-muted">
+              <li><b className="text-fg">1 a 4 dedos</b> · elige esa tarea del dock</li>
+              <li><b className="text-fg">🖐️ palma</b> · pausa lo que corre</li>
+              <li><b className="text-fg">✊ puño</b> · sigue con lo último</li>
+            </ul>
+            <p className="mt-2 border-t border-line pt-2 text-caption text-muted">
+              Cuenta cuántos dedos levantas, no cuáles. Sostén la seña un segundo.
+            </p>
+          </div>
+
           <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
             <p className="text-caption font-semibold text-muted">Aciertos por gesto</p>
             <ul className="mt-2 space-y-1.5">

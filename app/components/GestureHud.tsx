@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { X, Hand, VideoOff } from "lucide-react";
-import { GESTURE_EMOJI, type Gesture } from "@/lib/gestures/vocabulary";
+import { useState } from "react";
+import { X, Hand, VideoOff, HelpCircle } from "lucide-react";
+import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 import { dockChip, SPRING_SNAPPY, TWEEN_FAST } from "@/lib/motion";
 
 // HUD del control por gestos.
@@ -15,6 +16,15 @@ import { dockChip, SPRING_SNAPPY, TWEEN_FAST } from "@/lib/motion";
 //
 // La única animación protagonista es el anillo de dwell, y rodea tu propia mano: llenarse es
 // la promesa de "esto va a pasar" y da tiempo de arrepentirse antes de que pase.
+
+const LEGEND: [Gesture, string][] = [
+  ["uno", "1ª tarea"],
+  ["dos", "2ª tarea"],
+  ["tres", "3ª tarea"],
+  ["cuatro", "4ª tarea"],
+  ["palma", "pausar"],
+  ["puno", "seguir"],
+];
 
 const RING_R = 22;
 const RING_C = 2 * Math.PI * RING_R;
@@ -32,6 +42,7 @@ export type GestureHudProps = {
 };
 
 export function GestureHud({ candidate, progress, cooling, hint, videoRef, onStop, standalone }: GestureHudProps) {
+  const [showLegend, setShowLegend] = useState(false);
   return (
     <motion.div
       variants={dockChip}
@@ -86,8 +97,9 @@ export function GestureHud({ candidate, progress, cooling, hint, videoRef, onSto
           />
         </div>
 
-        {/* Estado en palabras */}
-        <div className="min-w-0">
+        {/* Estado en palabras. aria-live para que un lector de pantalla anuncie lo que pasa:
+            quien no ve el anillo necesita saber que su gesto fue reconocido. */}
+        <div className="min-w-0" aria-live="polite">
           <AnimatePresence mode="wait" initial={false}>
             {candidate ? (
               <motion.div
@@ -115,6 +127,43 @@ export function GestureHud({ candidate, progress, cooling, hint, videoRef, onSto
               >
                 <Hand size={13} aria-hidden />
                 {cooling ? "Listo" : "Esperando tu mano"}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Chuleta de señas: al alcance sin estorbar. Nadie memoriza cinco gestos el primer
+            día, y mandarlo a Ajustes a consultarlos rompe el sentido de la función. */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowLegend((v) => !v)}
+            className="focus-ring rounded-md p-1 text-muted/70 transition hover:text-fg"
+            aria-label="Ver las señas"
+            aria-expanded={showLegend}
+            title="Ver las señas"
+          >
+            <HelpCircle size={15} />
+          </button>
+          <AnimatePresence>
+            {showLegend && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                transition={TWEEN_FAST}
+                className="absolute bottom-full right-0 mb-2 w-56 origin-bottom-right rounded-card border border-line bg-[var(--surface-solid)] p-2.5 shadow-float"
+              >
+                <ul className="space-y-1">
+                  {LEGEND.map(([g, what]) => (
+                    <li key={g} className="flex items-center gap-2 text-caption">
+                      <span aria-hidden className="w-5 text-base leading-none">{GESTURE_EMOJI[g]}</span>
+                      <span className="text-muted"><b className="text-fg">{GESTURE_LABEL[g]}</b> · {what}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 border-t border-line pt-2 text-caption text-muted">
+                  Sostén la seña un segundo.
+                </p>
               </motion.div>
             )}
           </AnimatePresence>

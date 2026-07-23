@@ -229,3 +229,46 @@ describe("stabilizer", () => {
     expect(fires).toHaveLength(0); // vuelve a exigir el dwell completo
   });
 });
+
+// ── Selección de mano cuando hay más de una en cuadro ────────────────────────────────────
+// Pasa más seguido de lo que parece: la otra mano sobre el teclado, alguien pasando detrás.
+// Mandamos la que se ve más grande (la que está más cerca de la cámara), que es la que te
+// estás presentando a propósito.
+describe("mano dominante", () => {
+  const scale = (lm: Landmark[], k: number): Landmark[] =>
+    lm.map((p) => ({ x: WRIST.x + (p.x - WRIST.x) * k, y: WRIST.y + (p.y - WRIST.y) * k }));
+
+  const spanOf = (lm: Landmark[]) => {
+    const xs = lm.map((p) => p.x), ys = lm.map((p) => p.y);
+    return Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  };
+
+  it("la mano más cercana a la cámara ocupa más cuadro", () => {
+    const cerca = HANDS.dos;
+    const lejos = scale(HANDS.palma, 0.45);
+    expect(spanOf(cerca)).toBeGreaterThan(spanOf(lejos));
+  });
+
+  it("cada mano se sigue interpretando bien por separado", () => {
+    expect(gestureFrom(HANDS.dos)).toBe("dos");
+    expect(gestureFrom(scale(HANDS.palma, 0.6))).toBe("palma");
+  });
+});
+
+// ── Sensibilidad ────────────────────────────────────────────────────────────────────────
+describe("sensibilidad configurable", () => {
+  it("en 'rápido' dispara antes que en 'tranquilo'", () => {
+    const rapido = createStabilizer({ dwellMs: 800 });
+    const tranquilo = createStabilizer({ dwellMs: 2000 });
+    const a = feedFor(rapido, "uno", 1000);
+    const b = feedFor(tranquilo, "uno", 1000);
+    expect(a.fires).toEqual(["uno"]);
+    expect(b.fires).toHaveLength(0);
+  });
+
+  it("en 'tranquilo' un gesto de paso no alcanza a disparar", () => {
+    const tranquilo = createStabilizer({ dwellMs: 2000 });
+    const { fires } = feedFor(tranquilo, "palma", 1500); // un saludo dura menos que eso
+    expect(fires).toHaveLength(0);
+  });
+});

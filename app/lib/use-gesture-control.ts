@@ -5,7 +5,9 @@ import type { HandLandmarker } from "@mediapipe/tasks-vision";
 import { gestureFrom, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
 import { reportClientError } from "@/lib/report-error";
-import { isSoundOn, playConfirmed, playDetected } from "@/lib/gestures/sound";
+import { playConfirmed, playDetected } from "@/lib/gestures/sound";
+import { isSoundOn, getSensitivity, SENSITIVITY } from "@/lib/gesture-prefs";
+import { createCameraLock } from "@/lib/gestures/camera-lock";
 
 // Motor del control por gestos. Todo ocurre DENTRO del navegador: se lee la cámara, se buscan
 // las manos y se decide el comando. Ningún cuadro se guarda ni se envía a ningún lado.
@@ -21,12 +23,29 @@ const TARGET_FPS = 12; // suficiente para gestos sostenidos; a 30 solo se gasta 
 const FRAME_MS = 1000 / TARGET_FPS;
 const PROGRESS_STEPS = 12; // granularidad del anillo → máximo 12 renders por dwell
 const NO_HAND_TIMEOUT_MS = 5 * 60_000; // sin ver manos 5 min → se apaga sola
+// Ahorro: si lleva un rato sin ver una mano, baja el ritmo de inferencia. La cámara sigue
+// encendida (reaccionar rápido importa) pero deja de gastar batería mirando una silla vacía.
+const IDLE_AFTER_MS = 20_000;
+const IDLE_FRAME_MS = 1000 / 3;
+
+// Diagonal del rectángulo que ocupa la mano: sirve de proxy de "qué tan cerca está".
+function spanOf(lm: Landmark[]): number {
+  let minX = 1, maxX = 0, minY = 1, maxY = 0;
+  for (const p of lm) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return Math.hypot(maxX - minX, maxY - minY);
+}
 
 export type GestureStatus =
   | "off"
   | "starting"
   | "running"
   | "denied" // el navegador negó la cámara
+  | "taken" // otra pestaña de la app se quedó la cámara
   | "unsupported"; // faltan los assets o el navegador no puede
 
 export type GestureControlState = {
@@ -58,7 +77,7 @@ export function useGestureControl(opts: {
   const streamRef = useRef<MediaStream | null>(null);
   const landmarkerRef = useRef<HandLandmarker | null>(null);
   const rafRef = useRef<number | null>(null);
-  const stabRef = useRef(createStabilizer(opts.stabilizer));
+  const stabRef = useRef(createStabilizer(opts.stabilizer ?? SENSITIVITY[getSensitivity()]));
   const lastFrameRef = useRef(0);
   const lastHandRef = useRef(0);
   // Lo pintado ahora mismo, para no llamar a setState con el mismo valor.
@@ -67,6 +86,7 @@ export function useGestureControl(opts: {
   });
   // El callback se lee por ref: si entrara en las deps del efecto, cambiaría de identidad en
   // cada render del padre y reiniciaría la cámara constantemente (regla 1 de AGENTS.md).
+  const lockRef = useRef<ReturnType<typeof createCameraLock> | null>(null);
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
 
@@ -79,6 +99,8 @@ export function useGestureControl(opts: {
     landmarkerRef.current?.close();
     landmarkerRef.current = null;
     stabRef.current.reset();
+    lockRef.current?.release();
+    lockRef.current = null;
     shownRef.current = { candidate: null, step: 0, cooling: false };
     setCandidate(null);
     setProgress(0);
@@ -108,6 +130,17 @@ export function useGestureControl(opts: {
     // dice a la persona (y qué puede hacer al respecto).
     let stage: "engine" | "camera" = "engine";
 
+    // La sensibilidad se lee AL ENCENDER: si la cambias en Ajustes, aplica al reactivar.
+    stabRef.current = createStabilizer(opts.stabilizer ?? SENSITIVITY[getSensitivity()]);
+
+    // Si otra pestaña reclama la cámara, esta se apaga sola y lo dice.
+    lockRef.current?.release();
+    lockRef.current = createCameraLock(() => {
+      teardown();
+      setStatus("taken");
+      setError("Los gestos se movieron a la otra pestaña de la app que tienes abierta.");
+    });
+
     (async () => {
       try {
         // Import dinámico: quien no use gestos no descarga MediaPipe.
@@ -122,7 +155,7 @@ export function useGestureControl(opts: {
           vision.HandLandmarker.createFromOptions(fileset, {
             baseOptions: { modelAssetPath: MODEL_URL, delegate },
             runningMode: "VIDEO",
-            numHands: 1,
+            numHands: 2, // hay dos manos en cuadro más seguido de lo que parece
           });
         const landmarker = await build("GPU").catch(() => build("CPU"));
         if (cancelled) { landmarker.close(); return; }
@@ -143,6 +176,8 @@ export function useGestureControl(opts: {
         await video.play();
 
         lastHandRef.current = performance.now();
+        // Avisa a las demás pestañas que aquí se está usando la cámara; ellas se apagan.
+        lockRef.current?.claim();
         setStatus("running");
         loop();
       } catch (e) {
@@ -182,13 +217,18 @@ export function useGestureControl(opts: {
       if (document.hidden) return;
 
       const now = performance.now();
-      if (now - lastFrameRef.current < FRAME_MS) return;
+      // Ritmo normal mientras hay una mano a la vista; a paso lento cuando no hay nadie.
+      const idle = now - lastHandRef.current > IDLE_AFTER_MS;
+      if (now - lastFrameRef.current < (idle ? IDLE_FRAME_MS : FRAME_MS)) return;
       lastFrameRef.current = now;
 
       let gesture: Gesture | null = null;
       try {
         const res = landmarker.detectForVideo(video, now);
-        const hand = res.landmarks?.[0] as Landmark[] | undefined;
+        // Con dos manos en cuadro (pasa: la otra sobre el teclado, alguien pasando detrás)
+        // mandamos la que está MÁS CERCA de la cámara, que es la que te estás presentando.
+        const hands = (res.landmarks || []) as Landmark[][];
+        const hand = hands.length > 1 ? hands.reduce((a, b) => (spanOf(b) > spanOf(a) ? b : a)) : hands[0];
         if (hand?.length) {
           lastHandRef.current = now;
           gesture = gestureFrom(hand);

@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Hand, ShieldCheck, Volume2 } from "lucide-react";
 import { Toggle } from "@/components/ui/Toggle";
 import { PILOT } from "@/lib/pilot-flags";
-import { GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn } from "@/lib/gesture-prefs";
-import { isSoundOn, setSoundOn, playConfirmed } from "@/lib/gestures/sound";
+import {
+  GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, setSoundOn,
+  getSensitivity, setSensitivity, SENSITIVITY, type Sensitivity,
+} from "@/lib/gesture-prefs";
+import { playConfirmed } from "@/lib/gestures/sound";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 
 // Ajustes del control por gestos. La promesa del producto es "esto es para ti, no para
@@ -24,9 +28,10 @@ const VOCABULARY: { gesture: Gesture; does: string }[] = [
 export function GestureSettings() {
   const [on, setOn] = useState(false);
   const [sound, setSound] = useState(true);
+  const [sens, setSens] = useState<Sensitivity>("normal");
 
   useEffect(() => {
-    const read = () => { setOn(isGestureOptIn()); setSound(isSoundOn()); };
+    const read = () => { setOn(isGestureOptIn()); setSound(isSoundOn()); setSens(getSensitivity()); };
     read();
     window.addEventListener(GESTURE_ENABLED_EVENT, read);
     return () => window.removeEventListener(GESTURE_ENABLED_EVENT, read);
@@ -67,6 +72,29 @@ export function GestureSettings() {
 
         {on && (
           <div className="border-t border-line px-5 py-4">
+            <p className="text-sm font-medium text-fg">Qué tanto hay que sostener la seña</p>
+            <p className="mb-2.5 text-caption text-muted">
+              Más tiempo = menos posibilidad de que un saludo en una videollamada te mueva el cronómetro.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(SENSITIVITY) as Sensitivity[]).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => { setSensitivity(k); setSens(k); }}
+                  className={`focus-ring rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                    sens === k ? "border-accent bg-accent/10 text-accent" : "border-line text-muted hover:text-fg"
+                  }`}
+                >
+                  {SENSITIVITY[k].label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-caption text-muted">{SENSITIVITY[sens].hint}</p>
+          </div>
+        )}
+
+        {on && (
+          <div className="border-t border-line px-5 py-4">
             <p className="mb-2 text-caption font-semibold text-muted">Los gestos</p>
             <ul className="grid gap-1.5 sm:grid-cols-2">
               {VOCABULARY.map(({ gesture, does }) => (
@@ -84,6 +112,12 @@ export function GestureSettings() {
               pulgar o sin él. Hay que <b>sostener</b> la seña un segundo para que cuente — así
               un saludo en una junta no te mueve el cronómetro — y todo se puede deshacer.
             </p>
+            <Link
+              href="/labs/gestos"
+              className="focus-ring mt-3 inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-sm font-semibold text-white transition hover:bg-ink-soft"
+            >
+              <Hand size={14} /> Practicar sin medir tiempo
+            </Link>
           </div>
         )}
       </div>

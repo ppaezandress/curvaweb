@@ -67,22 +67,3 @@ export function playConfirmed() {
 export function playIgnored() {
   beep(300, 120, 0.06);
 }
-
-const KEY = "curva.gestures.sound";
-
-export function isSoundOn(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    return localStorage.getItem(KEY) !== "0"; // encendido por defecto
-  } catch {
-    return true;
-  }
-}
-
-export function setSoundOn(on: boolean) {
-  try {
-    localStorage.setItem(KEY, on ? "1" : "0");
-  } catch {
-    /* si no se puede guardar, queda encendido para esta sesión */
-  }
-}
