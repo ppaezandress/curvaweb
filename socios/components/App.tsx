@@ -2360,6 +2360,13 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
     const pagos = p.pagos || [];
     const enCaja = pagos.filter((x) => x.desembolsado).reduce((a, x) => a + (+x.monto || 0), 0);
     const enCajaPct = Math.min(1, enCaja / ticket);   // % del proyecto ya cobrado Y guardado en cajas
+    // Al equipo se le libera solo por MESES COMPLETOS cobrados+guardados: un proyecto de
+    // golpe (1 mes) o un anticipo parcial NO paga al equipo hasta completar el mes. ALIVE
+    // con el mes 1 completo sí; Esflo al 60% aún no. Decisión Andrés 2026-07-23.
+    const plazoN = Math.max(1, Math.floor(p.plazoMeses || 1));
+    const mensualBase = ticket / plazoN;
+    const mesesListos = mensualBase > 0 ? Math.floor(enCaja / mensualBase + 0.02) : 0; // +0.02: tolera el redondeo del mensual
+    const pctTransfer = Math.min(1, mesesListos / plazoN);   // % asignable al equipo (meses completos)
 
     // Saldos de las cajas que NO son masa salarial (socios / proyecto / ahorro / banca).
     if (enCajaPct > 0) {
@@ -2367,10 +2374,9 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
       agrupaCajas(agg.movimientos, R).forEach((g) => { if (g.caja !== "masaSalarial") saldos[g.caja] += g.total; });
     }
 
-    // Ledger de la masa salarial → equipo, persona por persona. "Listo" = lo que YA está
-    // en la caja (cobrado + guardado en cajas) y aún NO le has transferido — se puede
-    // enviar sin esperar al 100% del proyecto. "Acumulando" = lo que aún no entra.
-    // equipoPagado guarda el MONTO ya transferido (parcial, mes a mes). Andrés 2026-07-23.
+    // Ledger de la masa salarial → equipo, persona por persona. "Listo" = meses completos
+    // guardados y aún NO transferidos. "Acumulando" = lo que falta para completar meses.
+    // equipoPagado guarda el MONTO ya transferido (parcial, mes a mes).
     Object.values(r.people).forEach((per) => {
       if (isSocio(per.quien)) return;               // el dinero de los socios es suyo, no se adeuda
       const cut = per.trabajo + per.extra + (per.comision || 0);
@@ -2384,10 +2390,11 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
         if (!pagadosMap[key]) pagadosMap[key] = { nombre: per.nombre, quien: per.quien, monto: 0, fecha: pagadoFecha || todayISO() };
         pagadosMap[key].monto += mostrado; if ((pagadoFecha || "") > pagadosMap[key].fecha) pagadosMap[key].fecha = pagadoFecha!;
       }
-      const enCajaPersona = cut * enCajaPct;          // lo suyo que ya está en la caja
-      const listoPersona = Math.max(0, enCajaPersona - pagadoMonto);  // en caja y aún sin transferir → listo
-      const porVenir = Math.max(0, cut - enCajaPersona);              // aún no cobrado/guardado → acumulando
-      saldos.masaSalarial += listoPersona;            // lo que sigue parqueado (no transferido)
+      const enCajaReal = cut * enCajaPct;             // lo suyo que físicamente ya está en la caja
+      const transferible = cut * pctTransfer;         // lo asignable (solo meses completos)
+      const listoPersona = Math.max(0, transferible - pagadoMonto);   // meses completos sin transferir → listo
+      const porVenir = Math.max(0, cut - transferible);               // falta para completar meses → acumulando
+      saldos.masaSalarial += Math.max(0, enCajaReal - pagadoMonto);   // refleja lo físico en la caja (incl. anticipos)
       if ((listoPersona > 0.5 || porVenir > 0.5) && !deudas[key]) deudas[key] = { nombre: per.nombre, quien: per.quien, listo: 0, acum: 0, listos: [], acums: [] };
       if (listoPersona > 0.5) { deudas[key].listo += listoPersona; deudas[key].listos.push({ id: p.id, nombre: p.nombre, monto: listoPersona }); }
       if (porVenir > 0.5) { deudas[key].acum += porVenir; deudas[key].acums.push({ id: p.id, nombre: p.nombre, monto: porVenir, rec: enCajaPct }); }
