@@ -170,6 +170,33 @@ const ACTIVITY_EVENTS = [
 
 const round = (ms: number) => Math.max(0, Math.round(ms / 1000));
 
+/**
+ * Prepara los tramos guardados en localStorage para volver a montarlos.
+ *
+ * El total de una tarea es `baseline de Notion + tramos locales !synced + sesión viva`. Un
+ * tramo se marca `synced` cuando el rollup "Horas registradas" de Notion ya lo absorbió; hasta
+ * entonces se cuenta localmente. Ese `synced` se PERSISTE junto al tramo.
+ *
+ * Antes, al rehidratar se marcaban TODOS `synced` a ciegas. Eso rompía el caso de un tramo de
+ * HOY que se posteó pero el rollup aún no había indexado (lag de Notion): al recargar quedaba
+ * `synced` sin estar en el baseline → se PERDÍA del total de la tarea. El día seguía bien
+ * porque se calcula de los registros crudos de Notion, no del baseline — justo el síntoma
+ * reportado ("el día acumula pero el contador de la tarea se reinicia").
+ *
+ * Ahora: los tramos de días PREVIOS sí se marcan synced (el rollup ya los tiene, evita
+ * doble-conteo), pero los de HOY conservan su estado real para que `reconcileEntries` los
+ * sincronice contra el baseline REAL cuando cargue Notion.
+ */
+export function hydrateEntries(raw: TimeEntry[], now: number): TimeEntry[] {
+  const today = dayKey(now);
+  return (raw ?? []).map((e) => ({
+    ...e,
+    inactiveSeconds: e.inactiveSeconds ?? 0,
+    mode: e.mode ?? "manual",
+    synced: dayKey(e.endedAt) !== today ? true : (e.synced ?? false),
+  }));
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -313,9 +340,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // corriendo: se descartan para que no sigan acumulando elapsed (gemelo del guard
             // del timer manual de arriba).
             setAiActive((parsed.aiActive ?? []).filter((a: AiTimer) => Date.now() - a.startedAt <= STALE_TIMER_MS));
-            // Los tramos rehidratados vienen de sesiones previas → ya están en Notion y en el
-            // baseline. Se marcan synced para que NO se sumen otra vez localmente (doble conteo).
-            setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual", synced: true })));
+            // Rehidratación consciente del estado de sync (ver hydrateEntries): los tramos de
+            // HOY pendientes de que el rollup los absorba siguen contando en su tarea.
+            setEntries(hydrateEntries(parsed.entries ?? [], Date.now()));
             setOpenTasks(parsed.openTasks ?? []);
           }
         } catch { /* */ }
@@ -414,7 +441,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const parsed = raw ? JSON.parse(raw) : { active: null, aiActive: [], entries: [], openTasks: [] };
         setActive(parsed.active ?? null);
         setAiActive((parsed.aiActive ?? []).filter((a: AiTimer) => Date.now() - a.startedAt <= STALE_TIMER_MS));
-        setEntries((parsed.entries ?? []).map((e: TimeEntry) => ({ ...e, inactiveSeconds: e.inactiveSeconds ?? 0, mode: e.mode ?? "manual", synced: true })));
+        setEntries(hydrateEntries(parsed.entries ?? [], Date.now()));
         setOpenTasks(parsed.openTasks ?? []);
       } catch {
         setActive(null); setAiActive([]); setEntries([]); setOpenTasks([]);
