@@ -1584,14 +1584,25 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
       <div className="num-in">{o?.money && <span className="fix">$</span>}<input type="number" min={0} step={o?.step ?? 1} value={val || ""} placeholder={o?.ph ?? "0"} onChange={(e) => on(Math.max(0, +e.target.value || 0))} />{o?.suf && <span className="fix">{o.suf}</span>}</div>
     </div>
   );
+  // Contador con botones − / + (para nº de personas).
+  const stepper = (label: string, val: number, on: (v: number) => void) => (
+    <div className="cot-count">
+      <span className="cc-l">{label}</span>
+      <div className="cc-step">
+        <button type="button" aria-label={"menos " + label} onClick={() => on(Math.max(0, val - 1))}>−</button>
+        <input type="number" min={0} value={val || 0} onChange={(e) => on(Math.max(0, Math.floor(+e.target.value || 0)))} />
+        <button type="button" aria-label={"más " + label} onClick={() => on(val + 1)}>+</button>
+      </div>
+    </div>
+  );
 
   return (
     <>
       <div className="page-h cotz2-h">
         <div><h1>Cotizador</h1><p>Calcula el precio de un proyecto de consultoría por horas, áreas y equipo — con su reparto y su margen.</p></div>
         <div className="chips cotz2-tabs">
-          <button type="button" className={"chip-btn" + (modo === "cotizar" ? " on" : "")} onClick={() => setModo("cotizar")}>Cotizar</button>
-          <button type="button" className={"chip-btn" + (modo === "config" ? " on" : "")} onClick={() => setModo("config")}><Settings size={13} /> Ajustes</button>
+          <button type="button" className="chip-btn" aria-pressed={modo === "cotizar"} onClick={() => setModo("cotizar")}>Cotizar</button>
+          <button type="button" className="chip-btn" aria-pressed={modo === "config"} onClick={() => setModo("config")}><Settings size={13} /> Ajustes</button>
         </div>
       </div>
 
@@ -1617,20 +1628,22 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
             {cli("Horas totales estimadas", form.horas, (v) => setF({ horas: v }), { suf: "hrs" })}
 
             <div className="cot-field">
-              <label>Equipo</label>
-              <div className="cot-row3">
-                <div className="num-in fixed"><span className="fix">Piloto</span><input value="1" readOnly disabled /></div>
-                <div className="num-in"><span className="fix">Esp.</span><input type="number" min={0} step={1} value={form.nEspecialista || ""} placeholder="0" onChange={(e) => setF({ nEspecialista: Math.max(0, Math.floor(+e.target.value || 0)) })} /></div>
-                <div className="num-in"><span className="fix">Apoyo</span><input type="number" min={0} step={1} value={form.nApoyo || ""} placeholder="0" onChange={(e) => setF({ nApoyo: Math.max(0, Math.floor(+e.target.value || 0)) })} /></div>
+              <label>Equipo <span className="cot-hint-inline">el piloto siempre es 1</span></label>
+              <div className="cot-team">
+                <div className="cot-count locked">
+                  <span className="cc-l">Piloto</span>
+                  <div className="cc-box"><b>1</b></div>
+                </div>
+                {stepper("Especialista", form.nEspecialista, (v) => setF({ nEspecialista: v }))}
+                {stepper("Apoyo", form.nApoyo, (v) => setF({ nApoyo: v }))}
               </div>
-              <p className="hint" style={{ marginBottom: 0 }}>El piloto siempre es 1. Especialista y Apoyo, los que quieras.</p>
             </div>
 
             <div className="cot-field">
               <label>¿Presencial?</label>
               <div className="chips">
-                <button type="button" className={"chip-btn" + (!form.presencial ? " on" : "")} onClick={() => setF({ presencial: false })}>Remoto</button>
-                <button type="button" className={"chip-btn" + (form.presencial ? " on" : "")} onClick={() => setF({ presencial: true })}>Presencial</button>
+                <button type="button" className="chip-btn" aria-pressed={!form.presencial} onClick={() => setF({ presencial: false })}>Remoto</button>
+                <button type="button" className="chip-btn" aria-pressed={form.presencial} onClick={() => setF({ presencial: true })}>Presencial</button>
               </div>
             </div>
 
@@ -1649,31 +1662,41 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
 
           {/* RESULTADO */}
           <div className="card cot-out">
-            <div className="cot-price">
-              <span className="cp-l">Precio final al cliente</span>
-              <b className="cp-v"><span key={fmtMXN(r.precioCliente)} className="num-anim">{fmtMXN(r.precioCliente)}</span></b>
-              <span className="cp-s">{fmtMXN(r.margenBruto)} de margen · {pctFmt(r.pctMargen)}</span>
-            </div>
+            {r.precioCliente < 1 ? (
+              <div className="cot-empty">
+                <div className="cot-empty-ic"><Calculator size={22} /></div>
+                <b>Aquí sale el precio</b>
+                <span>Pon las horas y elige al menos un área. El resto se calcula solo.</span>
+              </div>
+            ) : (
+              <>
+                <div className="cot-price">
+                  <span className="cp-l">Precio final al cliente</span>
+                  <b className="cp-v"><span key={fmtMXN(r.precioCliente)} className="num-anim">{fmtMXN(r.precioCliente)}</span></b>
+                  <span className="cp-s">{fmtMXN(r.margenBruto)} de margen · {pctFmt(r.pctMargen)}</span>
+                </div>
 
-            <h3 className="cot-h3">Desglose</h3>
-            <div className="bd-row sub"><span className="bl">Subtotal (horas × tarifa × área)</span><span className="bv">{fmtMXN(r.subtotal)}</span></div>
-            {r.feePres > 0.5 && <div className="bd-row sub"><span className="bl">Fee de presencialidad ({cfg.pctPresencialidad}%)</span><span className="bv">{fmtMXN(r.feePres)}</span></div>}
-            {r.viaticos > 0.5 && <div className="bd-row sub"><span className="bl">Viáticos (reembolso)</span><span className="bv">{fmtMXN(r.viaticos)}</span></div>}
-            <div className="bd-row eq"><span className="bl">Precio al cliente</span><span className="bv">{fmtMXN(r.precioCliente)}</span></div>
+                <div className="cot-margin">
+                  <div><span>Margen bruto</span><b>{fmtMXN(r.margenBruto)}</b></div>
+                  <div><span>% de margen</span><b className={r.pctMargen < 0.4 ? "neg" : "pos"}>{pctFmt(r.pctMargen)}</b></div>
+                </div>
 
-            <h3 className="cot-h3">Reparto del equipo <span className="cot-sub">· {cfg.pctEquipo}% de {fmtMXN(r.precioCliente - r.viaticos)} = {fmtMXN(r.poolEquipo)}</span></h3>
-            <div className={"bd-row sub" + (r.pilotoFuera ? " cot-warn" : "")}><span className="bl">Piloto (peso ×{cfg.pesoPiloto})</span><span className="bv">{fmtMXN(r.pagoPiloto)}</span></div>
-            {r.nEsp > 0 && <div className="bd-row sub"><span className="bl">Especialista ×{r.nEsp} (peso ×{cfg.pesoEspecialista})</span><span className="bv">{fmtMXN(r.pagoEspTotal)}<em className="cot-cada"> · {fmtMXN(r.pagoEspCada)} c/u</em></span></div>}
-            {r.nApoyo > 0 && <div className="bd-row sub"><span className="bl">Apoyo ×{r.nApoyo} (peso ×{cfg.pesoApoyo})</span><span className="bv">{fmtMXN(r.pagoApoyoTotal)}<em className="cot-cada"> · {fmtMXN(r.pagoApoyoCada)} c/u</em></span></div>}
+                <h3 className="cot-h3">Desglose del precio</h3>
+                <div className="bd-row sub"><span className="bl">Subtotal · {form.horas || 0} hrs × {fmtMXN(cfg.tarifaHoraBase)} × área ×{r.areaFactor.toFixed(2)}</span><span className="bv">{fmtMXN(r.subtotal)}</span></div>
+                {r.feePres > 0.5 && <div className="bd-row sub"><span className="bl">Fee de presencialidad ({cfg.pctPresencialidad}%)</span><span className="bv">{fmtMXN(r.feePres)}</span></div>}
+                {r.viaticos > 0.5 && <div className="bd-row sub"><span className="bl">Viáticos (reembolso)</span><span className="bv">{fmtMXN(r.viaticos)}</span></div>}
+                <div className="bd-row eq"><span className="bl">Precio al cliente</span><span className="bv">{fmtMXN(r.precioCliente)}</span></div>
 
-            {r.pilotoFuera && (
-              <div className="alert warn cot-alert"><AlertTriangle size={15} /> <span>El pago del piloto (<b>{fmtMXN(r.pagoPiloto)}</b>) está fuera del rango sano {fmtMXN(cfg.pilotoMin)}–{fmtMXN(cfg.pilotoMax)}. Calibra la <b className="cot-link" onClick={() => setModo("config")}>tarifa base</b> o ajusta las horas.</span></div>
+                <h3 className="cot-h3">Reparto al equipo <span className="cot-sub">· {cfg.pctEquipo}% = {fmtMXN(r.poolEquipo)}</span></h3>
+                <div className={"bd-row sub" + (r.pilotoFuera ? " cot-warn" : "")}><span className="bl">Piloto <em className="cot-cada">peso ×{cfg.pesoPiloto}</em></span><span className="bv">{fmtMXN(r.pagoPiloto)}</span></div>
+                {r.nEsp > 0 && <div className="bd-row sub"><span className="bl">Especialista ×{r.nEsp} <em className="cot-cada">{fmtMXN(r.pagoEspCada)} c/u</em></span><span className="bv">{fmtMXN(r.pagoEspTotal)}</span></div>}
+                {r.nApoyo > 0 && <div className="bd-row sub"><span className="bl">Apoyo ×{r.nApoyo} <em className="cot-cada">{fmtMXN(r.pagoApoyoCada)} c/u</em></span><span className="bv">{fmtMXN(r.pagoApoyoTotal)}</span></div>}
+
+                {r.pilotoFuera && (
+                  <div className="alert warn cot-alert"><AlertTriangle size={15} /> <span>El pago del piloto (<b>{fmtMXN(r.pagoPiloto)}</b>) se sale del rango sano {fmtMXN(cfg.pilotoMin)}–{fmtMXN(cfg.pilotoMax)}. Calibra la <b className="cot-link" onClick={() => setModo("config")}>tarifa base</b> o ajusta las horas.</span></div>
+                )}
+              </>
             )}
-
-            <div className="cot-margin">
-              <div><span>Margen bruto</span><b>{fmtMXN(r.margenBruto)}</b></div>
-              <div><span>% de margen</span><b className={r.pctMargen < 0.4 ? "neg" : "pos"}>{pctFmt(r.pctMargen)}</b></div>
-            </div>
           </div>
         </div>
       )}
