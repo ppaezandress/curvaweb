@@ -137,7 +137,12 @@ export const REGLAS_DEFAULT: Reglas = {
   alpha: 60, pool: 10, beta: 0, split: 60, ahorro: 15, imp: 1.5,
   comisPct: 10, comisTope: 30000,
   pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
-  brkChico: 40, brkMediano: 30, brkGrande: 20, brkTope: 15,
+  // Bolsa del equipo PLANA al 40% (los 4 tramos iguales): el equipo se lleva un %
+  // parejo sin importar el tamaño → escala limpio y bien pagado. Antes bajaba por
+  // tramos (40/30/20/15) y el equipo salía castigado en proyectos grandes.
+  // Decisión Andrés 2026-07-23 (probado con estrés de escalabilidad). Se puede volver
+  // a tramos en Reglas › Avanzado. Los umbrales siguen por si se usa el modo tramos.
+  brkChico: 40, brkMediano: 40, brkGrande: 40, brkTope: 40,
   umbral1: 40000, umbral2: 80000, umbral3: 150000,
   smNuevo: 0.7,
   metaBancaMonto: 48000,

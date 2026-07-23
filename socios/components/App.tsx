@@ -23,7 +23,7 @@ type RosterPerson = { id: string; nombre: string; quien: Quien };
 // Evento de la bitácora (historial compartido): quién hizo qué y cuándo. Se sincroniza.
 type LogEvent = { id: string; ts: number; who: "A" | "B" | null; act: string; det: string };
 type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios; bitacora?: LogEvent[] };
-const RULES_VERSION = 9; // sube esto cuando una decisión deba re-aplicarse a estados guardados
+const RULES_VERSION = 10; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 // Saldo que YA existía en cada caja de Revolut antes de que la app empezara a
 // contar (el socio lo captura una vez; se SUMA a lo que la app calcula).
 const DEF_SALDOS: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0 };
@@ -268,6 +268,7 @@ export default function App() {
       if ((s.rulesVersion || 0) < 6) { merged.params.imp = 2.5; }               // ISR realista (RESICO), antes 30% placeholder
       if ((s.rulesVersion || 0) < 8) { merged.params.imp = 1.5; }               // ISR opcional por proyecto → tasa 1.5% (editable)
       if ((s.rulesVersion || 0) < 9) { merged.params.pool = 10; }               // Bono del Núcleo encendido al 10% (decisión Andrés 2026-07-23)
+      if ((s.rulesVersion || 0) < 10) { merged.params.brkChico = 40; merged.params.brkMediano = 40; merged.params.brkGrande = 40; merged.params.brkTope = 40; } // bolsa PLANA 40% (escala limpio)
       if ((s.rulesVersion || 0) < 4) {                                        // control de pagos: campos nuevos
         merged.projects = merged.projects.map((p) => ({
           ...p,
@@ -312,6 +313,7 @@ export default function App() {
           if (rv < 6) params.imp = 2.5;   // ISR realista (RESICO), antes 30% placeholder
           if (rv < 8) params.imp = 1.5;   // ISR opcional por proyecto → tasa 1.5% (editable)
           if (rv < 9) params.pool = 10;   // Bono del Núcleo encendido al 10%
+          if (rv < 10) { params.brkChico = 40; params.brkMediano = 40; params.brkGrande = 40; params.brkTope = 40; } // bolsa PLANA 40%
           let projects: Proyecto[] = (srv.projects || []);
           if (rv < 4) projects = projects.map(migrateProject);
           if (rv < 7) projects = freezeLegacyReglas(projects);   // congela guardados del server (verdad PROD)
@@ -2677,6 +2679,10 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
   const P = st.params;
   const [confirmReset, setConfirmReset] = useState(false);
   const [ticketEj, setTicketEj] = useState(100000); // ticket de ejemplo para explicar los tramos
+  const [avanzado, setAvanzado] = useState(false);   // mostrar el modo por tramos (avanzado)
+  // ¿La bolsa del equipo es un % plano (los 4 tramos iguales)? Ese es el modo simple.
+  const bolsaPlana = P.brkChico === P.brkMediano && P.brkMediano === P.brkGrande && P.brkGrande === P.brkTope;
+  const setBolsaPlana = (v: number) => update((s) => { s.params.brkChico = v; s.params.brkMediano = v; s.params.brkGrande = v; s.params.brkTope = v; return s; });
   // ¿Hay algo cambiado respecto a los valores por defecto? (para avisar y habilitar el reset)
   const modificado = (Object.keys(REGLAS_DEFAULT) as (keyof Reglas)[]).some((k) => P[k] !== REGLAS_DEFAULT[k]);
   const doReset = () => { update((s) => { s.params = { ...REGLAS_DEFAULT }; return s; }); setConfirmReset(false); };
@@ -2751,52 +2757,55 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         </div>
       </div>
 
-      <div className="card"><h2>% de equipo según el tamaño del ticket</h2>
-        <p className="hint" style={{ marginTop: 0 }}>Funciona por tramos (como los impuestos): los primeros pesos pagan más equipo, los siguientes menos. Así CURVA se queda con más en proyectos grandes, <b>y vender más caro siempre paga más</b> (sin saltos raros). Probado con 5,000 escenarios: 0 fugas.</p>
-        <div className="two" style={{ marginTop: 4 }}>
-          <div>
-            {pct("brkChico", "Tramo chico (≤ umbral 1)", 0, 60)}
-            {pct("brkMediano", "Tramo mediano (umbral 1–2)", 0, 60)}
-            {pct("brkGrande", "Tramo grande (umbral 2–3)", 0, 60)}
-            {pct("brkTope", "Tramo muy grande (> umbral 3)", 0, 60)}
+      <div className="card"><h2>Cuánto se lleva el equipo</h2>
+        <p className="hint" style={{ marginTop: 0 }}>El equipo se lleva este <b>% de cada proyecto</b>, sin importar el tamaño. Súbelo para que ganen más, bájalo para quedarte con más. Es parejo y <b>escala limpio</b> — antes bajaba en proyectos grandes y ahí el equipo salía castigado.</p>
+        {bolsaPlana ? (
+          <div className="field" style={{ ...rowStyle, marginTop: 4 }}>
+            <label style={{ margin: 0, flex: 1, fontWeight: 600 }}>El equipo se lleva</label>
+            <input style={{ flex: 1.6 }} type="range" min={0} max={60} step={1} value={P.brkChico} onChange={(e) => setBolsaPlana(+e.target.value)} />
+            <span style={{ ...valStyle, color: "var(--cobalt)", fontWeight: 700 }}>{P.brkChico}%</span>
           </div>
-          <div>
-            {money("umbral1", "Umbral 1")}
-            {money("umbral2", "Umbral 2")}
-            {money("umbral3", "Umbral 3")}
-          </div>
-        </div>
+        ) : (
+          <div className="alert warn" style={{ marginTop: 4 }}>Estás en modo <b>por tramos</b> (avanzado): el % cambia según el tamaño. <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setBolsaPlana(P.brkChico)}>Volver a % plano</button></div>
+        )}
         {(() => {
-          const tramos = baseBolsaDesglose(ticketEj, P);
-          const bolsaEj = tramos.reduce((a, x) => a + x.aporte, 0);
-          const nombres = ["chico", "mediano", "grande", "muy grande"];
+          const bolsaEj = baseBolsaDesglose(ticketEj, P).reduce((a, x) => a + x.aporte, 0);
           return (
             <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
               <div className="field" style={{ ...rowStyle, marginBottom: 8 }}>
-                <label style={{ margin: 0, flex: 1 }}>Pruébalo con un ticket de ejemplo</label>
+                <label style={{ margin: 0, flex: 1 }}>Pruébalo con un proyecto de</label>
                 <div className="money-in" style={{ flex: 1.3 }}><span>$</span><input type="number" min={0} step={5000} value={ticketEj} onChange={(e) => setTicketEj(Math.max(0, +e.target.value || 0))} /></div>
               </div>
-              <div className="stack">
-                {tramos.filter((x) => x.aporte > 0.5).map((x) => (
-                  <div key={x.i} className="seg" title={`Tramo ${nombres[x.i]} · ${x.pct}% · ${fmtMXN(x.aporte)}`} style={{ flex: `0 0 ${x.aporte / (bolsaEj || 1) * 100}%`, background: x.activo ? "var(--c-equipo)" : "var(--border)" }} />
-                ))}
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 14 }}>
+                <span>El equipo se lleva</span>
+                <span style={{ fontFamily: "var(--mono)", color: "var(--cobalt)" }}>{fmtMXN(bolsaEj)} · {pctFmt(bolsaEj / (ticketEj || 1))}</span>
               </div>
-              <div style={{ fontSize: 13, marginTop: 8, display: "grid", gap: 3 }}>
-                {tramos.map((x) => (
-                  <div key={x.i} style={{ display: "flex", justifyContent: "space-between", opacity: x.activo ? 1 : 0.4 }}>
-                    <span>{x.activo ? "✓" : "—"} Tramo {nombres[x.i]} ({x.pct}%){x.hasta === Infinity ? ` · > ${fmtMXN(x.desde)}` : ` · ${fmtMXN(x.desde)}–${fmtMXN(x.hasta)}`}</span>
-                    <span style={{ fontFamily: "var(--mono)", fontWeight: 700 }}>{x.activo ? fmtMXN(x.aporte) : "no aplica"}</span>
-                  </div>
-                ))}
-                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border)", marginTop: 4, paddingTop: 4, fontWeight: 700 }}>
-                  <span>Bolsa del equipo para {fmtMXN(ticketEj)}</span>
-                  <span style={{ fontFamily: "var(--mono)", color: "var(--cobalt)" }}>{fmtMXN(bolsaEj)} · {pctFmt(bolsaEj / (ticketEj || 1))}</span>
-                </div>
-              </div>
-              <p className="hint" style={{ marginTop: 8 }}>Estás moviendo <b>tramos</b>, no el ticket. Para un ticket de {fmtMXN(ticketEj)} solo aplican los tramos marcados ✓ (hasta donde llega el ticket). Mover un tramo que dice “no aplica” <b>no cambia nada</b> para este ticket — por eso a veces parece que una barrita no hace nada.</p>
             </div>
           );
         })()}
+        <button className="disclosure" style={{ marginTop: 12 }} aria-expanded={avanzado} onClick={() => setAvanzado((v) => !v)}>
+          {avanzado ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <span className="disc-t">Avanzado · por tramos</span>
+          <span className="disc-sub">un % distinto según el tamaño (como los impuestos)</span>
+        </button>
+        {avanzado && (
+          <div className="disc-body" style={{ display: "block", marginTop: 8 }}>
+            <p className="hint" style={{ marginTop: 0 }}>Modo experto: cada tramo del ticket paga un % distinto. Si pones los 4 iguales, vuelve a ser plano.</p>
+            <div className="two">
+              <div>
+                {pct("brkChico", "Tramo chico (≤ umbral 1)", 0, 60)}
+                {pct("brkMediano", "Tramo mediano (umbral 1–2)", 0, 60)}
+                {pct("brkGrande", "Tramo grande (umbral 2–3)", 0, 60)}
+                {pct("brkTope", "Tramo muy grande (> umbral 3)", 0, 60)}
+              </div>
+              <div>
+                {money("umbral1", "Umbral 1")}
+                {money("umbral2", "Umbral 2")}
+                {money("umbral3", "Umbral 3")}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card"><h2>Caja del proyecto — % por defecto según el tipo</h2>
