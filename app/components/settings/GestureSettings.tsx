@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Hand, ShieldCheck, Volume2 } from "lucide-react";
+import { Hand, ShieldCheck, Volume2, AppWindow, AlertTriangle } from "lucide-react";
 import { Toggle } from "@/components/ui/Toggle";
 import { PILOT } from "@/lib/pilot-flags";
 import {
   GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, setSoundOn,
   getSensitivity, setSensitivity, SENSITIVITY, type Sensitivity,
+  isBackgroundOn, setBackgroundOn,
 } from "@/lib/gesture-prefs";
 import { playConfirmed } from "@/lib/gestures/sound";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
@@ -29,9 +30,10 @@ export function GestureSettings() {
   const [on, setOn] = useState(false);
   const [sound, setSound] = useState(true);
   const [sens, setSens] = useState<Sensitivity>("normal");
+  const [bg, setBg] = useState(true);
 
   useEffect(() => {
-    const read = () => { setOn(isGestureOptIn()); setSound(isSoundOn()); setSens(getSensitivity()); };
+    const read = () => { setOn(isGestureOptIn()); setSound(isSoundOn()); setSens(getSensitivity()); setBg(isBackgroundOn()); };
     read();
     window.addEventListener(GESTURE_ENABLED_EVENT, read);
     return () => window.removeEventListener(GESTURE_ENABLED_EVENT, read);
@@ -67,6 +69,27 @@ export function GestureSettings() {
               on={sound}
               onChange={(v) => { setSoundOn(v); setSound(v); if (v) playConfirmed(); }}
             />
+          </div>
+        )}
+
+        {on && (
+          <div className="border-t border-line">
+            <Toggle
+              icon={<AppWindow size={16} />}
+              label="Seguir funcionando aunque cambie de app"
+              hint="Cambia de tarea con la mano mientras estás en Figma, en un PDF o en la llamada, sin volver aquí."
+              on={bg}
+              onChange={(v) => { setBackgroundOn(v); setBg(v); }}
+            />
+            {bg && !sound && (
+              <div className="mx-5 mb-4 flex items-start gap-2.5 rounded-control border border-warn/40 bg-warn/10 px-3 py-2.5 text-caption text-fg">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warn" />
+                <span>
+                  Con el sonido apagado no tienes forma de saber que te reconoció mientras estás
+                  en otra app. Al volver te contamos lo que pasó, pero conviene dejarlo prendido.
+                </span>
+              </div>
+            )}
           </div>
         )}
 

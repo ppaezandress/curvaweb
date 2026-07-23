@@ -6,8 +6,9 @@ import { gestureFrom, type Gesture, type Landmark } from "@/lib/gestures/vocabul
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
 import { reportClientError } from "@/lib/report-error";
 import { playConfirmed, playDetected } from "@/lib/gestures/sound";
-import { isSoundOn, getSensitivity, SENSITIVITY } from "@/lib/gesture-prefs";
+import { isSoundOn, getSensitivity, SENSITIVITY, isBackgroundOn } from "@/lib/gesture-prefs";
 import { createCameraLock } from "@/lib/gestures/camera-lock";
+import { createMetronome, frameIntervalMs, type Metronome } from "@/lib/gestures/metronome";
 
 // Motor del control por gestos. Todo ocurre DENTRO del navegador: se lee la cámara, se buscan
 // las manos y se decide el comando. Ningún cuadro se guarda ni se envía a ningún lado.
@@ -19,14 +20,11 @@ import { createCameraLock } from "@/lib/gestures/camera-lock";
 
 const MODEL_URL = "/mediapipe/hand_landmarker.task";
 const WASM_PATH = "/mediapipe/wasm";
-const TARGET_FPS = 12; // suficiente para gestos sostenidos; a 30 solo se gasta batería
-const FRAME_MS = 1000 / TARGET_FPS;
 const PROGRESS_STEPS = 12; // granularidad del anillo → máximo 12 renders por dwell
 const NO_HAND_TIMEOUT_MS = 5 * 60_000; // sin ver manos 5 min → se apaga sola
 // Ahorro: si lleva un rato sin ver una mano, baja el ritmo de inferencia. La cámara sigue
 // encendida (reaccionar rápido importa) pero deja de gastar batería mirando una silla vacía.
 const IDLE_AFTER_MS = 20_000;
-const IDLE_FRAME_MS = 1000 / 3;
 
 // Diagonal del rectángulo que ocupa la mano: sirve de proxy de "qué tan cerca está".
 function spanOf(lm: Landmark[]): number {
@@ -87,12 +85,16 @@ export function useGestureControl(opts: {
   // El callback se lee por ref: si entrara en las deps del efecto, cambiaría de identidad en
   // cada render del padre y reiniciaría la cámara constantemente (regla 1 de AGENTS.md).
   const lockRef = useRef<ReturnType<typeof createCameraLock> | null>(null);
+  const metroRef = useRef<Metronome | null>(null);
+  const hiddenRef = useRef(false);
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
 
   const teardown = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
+    metroRef.current?.stop();
+    metroRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop()); // apaga la luz de la cámara
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
@@ -126,6 +128,7 @@ export function useGestureControl(opts: {
     if (status !== "starting") return;
 
     let cancelled = false;
+    let cleanupVisibility: (() => void) | null = null;
     // Dónde falló: el motor de reconocimiento o la cámara. Cambia por completo qué se le
     // dice a la persona (y qué puede hacer al respecto).
     let stage: "engine" | "camera" = "engine";
@@ -179,7 +182,12 @@ export function useGestureControl(opts: {
         // Avisa a las demás pestañas que aquí se está usando la cámara; ellas se apagan.
         lockRef.current?.claim();
         setStatus("running");
-        loop();
+
+        metroRef.current?.stop();
+        metroRef.current = createMetronome(() => tick());
+        document.addEventListener("visibilitychange", applyVisibility);
+        cleanupVisibility = () => document.removeEventListener("visibilitychange", applyVisibility);
+        applyVisibility();
       } catch (e) {
         if (cancelled) return;
         teardown();
@@ -207,19 +215,38 @@ export function useGestureControl(opts: {
       }
     })();
 
-    function loop() {
-      rafRef.current = requestAnimationFrame(loop);
+    // El bucle corre SIEMPRE, mires o no la app: el sentido de los gestos es poder cambiar de
+    // tarea mientras estás en Figma o en la llamada. Mientras la pestaña está a la vista se
+    // usa requestAnimationFrame (suave y barato); en cuanto se oculta, el navegador lo congela
+    // y toma el relevo el metrónomo del worker, que sí sobrevive en segundo plano.
+    function schedule() {
+      if (hiddenRef.current) return; // en segundo plano manda el metrónomo
+      rafRef.current = requestAnimationFrame(() => { tick(); schedule(); });
+    }
+
+    function applyVisibility() {
+      const hidden = document.hidden;
+      hiddenRef.current = hidden;
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+
+      if (hidden && isBackgroundOn()) {
+        // Ritmo del metrónomo: el mismo que usaría el bucle visible, pero más espaciado.
+        metroRef.current?.setInterval(frameIntervalMs({ hidden: true, idle: false }));
+      } else {
+        metroRef.current?.setInterval(0);
+        if (!hidden) schedule();
+      }
+    }
+
+    function tick() {
       const video = videoRef.current;
       const landmarker = landmarkerRef.current;
       if (!video || !landmarker || video.readyState < 2) return;
 
-      // La pestaña en segundo plano no mira: ni inferencia ni batería.
-      if (document.hidden) return;
-
       const now = performance.now();
       // Ritmo normal mientras hay una mano a la vista; a paso lento cuando no hay nadie.
       const idle = now - lastHandRef.current > IDLE_AFTER_MS;
-      if (now - lastFrameRef.current < (idle ? IDLE_FRAME_MS : FRAME_MS)) return;
+      if (now - lastFrameRef.current < frameIntervalMs({ hidden: hiddenRef.current, idle })) return;
       lastFrameRef.current = now;
 
       let gesture: Gesture | null = null;
@@ -261,7 +288,7 @@ export function useGestureControl(opts: {
       }
     }
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; cleanupVisibility?.(); };
   }, [status, enabled, stop, teardown]);
 
   // Al desmontar (cerrar sesión, salir de la app) la cámara se apaga sí o sí.

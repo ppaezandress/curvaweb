@@ -11,6 +11,7 @@ const KEY_ON = "curva.gestures.enabled";
 const KEY_SOUND = "curva.gestures.sound";
 const KEY_SENS = "curva.gestures.sensitivity";
 const KEY_SEEN = "curva.gestures.onboarded";
+const KEY_BG = "curva.gestures.background";
 
 /** Evento local para que el HUD y los Ajustes reaccionen sin recargar. */
 export const GESTURE_ENABLED_EVENT = "curva:gestures-enabled";
@@ -69,6 +70,17 @@ export function getSensitivity(): Sensitivity {
 }
 export function setSensitivity(s: Sensitivity) {
   write(KEY_SENS, s);
+}
+
+// ── Seguir funcionando fuera de la app ──
+// El caso que justifica los gestos es cambiar de tarea SIN volver a la pestaña: estás en
+// Figma, en un PDF o en la llamada. Encendido por defecto; se puede apagar porque mantener el
+// reconocimiento en segundo plano cuesta batería.
+export function isBackgroundOn(): boolean {
+  return read(KEY_BG) !== "0";
+}
+export function setBackgroundOn(on: boolean) {
+  write(KEY_BG, on ? "1" : "0");
 }
 
 // ── Primer uso ──

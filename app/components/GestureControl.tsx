@@ -32,6 +32,8 @@ export function GestureControl() {
   // Lo que el cronómetro tiene AHORA, leído por ref: el bucle de la cámara vive fuera de
   // React y necesita el estado fresco sin re-suscribirse (ni reiniciar la cámara) en cada
   // cambio del dock.
+  // Lo ejecutado con la app en segundo plano, para contarlo al volver.
+  const pendingRef = useRef<{ label: string; undo: () => void; count: number } | null>(null);
   const ctxRef = useRef({ openTasks, activeTaskId: active?.taskId ?? null });
   useEffect(() => { ctxRef.current = { openTasks, activeTaskId: active?.taskId ?? null }; }, [openTasks, active]);
 
@@ -46,17 +48,39 @@ export function GestureControl() {
     if (action.kind === "pause") pause();
     else switchTo(action.taskId);
 
+    const label = describeAction(action, nameOf(action.taskId));
+    const undo = () => { if (previous) switchTo(previous); else pause(); };
+
+    // Si la orden se ejecutó mientras estabas en otra app, el toast se consumiría sin que
+    // nadie lo viera: se guarda y se te cuenta al volver. Nunca debe pasar que tu cronómetro
+    // cambie y te enteres tres horas después mirando el historial.
+    if (document.hidden) {
+      pendingRef.current = { label, undo, count: (pendingRef.current?.count ?? 0) + 1 };
+      return;
+    }
+
     // Deshacer al alcance de la mano: si la cámara entendió mal, no hay que ir a arreglar el
     // historial. Limitación conocida: deshacer un cambio deja un tramo de unos segundos en la
     // tarea equivocada (es el tiempo que de verdad estuvo corriendo).
-    toast(describeAction(action, nameOf(action.taskId)), {
-      tone: "info",
-      action: {
-        label: "Deshacer",
-        onClick: () => { if (previous) switchTo(previous); else pause(); },
-      },
-    });
+    toast(label, { tone: "info", action: { label: "Deshacer", onClick: undo } });
   }, [pause, switchTo, nameOf]);
+
+  // Al volver a la app, cuenta lo que pasó mientras no mirabas.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.hidden) return;
+      const p = pendingRef.current;
+      if (!p) return;
+      pendingRef.current = null;
+      const extra = p.count > 1 ? ` · y ${p.count - 1} ${p.count === 2 ? "cambio más" : "cambios más"}` : "";
+      toast(`Mientras no estabas: ${p.label}${extra}`, {
+        tone: "info",
+        action: { label: "Deshacer", onClick: p.undo },
+      });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   // Desestructurado: el linter de React trata el acceso a un objeto que contiene un ref como
   // lectura de ref durante el render.

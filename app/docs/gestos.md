@@ -40,6 +40,24 @@ cámara es justo donde esa promesa se pone a prueba.
 cuántas veces atina cada seña y **no toca el cronómetro**: se puede usar todo lo que uno quiera
 sin ensuciar el historial.
 
+## Funciona aunque estés en otra app
+
+Este es el punto de la función: cambiar de tarea mientras estás en Figma, en un PDF o en la
+llamada, **sin volver a la pestaña**. Viene encendido y se puede apagar (cuesta batería).
+
+Como en ese momento no ves nada en pantalla, hay dos señales:
+
+- **El sonido** te dice que te reconoció y que ejecutó. Por eso conviene no apagarlo si usas
+  esto en segundo plano.
+- **Al volver a la app** aparece un aviso con lo que pasó mientras no mirabas, con opción de
+  deshacerlo. Nunca debería pasar que tu cronómetro cambie y te enteres tres horas después.
+
+Detalle técnico: cuando la pestaña se oculta, el navegador congela `requestAnimationFrame` y
+frena los temporizadores de la página a uno por segundo — con eso un gesto de 1.2 s no se
+completaría nunca. Por eso el reloj se mueve a un Web Worker
+(`lib/gestures/metronome.ts`), que conserva su ritmo en segundo plano. El reconocimiento baja
+de 12 a 7 cuadros por segundo mientras no miras, y a 3 si no hay ninguna mano a la vista.
+
 ## Ajustes finos
 
 **Qué tanto sostener la seña:** Rápido (0.8 s) · Normal (1.2 s) · Tranquilo (2 s). Si pasas el

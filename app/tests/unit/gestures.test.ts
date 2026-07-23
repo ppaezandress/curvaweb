@@ -4,6 +4,7 @@ import {
   type Landmark, type Gesture,
 } from "@/lib/gestures/vocabulary";
 import { createStabilizer } from "@/lib/gestures/stabilizer";
+import { frameIntervalMs } from "@/lib/gestures/metronome";
 
 // ── Manos sintéticas ────────────────────────────────────────────────────────────────────
 // Construimos las 21 marcas como las devolvería MediaPipe (normalizadas 0..1, `y` crece hacia
@@ -270,5 +271,37 @@ describe("sensibilidad configurable", () => {
     const tranquilo = createStabilizer({ dwellMs: 2000 });
     const { fires } = feedFor(tranquilo, "palma", 1500); // un saludo dura menos que eso
     expect(fires).toHaveLength(0);
+  });
+});
+
+// ── Ritmo del reconocimiento ────────────────────────────────────────────────────────────
+// De esto depende que los gestos sigan vivos cuando NO estás en la app (el caso que les da
+// sentido) sin fundir la batería mirando una silla vacía.
+describe("frameIntervalMs", () => {
+  it("va más suave con la app a la vista que en segundo plano", () => {
+    const visible = frameIntervalMs({ hidden: false, idle: false });
+    const oculto = frameIntervalMs({ hidden: true, idle: false });
+    expect(visible).toBeLessThan(oculto);
+  });
+
+  it("en segundo plano sigue siendo suficiente para completar una seña", () => {
+    // Con el dwell más corto (0.8 s) y el estabilizador pidiendo 3 cuadros de acuerdo,
+    // el ritmo de fondo tiene que dejar caber esos cuadros de sobra.
+    const oculto = frameIntervalMs({ hidden: true, idle: false });
+    expect(oculto * 3).toBeLessThan(800);
+  });
+
+  it("sin ninguna mano a la vista baja el ritmo, mire o no la app", () => {
+    const idleVisible = frameIntervalMs({ hidden: false, idle: true });
+    const idleOculto = frameIntervalMs({ hidden: true, idle: true });
+    expect(idleVisible).toBe(idleOculto);
+    expect(idleVisible).toBeGreaterThan(frameIntervalMs({ hidden: true, idle: false }));
+  });
+
+  it("un dwell completo cabe de sobra en cualquier ritmo activo", () => {
+    for (const hidden of [true, false]) {
+      const ms = frameIntervalMs({ hidden, idle: false });
+      expect(1200 / ms).toBeGreaterThanOrEqual(3); // al menos 3 muestras en 1.2 s
+    }
   });
 });
