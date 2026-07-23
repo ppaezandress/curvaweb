@@ -59,9 +59,9 @@ export function setSoundOn(on: boolean) {
 export type Sensitivity = "rapido" | "normal" | "tranquilo";
 
 export const SENSITIVITY: Record<Sensitivity, { label: string; hint: string; dwellMs: number; cooldownMs: number }> = {
-  rapido: { label: "Rápido", hint: "0.8 s — para quien ya le agarró el modo", dwellMs: 800, cooldownMs: 1500 },
-  normal: { label: "Normal", hint: "1.2 s — el equilibrio recomendado", dwellMs: 1200, cooldownMs: 2000 },
-  tranquilo: { label: "Tranquilo", hint: "2 s — si estás mucho en videollamada", dwellMs: 2000, cooldownMs: 2500 },
+  rapido: { label: "Rápido", hint: "medio segundo — para quien ya le agarró el modo", dwellMs: 500, cooldownMs: 1200 },
+  normal: { label: "Normal", hint: "0.8 s — el equilibrio recomendado", dwellMs: 800, cooldownMs: 1600 },
+  tranquilo: { label: "Tranquilo", hint: "1.5 s — si estás mucho en videollamada", dwellMs: 1500, cooldownMs: 2200 },
 };
 
 export function getSensitivity(): Sensitivity {

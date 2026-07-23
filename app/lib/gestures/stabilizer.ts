@@ -11,6 +11,7 @@
 //
 // Puro y con el tiempo inyectado: se prueba entero sin cámara ni relojes falsos.
 import type { Gesture } from "@/lib/gestures/vocabulary";
+import { advanceRate } from "@/lib/gestures/quality";
 
 export type StabilizerConfig = {
   dwellMs: number;
@@ -20,14 +21,19 @@ export type StabilizerConfig = {
   minAgreeRatio: number;
   /** Cuadros mínimos antes de empezar a contar. Muy alto = el dwell se siente eterno. */
   minFrames: number;
+  /** Cuántos cuadros seguidos puede fallar el candidato sin perder el progreso. */
+  missTolerance: number;
 };
 
 export const DEFAULT_STABILIZER: StabilizerConfig = {
-  dwellMs: 1200,
-  cooldownMs: 2000,
-  windowSize: 10,
-  minAgreeRatio: 0.8,
-  minFrames: 3,
+  dwellMs: 800,
+  cooldownMs: 1600,
+  windowSize: 12,
+  // Subido de 0.8 a 0.85: al analizar más cuadros por segundo, exigir MÁS acuerdo ya no
+  // cuesta tiempo — se gana precisión gratis.
+  minAgreeRatio: 0.85,
+  minFrames: 4,
+  missTolerance: 3,
 };
 
 export type StabilizerOutput = {
@@ -42,7 +48,12 @@ export type StabilizerOutput = {
 };
 
 export type Stabilizer = {
-  feed: (gesture: Gesture | null, tMs: number) => StabilizerOutput;
+  /**
+   * @param quality 0..1 — qué tan buena es la evidencia de este cuadro (ver quality.ts).
+   * Un cuadro impecable hace avanzar el progreso más rápido que el reloj; uno mediocre, más
+   * lento. Por omisión 1 (para las pruebas que solo miden tiempo).
+   */
+  feed: (gesture: Gesture | null, tMs: number, quality?: number) => StabilizerOutput;
   reset: () => void;
 };
 
@@ -53,8 +64,15 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
 
   let window: (Gesture | null)[] = [];
   let candidate: Gesture | null = null;
-  let candidateSince = 0;
   let cooldownUntil = 0;
+  // Progreso acumulado hacia el disparo (0..1) y momento del último cuadro, para saber cuánto
+  // tiempo real ha pasado entre uno y otro.
+  let progressAcc = 0;
+  let lastT = 0;
+  // Cuadros seguidos en los que el candidato dejó de dominar. Se toleran unos pocos: el modelo
+  // parpadea, y reiniciar el progreso a cero por un solo cuadro malo era la causa de que una
+  // seña bien hecha "a veces no la tomara".
+  let misses = 0;
   // Tras disparar hay que "soltar": ver algo distinto al gesto que disparó antes de volver a
   // armarlo. Evita que sostener la mano repita el comando para siempre.
   let mustRelease: Gesture | null = null;
@@ -62,8 +80,10 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
   const reset = () => {
     window = [];
     candidate = null;
-    candidateSince = 0;
     cooldownUntil = 0;
+    progressAcc = 0;
+    lastT = 0;
+    misses = 0;
     mustRelease = null;
   };
 
@@ -82,7 +102,9 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
     return best && bestN >= Math.ceil(window.length * c.minAgreeRatio) ? best : null;
   };
 
-  const feed = (gesture: Gesture | null, tMs: number): StabilizerOutput => {
+  const feed = (gesture: Gesture | null, tMs: number, quality = 1): StabilizerOutput => {
+    const dt = lastT ? Math.max(0, tMs - lastT) : 0;
+    lastT = tMs;
     window.push(gesture);
     if (window.length > c.windowSize) window.shift();
 
@@ -98,26 +120,39 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
 
     if (tMs < cooldownUntil) {
       candidate = null;
+      progressAcc = 0;
       return { ...IDLE, cooling: true };
     }
 
     if (!top || top === mustRelease) {
+      // Un tropiezo suelto no tira el progreso: se conserva unos cuadros por si el modelo solo
+      // parpadeó. Pasado ese margen sí se abandona.
+      if (candidate && misses < c.missTolerance) {
+        misses++;
+        return { candidate, progress: progressAcc, fire: null, cooling: false };
+      }
       candidate = null;
+      progressAcc = 0;
       return IDLE;
     }
 
     if (top !== candidate) {
       candidate = top;
-      candidateSince = tMs;
+      progressAcc = 0;
     }
+    misses = 0;
 
-    const progress = Math.min(1, (tMs - candidateSince) / c.dwellMs);
-    if (progress < 1) return { candidate, progress, fire: null, cooling: false };
+    // El progreso avanza en proporción a la CALIDAD del cuadro: una seña impecable llena la
+    // barra antes de que se cumpla el tiempo nominal; una dudosa tarda bastante más.
+    progressAcc = Math.min(1, progressAcc + (dt / c.dwellMs) * advanceRate(quality));
+
+    if (progressAcc < 1) return { candidate, progress: progressAcc, fire: null, cooling: false };
 
     // Disparo.
     cooldownUntil = tMs + c.cooldownMs;
     mustRelease = top;
     candidate = null;
+    progressAcc = 0;
     window = [];
     return { candidate: null, progress: 1, fire: top, cooling: true };
   };

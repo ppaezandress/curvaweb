@@ -269,7 +269,6 @@ export default function App() {
       if ((s.rulesVersion || 0) < 8) { merged.params.imp = 1.5; }               // ISR opcional por proyecto → tasa 1.5% (editable)
       if ((s.rulesVersion || 0) < 9) { merged.params.pool = 10; }               // Bono del Núcleo encendido al 10% (decisión Andrés 2026-07-23)
       if ((s.rulesVersion || 0) < 10) { merged.params.brkChico = 40; merged.params.brkMediano = 40; merged.params.brkGrande = 40; merged.params.brkTope = 40; } // bolsa PLANA 40% (escala limpio)
-      if ((s.rulesVersion || 0) < 11) { merged.params.alpha = 100; } // socio que trabaja se lleva su pago completo (adiós al sombrero-a-la-Banca)
       if ((s.rulesVersion || 0) < 4) {                                        // control de pagos: campos nuevos
         merged.projects = merged.projects.map((p) => ({
           ...p,
@@ -315,7 +314,6 @@ export default function App() {
           if (rv < 8) params.imp = 1.5;   // ISR opcional por proyecto → tasa 1.5% (editable)
           if (rv < 9) params.pool = 10;   // Bono del Núcleo encendido al 10%
           if (rv < 10) { params.brkChico = 40; params.brkMediano = 40; params.brkGrande = 40; params.brkTope = 40; } // bolsa PLANA 40%
-          if (rv < 11) { params.alpha = 100; } // socio se lleva su pago de trabajo completo
           let projects: Proyecto[] = (srv.projects || []);
           if (rv < 4) projects = projects.map(migrateProject);
           if (rv < 7) projects = freezeLegacyReglas(projects);   // congela guardados del server (verdad PROD)

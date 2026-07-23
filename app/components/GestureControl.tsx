@@ -10,6 +10,8 @@ import { resolveCommand, describeAction } from "@/lib/timer-commands";
 import { GestureHud, GestureError } from "@/components/GestureHud";
 import { PILOT } from "@/lib/pilot-flags";
 import { toast } from "@/lib/toast";
+import { isSoundOn } from "@/lib/gesture-prefs";
+import { playForAction } from "@/lib/gestures/sound";
 import { GESTURE_ENABLED_EVENT, isGestureOptIn } from "@/lib/gesture-prefs";
 
 // Host del control por gestos, montado en el layout. Si la persona no lo activó, este
@@ -42,11 +44,21 @@ export function GestureControl() {
   const onCommand = useCallback((g: Gesture) => {
     const ctx = ctxRef.current;
     const action = resolveCommand(commandForGesture(g), ctx);
-    if (!action) return; // no hay esa tarea abierta, o ya estás en ella
+    if (!action) {
+      // Se entendió la seña pero no aplicaba: suena distinto para que no te quedes esperando.
+      if (isSoundOn()) playForAction("ignored");
+      return;
+    }
 
     const previous = ctx.activeTaskId;
     if (action.kind === "pause") pause();
     else switchTo(action.taskId);
+
+    // Cada cosa suena distinto: subir = arrancar, bajar = parar, parejo = cambiar de tarea.
+    // Es lo que te deja saber QUÉ pasó sin volver a mirar la pantalla.
+    if (isSoundOn()) {
+      playForAction(action.kind === "pause" ? "pause" : g === "pulgar" ? "resume" : "switch");
+    }
 
     const label = describeAction(action, nameOf(action.taskId));
     const undo = () => { if (previous) switchTo(previous); else pause(); };
@@ -96,12 +108,12 @@ export function GestureControl() {
     if (!action) {
       // Decir POR QUÉ no va a pasar nada: "sin tarea ahí" cuando pides una que no está
       // abierta, y "ya vas" cuando el gesto no aplica al estado actual.
-      if (candidate === "puno") return active ? "Ya vas" : "Nada que reanudar";
+      if (candidate === "pulgar") return active ? "Ya vas" : "Nada que reanudar";
       if (candidate === "palma") return "Nada corriendo";
       return "Sin tarea ahí";
     }
     if (action.kind === "pause") return "Pausar";
-    return `${candidate === "puno" ? "Seguir · " : ""}${nameOf(action.taskId) || "Cambiar de tarea"}`;
+    return `${candidate === "pulgar" ? "Seguir · " : ""}${nameOf(action.taskId) || "Cambiar de tarea"}`;
   })();
 
   // Autoencendido tras el opt-in: la persona ya dijo que sí en Ajustes.

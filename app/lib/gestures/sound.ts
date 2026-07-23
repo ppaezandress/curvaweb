@@ -112,18 +112,54 @@ function beep(freq: number, ms: number, gain: number) {
   }
 }
 
-/** "Te veo": empezó a reconocer un gesto. Bajito, porque pasa seguido. */
+// ── Un sonido por acción ────────────────────────────────────────────────────────────────
+// Cada cosa suena distinto para poder trabajar en otra app y saber QUÉ pasó sin mirar la
+// pantalla. La lógica es la de siempre en música: subir = arrancar, bajar = parar.
+//
+//   arrancar / reanudar → dos notas que SUBEN
+//   cambiar de tarea    → dos notas al mismo nivel, como pasar de página
+//   pausar              → dos notas que BAJAN
+//   no aplicaba         → una nota grave y sola
+//
+// Todo va bajito a propósito: esto puede sonar en una llamada con cliente.
+
+/** "Te veo": empezó a reconocer un gesto. El más discreto, porque pasa seguido. */
 export function playDetected() {
-  beep(660, 70, 0.05);
+  beep(660, 60, 0.04);
 }
 
-/** "Listo, lo hice": el comando se ejecutó. Más alto y claro, es el que importa. */
-export function playConfirmed() {
-  beep(880, 90, 0.11);
-  setTimeout(() => beep(1170, 110, 0.09), 90); // segundo tono: sensación de "cerrado"
+/** Cambiaste de tarea. Dos notas parejas: "pasaste de página". */
+export function playSwitch() {
+  beep(740, 70, 0.09);
+  setTimeout(() => beep(880, 90, 0.09), 75);
 }
 
-/** El gesto no aplicaba (no hay esa tarea abierta). Bajo y grave, sin dramatismo. */
+/** Pausaste. Baja: algo se detuvo. */
+export function playPause() {
+  beep(660, 90, 0.09);
+  setTimeout(() => beep(440, 130, 0.09), 90);
+}
+
+/** Volviste a medir. Sube: algo arrancó. */
+export function playResume() {
+  beep(523, 80, 0.09);
+  setTimeout(() => beep(784, 110, 0.1), 80);
+}
+
+/** El gesto se entendió pero no aplicaba (no hay esa tarea abierta). Grave y sin drama. */
 export function playIgnored() {
-  beep(300, 120, 0.06);
+  beep(300, 130, 0.05);
+}
+
+/** Toca el sonido que corresponde a lo que acaba de pasar. */
+export function playForAction(kind: "switch" | "pause" | "resume" | "ignored") {
+  if (kind === "pause") return playPause();
+  if (kind === "resume") return playResume();
+  if (kind === "ignored") return playIgnored();
+  return playSwitch();
+}
+
+/** Genérico de confirmación (lo usa el interruptor de sonido para dar una muestra). */
+export function playConfirmed() {
+  playSwitch();
 }

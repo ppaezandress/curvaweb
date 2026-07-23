@@ -9,9 +9,12 @@ escribiendo a mano o lejos de la computadora.
 |---|---|
 | 1 a 4 dedos | Cambia a esa tarea del dock |
 | 🖐️ Palma abierta | Pausa lo que esté corriendo |
-| ✊ Puño | Sigue con lo último que medías |
+| 👍 Pulgar arriba | Sigue con lo último que medías |
 
-Mano abierta suelta el trabajo, mano cerrada lo vuelve a agarrar. Los dedos, en medio, eligen.
+Palma abierta suelta el trabajo, pulgar arriba lo retoma. Los dedos, en medio, eligen tarea.
+
+**El puño no hace nada, a propósito.** Cerrar la mano es como queda al bajarla o al tomar el
+mouse: usarlo como comando garantizaba disparos accidentales.
 
 **Cuenta cuántos dedos levantas, no cuáles.** Da igual si el 3 lo haces con pulgar+índice+medio
 (como se cuenta en México) o con índice+medio+anular. Las dos formas valen — la primera versión
@@ -63,7 +66,20 @@ de 12 a 7 cuadros por segundo mientras no miras, y a 3 si no hay ninguna mano a 
 **Qué tanto sostener la seña:** Rápido (0.8 s) · Normal (1.2 s) · Tranquilo (2 s). Si pasas el
 día en videollamadas, ponlo en Tranquilo — así un saludo no te mueve el cronómetro.
 
-**Sonido:** se puede apagar. Va bajito a propósito porque puede sonar en una llamada.
+**Sonido:** cada acción suena distinto, para saber qué pasó sin mirar la pantalla —
+**sube** al arrancar o reanudar, **baja** al pausar, **parejo** al cambiar de tarea, y una nota
+grave y sola cuando la seña se entendió pero no aplicaba (por ejemplo, pediste la tarea 3 y solo
+hay dos abiertas). Va bajito a propósito porque puede sonar en una llamada. Se puede apagar.
+
+**Precisión.** Una seña solo cuenta si parece hecha a propósito:
+
+- **Quieta.** Una seña se sostiene; una mano que se rasca, se acomoda el pelo o va de paso está
+  en movimiento. Si se mueve rápido, el cuadro no cuenta.
+- **De frente.** Al apoyar la mano en la cara la palma queda de canto y los nudillos se alinean;
+  eso se detecta y se descarta.
+- **Sin dedos a medias.** Un dedo a medio estirar invalida el cuadro entero, en vez de adivinar.
+  Era lo que hacía parpadear entre 3 y 4 dedos.
+- **Sin manos lejanas.** Una mano pequeña (alguien al fondo de la sala) se ignora.
 
 ## Cómo se enciende para el equipo
 

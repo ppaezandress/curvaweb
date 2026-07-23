@@ -5,6 +5,7 @@ import {
 } from "@/lib/gestures/vocabulary";
 import { createStabilizer } from "@/lib/gestures/stabilizer";
 import { frameIntervalMs } from "@/lib/gestures/metronome";
+import { SENSITIVITY } from "@/lib/gesture-prefs";
 
 // ── Manos sintéticas ────────────────────────────────────────────────────────────────────
 // Construimos las 21 marcas como las devolvería MediaPipe (normalizadas 0..1, `y` crece hacia
@@ -58,7 +59,7 @@ function makeHand(up: Up): Landmark[] {
 }
 
 const HANDS: Record<Gesture, Landmark[]> = {
-  puno: makeHand({}),
+  pulgar: makeHand({ thumb: true }),
   uno: makeHand({ index: true }),
   dos: makeHand({ index: true, middle: true }),
   tres: makeHand({ index: true, middle: true, ring: true }),
@@ -113,15 +114,20 @@ describe("gestureFrom", () => {
     expect(gestureFrom(makeHand({ thumb: true, index: true }))).toBe("dos"); // 2 a la mexicana
     expect(gestureFrom(makeHand({ index: true, middle: true }))).toBe("dos"); // 2 con la V
 
-    expect(gestureFrom(makeHand({ thumb: true }))).toBe("uno"); // pulgar arriba
-    expect(gestureFrom(makeHand({ pinky: true }))).toBe("uno"); // meñique solo
+    expect(gestureFrom(makeHand({ pinky: true }))).toBe("uno"); // un dedo cualquiera
     expect(gestureFrom(makeHand({ index: true, pinky: true }))).toBe("dos"); // cuernos
 
     expect(gestureFrom(makeHand({ thumb: true, index: true, middle: true, ring: true }))).toBe("cuatro");
   });
 
-  it("el puño es un gesto de verdad, no 'nada'", () => {
-    expect(gestureFrom(HANDS.puno)).toBe("puno");
+  it("el puño NO significa nada: es la postura natural de una mano en reposo", () => {
+    // Usarlo como comando garantizaba disparos accidentales al bajar la mano o tomar el mouse.
+    expect(gestureFrom(makeHand({}))).toBeNull();
+  });
+
+  it("el pulgar arriba es su propia seña, distinta de 'un dedo'", () => {
+    expect(gestureFrom(makeHand({ thumb: true }))).toBe("pulgar");
+    expect(gestureFrom(makeHand({ index: true }))).toBe("uno");
   });
 
   it("no interpreta una mano cortada por el borde del cuadro", () => {
@@ -137,11 +143,11 @@ describe("gestureFrom", () => {
 });
 
 describe("commandForGesture", () => {
-  it("los dedos mandan a la tarea del dock; mano abierta pausa y mano cerrada reanuda", () => {
+  it("los dedos mandan a la tarea del dock; palma pausa y pulgar arriba reanuda", () => {
     expect(commandForGesture("uno")).toEqual({ kind: "switch", index: 0 });
     expect(commandForGesture("cuatro")).toEqual({ kind: "switch", index: 3 });
     expect(commandForGesture("palma")).toEqual({ kind: "pause" });
-    expect(commandForGesture("puno")).toEqual({ kind: "resume" });
+    expect(commandForGesture("pulgar")).toEqual({ kind: "resume" });
   });
 });
 
@@ -250,26 +256,35 @@ describe("mano dominante", () => {
     expect(spanOf(cerca)).toBeGreaterThan(spanOf(lejos));
   });
 
-  it("cada mano se sigue interpretando bien por separado", () => {
-    expect(gestureFrom(HANDS.dos)).toBe("dos");
-    expect(gestureFrom(scale(HANDS.palma, 0.6))).toBe("palma");
+  it("una mano pequeña (alguien al fondo de la sala) se ignora", () => {
+    // Antes se interpretaba igual que la tuya y podía moverte el cronómetro.
+    expect(gestureFrom(scale(HANDS.palma, 0.5))).toBeNull();
+    expect(gestureFrom(HANDS.palma)).toBe("palma");
   });
 });
 
 // ── Sensibilidad ────────────────────────────────────────────────────────────────────────
 describe("sensibilidad configurable", () => {
+  // Se usan los valores REALES de los ajustes: si alguien los cambia, estas pruebas dicen si
+  // el cambio rompió la promesa de cada modo.
   it("en 'rápido' dispara antes que en 'tranquilo'", () => {
-    const rapido = createStabilizer({ dwellMs: 800 });
-    const tranquilo = createStabilizer({ dwellMs: 2000 });
+    const rapido = createStabilizer(SENSITIVITY.rapido);
+    const tranquilo = createStabilizer(SENSITIVITY.tranquilo);
     const a = feedFor(rapido, "uno", 1000);
     const b = feedFor(tranquilo, "uno", 1000);
     expect(a.fires).toEqual(["uno"]);
     expect(b.fires).toHaveLength(0);
   });
 
-  it("en 'tranquilo' un gesto de paso no alcanza a disparar", () => {
-    const tranquilo = createStabilizer({ dwellMs: 2000 });
-    const { fires } = feedFor(tranquilo, "palma", 1500); // un saludo dura menos que eso
+  it("en 'tranquilo' un saludo de paso no alcanza a disparar", () => {
+    const tranquilo = createStabilizer(SENSITIVITY.tranquilo);
+    const { fires } = feedFor(tranquilo, "palma", 1200); // saludar dura menos que eso
+    expect(fires).toHaveLength(0);
+  });
+
+  it("hasta el modo rápido exige sostener: un gesto de medio segundo no basta", () => {
+    const rapido = createStabilizer(SENSITIVITY.rapido);
+    const { fires } = feedFor(rapido, "palma", 400);
     expect(fires).toHaveLength(0);
   });
 });
@@ -303,5 +318,42 @@ describe("frameIntervalMs", () => {
       const ms = frameIntervalMs({ hidden, idle: false });
       expect(1200 / ms).toBeGreaterThanOrEqual(3); // al menos 3 muestras en 1.2 s
     }
+  });
+});
+
+
+// ── Precisión: la zona muerta ───────────────────────────────────────────────────────────
+// Un dedo a medio estirar antes hacía parpadear el gesto entre 3 y 4 de un cuadro a otro.
+// Ahora un dedo dudoso invalida el cuadro entero: mejor tardar un cuadro más que ejecutar
+// el comando equivocado.
+describe("dedos a medias", () => {
+  const halfOpen = (dir: readonly [number, number] | number[]) => [
+    along(dir, 0.09), along(dir, 0.15), along(dir, 0.17),
+    along(dir, 0.165), // punta apenas más lejos que el nudillo: ni abierto ni cerrado
+  ];
+
+  function handWithHalfRing(): Landmark[] {
+    const pinkyMcp = along(DIRS.pinky, 0.09);
+    const thumbAt = (d: number): Landmark => ({ x: pinkyMcp.x - d, y: pinkyMcp.y });
+    const finger = (dir: readonly [number, number] | number[], open?: boolean) => [
+      along(dir, 0.09), along(dir, 0.15), along(dir, 0.19), along(dir, open ? 0.25 : 0.1),
+    ];
+    return [
+      WRIST, thumbAt(0.08), thumbAt(0.14), thumbAt(0.2), thumbAt(0.15),
+      ...finger(DIRS.index, true),
+      ...finger(DIRS.middle, true),
+      ...halfOpen(DIRS.ring), // el dudoso
+      ...finger(DIRS.pinky, false),
+    ];
+  }
+
+  it("no adivina cuando un dedo está a medias", () => {
+    expect(fingersUp(handWithHalfRing())).toBeNull();
+    expect(gestureFrom(handWithHalfRing())).toBeNull();
+  });
+
+  it("con los dedos claros sí decide", () => {
+    expect(gestureFrom(HANDS.dos)).toBe("dos");
+    expect(gestureFrom(HANDS.tres)).toBe("tres");
   });
 });

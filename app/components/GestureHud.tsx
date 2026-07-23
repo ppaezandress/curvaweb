@@ -23,7 +23,7 @@ const LEGEND: [Gesture, string][] = [
   ["tres", "3ª tarea"],
   ["cuatro", "4ª tarea"],
   ["palma", "pausar"],
-  ["puno", "seguir"],
+  ["pulgar", "seguir"],
 ];
 
 const RING_R = 22;

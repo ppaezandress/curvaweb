@@ -134,10 +134,11 @@ export const REGLAS_DEFAULT: Reglas = {
   // imp = tasa de ISR que se descuenta cuando el proyecto tiene "Descontar ISR"
   // activo. Default 1.5% (RESICO Persona Física, tramo típico). Editable en Reglas;
   // confírmalo con la contadora. Decisión 2026-07-18 (ISR opcional por proyecto).
-  // alpha 100: un socio que trabaja se lleva el 100% de su pago por trabajar (no se
-  // fuerza ahorro a La Banca). El colchón se construye con la Caja de ahorro. Decisión
-  // Andrés 2026-07-23 (probado: repartir el sombrero en utilidad diluye al socio que trabaja).
-  alpha: 100, pool: 10, beta: 0, split: 60, ahorro: 15, imp: 1.5,
+  // alpha 60: cuando un socio TRABAJA un proyecto, cobra solo el 60% de su tarifa (con
+  // descuento por ser dueño); el otro 40% va a La Banca (colchón de CURVA). Es el diseño
+  // documentado en Obsidian §7: "los socios inyectan colchón con su propio trabajo".
+  // NO diluye al otro socio ni le quita a CURVA — solo mueve TU dinero: bolsa hoy vs ahorro.
+  alpha: 60, pool: 10, beta: 0, split: 60, ahorro: 15, imp: 1.5,
   comisPct: 10, comisTope: 30000,
   pesoP: 1.8, pesoE: 1.5, pesoA: 1.0,
   // Bolsa del equipo PLANA al 40% (los 4 tramos iguales): el equipo se lleva un %

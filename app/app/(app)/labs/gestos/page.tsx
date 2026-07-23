@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Camera, CameraOff } from "lucide-react";
 import { useGestureControl } from "@/lib/use-gesture-control";
-import { unlockAudio } from "@/lib/gestures/sound";
+import { unlockAudio, playForAction } from "@/lib/gestures/sound";
+import { isSoundOn } from "@/lib/gesture-prefs";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 
 // Laboratorio del control por gestos (Fase 0). Existe para UNA decisión: ¿reconoce bien con
@@ -15,15 +16,18 @@ import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocab
 //   · que cada gesto se reconozca al primer intento,
 //   · cuántos disparos salen solos en diez minutos de trabajo normal (deberían ser cero),
 //   · que los cuadros por segundo no se desplomen y la máquina no se caliente.
-const ORDER: Gesture[] = ["uno", "dos", "tres", "cuatro", "palma", "puno"];
+const ORDER: Gesture[] = ["uno", "dos", "tres", "cuatro", "palma", "pulgar"];
 
 export default function LabGestosPage() {
   const [log, setLog] = useState<{ g: Gesture; at: string }[]>([]);
   const [fps, setFps] = useState(0);
   const [counts, setCounts] = useState<Partial<Record<Gesture, number>>>({});
-  const [stats, setStats] = useState({ frames: 0, agoSec: -1, source: "—" as string, hidden: false, received: 0, pumping: false, rawBroken: false });
+  const [stats, setStats] = useState({ frames: 0, agoSec: -1, source: "—" as string, hidden: false, received: 0, pumping: false, rawBroken: false, quality: 0, hint: null as string | null });
 
   const onCommand = useCallback((g: Gesture) => {
+    // Aquí no se ejecuta ningún comando, pero suena IGUAL que en la app real: practicar sirve
+    // para aprenderse los sonidos, no solo las señas.
+    if (isSoundOn()) playForAction(g === "palma" ? "pause" : g === "pulgar" ? "resume" : "switch");
     setCounts((c) => ({ ...c, [g]: (c[g] || 0) + 1 }));
     setLog((l) => [{ g, at: new Date().toLocaleTimeString("es-MX") }, ...l].slice(0, 12));
   }, []);
@@ -60,8 +64,10 @@ export default function LabGestosPage() {
         received: s.received,
         pumping: s.pumping,
         rawBroken: s.rawBroken,
+        quality: s.quality,
+        hint: s.hint,
       });
-    }, 1000);
+    }, 400);
     return () => clearInterval(iv);
   }, [status, getStats]);
 
@@ -129,10 +135,35 @@ export default function LabGestosPage() {
             <ul className="mt-2 space-y-1 text-caption text-muted">
               <li><b className="text-fg">1 a 4 dedos</b> · elige esa tarea del dock</li>
               <li><b className="text-fg">🖐️ palma</b> · pausa lo que corre</li>
-              <li><b className="text-fg">✊ puño</b> · sigue con lo último</li>
+              <li><b className="text-fg">👍 pulgar arriba</b> · sigue con lo último</li>
             </ul>
             <p className="mt-2 border-t border-line pt-2 text-caption text-muted">
-              Cuenta cuántos dedos levantas, no cuáles. Sostén la seña un segundo.
+              Cuenta cuántos dedos levantas, no cuáles. Sostén la seña un momento.
+            </p>
+            <p className="mt-2 flex items-center justify-between gap-2 rounded-control bg-surface-2 px-3 py-2 text-caption">
+              <span className="text-muted">Viendo ahora</span>
+              <span className="font-medium text-fg">
+                {candidate ? `${GESTURE_EMOJI[candidate]} ${GESTURE_LABEL[candidate]}` : running ? "nada claro" : "—"}
+              </span>
+            </p>
+          </div>
+
+          <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
+            <p className="text-caption font-semibold text-muted">Qué tan clara te ve</p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2">
+              <div
+                className="h-full rounded-full transition-[width,background-color] duration-200"
+                style={{
+                  width: `${Math.round(stats.quality * 100)}%`,
+                  background: stats.quality >= 0.8 ? "var(--success)" : stats.quality >= 0.35 ? "var(--accent)" : "var(--warn)",
+                }}
+              />
+            </div>
+            <p className="mt-1.5 text-caption text-muted">
+              {!running ? "Enciende la cámara para medir."
+                : stats.quality === 0 ? "No veo ninguna mano."
+                : stats.hint ? <><b className="text-fg">{stats.hint}</b> — así entra más rápido.</>
+                : "Perfecto: así se confirma en el tiempo mínimo."}
             </p>
           </div>
 

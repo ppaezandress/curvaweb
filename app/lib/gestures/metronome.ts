@@ -78,8 +78,11 @@ export function createMetronome(onTick: () => void): Metronome {
 // ── Ritmo ───────────────────────────────────────────────────────────────────────────────
 // Separado y puro para poder probarlo: de aquí depende que la función siga viva en segundo
 // plano sin fundir la batería.
-export const FPS_VISIBLE = 12; // suave y responsivo mientras miras la app
-export const FPS_HIDDEN = 7; // suficiente para un dwell de 0.8 s, mucho más barato
+// Analizar más seguido no solo "se siente" mejor: la ventana de acuerdo se llena antes, así
+// que el gesto se confirma antes CON la misma exigencia de estabilidad. Es la forma de ganar
+// velocidad sin pagarla en falsos positivos.
+export const FPS_VISIBLE = 20; // con la app a la vista
+export const FPS_HIDDEN = 12; // en segundo plano: sigue siendo cómodo y cuesta la mitad
 export const FPS_IDLE = 3; // no hay ninguna mano a la vista
 
 export function frameIntervalMs(state: { hidden: boolean; idle: boolean }): number {

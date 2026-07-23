@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HandLandmarker } from "@mediapipe/tasks-vision";
-import { gestureFrom, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
+import { gestureFrom, handCenter, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
+import { frameQuality, qualityHint, MIN_QUALITY } from "@/lib/gestures/quality";
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
 import { reportClientError } from "@/lib/report-error";
-import { playConfirmed, playDetected, startKeepAlive, stopKeepAlive } from "@/lib/gestures/sound";
+import { playDetected, startKeepAlive, stopKeepAlive } from "@/lib/gestures/sound";
 import { isSoundOn, getSensitivity, SENSITIVITY, isBackgroundOn } from "@/lib/gesture-prefs";
 import { createCameraLock } from "@/lib/gestures/camera-lock";
 import { createMetronome, frameIntervalMs, type Metronome } from "@/lib/gestures/metronome";
@@ -61,7 +62,7 @@ export type GestureControlState = {
    * no provocar un render por cuadro. Sirve para responder la pregunta que costó una tarde:
    * ¿el reconocimiento sigue vivo cuando me cambio a otra app, y de dónde saca los cuadros?
    */
-  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean; received: number; pumping: boolean; rawBroken: boolean };
+  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean; received: number; pumping: boolean; rawBroken: boolean; quality: number; hint: string | null };
 };
 
 export function useGestureControl(opts: {
@@ -109,7 +110,9 @@ export function useGestureControl(opts: {
   const rawFramesBrokenRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—", received: 0, pumping: false, rawBroken: false });
+  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—", received: 0, pumping: false, rawBroken: false, quality: 0, hint: null as string | null });
+  // Último centro de la mano y su tiempo, para medir a qué velocidad se mueve.
+  const lastCenterRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
 
@@ -126,13 +129,14 @@ export function useGestureControl(opts: {
     frameRef.current = null;
     pumpingRef.current = false;
     rawFramesBrokenRef.current = false;
-    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—", received: 0, pumping: false, rawBroken: false };
+    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—", received: 0, pumping: false, rawBroken: false, quality: 0, hint: null };
     streamRef.current?.getTracks().forEach((t) => t.stop()); // apaga la luz de la cámara
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     landmarkerRef.current?.close();
     landmarkerRef.current = null;
     stabRef.current.reset();
+    lastCenterRef.current = null;
     lockRef.current?.release();
     lockRef.current = null;
     shownRef.current = { candidate: null, step: 0, cooling: false };
@@ -414,6 +418,7 @@ export function useGestureControl(opts: {
       }
 
       let gesture: Gesture | null = null;
+      let quality = 0;
       try {
         statsRef.current.frames++;
         statsRef.current.lastFrameAt = Date.now();
@@ -422,10 +427,36 @@ export function useGestureControl(opts: {
         // Con dos manos en cuadro (pasa: la otra sobre el teclado, alguien pasando detrás)
         // mandamos la que está MÁS CERCA de la cámara, que es la que te estás presentando.
         const hands = (res.landmarks || []) as Landmark[][];
-        const hand = hands.length > 1 ? hands.reduce((a, b) => (spanOf(b) > spanOf(a) ? b : a)) : hands[0];
+        const idx = hands.length > 1
+          ? hands.reduce((best, h, i) => (spanOf(h) > spanOf(hands[best]) ? i : best), 0)
+          : 0;
+        const hand = hands[idx];
         if (hand?.length) {
           lastHandRef.current = now;
-          gesture = gestureFrom(hand);
+
+          // Velocidad del centro de la mano: sostener una seña ronda cero; rascarse la cara o
+          // acomodarse el pelo se dispara.
+          const center = handCenter(hand);
+          const prev = lastCenterRef.current;
+          const dt = prev ? (now - prev.t) / 1000 : 0;
+          const speed = prev && dt > 0 ? Math.hypot(center.x - prev.x, center.y - prev.y) / dt : 0;
+          lastCenterRef.current = { ...center, t: now };
+
+          // Nota del cuadro. En vez de aceptar o rechazar, se PUNTÚA: el estabilizador avanza
+          // rápido con evidencia buena y despacio con evidencia dudosa.
+          const q = frameQuality({
+            landmarks: hand,
+            speed,
+            modelScore: (res.handednesses?.[idx]?.[0]?.score ?? res.handedness?.[idx]?.[0]?.score) as number | undefined,
+          });
+          quality = q.score;
+          statsRef.current.quality = q.score;
+          statsRef.current.hint = qualityHint(q);
+          gesture = q.score >= MIN_QUALITY ? gestureFrom(hand) : null;
+        } else {
+          lastCenterRef.current = null;
+          statsRef.current.quality = 0;
+          statsRef.current.hint = null;
         }
       } catch {
         return false; // el reconocedor rechazó esta imagen: quien llama probará con otra
@@ -434,7 +465,7 @@ export function useGestureControl(opts: {
       // Cortesía: si llevas rato sin usarla, se apaga sola.
       if (now - lastHandRef.current > NO_HAND_TIMEOUT_MS) { stop(); return true; }
 
-      const out = stabRef.current.feed(gesture, now);
+      const out = stabRef.current.feed(gesture, now, quality);
 
       // Aquí está la clave del rendimiento: setState SOLO si cambió lo que se ve.
       const step = Math.round(out.progress * PROGRESS_STEPS);
@@ -449,10 +480,9 @@ export function useGestureControl(opts: {
       if (step !== shown.step) { shownRef.current.step = step; setProgress(step / PROGRESS_STEPS); }
       if (out.cooling !== shown.cooling) { shownRef.current.cooling = out.cooling; setCooling(out.cooling); }
 
-      if (out.fire) {
-        if (isSoundOn()) playConfirmed();
-        onCommandRef.current(out.fire);
-      }
+      // El sonido de confirmación lo toca quien resuelve el comando: solo ahí se sabe si fue
+      // un cambio de tarea, una pausa, un reanudar o algo que no aplicaba.
+      if (out.fire) onCommandRef.current(out.fire);
       return true;
     }
 

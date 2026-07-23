@@ -23,7 +23,7 @@ const VOCABULARY: { gesture: Gesture; does: string }[] = [
   { gesture: "tres", does: "Cambia a la 3ª" },
   { gesture: "cuatro", does: "Cambia a la 4ª" },
   { gesture: "palma", does: "Pausa lo que esté corriendo" },
-  { gesture: "puno", does: "Sigue con lo último que medías" },
+  { gesture: "pulgar", does: "Sigue con lo último que medías" },
 ];
 
 export function GestureSettings() {
@@ -70,7 +70,7 @@ export function GestureSettings() {
             <Toggle
               icon={<Volume2 size={16} />}
               label="Avisarme con un sonido"
-              hint="Un tic al reconocer tu mano y un tono al ejecutar. Así sabes que la cámara te está viendo."
+              hint="Cada acción suena distinto: subir = arrancar, bajar = pausar, parejo = cambiar de tarea."
               on={sound}
               onChange={(v) => { setSoundOn(v); setSound(v); if (v) playConfirmed(); }}
             />
@@ -136,9 +136,10 @@ export function GestureSettings() {
               ))}
             </ul>
             <p className="mt-2.5 text-caption text-muted">
-              Cuenta <b>cuántos dedos</b> levantas, no cuáles: da igual si el 3 lo haces con el
-              pulgar o sin él. Hay que <b>sostener</b> la seña un segundo para que cuente — así
-              un saludo en una junta no te mueve el cronómetro — y todo se puede deshacer.
+              Para elegir tarea cuenta <b>cuántos dedos</b> levantas, no cuáles: da igual si el 3
+              lo haces con el pulgar o sin él. La seña hay que <b>sostenerla</b> un momento,
+              <b>quieta y de frente</b> — por eso rascarte la cara no te mueve el cronómetro. El
+              puño no hace nada a propósito: es como queda la mano en reposo. Todo se deshace.
             </p>
             <Link
               href="/labs/gestos"
