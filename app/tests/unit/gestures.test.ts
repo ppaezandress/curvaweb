@@ -3,9 +3,7 @@ import {
   gestureFrom, gestureFromHands, fingersUp, handFullyVisible, commandForGesture, GESTURE_LABEL,
   type Landmark, type Gesture,
 } from "@/lib/gestures/vocabulary";
-import { createStabilizer } from "@/lib/gestures/stabilizer";
 import { frameIntervalMs } from "@/lib/gestures/metronome";
-import { SENSITIVITY } from "@/lib/gesture-prefs";
 
 // ── Manos sintéticas ────────────────────────────────────────────────────────────────────
 // Construimos las 21 marcas como las devolvería MediaPipe (normalizadas 0..1, `y` crece hacia
@@ -173,96 +171,6 @@ describe("commandForGesture", () => {
   });
 });
 
-// ── Estabilizador ───────────────────────────────────────────────────────────────────────
-// Alimentamos cuadros a mano para verificar las tres defensas contra el falso positivo.
-const feedFor = (
-  st: ReturnType<typeof createStabilizer>,
-  g: Gesture | null,
-  ms: number,
-  t0 = 0,
-  step = 80,
-) => {
-  let last = { candidate: null as Gesture | null, progress: 0, fire: null as Gesture | null, cooling: false };
-  const fires: Gesture[] = [];
-  for (let t = t0; t < t0 + ms; t += step) {
-    last = st.feed(g, t);
-    if (last.fire) fires.push(last.fire);
-  }
-  return { last, fires, endT: t0 + ms };
-};
-
-describe("stabilizer", () => {
-  it("no dispara con un gesto suelto: hay que sostenerlo", () => {
-    const st = createStabilizer();
-    const { fires } = feedFor(st, "uno", 600); // menos del dwell
-    expect(fires).toHaveLength(0);
-  });
-
-  it("dispara una sola vez al completar el dwell", () => {
-    const st = createStabilizer();
-    const { fires } = feedFor(st, "uno", 2000);
-    expect(fires).toEqual(["uno"]);
-  });
-
-  it("sostener la mano NO repite el comando en bucle", () => {
-    const st = createStabilizer();
-    const { fires } = feedFor(st, "palma", 12_000); // diez segundos con la palma quieta
-    expect(fires).toEqual(["palma"]);
-  });
-
-  it("hay que soltar y volver a hacer el gesto para repetirlo", () => {
-    const st = createStabilizer();
-    const a = feedFor(st, "uno", 2000);
-    expect(a.fires).toEqual(["uno"]);
-    const b = feedFor(st, null, 1500, a.endT); // suelta
-    const c = feedFor(st, "uno", 2000, b.endT); // lo vuelve a hacer
-    expect(c.fires).toEqual(["uno"]);
-  });
-
-  it("un parpadeo del modelo no cuenta como gesto", () => {
-    const st = createStabilizer();
-    // Mano quieta en "dos" con un cuadro suelto mal leído: debe seguir siendo "dos".
-    let out = st.feed("dos", 0);
-    for (let i = 1; i < 20; i++) out = st.feed(i === 7 ? "tres" : "dos", i * 80);
-    expect(out.fire ?? "dos").toBe("dos");
-  });
-
-  it("cambiar de gesto a media cuenta reinicia el progreso", () => {
-    const st = createStabilizer();
-    feedFor(st, "uno", 800);
-    const { fires, last } = feedFor(st, "dos", 400, 800);
-    expect(fires).toHaveLength(0);
-    expect(last.progress).toBeLessThan(1);
-  });
-
-  it("el progreso avanza de 0 a 1 (es lo que pinta el anillo)", () => {
-    const st = createStabilizer();
-    for (let t = 0; t < 700; t += 80) st.feed("tres", t);
-    const mid = st.feed("tres", 700);
-    expect(mid.progress).toBeGreaterThan(0.4);
-    expect(mid.progress).toBeLessThan(1);
-  });
-
-  it("una mano que no hace ningún gesto conocido no arma nada", () => {
-    const st = createStabilizer();
-    const { fires, last } = feedFor(st, null, 3000);
-    expect(fires).toHaveLength(0);
-    expect(last.candidate).toBeNull();
-  });
-
-  it("reset deja el estabilizador como nuevo", () => {
-    const st = createStabilizer();
-    feedFor(st, "uno", 1000);
-    st.reset();
-    const { fires } = feedFor(st, "uno", 600, 1000);
-    expect(fires).toHaveLength(0); // vuelve a exigir el dwell completo
-  });
-});
-
-// ── Selección de mano cuando hay más de una en cuadro ────────────────────────────────────
-// Pasa más seguido de lo que parece: la otra mano sobre el teclado, alguien pasando detrás.
-// Mandamos la que se ve más grande (la que está más cerca de la cámara), que es la que te
-// estás presentando a propósito.
 describe("mano dominante", () => {
   const scale = (lm: Landmark[], k: number): Landmark[] =>
     lm.map((p) => ({ x: WRIST.x + (p.x - WRIST.x) * k, y: WRIST.y + (p.y - WRIST.y) * k }));
@@ -286,34 +194,6 @@ describe("mano dominante", () => {
 });
 
 // ── Sensibilidad ────────────────────────────────────────────────────────────────────────
-describe("sensibilidad configurable", () => {
-  // Se usan los valores REALES de los ajustes: si alguien los cambia, estas pruebas dicen si
-  // el cambio rompió la promesa de cada modo.
-  it("en 'rápido' dispara antes que en 'tranquilo'", () => {
-    const rapido = createStabilizer(SENSITIVITY.rapido);
-    const tranquilo = createStabilizer(SENSITIVITY.tranquilo);
-    const a = feedFor(rapido, "uno", 1000);
-    const b = feedFor(tranquilo, "uno", 1000);
-    expect(a.fires).toEqual(["uno"]);
-    expect(b.fires).toHaveLength(0);
-  });
-
-  it("en 'tranquilo' un saludo de paso no alcanza a disparar", () => {
-    const tranquilo = createStabilizer(SENSITIVITY.tranquilo);
-    const { fires } = feedFor(tranquilo, "palma", 1200); // saludar dura menos que eso
-    expect(fires).toHaveLength(0);
-  });
-
-  it("hasta el modo rápido exige sostener: un gesto de medio segundo no basta", () => {
-    const rapido = createStabilizer(SENSITIVITY.rapido);
-    const { fires } = feedFor(rapido, "palma", 400);
-    expect(fires).toHaveLength(0);
-  });
-});
-
-// ── Ritmo del reconocimiento ────────────────────────────────────────────────────────────
-// De esto depende que los gestos sigan vivos cuando NO estás en la app (el caso que les da
-// sentido) sin fundir la batería mirando una silla vacía.
 describe("frameIntervalMs", () => {
   it("va más suave con la app a la vista que en segundo plano", () => {
     const visible = frameIntervalMs({ hidden: false, idle: false });

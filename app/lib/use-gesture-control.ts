@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HandLandmarker } from "@mediapipe/tasks-vision";
-import { gestureFromHands, handCenter, sampleOf, applyThresholds, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
+import { sampleOf, applyThresholds, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
+import { readFrame, adviceFor } from "@/lib/gestures/reader";
 import { loadThresholds, type Sample } from "@/lib/gestures/calibration";
-import { frameQuality, qualityHint, MIN_QUALITY } from "@/lib/gestures/quality";
-import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
+import { createIntegrator, type IntegratorConfig } from "@/lib/gestures/integrator";
 import { reportClientError } from "@/lib/report-error";
 import { playDetected, startKeepAlive, stopKeepAlive } from "@/lib/gestures/sound";
 import { isSoundOn, getSensitivity, SENSITIVITY, isBackgroundOn } from "@/lib/gesture-prefs";
@@ -69,7 +69,7 @@ export type GestureControlState = {
 export function useGestureControl(opts: {
   enabled: boolean;
   onCommand: (g: Gesture) => void;
-  stabilizer?: Partial<StabilizerConfig>;
+  stabilizer?: Partial<IntegratorConfig>;
   /** Medidas crudas de cada cuadro. Solo lo usa la pantalla de calibración. */
   onSample?: (s: Sample) => void;
 }): GestureControlState {
@@ -92,7 +92,7 @@ export function useGestureControl(opts: {
   const streamRef = useRef<MediaStream | null>(null);
   const landmarkerRef = useRef<HandLandmarker | null>(null);
   const rafRef = useRef<number | null>(null);
-  const stabRef = useRef(createStabilizer(opts.stabilizer ?? SENSITIVITY[getSensitivity()]));
+  const stabRef = useRef(createIntegrator(opts.stabilizer ?? SENSITIVITY[getSensitivity()]));
   const lastFrameRef = useRef(0);
   const lastHandRef = useRef(0);
   // Lo pintado ahora mismo, para no llamar a setState con el mismo valor.
@@ -177,7 +177,7 @@ export function useGestureControl(opts: {
 
     // La sensibilidad y la calibración se leen AL ENCENDER: si las cambias, aplican al
     // reactivar la cámara.
-    stabRef.current = createStabilizer(opts.stabilizer ?? SENSITIVITY[getSensitivity()]);
+    stabRef.current = createIntegrator(opts.stabilizer ?? SENSITIVITY[getSensitivity()]);
     applyThresholds(loadThresholds());
 
     // Si otra pestaña reclama la cámara, esta se apaga sola y lo dice.
@@ -425,53 +425,43 @@ export function useGestureControl(opts: {
       }
 
       let gesture: Gesture | null = null;
-      let quality = 0;
+      let confidence = 0;
       try {
         statsRef.current.frames++;
         statsRef.current.lastFrameAt = Date.now();
         statsRef.current.source = from;
         const res = landmarker.detectForVideo(source, now);
-        // Con dos manos en cuadro (pasa: la otra sobre el teclado, alguien pasando detrás)
-        // mandamos la que está MÁS CERCA de la cámara, que es la que te estás presentando.
         const hands = (res.landmarks || []) as Landmark[][];
-        const idx = hands.length > 1
-          ? hands.reduce((best, h, i) => (spanOf(h) > spanOf(hands[best]) ? i : best), 0)
-          : 0;
-        const hand = hands[idx];
-        if (hand?.length) {
-          lastHandRef.current = now;
 
-          // Velocidad del centro de la mano: sostener una seña ronda cero; rascarse la cara o
-          // acomodarse el pelo se dispara.
-          const center = handCenter(hand);
-          const prev = lastCenterRef.current;
-          const dt = prev ? (now - prev.t) / 1000 : 0;
-          const speed = prev && dt > 0 ? Math.hypot(center.x - prev.x, center.y - prev.y) / dt : 0;
-          lastCenterRef.current = { ...center, t: now };
-
-          // Nota del cuadro. En vez de aceptar o rechazar, se PUNTÚA: el estabilizador avanza
-          // rápido con evidencia buena y despacio con evidencia dudosa.
-          const q = frameQuality({
-            landmarks: hand,
-            speed,
-            modelScore: (res.handednesses?.[idx]?.[0]?.score ?? res.handedness?.[idx]?.[0]?.score) as number | undefined,
-          });
-          // Muestras crudas para la calibración (solo si alguien las pidió).
-          if (onSampleRef.current) {
-            const sample = sampleOf(hand);
-            if (sample) onSampleRef.current(sample);
+        // Velocidad del centro de la mano entre cuadros: sostener una seña ronda cero;
+        // rascarse la cara o acomodarse el pelo se dispara.
+        const prev = lastCenterRef.current;
+        const provisional = readFrame({ hands, speed: 0 });
+        let speed = 0;
+        if (prev && provisional.center) {
+          const dtSec = (now - prev.t) / 1000;
+          if (dtSec > 0) {
+            speed = Math.hypot(provisional.center.x - prev.x, provisional.center.y - prev.y) / dtSec;
           }
-
-          quality = q.score;
-          statsRef.current.quality = q.score;
-          statsRef.current.hint = qualityHint(q);
-          // Se pasan TODAS las manos: las dos palmas abiertas a la vez son un gesto propio.
-          gesture = q.score >= MIN_QUALITY ? gestureFromHands(hands) : null;
-        } else {
-          lastCenterRef.current = null;
-          statsRef.current.quality = 0;
-          statsRef.current.hint = null;
         }
+
+        // UNA sola lectura, siempre explicada: qué seña hay, qué tan buena es la evidencia y
+        // qué falla cuando no alcanza. Antes esto eran ocho filtros repartidos que podían
+        // rechazar en silencio y contradecirse entre sí.
+        const reading = readFrame({ hands, speed });
+        lastCenterRef.current = reading.center ? { ...reading.center, t: now } : null;
+        if (reading.center) lastHandRef.current = now;
+
+        // Muestras crudas para la calibración (solo si alguien las pidió).
+        if (onSampleRef.current && hands[0]?.length) {
+          const sample = sampleOf(hands[0]);
+          if (sample) onSampleRef.current(sample);
+        }
+
+        gesture = reading.gesture;
+        confidence = reading.confidence;
+        statsRef.current.quality = reading.confidence;
+        statsRef.current.hint = adviceFor(reading.reason);
       } catch {
         return false; // el reconocedor rechazó esta imagen: quien llama probará con otra
       }
@@ -479,7 +469,7 @@ export function useGestureControl(opts: {
       // Cortesía: si llevas rato sin usarla, se apaga sola.
       if (now - lastHandRef.current > NO_HAND_TIMEOUT_MS) { stop(); return true; }
 
-      const out = stabRef.current.feed(gesture, now, quality);
+      const out = stabRef.current.feed(gesture, confidence, now);
 
       // Aquí está la clave del rendimiento: setState SOLO si cambió lo que se ve.
       const step = Math.round(out.progress * PROGRESS_STEPS);

@@ -13,6 +13,7 @@
 // daban demasiados disparos accidentales. Para la 4ª tarea en adelante está el teclado (1-9).
 import type { TimerCommand } from "@/lib/timer-commands";
 import { DEFAULT_THRESHOLDS, type Thresholds } from "@/lib/gestures/calibration";
+export { palmFlatness } from "@/lib/gestures/intent";
 
 export type Landmark = { x: number; y: number; z?: number };
 export type Handedness = "Left" | "Right";
@@ -191,6 +192,17 @@ export function sampleOf(lm: Landmark[]): { fingers: number[]; thumb: number; sc
   };
 }
 
+/**
+ * Proporción ancho/largo de la palma, 0..~1. De frente la palma es casi tan ancha como larga;
+ * de canto el ancho se colapsa porque los nudillos se alinean hacia la cámara.
+ */
+export function palmFacingRatio(lm: Landmark[]): number {
+  if (!lm || lm.length < 21) return 0;
+  const width = dist(lm[INDEX_MCP], lm[PINKY_MCP]);
+  const length = Math.max(dist(lm[WRIST], lm[MIDDLE_MCP]), 1e-6);
+  return Math.min(1, width / length);
+}
+
 /** Centro de la palma. Sirve para exigir que la mano esté quieta antes de hacer caso. */
 export function handCenter(lm: Landmark[]): { x: number; y: number } {
   const p = [lm[WRIST], lm[5], lm[9], lm[13], lm[PINKY_MCP]];
@@ -225,13 +237,20 @@ function inside(p: Landmark, margin: number): boolean {
   return p.x > margin && p.x < 1 - margin && p.y > margin && p.y < 1 - margin;
 }
 
-export function handFullyVisible(lm: Landmark[], margin = 0.01): boolean {
+/** ¿Se ve el esqueleto de la palma? Sin él no hay tamaño ni orientación que medir. */
+export function coreVisible(lm: Landmark[], margin = 0.01): boolean {
   if (!lm || lm.length < 21) return false;
-  // El esqueleto de la palma sí tiene que verse entero: de ahí salen el tamaño y la orientación.
-  if (!CORE_POINTS.every((i) => inside(lm[i], margin))) return false;
-  // Y casi todas las puntas: se tolera que una roce el borde.
-  const tipsOut = TIP_POINTS.filter((i) => !inside(lm[i], margin)).length;
-  return tipsOut <= TIPS_ALLOWED_OUT;
+  return CORE_POINTS.every((i) => inside(lm[i], margin));
+}
+
+/** Cuántas puntas de dedo quedaron fuera del cuadro. */
+export function tipsOutOfFrame(lm: Landmark[], margin = 0.01): number {
+  if (!lm || lm.length < 21) return TIP_POINTS.length;
+  return TIP_POINTS.filter((i) => !inside(lm[i], margin)).length;
+}
+
+export function handFullyVisible(lm: Landmark[], margin = 0.01): boolean {
+  return coreVisible(lm, margin) && tipsOutOfFrame(lm, margin) <= TIPS_ALLOWED_OUT;
 }
 
 // Cuenta CUÁNTOS dedos hay levantados, sin importar cuáles.
@@ -240,8 +259,16 @@ export function handFullyVisible(lm: Landmark[], margin = 0.01): boolean {
 // falló con el primer usuario real: en México el 3 se hace con pulgar+índice+medio. Pedirle a
 // alguien que cuente "como la app quiere" es pedirle lo imposible — cada quien cuenta como
 // aprendió, y las dos formas son igual de válidas. Contar la cantidad las acepta todas.
-export function countFingers(f: FingerState): number {
-  return [f.thumb, f.index, f.middle, f.ring, f.pinky].filter(Boolean).length;
+export function countFingers(f: FingerState, spread?: number, t?: Thresholds): number {
+  // El pulgar se decide aquí con su propia medida cuando se pasa; si no, se usa lo que ya
+  // traía la lectura. Está separado porque es el dedo con menos recorrido y el que peor lee
+  // el modelo: en una palma abierta real queda casi siempre a medio camino.
+  const th = t ?? T;
+  const thumb = spread === undefined ? f.thumb
+    : spread > th.thumbFar ? true
+    : spread < th.thumbNear ? false
+    : f.index && f.middle && f.ring && f.pinky; // con los cuatro largos abiertos, es palma
+  return [thumb, f.index, f.middle, f.ring, f.pinky].filter(Boolean).length;
 }
 
 const BY_COUNT: Record<number, Gesture> = {
