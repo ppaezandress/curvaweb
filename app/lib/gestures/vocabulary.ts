@@ -16,25 +16,23 @@ import { DEFAULT_THRESHOLDS, type Thresholds } from "@/lib/gestures/calibration"
 export type Landmark = { x: number; y: number; z?: number };
 export type Handedness = "Left" | "Right";
 
-export type Gesture = "pulgar" | "uno" | "dos" | "tres" | "cuatro" | "palma";
+export type Gesture = "uno" | "dos" | "tres" | "palma" | "dosPalmas";
 
 export const GESTURE_LABEL: Record<Gesture, string> = {
-  pulgar: "Pulgar arriba",
   uno: "1 dedo",
   dos: "2 dedos",
   tres: "3 dedos",
-  cuatro: "4 dedos",
   palma: "Palma abierta",
+  dosPalmas: "Las dos palmas",
 };
 
 export const GESTURE_EMOJI: Record<Gesture, string> = {
-  pulgar: "👍", uno: "☝️", dos: "✌️", tres: "🤟", cuatro: "🖖", palma: "🖐️",
+  uno: "☝️", dos: "✌️", tres: "🤟", palma: "🖐️", dosPalmas: "🙌",
 };
 
 // Índices de MediaPipe Hands: 0 muñeca · 1-4 pulgar · 5-8 índice · 9-12 medio · 13-16 anular ·
 // 17-20 meñique. Para cada dedo largo: TIP (punta) y PIP (nudillo medio).
 const WRIST = 0;
-const THUMB_IP = 3;
 const THUMB_TIP = 4;
 const PINKY_MCP = 17;
 const LONG_FINGERS = [
@@ -62,7 +60,7 @@ function dist(a: Landmark, b: Landmark): number {
 let T: Thresholds = DEFAULT_THRESHOLDS;
 
 /** Aplica los umbrales de esta persona. Sin argumento, vuelve a los de fábrica. */
-export function useThresholds(t?: Thresholds) {
+export function applyThresholds(t?: Thresholds) {
   T = t ?? DEFAULT_THRESHOLDS;
 }
 
@@ -213,29 +211,45 @@ export function countFingers(f: FingerState): number {
 }
 
 const BY_COUNT: Record<number, Gesture> = {
+  1: "uno",
   2: "dos",
   3: "tres",
-  4: "cuatro",
   5: "palma",
 };
 
+// Ni el puño ni los cuatro dedos significan nada, a propósito:
+//   · el PUÑO es la postura natural de una mano en reposo — al bajarla, al tomar el mouse —,
+//     así que como comando garantizaba disparos accidentales;
+//   · CUATRO dedos se confundía demasiado seguido con tres y con la palma, y dependía de leer
+//     bien el pulgar, que es el dedo que peor se lee.
+// Que no signifiquen nada es parte de lo que hace fiable al resto.
 function match(f: FingerState): Gesture | null {
-  const n = countFingers(f);
-
-  // El puño NO significa nada, a propósito. Cerrar la mano es la postura natural de una mano
-  // en reposo — al bajarla, al tomar el mouse — así que usarlo como comando garantizaba
-  // disparos accidentales. Que no signifique nada es lo que lo hace seguro.
-  if (n === 0) return null;
-
-  // Un solo dedo: importa CUÁL. El pulgar arriba es un gesto propio y universal ("sigue"),
-  // mientras que cualquier otro dedo levantado es "la tarea 1".
-  if (n === 1) return f.thumb ? "pulgar" : "uno";
-
-  return BY_COUNT[n] ?? null;
+  return BY_COUNT[countFingers(f)] ?? null;
 }
 
 /** Mano demasiado pequeña = lejos de la cámara: casi siempre alguien de fondo, no tú. */
 const MIN_SCALE = 0.07;
+
+/**
+ * Gesto a partir de TODAS las manos en cuadro.
+ *
+ * Las dos palmas abiertas a la vez son el gesto más seguro que hay: hace falta tener las dos
+ * manos libres y presentadas al mismo tiempo, cosa que no pasa por accidente ni sosteniendo el
+ * celular. Por eso se reserva para retomar el trabajo.
+ */
+export function gestureFromHands(hands: Landmark[][]): Gesture | null {
+  const read = hands.map((h) => gestureFrom(h));
+  if (read.filter((g) => g === "palma").length >= 2) return "dosPalmas";
+  // Si no, manda la mano que se ve más grande (la que está más cerca de la cámara).
+  let best = -1;
+  let bestScale = 0;
+  hands.forEach((h, i) => {
+    if (h.length < 21) return;
+    const sc = handScale(h);
+    if (sc > bestScale) { bestScale = sc; best = i; }
+  });
+  return best >= 0 ? read[best] : null;
+}
 
 /** Gesto de una mano detectada, o `null` si no reconoce nada fiable. */
 export function gestureFrom(lm: Landmark[]): Gesture | null {
@@ -246,14 +260,13 @@ export function gestureFrom(lm: Landmark[]): Gesture | null {
 }
 
 // ── Mando: gestos ──
-// Palma abierta suelta el trabajo, pulgar arriba lo retoma. Los dedos, en medio, eligen tarea.
+// Una palma suelta el trabajo, las dos palmas lo retoman. Los dedos, en medio, eligen tarea.
 export const GESTURE_COMMAND: Record<Gesture, TimerCommand> = {
-  pulgar: { kind: "resume" },
   uno: { kind: "switch", index: 0 },
   dos: { kind: "switch", index: 1 },
   tres: { kind: "switch", index: 2 },
-  cuatro: { kind: "switch", index: 3 },
   palma: { kind: "pause" },
+  dosPalmas: { kind: "resume" },
 };
 
 export function commandForGesture(g: Gesture): TimerCommand {

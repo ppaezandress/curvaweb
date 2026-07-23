@@ -1212,13 +1212,20 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // del equipo COINCIDA en las dos vistas (antes barra=35% vs desglose=41%, bug de Balmo).
   // Comisión y bono del Núcleo se pintan como franjas propias (no dentro de Equipo) para
   // que barra y desglose sean idénticas franja por franja. Todo suma el ingreso exacto.
-  const equipoNeto = r.bolsaOut - r.disc + r.manualDelta; // pago real al equipo (incluye ajustes a mano)
+  const isrRes = active.descontarISR && P.imp > 0 ? isrReservaDe(r.t, P) : 0;
+  const netoSocios = r.utilKept - isrRes;                                    // utilidad de socios ya sin ISR
+  const isrA = isrRes * P.split / 100, isrB = isrRes * (1 - P.split / 100);  // ISR que le toca a cada socio
+  // "A dónde va cada peso" — DESPUÉS de ISR: mismas franjas que el desglose (Equipo =
+  // bolsa − sombrero; el sombrero va en Ahorro CURVA), y la utilidad de socios YA sin ISR,
+  // para que TODO sume lo que de verdad se reparte (ingreso − ISR) = idéntico al desglose.
+  const equipoNeto = r.bolsaOut - r.disc + r.manualDelta;
   const segs = [
     { k: "Equipo", v: equipoNeto, c: "--c-equipo" },
-    { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
     { k: "Bono Núcleo", v: r.poolAmt, c: "--c-reserva" },
+    { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
     { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
-    { k: "Ahorro CURVA", v: r.banca, c: "--c-banca" }, { k: P.nombreA, v: r.sAutil, c: "--c-andres" }, { k: P.nombreB, v: r.sButil, c: "--c-balmo" },
+    { k: "Ahorro CURVA", v: r.banca, c: "--c-banca" },
+    { k: P.nombreA, v: r.sAutil - isrA, c: "--c-andres" }, { k: P.nombreB, v: r.sButil - isrB, c: "--c-balmo" },
   ].filter((s) => s.v > 0.5);
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
   const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
@@ -1239,10 +1246,6 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // La comisión ahora vive en su propio campo (franjita naranja); se suma aparte al cuadre.
   const leak = r.t - (tT + tE + tC + r.cajaProj + r.banca);
   const mr = (r.marginOp - r.manualDelta) / t; // margen real que se queda CURVA (tras ajustes a mano)
-  // ISR = % sobre la facturación (base). Sale de la utilidad de socios ANTES de dividir
-  // entre ellos, así sus montos ya son netos. El ISR NO se reparte (se va al SAT).
-  const isrRes = active.descontarISR && P.imp > 0 ? isrReservaDe(r.t, P) : 0;
-  const netoSocios = r.utilKept - isrRes; // utilidad de socios ya sin ISR
   const bd = (cls: string, l: string, v: number) => <div className={"bd-row " + cls}><span className="bl">{l}</span><span className="bv"><span key={fmtMXN(v * f)} className="num-anim">{fmtMXN(v * f)}</span></span></div>;
 
   // ── Selector de personas (roster) ──
@@ -1513,7 +1516,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, netoSocios * (100 - P.split) / 100)}
               </div>
               <div className="card">
-                <h2>A dónde va cada peso del ingreso{porMes ? " · al mes" : ""}</h2>
+                <h2>A dónde va cada peso{isrRes > 0.5 ? " · después de ISR" : ""}{porMes ? " · al mes" : ""}</h2>
                 <div className="stack">{segs.map((s) => <div key={s.k} className="seg" title={`${s.k} ${fmtMXN(s.v * f)}`} style={{ flex: `0 0 ${s.v / totSeg * 100}%`, background: `var(${s.c})` }} />)}</div>
                 <div className="legend">{segs.map((s) => <span key={s.k} className="lg"><span className="dot" style={{ background: `var(${s.c})` }} /><span className="ln">{s.k}</span><span key={fmtMXN(s.v * f)} className="lv num-anim">{fmtMXN(s.v * f)}</span><span className="lp">{pctFmt(s.v / totSeg)}</span></span>)}</div>
               </div>

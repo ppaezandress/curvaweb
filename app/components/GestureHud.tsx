@@ -21,9 +21,8 @@ const LEGEND: [Gesture, string][] = [
   ["uno", "1ª tarea"],
   ["dos", "2ª tarea"],
   ["tres", "3ª tarea"],
-  ["cuatro", "4ª tarea"],
   ["palma", "pausar"],
-  ["pulgar", "seguir"],
+  ["dosPalmas", "seguir"],
 ];
 
 const RING_R = 22;

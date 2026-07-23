@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HandLandmarker } from "@mediapipe/tasks-vision";
-import { gestureFrom, handCenter, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
+import { gestureFromHands, handCenter, sampleOf, applyThresholds, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
+import { loadThresholds, type Sample } from "@/lib/gestures/calibration";
 import { frameQuality, qualityHint, MIN_QUALITY } from "@/lib/gestures/quality";
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
 import { reportClientError } from "@/lib/report-error";
@@ -69,6 +70,8 @@ export function useGestureControl(opts: {
   enabled: boolean;
   onCommand: (g: Gesture) => void;
   stabilizer?: Partial<StabilizerConfig>;
+  /** Medidas crudas de cada cuadro. Solo lo usa la pantalla de calibración. */
+  onSample?: (s: Sample) => void;
 }): GestureControlState {
   const { enabled } = opts;
 
@@ -115,6 +118,8 @@ export function useGestureControl(opts: {
   const lastCenterRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
+  const onSampleRef = useRef(opts.onSample);
+  useEffect(() => { onSampleRef.current = opts.onSample; }, [opts.onSample]);
 
   const teardown = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -170,8 +175,10 @@ export function useGestureControl(opts: {
     // dice a la persona (y qué puede hacer al respecto).
     let stage: "engine" | "camera" = "engine";
 
-    // La sensibilidad se lee AL ENCENDER: si la cambias en Ajustes, aplica al reactivar.
+    // La sensibilidad y la calibración se leen AL ENCENDER: si las cambias, aplican al
+    // reactivar la cámara.
     stabRef.current = createStabilizer(opts.stabilizer ?? SENSITIVITY[getSensitivity()]);
+    applyThresholds(loadThresholds());
 
     // Si otra pestaña reclama la cámara, esta se apaga sola y lo dice.
     lockRef.current?.release();
@@ -449,10 +456,17 @@ export function useGestureControl(opts: {
             speed,
             modelScore: (res.handednesses?.[idx]?.[0]?.score ?? res.handedness?.[idx]?.[0]?.score) as number | undefined,
           });
+          // Muestras crudas para la calibración (solo si alguien las pidió).
+          if (onSampleRef.current) {
+            const sample = sampleOf(hand);
+            if (sample) onSampleRef.current(sample);
+          }
+
           quality = q.score;
           statsRef.current.quality = q.score;
           statsRef.current.hint = qualityHint(q);
-          gesture = q.score >= MIN_QUALITY ? gestureFrom(hand) : null;
+          // Se pasan TODAS las manos: las dos palmas abiertas a la vez son un gesto propio.
+          gesture = q.score >= MIN_QUALITY ? gestureFromHands(hands) : null;
         } else {
           lastCenterRef.current = null;
           statsRef.current.quality = 0;

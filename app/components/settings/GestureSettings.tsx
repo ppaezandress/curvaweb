@@ -21,9 +21,8 @@ const VOCABULARY: { gesture: Gesture; does: string }[] = [
   { gesture: "uno", does: "Mide la 1ª tarea del dock" },
   { gesture: "dos", does: "Cambia a la 2ª" },
   { gesture: "tres", does: "Cambia a la 3ª" },
-  { gesture: "cuatro", does: "Cambia a la 4ª" },
   { gesture: "palma", does: "Pausa lo que esté corriendo" },
-  { gesture: "pulgar", does: "Sigue con lo último que medías" },
+  { gesture: "dosPalmas", does: "Sigue con lo último que medías" },
 ];
 
 export function GestureSettings() {
@@ -141,6 +140,7 @@ export function GestureSettings() {
               sostener la seña un momento, quieta y de frente. Por eso traer el celular en la
               mano o rascarte la cara no te mueve el cronómetro: esa mano no está presentada.
               Entre un comando y el siguiente hay que <b>retirar la mano</b>. Todo se deshace.
+              Y en <b>Practicar</b> puedes ajustar el reconocimiento a tu propia mano.
             </p>
             <Link
               href="/labs/gestos"

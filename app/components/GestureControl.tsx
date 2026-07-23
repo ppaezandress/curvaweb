@@ -57,7 +57,7 @@ export function GestureControl() {
     // Cada cosa suena distinto: subir = arrancar, bajar = parar, parejo = cambiar de tarea.
     // Es lo que te deja saber QUÉ pasó sin volver a mirar la pantalla.
     if (isSoundOn()) {
-      playForAction(action.kind === "pause" ? "pause" : g === "pulgar" ? "resume" : "switch");
+      playForAction(action.kind === "pause" ? "pause" : g === "dosPalmas" ? "resume" : "switch");
     }
 
     const label = describeAction(action, nameOf(action.taskId));
@@ -108,12 +108,12 @@ export function GestureControl() {
     if (!action) {
       // Decir POR QUÉ no va a pasar nada: "sin tarea ahí" cuando pides una que no está
       // abierta, y "ya vas" cuando el gesto no aplica al estado actual.
-      if (candidate === "pulgar") return active ? "Ya vas" : "Nada que reanudar";
+      if (candidate === "dosPalmas") return active ? "Ya vas" : "Nada que reanudar";
       if (candidate === "palma") return "Nada corriendo";
       return "Sin tarea ahí";
     }
     if (action.kind === "pause") return "Pausar";
-    return `${candidate === "pulgar" ? "Seguir · " : ""}${nameOf(action.taskId) || "Cambiar de tarea"}`;
+    return `${candidate === "dosPalmas" ? "Seguir · " : ""}${nameOf(action.taskId) || "Cambiar de tarea"}`;
   })();
 
   // Autoencendido tras el opt-in: la persona ya dijo que sí en Ajustes.

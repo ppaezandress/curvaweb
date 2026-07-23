@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  gestureFrom, fingersUp, handFullyVisible, commandForGesture, GESTURE_LABEL,
+  gestureFrom, gestureFromHands, fingersUp, handFullyVisible, commandForGesture, GESTURE_LABEL,
   type Landmark, type Gesture,
 } from "@/lib/gestures/vocabulary";
 import { createStabilizer } from "@/lib/gestures/stabilizer";
@@ -66,14 +66,15 @@ function makeHand(up: Up): Landmark[] {
   ];
 }
 
-const HANDS: Record<Gesture, Landmark[]> = {
-  pulgar: makeHand({ thumb: true }),
+const HANDS: Record<Exclude<Gesture, "dosPalmas">, Landmark[]> = {
   uno: makeHand({ index: true }),
   dos: makeHand({ index: true, middle: true }),
   tres: makeHand({ index: true, middle: true, ring: true }),
-  cuatro: makeHand({ index: true, middle: true, ring: true, pinky: true }),
   palma: makeHand({ thumb: true, index: true, middle: true, ring: true, pinky: true }),
 };
+
+// Cuatro dedos ya no significa nada (se confundía con tres y con la palma).
+const CUATRO = makeHand({ index: true, middle: true, ring: true, pinky: true });
 
 function rotate(lm: Landmark[], deg: number): Landmark[] {
   const r = (deg * Math.PI) / 180;
@@ -99,8 +100,8 @@ describe("fingersUp", () => {
 });
 
 describe("gestureFrom", () => {
-  it("reconoce los cinco gestos del vocabulario", () => {
-    for (const g of Object.keys(HANDS) as Gesture[]) {
+  it("reconoce los gestos de una mano", () => {
+    for (const g of Object.keys(HANDS) as (keyof typeof HANDS)[]) {
       expect(gestureFrom(HANDS[g]), `falló ${GESTURE_LABEL[g]}`).toBe(g);
     }
   });
@@ -125,12 +126,15 @@ describe("gestureFrom", () => {
     expect(gestureFrom(makeHand({ pinky: true }))).toBe("uno"); // un dedo cualquiera
     expect(gestureFrom(makeHand({ index: true, pinky: true }))).toBe("dos"); // cuernos
 
-    expect(gestureFrom(makeHand({ thumb: true, index: true, middle: true, ring: true }))).toBe("cuatro");
   });
 
   it("el puño NO significa nada: es la postura natural de una mano en reposo", () => {
     // Usarlo como comando garantizaba disparos accidentales al bajar la mano o tomar el mouse.
     expect(gestureFrom(makeHand({}))).toBeNull();
+  });
+
+  it("cuatro dedos ya no significa nada: se confundía con tres y con la palma", () => {
+    expect(gestureFrom(CUATRO)).toBeNull();
   });
 
   it("la palma entra aunque el pulgar no esté del todo claro", () => {
@@ -144,13 +148,9 @@ describe("gestureFrom", () => {
     expect(gestureFrom(conPulgarDudoso)).toBe("palma");
   });
 
-  it("con el pulgar claramente recogido sí son cuatro dedos", () => {
-    expect(gestureFrom(HANDS.cuatro)).toBe("cuatro");
-  });
-
-  it("el pulgar arriba es su propia seña, distinta de 'un dedo'", () => {
-    expect(gestureFrom(makeHand({ thumb: true }))).toBe("pulgar");
+  it("un solo dedo es la tarea 1, sea cual sea el dedo", () => {
     expect(gestureFrom(makeHand({ index: true }))).toBe("uno");
+    expect(gestureFrom(makeHand({ thumb: true }))).toBe("uno");
   });
 
   it("no interpreta una mano cortada por el borde del cuadro", () => {
@@ -159,18 +159,17 @@ describe("gestureFrom", () => {
     expect(gestureFrom(fuera)).toBeNull();
   });
 
-  it("cuatro dedos y la mano entera abierta son cosas distintas", () => {
-    expect(gestureFrom(HANDS.cuatro)).toBe("cuatro");
+  it("la mano entera abierta es la palma", () => {
     expect(gestureFrom(HANDS.palma)).toBe("palma");
   });
 });
 
 describe("commandForGesture", () => {
-  it("los dedos mandan a la tarea del dock; palma pausa y pulgar arriba reanuda", () => {
+  it("los dedos mandan a la tarea; una palma pausa y las dos reanudan", () => {
     expect(commandForGesture("uno")).toEqual({ kind: "switch", index: 0 });
-    expect(commandForGesture("cuatro")).toEqual({ kind: "switch", index: 3 });
+    expect(commandForGesture("tres")).toEqual({ kind: "switch", index: 2 });
     expect(commandForGesture("palma")).toEqual({ kind: "pause" });
-    expect(commandForGesture("pulgar")).toEqual({ kind: "resume" });
+    expect(commandForGesture("dosPalmas")).toEqual({ kind: "resume" });
   });
 });
 
@@ -378,5 +377,34 @@ describe("dedos a medias", () => {
   it("con los dedos claros sí decide", () => {
     expect(gestureFrom(HANDS.dos)).toBe("dos");
     expect(gestureFrom(HANDS.tres)).toBe("tres");
+  });
+});
+
+// ── Las dos palmas ──────────────────────────────────────────────────────────────────────
+// El gesto más seguro del vocabulario: hace falta tener las DOS manos libres y presentadas a
+// la vez, cosa que no ocurre por accidente ni con el celular en la mano. Por eso es el que
+// retoma el trabajo.
+describe("dos palmas", () => {
+  const otraMano = (lm: Landmark[]): Landmark[] => lm.map((p) => ({ ...p, x: p.x + 0.25 }));
+
+  it("dos palmas abiertas a la vez son su propio gesto", () => {
+    expect(gestureFromHands([HANDS.palma, otraMano(HANDS.palma)])).toBe("dosPalmas");
+  });
+
+  it("una sola palma sigue siendo pausar", () => {
+    expect(gestureFromHands([HANDS.palma])).toBe("palma");
+  });
+
+  it("una palma y otra mano con dedos NO son dos palmas", () => {
+    expect(gestureFromHands([HANDS.palma, otraMano(HANDS.dos)])).not.toBe("dosPalmas");
+  });
+
+  it("con dos manos distintas manda la que está más cerca de la cámara", () => {
+    const lejana = otraMano(HANDS.dos).map((p) => ({ x: 0.75 + (p.x - 0.75) * 0.5, y: 0.72 + (p.y - 0.72) * 0.5 }));
+    expect(gestureFromHands([HANDS.tres, lejana])).toBe("tres");
+  });
+
+  it("sin manos no hay gesto", () => {
+    expect(gestureFromHands([])).toBeNull();
   });
 });

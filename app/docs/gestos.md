@@ -7,14 +7,19 @@ escribiendo a mano o lejos de la computadora.
 
 | Seña | Qué hace |
 |---|---|
-| 1 a 4 dedos | Cambia a esa tarea del dock |
-| 🖐️ Palma abierta | Pausa lo que esté corriendo |
-| 👍 Pulgar arriba | Sigue con lo último que medías |
+| ☝️ 1 a 3 dedos | Cambia a esa tarea del dock |
+| 🖐️ Una palma | Pausa lo que esté corriendo |
+| 🙌 Las dos palmas | Sigue con lo último que medías |
 
-Palma abierta suelta el trabajo, pulgar arriba lo retoma. Los dedos, en medio, eligen tarea.
+Una palma suelta el trabajo, las dos palmas lo retoman. Los dedos, en medio, eligen tarea.
 
-**El puño no hace nada, a propósito.** Cerrar la mano es como queda al bajarla o al tomar el
-mouse: usarlo como comando garantizaba disparos accidentales.
+**Las dos palmas es el gesto más seguro que hay**: hace falta tener las dos manos libres y
+presentadas a la vez, cosa que no pasa por accidente ni con el celular en la mano.
+
+**Hay tres posturas que no significan nada, a propósito:** el puño (es como queda la mano al
+bajarla o al tomar el mouse), los cuatro dedos (se confundía con tres y con la palma, y dependía
+de leer bien el pulgar) y el pulgar solo. Que no signifiquen nada es parte de lo que hace
+fiable al resto.
 
 **Cuenta cuántos dedos levantas, no cuáles.** Da igual si el 3 lo haces con pulgar+índice+medio
 (como se cuenta en México) o con índice+medio+anular. Las dos formas valen — la primera versión
@@ -60,6 +65,14 @@ frena los temporizadores de la página a uno por segundo — con eso un gesto de
 completaría nunca. Por eso el reloj se mueve a un Web Worker
 (`lib/gestures/metronome.ts`), que conserva su ritmo en segundo plano. El reconocimiento baja
 de 12 a 7 cuadros por segundo mientras no miras, y a 3 si no hay ninguna mano a la vista.
+
+## Ajustarlo a tu mano
+
+**Practicar → Ajustar a mi mano.** Enseñas la mano abierta y luego el puño, cuatro segundos
+cada una, y el sistema calcula TUS umbrales: el largo de tus dedos, tu cámara y a qué distancia
+te sientas. Es lo que arregla el "a veces no me lee" — los valores de fábrica son una
+estimación, y cada mano es distinta. Se guarda en tu equipo y se puede rehacer cuando cambies
+de escritorio o de luz.
 
 ## Ajustes finos
 
