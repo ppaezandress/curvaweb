@@ -1999,6 +1999,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
             <button className="btn ghost" onClick={() => setReglasOpen(true)}><SlidersHorizontal size={14} /> Ver reglas</button>
             <button className="btn ghost" onClick={() => setGastosOpen(true)}><Receipt size={14} /> Gastos{misGastos.length ? ` (${misGastos.length})` : ""}</button>
             <button className="btn ghost" onClick={() => compartir(`Reparto · ${p.nombre}`, textoReparto())}><Share2 size={14} /> WhatsApp</button>
+            <button className="btn ghost" title={p.soloRegistro ? "Volver a contar este proyecto en los saldos de las Cajas." : "Ya saldado: se queda en el historial pero deja de contar en los saldos de las Cajas (su dinero ya salió)."} onClick={() => upP((x) => { x.soloRegistro = !x.soloRegistro; })}>{p.soloRegistro ? <><RotateCcw size={14} /> Volver a Cajas</> : <><Check size={14} /> Fuera de cajas</>}</button>
             {estado === "cancelado"
               ? <button className="btn ghost" title="Reactivar: el estado vuelve a calcularse solo según lo cobrado" onClick={() => upP((x) => { x.estado = undefined; })}><RotateCcw size={14} /> Reactivar</button>
               : <button className="btn ghost" title="Marca el proyecto como cancelado (sale de los totales)" onClick={() => upP((x) => { x.estado = "cancelado"; })}><Trash2 size={14} /> Cancelar</button>}
@@ -2302,7 +2303,7 @@ type Deuda = {
 
 function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State) => State) => void; setSec: (s: string) => void; log?: (act: string, det: string) => void }) {
   const P = st.params;
-  const proyectos = st.projects.filter((p) => !p.borrador);
+  const proyectos = st.projects.filter((p) => !p.borrador && !p.soloRegistro); // los saldados (histórico) no cuentan en tesorería
   const [editSaldos, setEditSaldos] = useState(false);
   const semillas = mergeSaldos(st.saldosIniciales); // saldo que ya tenías antes de la app
   const setSeed = (c: CajaKind, v: number) => update((s) => { s.saldosIniciales = { ...mergeSaldos(s.saldosIniciales), [c]: v }; return s; });

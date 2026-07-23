@@ -66,6 +66,9 @@ export type Proyecto = {
   // "neto" de este proyecto descuenta la tasa `imp` de las Reglas VIVAS (1.5% edit.).
   // Default false → sin ISR ("si no lo picas, no se descuenta"). No mueve el reparto.
   descontarISR?: boolean;
+  // Proyecto ya SALDADO (histórico): se registra para el historial pero su dinero ya
+  // salió, así que NO cuenta en los saldos de las Cajas (tesorería actual). Andrés 2026-07-24.
+  soloRegistro?: boolean;
   // Comisión de origen fijada a mano (override del cálculo %). Solo aplica si hay
   // comisión (origen socio/persona). Ideal para "solo el primer pago". Decisión Andrés 2026-07-23.
   comisManual?: number;
