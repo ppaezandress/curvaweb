@@ -11,6 +11,7 @@
 // Suena discreto a propósito: esto puede sonar en una llamada con cliente.
 
 let ctx: AudioContext | null = null;
+let keepAlive: { osc: OscillatorNode; gain: GainNode } | null = null;
 
 function audio(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -20,13 +21,72 @@ function audio(): AudioContext | null {
       if (!Ctor) return null;
       ctx = new Ctor();
     }
-    // Los navegadores suspenden el audio hasta que hay un gesto del usuario; encender la
-    // cámara cuenta como tal, pero por si acaso se reanuda aquí.
     if (ctx.state === "suspended") void ctx.resume();
     return ctx;
   } catch {
     return null;
   }
+}
+
+/**
+ * Desbloquea el audio. TIENE que llamarse desde un clic del usuario.
+ *
+ * Un AudioContext creado fuera de un gesto nace bloqueado, y `resume()` no siempre lo salva.
+ * Antes el contexto se creaba dentro del bucle de reconocimiento — o sea, nunca desde un
+ * gesto — y por eso los tonos podían no sonar nunca. Se llama al activar los gestos y al
+ * darle a "Encender cámara".
+ */
+export function unlockAudio() {
+  const a = audio();
+  if (!a) return;
+  try {
+    const osc = a.createOscillator();
+    const vol = a.createGain();
+    vol.gain.value = 0.0001; // inaudible: solo sirve para desbloquear
+    osc.connect(vol);
+    vol.connect(a.destination);
+    osc.start();
+    osc.stop(a.currentTime + 0.03);
+  } catch {
+    /* si no se pudo, los tonos simplemente no sonarán */
+  }
+}
+
+/**
+ * Mantiene el audio despierto mientras los gestos corren en segundo plano.
+ *
+ * Dos motivos: (1) al cambiar de app el contexto puede suspenderse y el tono se perdería justo
+ * cuando es la ÚNICA señal que queda; (2) una pestaña que reproduce audio se libra del frenado
+ * agresivo que el navegador aplica a las pestañas de fondo, así que el reconocimiento conserva
+ * su ritmo. El tono es inaudible.
+ */
+export function startKeepAlive() {
+  const a = audio();
+  if (!a || keepAlive) return;
+  try {
+    const osc = a.createOscillator();
+    const gain = a.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 30; // por debajo de lo que se oye en una laptop
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(a.destination);
+    osc.start();
+    keepAlive = { osc, gain };
+  } catch {
+    /* sin esto el modo segundo plano puede frenarse, pero no rompe nada */
+  }
+}
+
+export function stopKeepAlive() {
+  try {
+    keepAlive?.osc.stop();
+    keepAlive?.osc.disconnect();
+    keepAlive?.gain.disconnect();
+  } catch {
+    /* ya estaba detenido */
+  }
+  keepAlive = null;
 }
 
 /** Un tono corto y suave. `freq` en Hz, `ms` de duración, `gain` 0..1. */

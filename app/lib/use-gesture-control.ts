@@ -5,7 +5,7 @@ import type { HandLandmarker } from "@mediapipe/tasks-vision";
 import { gestureFrom, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
 import { reportClientError } from "@/lib/report-error";
-import { playConfirmed, playDetected } from "@/lib/gestures/sound";
+import { playConfirmed, playDetected, startKeepAlive, stopKeepAlive } from "@/lib/gestures/sound";
 import { isSoundOn, getSensitivity, SENSITIVITY, isBackgroundOn } from "@/lib/gesture-prefs";
 import { createCameraLock } from "@/lib/gestures/camera-lock";
 import { createMetronome, frameIntervalMs, type Metronome } from "@/lib/gestures/metronome";
@@ -56,6 +56,12 @@ export type GestureControlState = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   start: () => void;
   stop: () => void;
+  /**
+   * Diagnóstico, para la pantalla de práctica. Se lee bajo demanda (NO es estado de React) para
+   * no provocar un render por cuadro. Sirve para responder la pregunta que costó una tarde:
+   * ¿el reconocimiento sigue vivo cuando me cambio a otra app, y de dónde saca los cuadros?
+   */
+  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean };
 };
 
 export function useGestureControl(opts: {
@@ -87,6 +93,10 @@ export function useGestureControl(opts: {
   const lockRef = useRef<ReturnType<typeof createCameraLock> | null>(null);
   const metroRef = useRef<Metronome | null>(null);
   const hiddenRef = useRef(false);
+  // Último cuadro llegado del track de la cámara (ver startFramePump) y su lector.
+  const frameRef = useRef<VideoFrame | null>(null);
+  const readerRef = useRef<ReadableStreamDefaultReader<VideoFrame> | null>(null);
+  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—" });
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
 
@@ -95,6 +105,13 @@ export function useGestureControl(opts: {
     rafRef.current = null;
     metroRef.current?.stop();
     metroRef.current = null;
+    stopKeepAlive();
+    // Un VideoFrame sin cerrar agota el pool del navegador y deja la cámara colgada.
+    try { void readerRef.current?.cancel(); } catch { /* ya estaba cerrado */ }
+    readerRef.current = null;
+    frameRef.current?.close();
+    frameRef.current = null;
+    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—" };
     streamRef.current?.getTracks().forEach((t) => t.stop()); // apaga la luz de la cámara
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
@@ -178,6 +195,16 @@ export function useGestureControl(opts: {
         video.srcObject = stream;
         await video.play();
 
+        // Cuadros DIRECTOS de la cámara, no del <video>.
+        //
+        // Este es el motivo por el que "en segundo plano no servía": al ocultarse la pestaña,
+        // el navegador deja de refrescar el elemento <video>, así que el reconocedor seguía
+        // leyendo la última imagen congelada — el bucle corría, pero miraba una foto vieja.
+        // El track de la cámara sí sigue entregando cuadros, y MediaPipe acepta un VideoFrame
+        // como entrada. Donde no exista esta API (Safari, Firefox) se sigue usando el <video>,
+        // que funciona perfecto mientras la app esté a la vista.
+        startFramePump(stream);
+
         lastHandRef.current = performance.now();
         // Avisa a las demás pestañas que aquí se está usando la cámara; ellas se apagan.
         lockRef.current?.claim();
@@ -215,6 +242,38 @@ export function useGestureControl(opts: {
       }
     })();
 
+    // Bombeo de cuadros del track de la cámara. Guarda siempre el más reciente y cierra el
+    // anterior (un VideoFrame que no se cierra agota el pool del navegador y congela la
+    // cámara). Corre a la cadencia de la cámara; el reconocimiento consume al ritmo que
+    // decida `frameIntervalMs`, así que la mayoría de los cuadros solo se descartan.
+    function startFramePump(stream: MediaStream) {
+      const Processor = (window as unknown as {
+        MediaStreamTrackProcessor?: new (o: { track: MediaStreamTrack }) => { readable: ReadableStream<VideoFrame> };
+      }).MediaStreamTrackProcessor;
+      const track = stream.getVideoTracks()[0];
+      if (!Processor || !track) return; // sin soporte: se usa el <video> (solo app a la vista)
+
+      try {
+        const reader = new Processor({ track }).readable.getReader();
+        readerRef.current = reader;
+        (async () => {
+          while (!cancelled) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (cancelled) { value?.close(); break; }
+            frameRef.current?.close();
+            frameRef.current = value ?? null;
+          }
+        })().catch(() => {
+          // Si el bombeo muere, el <video> sigue sirviendo con la app a la vista.
+          frameRef.current?.close();
+          frameRef.current = null;
+        });
+      } catch {
+        /* sin bombeo: modo <video> */
+      }
+    }
+
     // El bucle corre SIEMPRE, mires o no la app: el sentido de los gestos es poder cambiar de
     // tarea mientras estás en Figma o en la llamada. Mientras la pestaña está a la vista se
     // usa requestAnimationFrame (suave y barato); en cuanto se oculta, el navegador lo congela
@@ -232,8 +291,12 @@ export function useGestureControl(opts: {
       if (hidden && isBackgroundOn()) {
         // Ritmo del metrónomo: el mismo que usaría el bucle visible, pero más espaciado.
         metroRef.current?.setInterval(frameIntervalMs({ hidden: true, idle: false }));
+        // Mantiene vivo el audio: en segundo plano el tono es la ÚNICA señal de que te
+        // reconoció, y de paso libra a la pestaña del frenado que aplica el navegador.
+        startKeepAlive();
       } else {
         metroRef.current?.setInterval(0);
+        stopKeepAlive();
         if (!hidden) schedule();
       }
     }
@@ -251,7 +314,13 @@ export function useGestureControl(opts: {
 
       let gesture: Gesture | null = null;
       try {
-        const res = landmarker.detectForVideo(video, now);
+        // El cuadro del track manda cuando existe: es el único que sigue vivo con la pestaña
+        // oculta. El <video> queda de respaldo.
+        const source = (frameRef.current ?? video) as unknown as HTMLVideoElement;
+        statsRef.current.frames++;
+        statsRef.current.lastFrameAt = Date.now();
+        statsRef.current.source = frameRef.current ? "track" : "video";
+        const res = landmarker.detectForVideo(source, now);
         // Con dos manos en cuadro (pasa: la otra sobre el teclado, alguien pasando detrás)
         // mandamos la que está MÁS CERCA de la cámara, que es la que te estás presentando.
         const hands = (res.landmarks || []) as Landmark[][];
@@ -294,5 +363,10 @@ export function useGestureControl(opts: {
   // Al desmontar (cerrar sesión, salir de la app) la cámara se apaga sí o sí.
   useEffect(() => () => teardown(), [teardown]);
 
-  return { status, error, candidate, progress, cooling, videoRef, start, stop };
+  const getStats = useCallback(
+    () => ({ ...statsRef.current, hidden: hiddenRef.current }),
+    [],
+  );
+
+  return { status, error, candidate, progress, cooling, videoRef, start, stop, getStats };
 }

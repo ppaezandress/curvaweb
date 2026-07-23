@@ -1840,37 +1840,34 @@ function Proyectos({ st, update, setActive, otroNombre, log }: { st: State; upda
   );
 }
 
-/* Progreso mes a mes de un proyecto a plazo: N celdas (mes 1…N con fecha real)
-   que se van llenando conforme se cobra. "Vas en el mes X de N". Automático: los
-   meses cubiertos = % recibido × N (no hay que marcar nada). El monto por celda es
-   el cobro mensual (totalCliente ÷ N). Decisión Andrés 2026-07-19 (auto por lo cobrado). */
-function MesesProgreso({ p, rec }: { p: Proyecto; rec: number }) {
+/* Progreso mes a mes de un proyecto a plazo: N celdas (mes 1…N con fecha real).
+   INTERACTIVO: picas un mes para marcarlo como cobrado (registra ese pago) y vuelves
+   a picar para desmarcarlo. El monto por mes es el cobro mensual (totalCliente ÷ N).
+   Decisión Andrés 2026-07-23 (antes era solo lectura, auto por lo cobrado). */
+function MesesProgreso({ p, cobradoMes, onToggle }: { p: Proyecto; cobradoMes: (i: number) => boolean; onToggle: (i: number) => void }) {
   const N = Math.max(1, Math.floor(p.plazoMeses || 1));
   if (N < 2) return null;
   const inicio = p.fechaInicio || todayISO();
   const totCli = totalCliente(p);
   const mensual = totCli / N;
-  const cubiertos = Math.max(0, rec * N);           // meses cubiertos (fraccional)
-  const completo = cubiertos >= N - 0.001;
-  const mesActual = completo ? N : Math.min(N, Math.floor(cubiertos) + 1);
+  const estados = Array.from({ length: N }, (_, i) => cobradoMes(i));
+  const nCobrados = estados.filter(Boolean).length;
+  const completo = nCobrados >= N;
   return (
     <div className="meses-prog">
       <div className="meses-h">
-        <b>{completo ? `Cobrado completo · ${N} de ${N} meses` : `Vas en el mes ${mesActual} de ${N}`}</b>
-        <span>{fmtMXN(rec * totCli)} de {fmtMXN(totCli)} · {fmtMXN(mensual)}/mes</span>
+        <b>{completo ? `Cobrado completo · ${N} de ${N} meses` : `${nCobrados} de ${N} meses cobrados`}</b>
+        <span>{fmtMXN(nCobrados * mensual)} de {fmtMXN(totCli)} · pica un mes para marcarlo</span>
       </div>
       <div className="meses-strip">
-        {Array.from({ length: N }, (_, i) => {
-          const fill = Math.min(1, Math.max(0, cubiertos - i));
-          const estado = fill >= 0.999 ? "full" : fill > 0.001 ? "part" : "none";
-          return (
-            <div key={i} className={"mes-cell " + estado} title={`${mesLabel(addMonths(inicio, i))}: ${estado === "full" ? "pagado" : estado === "part" ? "parcial" : "pendiente"}`}>
-              <span className="mes-lbl">{mesLabel(addMonths(inicio, i))}</span>
-              <span className="mes-bar"><i style={{ width: fill * 100 + "%" }} /></span>
-              <span className="mes-amt">{fmtMXN(mensual)}</span>
-            </div>
-          );
-        })}
+        {estados.map((ok, i) => (
+          <button key={i} type="button" className={"mes-cell " + (ok ? "cobrado" : "pend")} onClick={() => onToggle(i)}
+            title={ok ? "Cobrado · pica para desmarcar" : "Pica para marcar este mes como cobrado"}>
+            <span className="mes-lbl">{mesLabel(addMonths(inicio, i))}</span>
+            <span className="mes-amt">{fmtMXN(mensual)}</span>
+            <span className="mes-tag">{ok ? <><Check size={12} /> Cobrado</> : "Marcar cobrado"}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -1916,6 +1913,21 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
   const manualN = p.members.filter((m) => typeof m.montoManual === "number").length; // sueldos tocados a mano
   const estado: EstadoProyecto = estadoAuto(p);
   const upP = (fn: (x: Proyecto) => void) => update((s) => { const x = s.projects.find((y) => y.id === p.id); if (x) fn(x); return s; });
+  // ── Marcar/desmarcar un mes como cobrado con un clic (proyectos a plazo) ──
+  const inicioP = p.fechaInicio || todayISO();
+  const ymDeMes = (i: number) => addMonths(inicioP, i).slice(0, 7);              // "YYYY-MM" del mes i
+  const pagosDeMes = (i: number) => (p.pagos || []).filter((pg) => (pg.fecha || "").slice(0, 7) === ymDeMes(i));
+  const pagoClicDeMes = (i: number) => pagosDeMes(i).find((pg) => /^Mes \d+$/.test(pg.nota || "")); // el pago creado con un clic
+  const montoMensualBase = Math.round(r.t / plN);                               // base (sin IVA) por mes
+  const cobradoMes = (i: number) => pagosDeMes(i).reduce((s, pg) => s + (+pg.monto || 0), 0) >= montoMensualBase * 0.5;
+  const toggleMes = (i: number) => {
+    const cp = pagoClicDeMes(i);
+    if (cp) { upP((x) => { x.pagos = (x.pagos || []).filter((pg) => pg.id !== cp.id); }); log?.("desmarcó un mes", `${mesLabel(addMonths(inicioP, i))} · ${p.nombre}`); }
+    else if (!cobradoMes(i)) {
+      const pago: Pago = { id: uid(), fecha: ymDeMes(i) + "-15", monto: montoMensualBase, ivaCobrado: p.conIVA ? Math.round(montoMensualBase * IVA) : undefined, nota: `Mes ${i + 1}`, desembolsado: false };
+      upP((x) => { x.pagos = [...(x.pagos || []), pago]; }); log?.("marcó un mes cobrado", `${mesLabel(addMonths(inicioP, i))} · ${p.nombre}`);
+    }
+  };
   // Gastos de este proyecto (salen de su caja).
   const misGastos = gastosDeProyecto(gastos, p.id);
   const cajaBudget = cajaMonto(p), gastado = sumaGastos(misGastos), cajaRestante = cajaBudget - gastado;
@@ -1972,7 +1984,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
               : <button className="btn ghost" title="Marca el proyecto como cancelado (sale de los totales)" onClick={() => upP((x) => { x.estado = "cancelado"; })}><Trash2 size={14} /> Cancelar</button>}
           </div>
 
-          <MesesProgreso p={p} rec={rec} />
+          <MesesProgreso p={p} cobradoMes={cobradoMes} onToggle={toggleMes} />
 
           <div className="pay-cols">
             <div>

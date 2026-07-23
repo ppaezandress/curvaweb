@@ -10,7 +10,7 @@ import {
   getSensitivity, setSensitivity, SENSITIVITY, type Sensitivity,
   isBackgroundOn, setBackgroundOn,
 } from "@/lib/gesture-prefs";
-import { playConfirmed } from "@/lib/gestures/sound";
+import { playConfirmed, unlockAudio } from "@/lib/gestures/sound";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 
 // Ajustes del control por gestos. La promesa del producto es "esto es para ti, no para
@@ -57,7 +57,12 @@ export function GestureSettings() {
           label="Activar el control por gestos"
           hint="Enciende la cámara solo mientras lo uses. Se apaga sola si dejas de hacer gestos."
           on={on}
-          onChange={setGestureOptIn}
+          onChange={(v) => {
+            // El audio se desbloquea AQUÍ, dentro del clic: un AudioContext creado fuera de un
+            // gesto del usuario nace bloqueado y los tonos no suenan nunca.
+            if (v) unlockAudio();
+            setGestureOptIn(v);
+          }}
         />
 
         {on && (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Camera, CameraOff } from "lucide-react";
 import { useGestureControl } from "@/lib/use-gesture-control";
+import { unlockAudio } from "@/lib/gestures/sound";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 
 // Laboratorio del control por gestos (Fase 0). Existe para UNA decisión: ¿reconoce bien con
@@ -20,6 +21,7 @@ export default function LabGestosPage() {
   const [log, setLog] = useState<{ g: Gesture; at: string }[]>([]);
   const [fps, setFps] = useState(0);
   const [counts, setCounts] = useState<Partial<Record<Gesture, number>>>({});
+  const [stats, setStats] = useState({ frames: 0, agoSec: -1, source: "—" as string, hidden: false });
 
   const onCommand = useCallback((g: Gesture) => {
     setCounts((c) => ({ ...c, [g]: (c[g] || 0) + 1 }));
@@ -28,7 +30,7 @@ export default function LabGestosPage() {
 
   // Desestructurado a propósito: el linter de React trata cualquier acceso a un objeto que
   // contiene un ref como lectura de ref durante el render.
-  const { status, error, candidate, progress, videoRef, start, stop } =
+  const { status, error, candidate, progress, videoRef, start, stop, getStats } =
     useGestureControl({ enabled: true, onCommand });
 
   // Cuadros por segundo reales del <video> (no de la inferencia): sirve para ver si la cámara
@@ -43,6 +45,22 @@ export default function LabGestosPage() {
     const iv = setInterval(() => { setFps(frames); frames = 0; }, 1000);
     return () => { alive = false; v.cancelVideoFrameCallback?.(id); clearInterval(iv); };
   }, [status, videoRef]);
+
+  // Diagnóstico una vez por segundo: si te cambias a otra app y vuelves, aquí se ve si el
+  // reconocimiento siguió trabajando (los cuadros suben) o si se congeló.
+  useEffect(() => {
+    if (status !== "running") return;
+    const iv = setInterval(() => {
+      const s = getStats();
+      setStats({
+        frames: s.frames,
+        agoSec: s.lastFrameAt ? Math.max(0, Math.round((Date.now() - s.lastFrameAt) / 1000)) : -1,
+        source: s.source,
+        hidden: s.hidden,
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [status, getStats]);
 
   const running = status === "running";
 
@@ -60,7 +78,7 @@ export default function LabGestosPage() {
           </p>
         </div>
         <button
-          onClick={running ? stop : start}
+          onClick={running ? stop : () => { unlockAudio(); start(); }}
           className={`focus-ring inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
             running ? "border border-line bg-surface text-fg hover:border-danger/40 hover:text-danger" : "bg-accent text-white hover:opacity-90"
           }`}
@@ -130,6 +148,35 @@ export default function LabGestosPage() {
             <p className="mt-3 border-t border-line pt-2 text-caption text-muted">
               Cuadros por segundo: <span className="font-mono text-fg">{running ? fps : "—"}</span>
             </p>
+          </div>
+
+          <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
+            <p className="text-caption font-semibold text-muted">¿Sigue trabajando?</p>
+            <p className="mt-1 text-caption text-muted">
+              Cámbiate a otra app, haz una seña y vuelve: si los cuadros subieron, siguió viéndote.
+            </p>
+            <dl className="mt-2 space-y-1 text-caption">
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Cuadros analizados</dt>
+                <dd className="font-mono text-fg">{stats.frames}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Última imagen</dt>
+                <dd className="font-mono text-fg">{stats.agoSec >= 0 ? `hace ${stats.agoSec}s` : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Origen</dt>
+                <dd className="font-mono text-fg">
+                  {stats.source === "track" ? "cámara directa" : stats.source === "video" ? "video (solo visible)" : "—"}
+                </dd>
+              </div>
+            </dl>
+            {stats.source === "video" && running && (
+              <p className="mt-2 rounded-control border border-warn/40 bg-warn/10 px-2.5 py-2 text-caption text-fg">
+                Tu navegador no deja leer la cámara directamente, así que al cambiarte de app el
+                reconocimiento se pausa. En Chrome sí funciona.
+              </p>
+            )}
           </div>
 
           <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
