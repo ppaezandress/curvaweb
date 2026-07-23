@@ -3,8 +3,9 @@ import { useEffect, useState, useCallback, useRef, Component, type ReactNode, ty
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange, Users, Share2, Copy,
+  Scale, CalendarRange, Users, Share2, Copy, Settings,
 } from "lucide-react";
+import { cotizar, mergeCotConfig, COT_CONFIG_DEFAULT, COT_FORM_DEFAULT, type CotConfig, type CotForm } from "@/lib/cotizador";
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
   cajaLabel, CAJA_ORDER, isSocio,
@@ -22,7 +23,7 @@ type Cliente = { id: string; nombre: string; estado: string | null };
 type RosterPerson = { id: string; nombre: string; quien: Quien };
 // Evento de la bitácora (historial compartido): quién hizo qué y cuándo. Se sincroniza.
 type LogEvent = { id: string; ts: number; who: "A" | "B" | null; act: string; det: string };
-type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios; bitacora?: LogEvent[] };
+type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: RosterPerson[]; activeId: string; rulesVersion?: number; saldosIniciales?: Record<CajaKind, number>; banco?: DatosBancarios; bitacora?: LogEvent[]; cotConfig?: CotConfig };
 const RULES_VERSION = 11; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 // Saldo que YA existía en cada caja de Revolut antes de que la app empezara a
 // contar (el socio lo captura una vez; se SUMA a lo que la app calcula).
@@ -157,15 +158,15 @@ const freezeLegacyReglas = (projects: Proyecto[]): Proyecto[] =>
   projects.map((p) => (p.borrador || p.reglas) ? p : { ...p, reglas: { ...REGLAS_DEFAULT } });
 
 // Fotografía del estado para diffear qué cambió antes de sincronizar.
-type Snapshot = { projects: Record<string, string>; params: string; gastos: string; roster: string; rulesVersion: number; saldos: string; banco: string; bitacora: string };
+type Snapshot = { projects: Record<string, string>; params: string; gastos: string; roster: string; rulesVersion: number; saldos: string; banco: string; bitacora: string; cotConfig: string };
 function snapshotOf(s: State): Snapshot {
   const projects: Record<string, string> = {};
   s.projects.filter((p) => !p.borrador).forEach((p) => { projects[p.id] = JSON.stringify(p); });
-  return { projects, params: JSON.stringify(s.params), gastos: JSON.stringify(s.gastos), roster: JSON.stringify(s.roster || []), rulesVersion: s.rulesVersion || RULES_VERSION, saldos: JSON.stringify(mergeSaldos(s.saldosIniciales)), banco: JSON.stringify(mergeBanco(s.banco)), bitacora: JSON.stringify(s.bitacora || []) };
+  return { projects, params: JSON.stringify(s.params), gastos: JSON.stringify(s.gastos), roster: JSON.stringify(s.roster || []), rulesVersion: s.rulesVersion || RULES_VERSION, saldos: JSON.stringify(mergeSaldos(s.saldosIniciales)), banco: JSON.stringify(mergeBanco(s.banco)), bitacora: JSON.stringify(s.bitacora || []), cotConfig: JSON.stringify(mergeCotConfig(s.cotConfig)) };
 }
 function hayPendientes(s: State, snap: Snapshot): boolean {
   const cur = snapshotOf(s);
-  if (cur.params !== snap.params || cur.gastos !== snap.gastos || cur.roster !== snap.roster || cur.rulesVersion !== snap.rulesVersion || cur.saldos !== snap.saldos || cur.banco !== snap.banco || cur.bitacora !== snap.bitacora) return true;
+  if (cur.params !== snap.params || cur.gastos !== snap.gastos || cur.roster !== snap.roster || cur.rulesVersion !== snap.rulesVersion || cur.saldos !== snap.saldos || cur.banco !== snap.banco || cur.bitacora !== snap.bitacora || cur.cotConfig !== snap.cotConfig) return true;
   const ids = new Set([...Object.keys(cur.projects), ...Object.keys(snap.projects)]);
   for (const id of ids) if (cur.projects[id] !== snap.projects[id]) return true;
   return false;
@@ -186,7 +187,7 @@ function initialState(): State {
   const p1 = newProject("Wellness (ejemplo)");
   const p2 = newProject("Web Trazo (ejemplo)");
   p2.ticket = 30000; p2.cajaPct = 8; p2.members = [{ rol: "P", quien: "nucleo", nombre: "Lomba", sm: 1, personId: "r_lomba" }];
-  return { params: { ...REGLAS_DEFAULT }, gastos: DEF_GASTOS.slice(), projects: [p1, p2], roster: DEF_ROSTER.slice(), activeId: p1.id, rulesVersion: RULES_VERSION, saldosIniciales: { ...DEF_SALDOS }, banco: { ...DEF_BANCO } };
+  return { params: { ...REGLAS_DEFAULT }, gastos: DEF_GASTOS.slice(), projects: [p1, p2], roster: DEF_ROSTER.slice(), activeId: p1.id, rulesVersion: RULES_VERSION, saldosIniciales: { ...DEF_SALDOS }, banco: { ...DEF_BANCO }, cotConfig: mergeCotConfig(null) };
 }
 
 const NAV = [
@@ -261,7 +262,7 @@ export default function App() {
     // Merge de parámetros: los guardados mandan, pero cualquier perilla NUEVA
     // (que antes estaba hardcodeada) toma su default. Así no rompemos localStorage viejo.
     if (s && s.projects) {
-      const merged: State = { ...s, params: { ...REGLAS_DEFAULT, ...(s.params || {}) }, roster: (s.roster && s.roster.length ? s.roster : DEF_ROSTER.slice()), saldosIniciales: mergeSaldos(s.saldosIniciales), banco: mergeBanco(s.banco) };
+      const merged: State = { ...s, params: { ...REGLAS_DEFAULT, ...(s.params || {}) }, roster: (s.roster && s.roster.length ? s.roster : DEF_ROSTER.slice()), saldosIniciales: mergeSaldos(s.saldosIniciales), banco: mergeBanco(s.banco), cotConfig: mergeCotConfig(s.cotConfig) };
       // Migraciones de decisiones (se re-aplican a estados guardados viejos):
       if ((s.rulesVersion || 0) < 2) { merged.params.pool = 0; }              // apagar bono del Núcleo
       if ((s.rulesVersion || 0) < 3) { merged.params.metaBancaMonto = 48000; } // meta de Banca realista
@@ -323,7 +324,7 @@ export default function App() {
             const drafts = (prev?.projects || []).filter((p) => p.borrador);   // el borrador es local, no viene del server
             const all = [...projects, ...drafts];
             const activeId = prev && all.some((p) => p.id === prev.activeId) ? prev.activeId : (all[0]?.id || "");
-            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? prev?.saldosIniciales), banco: mergeBanco(srv.banco ?? prev?.banco), bitacora: (srv.bitacora as LogEvent[]) ?? prev?.bitacora ?? [] };
+            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? prev?.saldosIniciales), banco: mergeBanco(srv.banco ?? prev?.banco), bitacora: (srv.bitacora as LogEvent[]) ?? prev?.bitacora ?? [], cotConfig: mergeCotConfig(srv.cotConfig ?? prev?.cotConfig) };
             syncedRef.current = snapshotOf(next);
             return next;
           });
@@ -331,7 +332,7 @@ export default function App() {
           // server vacío → sembrar con el estado local actual
           setSt((prev) => {
             const base = prev || initialState();
-            fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ upsertProjects: base.projects, params: base.params, gastos: base.gastos, roster: base.roster, rulesVersion: base.rulesVersion, saldosIniciales: mergeSaldos(base.saldosIniciales), banco: mergeBanco(base.banco) }) }).catch(() => {});
+            fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ upsertProjects: base.projects, params: base.params, gastos: base.gastos, roster: base.roster, rulesVersion: base.rulesVersion, saldosIniciales: mergeSaldos(base.saldosIniciales), banco: mergeBanco(base.banco), cotConfig: mergeCotConfig(base.cotConfig) }) }).catch(() => {});
             syncedRef.current = snapshotOf(base);
             return base;
           });
@@ -359,6 +360,7 @@ export default function App() {
       if (snap.saldos !== cur.saldos) body.saldosIniciales = mergeSaldos(st.saldosIniciales);
       if (snap.banco !== cur.banco) body.banco = mergeBanco(st.banco);
       if (snap.bitacora !== cur.bitacora) body.bitacora = st.bitacora || [];
+      if (snap.cotConfig !== cur.cotConfig) body.cotConfig = mergeCotConfig(st.cotConfig);
       if (Object.keys(body).length === 0) return;
       fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
         .then((r) => r.json()).then((d) => { if (d.ok) syncedRef.current = cur; }).catch(() => {});
@@ -384,7 +386,7 @@ export default function App() {
             const drafts = (curr?.projects || []).filter((p) => p.borrador);
             const all = [...projects, ...drafts];
             const activeId = curr && all.some((p) => p.id === curr.activeId) ? curr.activeId : (all[0]?.id || "");
-            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? curr?.saldosIniciales), banco: mergeBanco(srv.banco ?? curr?.banco), bitacora: (srv.bitacora as LogEvent[]) ?? curr?.bitacora ?? [] };
+            const next: State = { params, gastos, projects: all, roster, activeId, rulesVersion: RULES_VERSION, saldosIniciales: mergeSaldos(srv.saldosIniciales ?? curr?.saldosIniciales), banco: mergeBanco(srv.banco ?? curr?.banco), bitacora: (srv.bitacora as LogEvent[]) ?? curr?.bitacora ?? [], cotConfig: mergeCotConfig(srv.cotConfig ?? curr?.cotConfig) };
             syncedRef.current = snapshotOf(next);
             return next;
           });
@@ -438,7 +440,7 @@ export default function App() {
         <ErrorBoundary key={sec}>
           {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={setSec} />}
           {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
-          {sec === "cotizador" && <Cotizador st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
+          {sec === "cotizador" && <Cotizador st={st} update={update} />}
           {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} log={log} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
           {sec === "mimes" && <MiMes st={st} setSec={setSec} yoNombre={yoNombre} />}
           {sec === "personas" && <Personas st={st} />}
@@ -1559,221 +1561,155 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
 // cliente y lo que gana cada quien. El explorador "¿y si cobras…?" recalcula el
 // reparto a varios precios para no cotizar ni de más ni de menos. Los parámetros
 // finos (comisión, ISR, caja, reglas) viven en la Calculadora. Decisión Andrés 2026-07-23.
-function Cotizador({ st, active, clientes, update, updateActive, setSec, setToast, log }: {
-  st: State; active: Proyecto; clientes: Cliente[];
-  update: (fn: (s: State) => State) => void; updateActive: (fn: (p: Proyecto) => void) => void; setSec: (s: string) => void; setToast: (m: string) => void; log?: (act: string, det: string) => void;
-}) {
-  const nuevoBorrador = () => update((s) => {
-    const ex = s.projects.find((x) => x.borrador);
-    if (ex) { s.activeId = ex.id; return s; }
-    const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id;
-    return s;
-  });
-  const guardar = () => {
-    const cur0 = st.projects.find((x) => x.id === st.activeId);
-    const eraBorrador = !!cur0?.borrador;
-    const nombre = (cur0?.nombre || "El proyecto").trim();
-    update((s) => {
-      const cur = s.projects.find((x) => x.id === s.activeId);
-      if (cur) { cur.borrador = false; cur.reglas = { ...s.params }; }
-      if (eraBorrador) { const nb = makeDraft(s.projects); s.projects.push(nb); s.activeId = nb.id; }
-      return s;
-    });
-    setToast(eraBorrador ? `“${nombre}” guardado` : `“${nombre}” actualizado`);
-    log?.(eraBorrador ? "guardó un proyecto" : "actualizó un proyecto", nombre);
-  };
-  if (!active) return (
-    <>
-      <div className="page-h"><div><h1>Cotizador</h1><p>Pon el precio y ve, al instante, lo que gana cada quien.</p></div></div>
-      <div className="card" style={{ textAlign: "center", padding: "44px 24px" }}>
-        <p className="hint" style={{ marginTop: 0, marginBottom: 14 }}>No tienes proyectos todavía.</p>
-        <button className="btn primary" onClick={nuevoBorrador}>+ Crear el primero</button>
-      </div>
-    </>
+/* ---------------- Cotizador (pricing de consultoría por horas) ----------------
+   Herramienta interna: precio al cliente = horas × tarifa × factor de área (+fee de
+   presencialidad +viáticos), reparte una bolsa al equipo por pesos de rol y muestra el
+   margen. TODO parámetro vive en st.cotConfig (editable en "Ajustes", sincronizado).
+   Encargo Andrés 2026-07-23. Reemplaza el viejo explorador de precio (redundante con la
+   Calculadora). */
+function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State) => void }) {
+  const cfg = mergeCotConfig(st.cotConfig);
+  const [form, setForm] = useState<CotForm>(COT_FORM_DEFAULT);
+  const [modo, setModo] = useState<"cotizar" | "config">("cotizar");
+  const r = cotizar(cfg, form);
+  const setF = (patch: Partial<CotForm>) => setForm((f) => ({ ...f, ...patch }));
+  const toggleArea = (id: string) => setForm((f) => ({ ...f, areasSel: f.areasSel.includes(id) ? f.areasSel.filter((x) => x !== id) : [...f.areasSel, id] }));
+  const setCfg = (patch: Partial<CotConfig>) => update((s) => { s.cotConfig = mergeCotConfig({ ...mergeCotConfig(s.cotConfig), ...patch }); return s; });
+  const editArea = (id: string, patch: Partial<{ nombre: string; peso: number }>) => setCfg({ areas: cfg.areas.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
+
+  // Campo numérico reusable (dinero o cantidad, con sufijo opcional).
+  const cli = (label: string, val: number, on: (v: number) => void, o?: { money?: boolean; step?: number; suf?: string; ph?: string }) => (
+    <div className="cot-field">
+      <label>{label}</label>
+      <div className="num-in">{o?.money && <span className="fix">$</span>}<input type="number" min={0} step={o?.step ?? 1} value={val || ""} placeholder={o?.ph ?? "0"} onChange={(e) => on(Math.max(0, +e.target.value || 0))} />{o?.suf && <span className="fix">{o.suf}</span>}</div>
+    </div>
   );
-
-  const P = st.params;
-  const activeRes = membersResolved(active, st.roster, P);
-  const r = compute(activeRes, P);
-  const t = r.t || 1;
-  const plazoN = Math.max(1, Math.floor(active.plazoMeses || 1));
-  const conIVA = active.ivaModo === "incluido" || (active.ivaModo !== "sin" && !!active.conIVA);
-  const base = active.ticket;
-  const total = conIVA ? Math.round(base * (1 + IVA) * 100) / 100 : base;
-  // Todo el cotizador va DESPUÉS de ISR (el ISR no se reparte), igual que la Calculadora.
-  const isrDe = (rr: ReturnType<typeof compute>) => active.descontarISR && P.imp > 0 ? isrReservaDe(rr.t, P) : 0;
-  const isrRes = isrDe(r), isrA = isrRes * P.split / 100, isrB = isrRes * (1 - P.split / 100);
-  const socioANeto = r.socioA - isrA, socioBNeto = r.socioB - isrB;
-  const rows = Object.values(r.people).map((x) => x.quien === "socioA" ? { ...x, extra: x.extra - isrA } : x.quien === "socioB" ? { ...x, extra: x.extra - isrB } : x)
-    .filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
-  const curva = r.marginOp - r.manualDelta - isrRes;     // lo que se queda CURVA, ya sin ISR
-  const mr = curva / t;                                  // margen que se queda CURVA
-
-  // Explorador: recalcula el reparto a varios precios (misma base ± %). Al hacer
-  // clic fija ese precio. Así ves de un vistazo el costo de cobrar de menos.
-  const puntos = [-0.15, -0.1, 0, 0.1, 0.2, 0.3];
-  const explor = puntos.map((d) => {
-    const nt = Math.max(0, Math.round(base * (1 + d)));
-    const rr = compute(membersResolved({ ...active, ticket: nt }, st.roster, P), P);
-    const cv = rr.marginOp - rr.manualDelta - isrDe(rr);
-    return { d, nt, tot: conIVA ? Math.round(nt * (1 + IVA)) : nt, curva: cv, mr: cv / (rr.t || 1) };
-  });
-
-  // ── Selector de personas (mismo patrón que la Calculadora) ──
-  const personVal = (m: Miembro): string => {
-    if (m.personId === "socioA" || m.quien === "socioA") return "socioA";
-    if (m.personId === "socioB" || m.quien === "socioB") return "socioB";
-    if (m.personId && st.roster.some((rp) => rp.id === m.personId)) return m.personId;
-    const byName = st.roster.find((rp) => rp.nombre === m.nombre);
-    return byName ? byName.id : "__cur";
-  };
-  const choosePerson = (i: number, id: string) => {
-    if (id === "__cur") return;
-    if (id === "__new") {
-      update((s) => {
-        const np: RosterPerson = { id: uid(), nombre: "Nueva persona", quien: "nucleo" };
-        s.roster.push(np);
-        const proj = s.projects.find((x) => x.id === s.activeId);
-        if (proj && proj.members[i]) { const m = proj.members[i]; m.personId = np.id; m.nombre = np.nombre; m.quien = "nucleo"; m.sm = 1; }
-        return s;
-      });
-      return;
-    }
-    updateActive((p) => {
-      const m = p.members[i]; if (!m) return;
-      if (id === "socioA") { m.personId = "socioA"; m.quien = "socioA"; m.nombre = P.nombreA; m.sm = 1; }
-      else if (id === "socioB") { m.personId = "socioB"; m.quien = "socioB"; m.nombre = P.nombreB; m.sm = 1; }
-      else { const rp = st.roster.find((rp2) => rp2.id === id); if (rp) { m.personId = rp.id; m.quien = rp.quien; m.nombre = rp.nombre; m.sm = rp.quien === "nuevo" ? P.smNuevo : 1; } }
-    });
-  };
-  const addMember = () => updateActive((p) => {
-    const used = new Set(p.members.map((m) => m.personId));
-    const rp = st.roster.find((rp2) => !used.has(rp2.id)) || st.roster[0];
-    if (rp) p.members.push({ rol: "A", quien: rp.quien, nombre: rp.nombre, sm: rp.quien === "nuevo" ? P.smNuevo : 1, personId: rp.id });
-    else p.members.push({ rol: "A", quien: "socioA", nombre: P.nombreA, sm: 1, personId: "socioA" });
-  });
-
-  const setModo = (m: "sin" | "incluido") => updateActive((p) => {
-    const oldIncluido = p.ivaModo === "incluido";
-    const visible = oldIncluido ? Math.round(p.ticket * (1 + IVA) * 100) / 100 : p.ticket;
-    p.ivaModo = m; p.conIVA = m !== "sin";
-    p.ticket = m === "incluido" ? Math.round(ticketSinIVA(visible) * 100) / 100 : visible;
-  });
-  const inputVal = conIVA ? Math.round(base * (1 + IVA) * 100) / 100 : base;
-  const onTicket = (v: number) => updateActive((p) => { p.ticket = conIVA ? Math.round(ticketSinIVA(v) * 100) / 100 : v; });
 
   return (
     <>
-      <div className="page-h"><div><h1>Cotizador</h1><p>Pon el precio y mira, al instante, lo que gana cada quien.</p></div></div>
-      <div className="proj-bar">
-        <div className="pb-group">
-          <span className="pb-cap">Proyecto</span>
-          <select value={active.id} onChange={(e) => update((s) => { s.activeId = e.target.value; return s; })}>
-            {st.projects.map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.borrador ? " · sin guardar" : ""}</option>)}
-          </select>
-        </div>
-        <div className="pb-group grow">
-          <span className="pb-cap">Nombre</span>
-          <input type="text" value={active.nombre} placeholder="Cliente o proyecto" onChange={(e) => updateActive((p) => { p.nombre = e.target.value; })} />
-        </div>
-        <div className="pb-actions">
-          <button className="btn" title="Empieza (o continúa) un borrador" onClick={nuevoBorrador}><Plus size={15} /> Nuevo</button>
-          <button className="btn primary" title={active.borrador ? "Guarda este proyecto" : "Re-guarda con las reglas de hoy"} onClick={guardar}>{active.borrador ? <>Guardar <ArrowRight size={15} /></> : <>Actualizar <ArrowRight size={15} /></>}</button>
+      <div className="page-h cotz2-h">
+        <div><h1>Cotizador</h1><p>Calcula el precio de un proyecto de consultoría por horas, áreas y equipo — con su reparto y su margen.</p></div>
+        <div className="chips cotz2-tabs">
+          <button type="button" className={"chip-btn" + (modo === "cotizar" ? " on" : "")} onClick={() => setModo("cotizar")}>Cotizar</button>
+          <button type="button" className={"chip-btn" + (modo === "config" ? " on" : "")} onClick={() => setModo("config")}><Settings size={13} /> Ajustes</button>
         </div>
       </div>
 
-      {/* El corazón del Cotizador: precio al cliente ↔ lo que se reparte, lado a lado. */}
-      <div className="cotz-hero rise">
-        <div className="cotz-side pays">
-          <span className="cotz-lbl">El cliente paga</span>
-          <span className="cotz-big"><span key={fmtMXN(total)} className="num-anim">{fmtMXN(total)}</span></span>
-          <span className="cotz-sub">{conIVA ? "IVA incluido" : "sin IVA"}{plazoN > 1 ? ` · ${plazoN} pagos de ${fmtMXN(total / plazoN)}` : ""}</span>
-        </div>
-        <div className="cotz-flow"><ArrowRight size={20} /></div>
-        <div className="cotz-side keeps">
-          <span className="cotz-lbl">CURVA se queda</span>
-          <span className="cotz-big"><span key={fmtMXN(curva)} className="num-anim">{fmtMXN(curva)}</span></span>
-          <span className="cotz-sub">{pctFmt(mr)} del ingreso · {P.nombreA} {fmtMXN(socioANeto)} · {P.nombreB} {fmtMXN(socioBNeto)}</span>
-        </div>
-      </div>
-
-      <div className="grid rise">
-        <div className="sidec">
+      {modo === "cotizar" && (
+        <div className="two rise">
+          {/* FORMULARIO */}
           <div className="card">
-            <h2>La propuesta</h2>
-            <div className="field"><label>Cliente</label><select value={active.clienteId || ""} onChange={(e) => updateActive((p) => { p.clienteId = e.target.value || null; p.clienteNombre = clientes.find((c) => c.id === e.target.value)?.nombre || null; })}><option value="">— sin asignar —</option>{clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></div>
-            <div className="field"><label>Precio</label>
-              <div className="money-in"><span>$</span><input type="number" value={inputVal} onChange={(e) => onTicket(+e.target.value || 0)} /></div>
-              <div className="chips" style={{ marginTop: 8 }}>
-                <button className="chip-btn" aria-pressed={conIVA} onClick={() => setModo(conIVA ? "sin" : "incluido")}>{conIVA ? "El precio ya trae IVA" : "El precio no lleva IVA"}</button>
+            <h2>El proyecto</h2>
+
+            <div className="cot-field">
+              <label>Áreas del proyecto <span className="tip" data-tip="El peso promedio de las áreas ajusta el precio ±10% por cada punto arriba/abajo de 3.">ⓘ</span></label>
+              <div className="cot-areas">
+                {cfg.areas.map((a) => (
+                  <button key={a.id} type="button" className={"cot-area" + (form.areasSel.includes(a.id) ? " on" : "")} onClick={() => toggleArea(a.id)}>
+                    {a.nombre}<span className="pw">{a.peso}</span>
+                  </button>
+                ))}
+                {cfg.areas.length === 0 && <span className="hint">Sin áreas — agrégalas en Ajustes.</span>}
+              </div>
+              {form.areasSel.length > 0 && <p className="hint" style={{ marginBottom: 0 }}>Peso promedio {r.pesoProm.toFixed(1)} → factor ×{r.areaFactor.toFixed(2)}</p>}
+            </div>
+
+            {cli("Horas totales estimadas", form.horas, (v) => setF({ horas: v }), { suf: "hrs" })}
+
+            <div className="cot-field">
+              <label>Equipo</label>
+              <div className="cot-row3">
+                <div className="num-in fixed"><span className="fix">Piloto</span><input value="1" readOnly disabled /></div>
+                <div className="num-in"><span className="fix">Esp.</span><input type="number" min={0} step={1} value={form.nEspecialista || ""} placeholder="0" onChange={(e) => setF({ nEspecialista: Math.max(0, Math.floor(+e.target.value || 0)) })} /></div>
+                <div className="num-in"><span className="fix">Apoyo</span><input type="number" min={0} step={1} value={form.nApoyo || ""} placeholder="0" onChange={(e) => setF({ nApoyo: Math.max(0, Math.floor(+e.target.value || 0)) })} /></div>
+              </div>
+              <p className="hint" style={{ marginBottom: 0 }}>El piloto siempre es 1. Especialista y Apoyo, los que quieras.</p>
+            </div>
+
+            <div className="cot-field">
+              <label>¿Presencial?</label>
+              <div className="chips">
+                <button type="button" className={"chip-btn" + (!form.presencial ? " on" : "")} onClick={() => setF({ presencial: false })}>Remoto</button>
+                <button type="button" className={"chip-btn" + (form.presencial ? " on" : "")} onClick={() => setF({ presencial: true })}>Presencial</button>
               </div>
             </div>
-            <div className="two" style={{ gap: 12 }}>
-              <div className="field"><label>Plazo (meses)</label><input type="number" min={1} max={24} step={1} value={active.plazoMeses ?? 1} onChange={(e) => updateActive((p) => { p.plazoMeses = Math.max(1, Math.floor(+e.target.value) || 1); })} /></div>
-              <div className="field"><label>Tipo</label><select value={active.tipo} onChange={(e) => updateActive((p) => { const tp = e.target.value as "trazo" | "trayectoria" | "alianza"; p.tipo = tp; p.cajaPct = cajaPresetDe(st.params)[tp]; })}>{(["trazo", "trayectoria", "alianza"] as const).map((tp) => <option key={tp} value={tp}>{tp[0].toUpperCase() + tp.slice(1)}</option>)}</select></div>
-            </div>
-            <div className="field"><label>¿Qué le vendes? <span className="tip" data-tip="Los entregables, uno por línea. Aparecen en la cotización que le mandas al cliente."><Info /></span></label>
-              <textarea value={active.cotScope || ""} placeholder={"Un entregable por línea…"} rows={4} onChange={(e) => updateActive((p) => { p.cotScope = e.target.value; })} className="cotz-scope" />
-            </div>
-            <button className="btn ghost" style={{ width: "100%" }} onClick={() => window.open("/pdf/cotizacion?proyecto=" + active.id, "_blank")} disabled={active.borrador} title={active.borrador ? "Guarda el proyecto primero" : "Cotización lista para el cliente"}><FileText size={15} /> Cotización para el cliente</button>
-          </div>
-          <div className="card">
-            <h2>Quién iría en el equipo <span className="tip" data-tip="Elige a cada persona; la app ya sabe si es socio o Núcleo. Afina sueldos, comisión e ISR en la Calculadora."><Info /></span></h2>
-            {active.members.map((m, i) => {
-              const val = personVal(m);
-              return (
-                <div className="member2" key={i}>
-                  <select value={val} onChange={(e) => choosePerson(i, e.target.value)}>
-                    <optgroup label="Socios"><option value="socioA">{P.nombreA}</option><option value="socioB">{P.nombreB}</option></optgroup>
-                    {st.roster.length > 0 && <optgroup label="Equipo">{st.roster.map((rp) => <option key={rp.id} value={rp.id}>{rp.nombre}</option>)}</optgroup>}
-                    {val === "__cur" && <option value="__cur">{m.nombre || "— sin asignar —"}</option>}
-                    <option value="__new">+ Nueva persona…</option>
-                  </select>
-                  <div className="member-rol">
-                    <div className="chips">
-                      {(["P", "E", "A"] as Rol[]).map((rl) => (
-                        <button key={rl} className="chip-btn" aria-pressed={m.rol === rl} onClick={() => updateActive((p) => { p.members[i].rol = rl; })}>{ROLNAME[rl]}</button>
-                      ))}
-                    </div>
-                    <button className="rmv" title="Quitar del proyecto" onClick={() => updateActive((p) => { p.members.splice(i, 1); })}>×</button>
-                  </div>
-                </div>
-              );
-            })}
-            <button className="add" onClick={addMember}>+ Agregar persona</button>
-            <p className="hint" style={{ marginBottom: 0 }}>Afina sueldos, comisión e ISR en la <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setSec("calculadora")}>Calculadora</b>.</p>
-          </div>
-        </div>
 
-        <div>
-          <div className="card">
-            <h2>Se reparte así{plazoN > 1 ? " · en total" : ""}</h2>
-            <Rank rows={rows} />
-            {plazoN > 1 && <p className="hint" style={{ marginBottom: 0 }}>Total de los {plazoN} meses. El promedio mensual está en la Calculadora.</p>}
+            {form.presencial && (
+              <div className="cot-field">
+                <label>Viáticos (reembolso directo)</label>
+                <div className="cot-row3">
+                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} placeholder="Transp." value={form.transporte || ""} onChange={(e) => setF({ transporte: Math.max(0, +e.target.value || 0) })} /></div>
+                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} placeholder="TAG" value={form.tag || ""} onChange={(e) => setF({ tag: Math.max(0, +e.target.value || 0) })} /></div>
+                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} placeholder="Comida" value={form.comida || ""} onChange={(e) => setF({ comida: Math.max(0, +e.target.value || 0) })} /></div>
+                </div>
+                <p className="hint" style={{ marginBottom: 0 }}>Se suman tal cual (no dejan margen) + fee de presencialidad {cfg.pctPresencialidad}% sobre el subtotal.</p>
+              </div>
+            )}
           </div>
-          <div className="card">
-            <h2>¿Y si cobras…? <span className="tip" data-tip="Mismo equipo, distinto precio. La barra crece con los pesos que se queda CURVA; el color marca si el margen es sano. Haz clic en una fila para fijar ese precio."><Info /></span></h2>
-            <div className="cotz-explor">
-              <div className="cx-head"><span>Precio al cliente</span><span>Lo que entra a CURVA</span><span>Se queda</span></div>
-              {(() => {
-                const maxCurva = Math.max(1, ...explor.map((e) => e.curva));
-                return explor.map((e, i) => {
-                  const isCur = Math.abs(e.d) < 0.001;
-                  const col = e.mr >= 0.4 ? "var(--pos)" : e.mr >= 0.25 ? "var(--warn)" : "var(--neg)";
-                  return (
-                    <button key={i} className={"cx-row" + (isCur ? " cur" : "")} onClick={() => { if (!isCur) updateActive((p) => { p.ticket = e.nt; }); }} disabled={isCur} title={isCur ? "Precio actual" : "Fijar este precio"}>
-                      <span className="cx-price">{fmtMXN(e.tot)}<em>{e.d === 0 ? "hoy" : (e.d > 0 ? "+" : "") + Math.round(e.d * 100) + "%"}</em></span>
-                      <span className="cx-bar"><i style={{ width: Math.max(4, Math.min(100, e.curva / maxCurva * 100)) + "%", background: col }} /></span>
-                      <span className="cx-curva" style={{ color: col }}>{fmtMXN(e.curva)}<em>{pctFmt(e.mr)} margen</em></span>
-                    </button>
-                  );
-                });
-              })()}
+
+          {/* RESULTADO */}
+          <div className="card cot-out">
+            <div className="cot-price">
+              <span className="cp-l">Precio final al cliente</span>
+              <b className="cp-v"><span key={fmtMXN(r.precioCliente)} className="num-anim">{fmtMXN(r.precioCliente)}</span></b>
+              <span className="cp-s">{fmtMXN(r.margenBruto)} de margen · {pctFmt(r.pctMargen)}</span>
             </div>
-            <p className="hint" style={{ marginBottom: 0 }}>El margen % casi no cambia con el precio (todo escala parejo). Lo que sí cambia son los <b>pesos</b> que entran: cobrar de menos es dinero que dejas en la mesa.</p>
+
+            <h3 className="cot-h3">Desglose</h3>
+            <div className="bd-row sub"><span className="bl">Subtotal (horas × tarifa × área)</span><span className="bv">{fmtMXN(r.subtotal)}</span></div>
+            {r.feePres > 0.5 && <div className="bd-row sub"><span className="bl">Fee de presencialidad ({cfg.pctPresencialidad}%)</span><span className="bv">{fmtMXN(r.feePres)}</span></div>}
+            {r.viaticos > 0.5 && <div className="bd-row sub"><span className="bl">Viáticos (reembolso)</span><span className="bv">{fmtMXN(r.viaticos)}</span></div>}
+            <div className="bd-row eq"><span className="bl">Precio al cliente</span><span className="bv">{fmtMXN(r.precioCliente)}</span></div>
+
+            <h3 className="cot-h3">Reparto del equipo <span className="cot-sub">· {cfg.pctEquipo}% de {fmtMXN(r.precioCliente - r.viaticos)} = {fmtMXN(r.poolEquipo)}</span></h3>
+            <div className={"bd-row sub" + (r.pilotoFuera ? " cot-warn" : "")}><span className="bl">Piloto (peso ×{cfg.pesoPiloto})</span><span className="bv">{fmtMXN(r.pagoPiloto)}</span></div>
+            {r.nEsp > 0 && <div className="bd-row sub"><span className="bl">Especialista ×{r.nEsp} (peso ×{cfg.pesoEspecialista})</span><span className="bv">{fmtMXN(r.pagoEspTotal)}<em className="cot-cada"> · {fmtMXN(r.pagoEspCada)} c/u</em></span></div>}
+            {r.nApoyo > 0 && <div className="bd-row sub"><span className="bl">Apoyo ×{r.nApoyo} (peso ×{cfg.pesoApoyo})</span><span className="bv">{fmtMXN(r.pagoApoyoTotal)}<em className="cot-cada"> · {fmtMXN(r.pagoApoyoCada)} c/u</em></span></div>}
+
+            {r.pilotoFuera && (
+              <div className="alert warn cot-alert"><AlertTriangle size={15} /> <span>El pago del piloto (<b>{fmtMXN(r.pagoPiloto)}</b>) está fuera del rango sano {fmtMXN(cfg.pilotoMin)}–{fmtMXN(cfg.pilotoMax)}. Calibra la <b className="cot-link" onClick={() => setModo("config")}>tarifa base</b> o ajusta las horas.</span></div>
+            )}
+
+            <div className="cot-margin">
+              <div><span>Margen bruto</span><b>{fmtMXN(r.margenBruto)}</b></div>
+              <div><span>% de margen</span><b className={r.pctMargen < 0.4 ? "neg" : "pos"}>{pctFmt(r.pctMargen)}</b></div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {modo === "config" && (
+        <div className="two rise">
+          <div className="card">
+            <h2>Parámetros</h2>
+            <p className="hint" style={{ marginTop: -4 }}>Todavía se están calibrando. Se guardan y se comparten — cámbialos sin tocar código.</p>
+            <div className="cot-cfg-grid">
+              {cli("Tarifa por hora (base)", cfg.tarifaHoraBase, (v) => setCfg({ tarifaHoraBase: v }), { money: true, step: 10 })}
+              {cli("% asignado al equipo", cfg.pctEquipo, (v) => setCfg({ pctEquipo: v }), { suf: "%" })}
+              {cli("Fee de presencialidad", cfg.pctPresencialidad, (v) => setCfg({ pctPresencialidad: v }), { suf: "%" })}
+              {cli("Peso piloto", cfg.pesoPiloto, (v) => setCfg({ pesoPiloto: v }), { step: 0.1 })}
+              {cli("Peso especialista", cfg.pesoEspecialista, (v) => setCfg({ pesoEspecialista: v }), { step: 0.1 })}
+              {cli("Peso apoyo", cfg.pesoApoyo, (v) => setCfg({ pesoApoyo: v }), { step: 0.1 })}
+              {cli("Piloto — mínimo sano", cfg.pilotoMin, (v) => setCfg({ pilotoMin: v }), { money: true, step: 500 })}
+              {cli("Piloto — máximo sano", cfg.pilotoMax, (v) => setCfg({ pilotoMax: v }), { money: true, step: 500 })}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="tes-h"><h2 style={{ margin: 0 }}>Catálogo de áreas</h2><button type="button" className="btn ghost sm" onClick={() => setCfg({ areas: [...cfg.areas, { id: uid(), nombre: "Nueva área", peso: 3 }] })}><Plus size={13} /> Agregar</button></div>
+            <p className="hint" style={{ marginTop: -4 }}>Cada área tiene un peso 1–5; el promedio de las elegidas ajusta el precio.</p>
+            {cfg.areas.map((a) => (
+              <div key={a.id} className="cot-area-edit">
+                <input className="cot-area-name" value={a.nombre} onChange={(e) => editArea(a.id, { nombre: e.target.value })} />
+                <div className="num-in sm peso"><input type="number" min={1} max={5} step={1} value={a.peso} onChange={(e) => editArea(a.id, { peso: Math.min(5, Math.max(1, Math.round(+e.target.value || 1))) })} /></div>
+                <button type="button" className="rmv" title="Quitar área" onClick={() => setCfg({ areas: cfg.areas.filter((x) => x.id !== a.id) })}>×</button>
+              </div>
+            ))}
+            {cfg.areas.length === 0 && <p className="hint">Sin áreas. Agrega al menos una.</p>}
+            <button type="button" className="deuda-toggle" style={{ marginTop: 8 }} onClick={() => setCfg({ areas: COT_CONFIG_DEFAULT.areas.map((a) => ({ ...a })) })}>Restaurar catálogo inicial</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

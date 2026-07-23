@@ -865,3 +865,46 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .pmr-proj-v b{font-family:var(--mono);font-size:15px;font-weight:700}
 .pmr-proj-v span{font-size:11px;color:var(--muted);margin-left:2px}
 .pmr-outlook{margin-top:18px;padding:14px 16px;background:var(--cobalt-soft);border-radius:10px;font-size:13.5px;line-height:1.5;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+
+/* ============ Cotizador (pricing de consultoría) ============ */
+.cotz2-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.cotz2-tabs{flex:none}
+.cot-field{margin-bottom:15px}
+.cot-field>label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--muted);margin-bottom:7px}
+.cot-areas{display:flex;flex-wrap:wrap;gap:7px}
+.cot-area{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--r-chip);border:1px solid var(--border-2);background:var(--panel);color:var(--ink);cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:border-color .15s var(--ease),background .15s,color .15s}
+.cot-area:hover{border-color:var(--cobalt)}
+.cot-area.on{background:var(--cobalt);color:#fff;border-color:var(--cobalt)}
+.cot-area .pw{font-size:11px;font-weight:800;min-width:18px;text-align:center;padding:1px 5px;border-radius:99px;background:color-mix(in srgb,var(--ink) 10%,transparent);font-variant-numeric:tabular-nums}
+.cot-area.on .pw{background:rgba(255,255,255,.25);color:#fff}
+.cot-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.num-in{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:0 12px;transition:border-color .15s var(--ease),box-shadow .15s}
+.num-in:focus-within{border-color:var(--cobalt);box-shadow:0 0 0 3.5px var(--cobalt-soft)}
+.num-in input{flex:1;min-width:0;border:0;background:transparent;padding:11px 0;font:inherit;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);outline:none}
+.num-in input:disabled{opacity:1;-webkit-text-fill-color:var(--ink)}
+.num-in .fix{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.num-in.fixed{background:var(--panel-2)}
+.num-in.sm{padding:0 8px}.num-in.sm input{padding:8px 0;text-align:center}
+.num-in.peso{width:64px;flex:none}
+.cot-out h2{margin-top:0}
+.cot-price{background:linear-gradient(135deg,var(--cobalt),var(--cyan,#38BDF8));color:#fff;border-radius:var(--r);padding:18px 20px;margin-bottom:14px;display:flex;flex-direction:column;gap:3px;box-shadow:var(--glow)}
+.cot-price .cp-l{font-size:11.5px;font-weight:650;opacity:.92;text-transform:uppercase;letter-spacing:.04em}
+.cot-price .cp-v{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.08}
+.cot-price .cp-s{font-size:12.5px;font-weight:600;opacity:.92;font-variant-numeric:tabular-nums}
+.cot-h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:16px 0 4px}
+.cot-h3 .cot-sub{font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-variant-numeric:tabular-nums}
+.cot-cada{font-style:normal;font-weight:500;color:var(--muted);font-size:12.5px}
+.cot-warn .bv,.cot-warn .bl{color:var(--warn)}
+.cot-alert{margin-top:12px;align-items:center}
+.cot-link{cursor:pointer;color:var(--cobalt);text-decoration:underline;font-weight:700}
+.cot-margin{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.cot-margin>div{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px;display:flex;flex-direction:column;gap:2px}
+.cot-margin span{font-size:11px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+.cot-margin b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.cot-margin b.pos{color:var(--pos)}.cot-margin b.neg{color:var(--neg)}
+.cot-cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cot-cfg-grid .cot-field{margin-bottom:0}
+.cot-area-edit{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cot-area-name{flex:1;min-width:0}
+@media(max-width:560px){.cot-cfg-grid{grid-template-columns:1fr}}

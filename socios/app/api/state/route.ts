@@ -35,6 +35,7 @@ export async function GET() {
         saldosIniciales: kvMap.saldosIniciales || null,
         banco: kvMap.banco || null,
         bitacora: kvMap.bitacora || null,
+        cotConfig: kvMap.cotConfig || null,
       },
     });
   } catch (e) {
@@ -52,6 +53,7 @@ type SyncBody = {
   saldosIniciales?: unknown;
   banco?: unknown;
   bitacora?: unknown;
+  cotConfig?: unknown;
 };
 
 export async function POST(req: Request) {
@@ -78,6 +80,7 @@ export async function POST(req: Request) {
     if (body.saldosIniciales !== undefined) kvRows.push({ k: "saldosIniciales", v: body.saldosIniciales, updated_at: now });
     if (body.banco !== undefined) kvRows.push({ k: "banco", v: body.banco, updated_at: now });
     if (body.bitacora !== undefined) kvRows.push({ k: "bitacora", v: body.bitacora, updated_at: now });
+    if (body.cotConfig !== undefined) kvRows.push({ k: "cotConfig", v: body.cotConfig, updated_at: now });
     if (kvRows.length) ops.push(sb.from("socios_kv").upsert(kvRows, { onConflict: "k" }).then((r) => ({ error: r.error as unknown })));
 
     const results = await Promise.all(ops);
