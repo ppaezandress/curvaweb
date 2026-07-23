@@ -26,7 +26,7 @@ type State = { params: Reglas; gastos: Gasto[]; projects: Proyecto[]; roster: Ro
 const RULES_VERSION = 10; // sube esto cuando una decisión deba re-aplicarse a estados guardados
 // Saldo que YA existía en cada caja de Revolut antes de que la app empezara a
 // contar (el socio lo captura una vez; se SUMA a lo que la app calcula).
-const DEF_SALDOS: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0 };
+const DEF_SALDOS: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0, isr: 0 };
 const mergeSaldos = (x: unknown): Record<CajaKind, number> => ({ ...DEF_SALDOS, ...((x as Record<CajaKind, number>) || {}) });
 // Datos de cobro de CURVA (editable en Panel). Pre-cargado con la cuenta de Andrés.
 const DEF_BANCO: DatosBancarios = {
@@ -87,7 +87,7 @@ const uid = () => "p" + Math.random().toString(36).slice(2, 9);
 // Color de cada caja de Revolut (dot en las tarjetas de cajas / tesorería).
 const cajaKindColor: Record<CajaKind, string> = {
   masaSalarial: "--c-equipo", socioA: "--c-andres", socioB: "--c-balmo",
-  cajaProyecto: "--c-caja", cajaAhorro: "--c-banca", banca: "--c-reserva",
+  cajaProyecto: "--c-caja", cajaAhorro: "--c-banca", banca: "--c-reserva", isr: "--warn",
 };
 const ESTADO_LABEL: Record<EstadoProyecto, string> = {
   cotizacion: "Cotización", activo: "Activo", cerrado: "Cerrado", cancelado: "Cancelado",
@@ -2284,7 +2284,7 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
   const semillas = mergeSaldos(st.saldosIniciales); // saldo que ya tenías antes de la app
   const setSeed = (c: CajaKind, v: number) => update((s) => { s.saldosIniciales = { ...mergeSaldos(s.saldosIniciales), [c]: v }; return s; });
 
-  const saldos: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0 };
+  const saldos: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0, isr: 0 };
   const deudas: Record<string, Deuda> = {};
   const pagadosMap: Record<string, { nombre: string; quien: Quien; monto: number; fecha: string }> = {};
   const avisos: { id: string; nombre: string; monto: number }[] = [];

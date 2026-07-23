@@ -275,21 +275,20 @@ export function useGestureControl(opts: {
             if (done) break;
             if (cancelled || !value) { value?.close(); break; }
 
-            // Solo se analiza al ritmo que toque; el resto de cuadros se descartan enseguida
-            // para no acumular memoria.
-            const now = performance.now();
-            const idle = !hiddenRef.current && now - lastHandRef.current > IDLE_AFTER_MS;
-            if (now - lastFrameRef.current >= frameIntervalMs({ hidden: hiddenRef.current, idle })) {
-              lastFrameRef.current = now;
-              frameRef.current?.close();
-              frameRef.current = value;
-              analyze(value as unknown as HTMLVideoElement, now);
-            } else {
-              value.close();
-            }
+            // Guarda siempre el cuadro más reciente y cierra el anterior.
+            const prev = frameRef.current;
+            frameRef.current = value;
+            prev?.close();
+
+            // Con la pestaña oculta los temporizadores están frenados, así que el pulso lo da
+            // la cámara. Con la app a la vista manda requestAnimationFrame, que ya estaba
+            // probado; `maybeAnalyze` comparte el limitador de ritmo, así que no se duplica
+            // trabajo aunque los dos caminos estén vivos a la vez.
+            if (hiddenRef.current) maybeAnalyze();
           }
         })().catch(() => {
-          // Si el bombeo muere, quedan el <video> y los temporizadores (solo app a la vista).
+          // Si el bombeo muere, el <video> y los temporizadores siguen cubriendo el primer
+          // plano. NUNCA se deja al usuario sin ningún camino vivo.
           pumpingRef.current = false;
           frameRef.current?.close();
           frameRef.current = null;
@@ -297,6 +296,38 @@ export function useGestureControl(opts: {
       } catch {
         /* sin bombeo: modo <video> */
       }
+    }
+
+    /**
+     * Punto ÚNICO de análisis, con el limitador de ritmo compartido. Lo llaman los dos
+     * caminos (la cámara y los temporizadores); el que llegue primero se lleva el turno.
+     *
+     * Prefiere el cuadro del flujo de la cámara — el único que sigue vivo en segundo plano —
+     * y cae al <video> si ese camino falla. Si el reconocedor rechaza los cuadros crudos, deja
+     * de intentarlo y se queda con el <video>: más vale funcionar solo en primer plano que no
+     * funcionar en absoluto.
+     */
+    function maybeAnalyze() {
+      const video = videoRef.current;
+      const landmarker = landmarkerRef.current;
+      if (!video || !landmarker) return;
+
+      const now = performance.now();
+      const idle = !hiddenRef.current && now - lastHandRef.current > IDLE_AFTER_MS;
+      if (now - lastFrameRef.current < frameIntervalMs({ hidden: hiddenRef.current, idle })) return;
+
+      const raw = frameRef.current;
+      if (raw && !rawFramesBrokenRef.current) {
+        lastFrameRef.current = now;
+        const ok = analyze(raw as unknown as HTMLVideoElement, now, "track");
+        if (ok) return;
+        // El reconocedor no admite el cuadro crudo en este navegador: no insistir.
+        rawFramesBrokenRef.current = true;
+      }
+
+      if (video.readyState < 2) return;
+      lastFrameRef.current = now;
+      analyze(video, now, "video");
     }
 
     // El bucle corre SIEMPRE, mires o no la app: el sentido de los gestos es poder cambiar de
@@ -327,33 +358,24 @@ export function useGestureControl(opts: {
       }
     }
 
-    // Camino de respaldo: sin acceso directo al flujo de la cámara (Safari, Firefox) se sigue
-    // usando el <video> con requestAnimationFrame y el metrónomo. Ahí el modo segundo plano
-    // queda a merced de lo que permita el navegador.
+    /** Pulso de primer plano (requestAnimationFrame) y respaldo del metrónomo. */
     function tick() {
-      if (pumpingRef.current) return; // manda la cámara; este camino sobra
-      const video = videoRef.current;
-      const landmarker = landmarkerRef.current;
-      if (!video || !landmarker || video.readyState < 2) return;
-
-      const now = performance.now();
-      // Ritmo normal mientras hay una mano a la vista; a paso lento cuando no hay nadie.
-      const idle = !hiddenRef.current && now - lastHandRef.current > IDLE_AFTER_MS;
-      if (now - lastFrameRef.current < frameIntervalMs({ hidden: hiddenRef.current, idle })) return;
-      lastFrameRef.current = now;
-      analyze(video, now);
+      maybeAnalyze();
     }
 
-    /** Analiza un cuadro (venga del flujo de la cámara o del <video>) y aplica el comando. */
-    function analyze(source: HTMLVideoElement, now: number) {
+    /**
+     * Analiza un cuadro y aplica el comando. Devuelve false si el reconocedor rechazó la
+     * imagen, para que quien llama pueda intentar con otra fuente.
+     */
+    function analyze(source: HTMLVideoElement, now: number, from: "track" | "video"): boolean {
       const landmarker = landmarkerRef.current;
-      if (!landmarker) return;
+      if (!landmarker) return false;
 
       let gesture: Gesture | null = null;
       try {
         statsRef.current.frames++;
         statsRef.current.lastFrameAt = Date.now();
-        statsRef.current.source = pumpingRef.current ? "track" : "video";
+        statsRef.current.source = from;
         const res = landmarker.detectForVideo(source, now);
         // Con dos manos en cuadro (pasa: la otra sobre el teclado, alguien pasando detrás)
         // mandamos la que está MÁS CERCA de la cámara, que es la que te estás presentando.

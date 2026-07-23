@@ -428,7 +428,7 @@ export const pctRecibido = (pr: Proyecto) => {
 // 2026-07-09: cada peso que devuelve compute() se escala por la fracción recibida.
 export type DestinoKind =
   | "equipo" | "cajaProyecto" | "cajaAhorro" | "banca"
-  | "socioA" | "socioB" | "nucleoBono" | "comision";
+  | "socioA" | "socioB" | "nucleoBono" | "comision" | "isr";
 
 export type Movimiento = {
   destino: DestinoKind;
@@ -453,6 +453,7 @@ export const CAJA_LABEL: Record<DestinoKind, string> = {
   socioB: "Socio B",
   nucleoBono: "Bono del Núcleo",
   comision: "Comisión",
+  isr: "ISR · aparta para el SAT",
 };
 
 // Reparte la fracción recibida (pctAcum − pctPrev) entre todas las cajas.
@@ -463,18 +464,26 @@ export function desembolso(pr: Proyecto, R: Reglas, ev: { pctPrev: number; pctAc
   const push = (destino: DestinoKind, etiqueta: string, monto: number, quien?: Quien) => {
     if (monto > 0.5) mv.push({ destino, etiqueta, monto, quien });
   };
+  // ISR: si el proyecto "descuenta ISR", se aparta para el SAT (sobre la facturación)
+  // y sale del NETO de los socios (es su impuesto como dueños del RFC). Se resta de su
+  // caja y se muestra como una línea aparte "aparta para el SAT" — así las transferencias
+  // a las cajas suman lo que de verdad queda tras impuestos. Decisión Andrés 2026-07-23.
+  const isrTotal = pr.descontarISR && (+R.imp || 0) > 0 ? Math.max(0, r.t) * (+R.imp) / 100 : 0;
+  const isrA = isrTotal * (R.split / 100);          // lo que le toca a socioA del ISR
+  const isrB = isrTotal * (1 - R.split / 100);      // a socioB
   // Cada persona: su trabajo + extra escalado a su caja; la comisión (franjita
   // naranja) va SIEMPRE a la caja "comisión", nunca al bolsillo de un socio.
   Object.values(r.people).forEach((p) => {
     const monto = (p.trabajo + p.extra) * d;
-    if (p.quien === "socioA") push("socioA", p.nombre, monto, "socioA");
-    else if (p.quien === "socioB") push("socioB", p.nombre, monto, "socioB");
+    if (p.quien === "socioA") push("socioA", p.nombre, (Math.max(0, monto - isrA * d)), "socioA");
+    else if (p.quien === "socioB") push("socioB", p.nombre, (Math.max(0, monto - isrB * d)), "socioB");
     else if (p.trabajo + p.extra > 0.5) push("equipo", `Equipo · ${p.nombre}`, monto, p.quien);
     push("comision", `Comisión · ${p.nombre}`, (p.comision || 0) * d, p.quien);
   });
   push("cajaProyecto", CAJA_LABEL.cajaProyecto, r.cajaProj * d);
   push("cajaAhorro", CAJA_LABEL.cajaAhorro, r.cajaAhorro * d);
   push("banca", CAJA_LABEL.banca, (r.disc + r.utilSwept + r.comisBanca) * d);
+  push("isr", CAJA_LABEL.isr, isrTotal * d);
   const montoRecibido = r.t * d;
   const suma = mv.reduce((a, m) => a + m.monto, 0);
   return { montoRecibido, movimientos: mv, cuadra: Math.abs(suma - montoRecibido) < 0.5 };
@@ -496,23 +505,23 @@ export function desembolsoDePago(pr: Proyecto, R: Reglas, idx: number): Desembol
 // ── Cajas de Revolut: los movimientos del desembolso, agrupados en las cuentas
 // reales donde el socio parquea el dinero. La Masa salarial junta a todo el equipo
 // (sueldos) + comisiones; los socios y las cajas tienen su propia cuenta. ──
-export type CajaKind = "masaSalarial" | "socioA" | "socioB" | "cajaProyecto" | "cajaAhorro" | "banca";
-export const CAJA_ORDER: CajaKind[] = ["masaSalarial", "socioA", "socioB", "cajaProyecto", "cajaAhorro", "banca"];
+export type CajaKind = "masaSalarial" | "socioA" | "socioB" | "cajaProyecto" | "cajaAhorro" | "banca" | "isr";
+export const CAJA_ORDER: CajaKind[] = ["masaSalarial", "socioA", "socioB", "cajaProyecto", "cajaAhorro", "banca", "isr"];
 export type CajaDetalle = { nombre: string; concepto: "sueldo" | "comisión" | "bono"; monto: number; quien?: Quien };
 export type CajaGrupo = { caja: CajaKind; label: string; quien?: Quien; total: number; detalle: CajaDetalle[] };
 
 const DESTINO_A_CAJA: Record<DestinoKind, CajaKind> = {
   equipo: "masaSalarial", comision: "masaSalarial", nucleoBono: "masaSalarial",
-  socioA: "socioA", socioB: "socioB", cajaProyecto: "cajaProyecto", cajaAhorro: "cajaAhorro", banca: "banca",
+  socioA: "socioA", socioB: "socioB", cajaProyecto: "cajaProyecto", cajaAhorro: "cajaAhorro", banca: "banca", isr: "isr",
 };
 export const cajaLabel = (c: CajaKind, R: Reglas): string =>
   c === "masaSalarial" ? "Masa salarial" : c === "socioA" ? R.nombreA : c === "socioB" ? R.nombreB
-    : c === "cajaProyecto" ? "Caja del proyecto" : c === "cajaAhorro" ? "Caja de ahorro" : "La Banca";
+    : c === "cajaProyecto" ? "Caja del proyecto" : c === "cajaAhorro" ? "Caja de ahorro" : c === "isr" ? "ISR (aparta para el SAT)" : "La Banca";
 
-// Toma los Movimiento del desembolso y los reparte en las 6 cajas de Revolut.
+// Toma los Movimiento del desembolso y los reparte en las cajas de Revolut (+ la reserva ISR).
 export function agrupaCajas(mv: Movimiento[], R: Reglas): CajaGrupo[] {
   const quienDe: Record<CajaKind, Quien | undefined> = {
-    masaSalarial: undefined, socioA: "socioA", socioB: "socioB", cajaProyecto: undefined, cajaAhorro: undefined, banca: undefined,
+    masaSalarial: undefined, socioA: "socioA", socioB: "socioB", cajaProyecto: undefined, cajaAhorro: undefined, banca: undefined, isr: undefined,
   };
   const g: Record<CajaKind, CajaGrupo> = {} as Record<CajaKind, CajaGrupo>;
   CAJA_ORDER.forEach((c) => { g[c] = { caja: c, label: cajaLabel(c, R), quien: quienDe[c], total: 0, detalle: [] }; });
