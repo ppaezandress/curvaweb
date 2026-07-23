@@ -2351,7 +2351,6 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
   const saldos: Record<CajaKind, number> = { masaSalarial: 0, socioA: 0, socioB: 0, cajaProyecto: 0, cajaAhorro: 0, banca: 0, isr: 0 };
   const deudas: Record<string, Deuda> = {};
   const pagadosMap: Record<string, { nombre: string; quien: Quien; monto: number; fecha: string }> = {};
-  const avisos: { id: string; nombre: string; monto: number }[] = [];
 
   proyectos.forEach((p) => {
     const R = reglasDe(p, P);        // foto congelada del proyecto guardado
@@ -2359,13 +2358,8 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
     const r = compute(pr, R);
     const ticket = r.t; if (ticket <= 0) return;
     const pagos = p.pagos || [];
-    const cobrado = pagos.reduce((a, x) => a + (+x.monto || 0), 0);
     const enCaja = pagos.filter((x) => x.desembolsado).reduce((a, x) => a + (+x.monto || 0), 0);
-    const enCajaPct = Math.min(1, enCaja / ticket);
-    const rec = Math.min(1, cobrado / ticket);
-    const liquidado = rec >= 0.999;
-    const todoEnCaja = pagos.length > 0 && pagos.every((x) => x.desembolsado);
-    const listoProj = liquidado && todoEnCaja;
+    const enCajaPct = Math.min(1, enCaja / ticket);   // % del proyecto ya cobrado Y guardado en cajas
 
     // Saldos de las cajas que NO son masa salarial (socios / proyecto / ahorro / banca).
     if (enCajaPct > 0) {
@@ -2373,27 +2367,31 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
       agrupaCajas(agg.movimientos, R).forEach((g) => { if (g.caja !== "masaSalarial") saldos[g.caja] += g.total; });
     }
 
-    // Ledger de la masa salarial → equipo (persona por persona).
-    let equipoListo = 0;
+    // Ledger de la masa salarial → equipo, persona por persona. "Listo" = lo que YA está
+    // en la caja (cobrado + guardado en cajas) y aún NO le has transferido — se puede
+    // enviar sin esperar al 100% del proyecto. "Acumulando" = lo que aún no entra.
+    // equipoPagado guarda el MONTO ya transferido (parcial, mes a mes). Andrés 2026-07-23.
     Object.values(r.people).forEach((per) => {
       if (isSocio(per.quien)) return;               // el dinero de los socios es suyo, no se adeuda
       const cut = per.trabajo + per.extra + (per.comision || 0);
       if (cut <= 0.5) return;
       const key = per.nombre;
-      const yaPagado = !!p.equipoPagado?.[per.nombre];
-      if (yaPagado) {
-        const f = p.equipoPagado![per.nombre];
-        if (!pagadosMap[key]) pagadosMap[key] = { nombre: per.nombre, quien: per.quien, monto: 0, fecha: f };
-        pagadosMap[key].monto += cut; if (f > pagadosMap[key].fecha) pagadosMap[key].fecha = f;
-        return;
+      const ep = p.equipoPagado?.[per.nombre];
+      const pagadoMonto = typeof ep === "string" ? cut : (ep?.monto || 0);   // string viejo = se pagó todo
+      const pagadoFecha = typeof ep === "string" ? ep : ep?.fecha;
+      if (pagadoMonto > 0.5) {                       // lo ya transferido → lista "Ya transferidos"
+        const mostrado = Math.min(pagadoMonto, cut);
+        if (!pagadosMap[key]) pagadosMap[key] = { nombre: per.nombre, quien: per.quien, monto: 0, fecha: pagadoFecha || todayISO() };
+        pagadosMap[key].monto += mostrado; if ((pagadoFecha || "") > pagadosMap[key].fecha) pagadosMap[key].fecha = pagadoFecha!;
       }
-      if (!deudas[key]) deudas[key] = { nombre: per.nombre, quien: per.quien, listo: 0, acum: 0, listos: [], acums: [] };
-      const enCajaPersona = cut * enCajaPct;
-      saldos.masaSalarial += enCajaPersona;         // sigue parqueado en la masa salarial
-      if (listoProj) { deudas[key].listo += cut; deudas[key].listos.push({ id: p.id, nombre: p.nombre, monto: cut }); equipoListo += cut; }
-      else if (enCajaPersona > 0.5) { deudas[key].acum += enCajaPersona; deudas[key].acums.push({ id: p.id, nombre: p.nombre, monto: enCajaPersona, rec }); }
+      const enCajaPersona = cut * enCajaPct;          // lo suyo que ya está en la caja
+      const listoPersona = Math.max(0, enCajaPersona - pagadoMonto);  // en caja y aún sin transferir → listo
+      const porVenir = Math.max(0, cut - enCajaPersona);              // aún no cobrado/guardado → acumulando
+      saldos.masaSalarial += listoPersona;            // lo que sigue parqueado (no transferido)
+      if ((listoPersona > 0.5 || porVenir > 0.5) && !deudas[key]) deudas[key] = { nombre: per.nombre, quien: per.quien, listo: 0, acum: 0, listos: [], acums: [] };
+      if (listoPersona > 0.5) { deudas[key].listo += listoPersona; deudas[key].listos.push({ id: p.id, nombre: p.nombre, monto: listoPersona }); }
+      if (porVenir > 0.5) { deudas[key].acum += porVenir; deudas[key].acums.push({ id: p.id, nombre: p.nombre, monto: porVenir, rec: enCajaPct }); }
     });
-    if (listoProj && equipoListo > 0.5) avisos.push({ id: p.id, nombre: p.nombre, monto: equipoListo });
   });
 
   const filas = Object.values(deudas).filter((d) => d.listo + d.acum > 0.5).sort((a, b) => (b.listo + b.acum) - (a.listo + a.acum) || order[a.quien] - order[b.quien]);
@@ -2402,8 +2400,13 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
   const totalAcum = filas.reduce((a, d) => a + d.acum, 0);
   const hayPagos = proyectos.some((p) => (p.pagos || []).length > 0);
 
-  const pagarPersona = (nombre: string, ids: string[]) => { update((s) => {
-    ids.forEach((id) => { const p = s.projects.find((x) => x.id === id); if (p) p.equipoPagado = { ...(p.equipoPagado || {}), [nombre]: todayISO() }; });
+  const pagarPersona = (nombre: string, items: { id: string; monto: number }[]) => { update((s) => {
+    items.forEach(({ id, monto }) => {
+      const p = s.projects.find((x) => x.id === id); if (!p) return;
+      const prev = p.equipoPagado?.[nombre];
+      const prevMonto = typeof prev === "string" ? 0 : (prev?.monto || 0);   // suma sobre lo ya transferido (pagos parciales)
+      p.equipoPagado = { ...(p.equipoPagado || {}), [nombre]: { monto: prevMonto + monto, fecha: todayISO() } };
+    });
     return s;
   }); log?.("transfirió al equipo", `a ${nombre}`); };
   const deshacer = (nombre: string) => update((s) => {
@@ -2413,13 +2416,9 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
 
   return (
     <>
-      <div className="page-h"><div><h1>Cajas</h1><p>Tus cuentas de Revolut y a quién le debes de la masa salarial. Al equipo se le paga cuando su proyecto ya quedó 100% liquidado.</p></div></div>
+      <div className="page-h"><div><h1>Cajas</h1><p>Tus cuentas de Revolut y a quién le debes de la masa salarial. Le transfieres a cada quien lo que ya cobraste y guardaste en cajas, sin esperar al 100% del proyecto.</p></div></div>
 
       <div className="rise">
-        {avisos.map((a) => (
-          <div key={a.id} className="alert ok" style={{ marginBottom: 10 }}><Check size={15} /> <b>{a.nombre}</b> quedó 100% liquidado — ya puedes transferir {fmtMXN(a.monto)} al equipo.</div>
-        ))}
-
         <div className="card">
           <div className="tes-h">
             <h2 style={{ margin: 0 }}>Lo que hay en cada caja</h2>
@@ -2452,7 +2451,7 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
           </div>
           {!hayPagos && <div className="hint">Aún no hay pagos. Registra un cobro en <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setSec("proyectos")}>Proyectos</b> y aquí verás a quién le debes.</div>}
           {hayPagos && filas.length === 0 && <div className="hint">Nadie del equipo tiene saldo pendiente ahora mismo.</div>}
-          {filas.map((d) => <DeudaRow key={d.nombre} d={d} onPagar={() => pagarPersona(d.nombre, d.listos.map((x) => x.id))} />)}
+          {filas.map((d) => <DeudaRow key={d.nombre} d={d} onPagar={() => pagarPersona(d.nombre, d.listos.map((x) => ({ id: x.id, monto: x.monto })))} />)}
           {pagados.length > 0 && <PagadosLista pagados={pagados} onDeshacer={deshacer} />}
         </div>
       </div>
@@ -2473,7 +2472,7 @@ function DeudaRow({ d, onPagar }: { d: Deuda; onPagar: () => void }) {
         </div>
         {d.listo > 0.5
           ? <button className="btn primary sm" onClick={onPagar}><ArrowRight size={13} /> Transferir</button>
-          : <span className="d-wait">esperando liquidar</span>}
+          : <span className="d-wait">esperando cobro</span>}
       </div>
       {n > 0 && <button className="deuda-toggle" onClick={() => setOpen(!open)}>{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}{open ? "ocultar" : "ver de qué proyectos"} ({n})</button>}
       {open && (

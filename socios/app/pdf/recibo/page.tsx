@@ -73,10 +73,13 @@ export default function PdfRecibo() {
         if (isSocio(per.quien) || per.nombre !== q.persona) return;
         const cut = per.trabajo + per.extra + (per.comision || 0);
         if (cut <= 0.5) return;
-        const f = p.equipoPagado?.[per.nombre];
-        if (!f) return; // solo lo ya pagado
-        monto += cut; proys.push({ nombre: p.nombre, monto: cut });
-        if (f > fecha) fecha = f;
+        const ep = p.equipoPagado?.[per.nombre];
+        if (!ep) return; // solo lo ya pagado
+        const pagadoMonto = typeof ep === "string" ? cut : (ep.monto || 0); // formato viejo = todo; nuevo = parcial
+        const f = typeof ep === "string" ? ep : ep.fecha;
+        if (pagadoMonto <= 0.5) return;
+        monto += pagadoMonto; proys.push({ nombre: p.nombre, monto: pagadoMonto });
+        if (f && f > fecha) fecha = f;
       });
     });
     if (monto <= 0.5) return null;

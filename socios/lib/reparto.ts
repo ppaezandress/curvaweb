@@ -75,7 +75,9 @@ export type Proyecto = {
   // Salidas de la Masa salarial: a qué integrante del equipo YA le transferiste su
   // parte de ESTE proyecto (nombre → fecha ISO). Solo se marca cuando el proyecto ya
   // está 100% liquidado. Los socios no viven aquí: su dinero es suyo, no se "adeuda".
-  equipoPagado?: Record<string, string>;
+  // Lo que YA le transferiste a cada persona en este proyecto. Formato viejo (string =
+  // fecha) = se pagó todo; formato nuevo ({monto,fecha}) soporta pagos parciales mes a mes.
+  equipoPagado?: Record<string, string | { monto: number; fecha: string }>;
   borrador?: boolean;        // scratch local de la Calculadora (no cuenta en Panel/Proyectos ni se sincroniza) hasta "Guardar"
   // Foto de las Reglas (parámetros de dinero) con las que se guardó el proyecto. Una
   // vez guardado, el proyecto se calcula SIEMPRE con esta foto — así mover perillas en
