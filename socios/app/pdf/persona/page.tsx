@@ -140,7 +140,9 @@ export default function PdfPersona() {
                 {futuros.length > 0
                   ? <div className="pmr-stat"><span className="pmr-stat-l">Por venir · {futuros.length} {futuros.length === 1 ? "mes" : "meses"}</span><b style={{ color: "var(--cobalt)" }}>{fmtMXN(futuroTot)}</b></div>
                   : <div className="pmr-stat"><span className="pmr-stat-l">Total del periodo</span><b>{fmtMXN(a.total)}</b></div>}
-                <div className="pmr-stat"><span className="pmr-stat-l">Neto estimado{esSoc(a.quien) ? ` · ISR ${netoPct}` : ""}</span><b style={{ color: "var(--pos)" }}>{fmtMXN(a.neto)}</b></div>
+                {esSoc(a.quien)
+                  ? <div className="pmr-stat"><span className="pmr-stat-l">Neto est. · ISR {netoPct}</span><b style={{ color: "var(--pos)" }}>{fmtMXN(a.neto)}</b></div>
+                  : <div className="pmr-stat"><span className="pmr-stat-l">Meses activos</span><b>{meses.length}</b></div>}
               </div>
 
               {/* Línea de tiempo mes a mes */}
