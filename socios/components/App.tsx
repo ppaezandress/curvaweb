@@ -1218,23 +1218,34 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // Equipo = SOLO el Núcleo (el pago de trabajo de un socio va en SU franja, no en Equipo).
   // Así el gráfico, el desglose y "cuánto cobra cada quien" muestran los MISMOS números y
   // todo suma lo que de verdad se reparte (ingreso − ISR).
-  let equipoNucleo = r.manualDelta;                                          // Núcleo (sueldos) + ajustes a mano
-  Object.values(r.people).forEach((pe) => { if (!isSocio(pe.quien)) equipoNucleo += pe.trabajo; });
-  const socioANeto = r.socioA - isrA, socioBNeto = r.socioB - isrB;          // take completo de cada socio, ya sin ISR
+  const socioANeto = r.socioA - isrA, socioBNeto = r.socioB - isrB;          // utilidad+trabajo de cada socio, ya sin ISR (sin comisión)
   const marginOpNeto = r.marginOp - isrRes;                                  // lo que le queda a CURVA, ya sin ISR
-  const segs = [
-    { k: "Equipo", v: equipoNucleo, c: "--c-equipo" },
-    { k: "Bono Núcleo", v: r.poolAmt, c: "--c-reserva" },
-    { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
-    { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
-    { k: "Ahorro CURVA", v: r.banca, c: "--c-banca" },
-    { k: P.nombreA, v: socioANeto, c: "--c-andres" }, { k: P.nombreB, v: socioBNeto, c: "--c-balmo" },
-  ].filter((s) => s.v > 0.5);
-  const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
-  // Cada socio, ya NETO de su ISR (el ISR sale de su utilidad, no del pago del Núcleo),
-  // para que "cuánto cobra cada quien" coincida con el gráfico y el desglose.
+  // FUENTE ÚNICA: rows = lo que cobra cada quien, ya NETO de ISR (el ISR sale de la
+  // utilidad del socio, no del pago del Núcleo). El gráfico y el desglose se DERIVAN de
+  // esto mismo, así es imposible que un número difiera entre las tres vistas.
   const rows = Object.values(r.people).map((x) => x.quien === "socioA" ? { ...x, extra: x.extra - isrA } : x.quien === "socioB" ? { ...x, extra: x.extra - isrB } : x)
     .filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
+  // Buckets del gráfico/desglose, agregados desde r.people: Equipo = Núcleo (sueldo + su
+  // comisión), Bono = extra del Núcleo, cada socio = su take + su comisión (ya sin ISR).
+  // La comisión SIEMPRE viaja con la persona que la cobró → nunca queda "suelta".
+  // OJO: NO sumar r.manualDelta aquí — cuando fijas un sueldo a mano, el motor ya lo
+  // mete en people[].trabajo (y ya restó ese extra de la utilidad de socios). Sumarlo
+  // otra vez lo contaría doble y descuadraría el gráfico. (Verificado escenario O.)
+  let equipoNucleo = 0, bonoNucleo = 0, comisSocioA = 0, comisSocioB = 0;
+  Object.values(r.people).forEach((pe) => {
+    if (pe.quien === "socioA") comisSocioA += pe.comision || 0;
+    else if (pe.quien === "socioB") comisSocioB += pe.comision || 0;
+    else { equipoNucleo += pe.trabajo + (pe.comision || 0); bonoNucleo += pe.extra; }
+  });
+  const segAndres = socioANeto + comisSocioA, segBalmo = socioBNeto + comisSocioB; // lo que gana cada socio EN TOTAL
+  const segs = [
+    { k: "Equipo", v: equipoNucleo, c: "--c-equipo" },
+    { k: "Bono Núcleo", v: bonoNucleo, c: "--c-reserva" },
+    { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
+    { k: "Ahorro CURVA", v: r.banca, c: "--c-banca" },
+    { k: P.nombreA, v: segAndres, c: "--c-andres" }, { k: P.nombreB, v: segBalmo, c: "--c-balmo" },
+  ].filter((s) => s.v > 0.5);
+  const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
   // "Por mes" = la MISMA comparación (todos lado a lado), pero el monto de cada quien
   // ÷ meses (promedio mensual). No es el mes-a-mes por persona (ese siempre repite el
   // mismo número con reparto parejo, no sirve para comparar). Decisión Andrés 2026-07-19.
@@ -1415,8 +1426,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             <h2>El equipo del proyecto <span className="tip" data-tip="Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en Reglas › Personas."><Info /></span></h2>
             <div className={"team-impact" + (hayManual ? " on" : "")}>
               <div className="ti-item"><span>CURVA{porMes ? "/mes" : ""}</span><b><span key={fmtMXN((marginOpNeto - r.manualDelta) * f)} className="num-anim">{fmtMXN((marginOpNeto - r.manualDelta) * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.marginOp * f)}</em>}</div>
-              <div className="ti-item"><span>{P.nombreA}</span><b style={{ color: socioANeto < -0.5 ? "var(--danger)" : "var(--c-andres)" }}><span key={fmtMXN(socioANeto * f)} className="num-anim">{fmtMXN(socioANeto * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioA * f)}</em>}</div>
-              <div className="ti-item"><span>{P.nombreB}</span><b style={{ color: socioBNeto < -0.5 ? "var(--danger)" : "var(--c-balmo)" }}><span key={fmtMXN(socioBNeto * f)} className="num-anim">{fmtMXN(socioBNeto * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioB * f)}</em>}</div>
+              <div className="ti-item"><span>{P.nombreA}</span><b style={{ color: segAndres < -0.5 ? "var(--danger)" : "var(--c-andres)" }}><span key={fmtMXN(segAndres * f)} className="num-anim">{fmtMXN(segAndres * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioA * f)}</em>}</div>
+              <div className="ti-item"><span>{P.nombreB}</span><b style={{ color: segBalmo < -0.5 ? "var(--danger)" : "var(--c-balmo)" }}><span key={fmtMXN(segBalmo * f)} className="num-anim">{fmtMXN(segBalmo * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioB * f)}</em>}</div>
             </div>
             {active.members.map((m, i) => {
               const val = personVal(m);
@@ -1474,8 +1485,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           )}
           <div className="tiles rise">
             <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN((marginOpNeto - r.manualDelta) * f)} p={`${pctFmt((marginOpNeto - r.manualDelta) / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Ahorro CURVA), ya sin ISR, después de pagarle al equipo (incluye ajustes manuales), la comisión y apartar la caja del proyecto." />
-            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(socioANeto * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto, ya sin ISR: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
-            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(socioBNeto * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto, ya sin ISR: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
+            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(segAndres * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto, ya sin ISR: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}${comisSocioA > 0.5 ? " + su comisión por traerlo" : ""}.`} />
+            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(segBalmo * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto, ya sin ISR: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}${comisSocioB > 0.5 ? " + su comisión por traerlo" : ""}.`} />
             <Tile k="k-banca" l={porMes ? "Ahorro CURVA / mes" : "Al Ahorro CURVA"} v={fmtMXN(r.banca * f)} p={`el colchón${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
           </div>
           <div className="card">
@@ -1509,14 +1520,13 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {bd("", "Ingreso del proyecto", r.t)}
                 {isrRes > 0.5 && bd("sub", `− ISR (${P.imp}% · RESICO, al SAT — no se reparte)`, -isrRes)}
                 {isrRes > 0.5 && bd("eq", "Queda para repartir (después de ISR)", r.t - isrRes)}
-                {equipoNucleo > 0.5 && bd("sub", `− Equipo · sueldos del Núcleo (${pctFmt(equipoNucleo / (r.t || 1))})`, -equipoNucleo)}
-                {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
-                {r.comisPaid > 0.5 && bd("sub", `− Comisión de origen → ${active.origenPersona || "quien lo trajo"}`, -r.comisPaid)}
+                {equipoNucleo > 0.5 && bd("sub", `− Equipo · Núcleo (${pctFmt(equipoNucleo / (r.t || 1))})`, -equipoNucleo)}
+                {bonoNucleo > 0.5 && bd("sub", "− Bono del Núcleo", -bonoNucleo)}
                 {r.cajaProj > 0.5 && bd("sub", "− Caja del proyecto", -r.cajaProj)}
                 {r.banca > 0.5 && bd("sub", "− Ahorro CURVA (el % del margen + el sombrero de socio)", -r.banca)}
-                {bd("strong", `Para los socios · su trabajo + utilidad${isrRes > 0.5 ? " · ya sin ISR" : ""}`, socioANeto + socioBNeto)}
-                {bd("sub", `→ ${P.nombreA}`, socioANeto)}
-                {bd("sub", `→ ${P.nombreB}`, socioBNeto)}
+                {bd("strong", `Para los socios · su trabajo + utilidad${isrRes > 0.5 ? " · ya sin ISR" : ""}`, segAndres + segBalmo)}
+                {bd("sub", `→ ${P.nombreA}`, segAndres)}
+                {bd("sub", `→ ${P.nombreB}`, segBalmo)}
               </div>
               <div className="card">
                 <h2>A dónde va cada peso{isrRes > 0.5 ? " · después de ISR" : ""}{porMes ? " · al mes" : ""}</h2>
@@ -1533,8 +1543,8 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
         <ReglasDrawer st={st} update={update} setSec={setSec} onClose={() => setReglasDrawer(false)}
           preview={[
             { l: porMes ? "CURVA / mes" : "CURVA se queda", v: fmtMXN(marginOpNeto * f), c: "--pos" },
-            { l: P.nombreA, v: fmtMXN(socioANeto * f), c: "--c-andres" },
-            { l: P.nombreB, v: fmtMXN(socioBNeto * f), c: "--c-balmo" },
+            { l: P.nombreA, v: fmtMXN(segAndres * f), c: "--c-andres" },
+            { l: P.nombreB, v: fmtMXN(segBalmo * f), c: "--c-balmo" },
             { l: porMes ? "Ahorro CURVA / mes" : "Al Ahorro CURVA", v: fmtMXN(r.banca * f), c: "--c-banca" },
           ]} />
       )}
@@ -2212,13 +2222,24 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
 }) {
   const d = desembolsoDePago(p, params, idx);
   const cajas = agrupaCajas(d.movimientos, params);
+  // El ISR NO es una caja de reparto (se va al SAT). Lo sacamos de la lista de
+  // transferencias y lo mostramos aparte, junto al IVA, en el desglose de impuestos:
+  // así la lista solo tiene las cajas donde de verdad parqueas dinero para repartir.
+  const cajasReparto = cajas.filter((c) => c.caja !== "isr");
+  const isrMonto = cajas.find((c) => c.caja === "isr")?.total || 0;
+  const conIVA = p.ivaModo === "incluido" || (p.ivaModo !== "sin" && !!p.conIVA);
+  const ivaMonto = conIVA ? Math.round(pago.monto * IVA) : 0;                 // el IVA que le cobraste al cliente (al SAT)
+  const totalConIVA = pago.monto + ivaMonto;                                  // lo que de verdad te transfirió el cliente
+  const repartible = pago.monto - isrMonto;                                   // lo que baja a las cajas
+  const hayImpuestos = ivaMonto > 0.5 || isrMonto > 0.5;
   const [copied, setCopied] = useState(false);
   const listaTexto = () => {
-    const L: string[] = [`Transferencias · ${p.nombre} · pago ${fmtMXN(pago.monto)}`, "─────────────"];
-    cajas.forEach((c) => {
+    const L: string[] = [`Transferencias · ${p.nombre} · repartes ${fmtMXN(repartible)}`, "─────────────"];
+    cajasReparto.forEach((c) => {
       L.push(`${c.label}: ${fmtMXN(c.total)}`);
       if (c.caja === "masaSalarial") c.detalle.forEach((dt) => L.push(`   · ${dt.nombre}${dt.concepto !== "sueldo" ? " (" + dt.concepto + ")" : ""}: ${fmtMXN(dt.monto)}`));
     });
+    if (hayImpuestos) { L.push("─────────────"); if (ivaMonto > 0.5) L.push(`IVA (al SAT, lo apartas tú): ${fmtMXN(ivaMonto)}`); if (isrMonto > 0.5) L.push(`ISR (al SAT, lo apartas tú): ${fmtMXN(isrMonto)}`); }
     return L.join("\n");
   };
   const copiar = () => {
@@ -2241,7 +2262,8 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
         <div className="desemb-h"><span><Wallet size={13} /> Reparte este pago en tus cajas de Revolut:</span>
           <button className="btn ghost sm" onClick={copiar} title="Copia la lista exacta de transferencias para seguirla en Revolut">{copied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar lista</>}</button>
         </div>
-        {cajas.map((c) => <CajaLine key={c.caja} c={c} />)}
+        {hayImpuestos && <PagoImpuestos totalConIVA={totalConIVA} ivaMonto={ivaMonto} isrMonto={isrMonto} repartible={repartible} />}
+        {cajasReparto.map((c) => <CajaLine key={c.caja} c={c} />)}
       </div>
       <button className={"btn " + (pago.desembolsado ? "ok-btn" : "primary")} style={{ width: "100%", marginTop: 8 }} onClick={onToggleDesemb}>
         {pago.desembolsado ? <><Check size={14} /> Guardado en cajas</> : "Marcar: guardado en cajas"}
@@ -2271,6 +2293,31 @@ function CajaLine({ c }: { c: CajaGrupo }) {
               <span className="cja-dv">{fmtMXN(dt.monto)}</span>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Desglose de impuestos de un pago: cuenta de lo que pagó el cliente (con IVA) cuánto
+// se va al IVA y al ISR (los apartas TÚ para el SAT), hasta dejar lo que baja a las
+// cajas. No es una caja de reparto — es el paso previo. Colapsable, cerrado por defecto.
+function PagoImpuestos({ totalConIVA, ivaMonto, isrMonto, repartible }: { totalConIVA: number; ivaMonto: number; isrMonto: number; repartible: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={"cja imp" + (open ? " open" : "")}>
+      <div className="cja-head tapp" onClick={() => setOpen(!open)}>
+        <span className="mv-dot" style={{ background: "var(--warn)" }} />
+        <span className="mv-l">Impuestos al SAT <span className="cja-n">· los apartas tú · repartes {fmtMXN(repartible)}</span></span>
+        <span className="cja-chev">{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</span>
+        <span className="mv-v">−{fmtMXN(ivaMonto + isrMonto)}</span>
+      </div>
+      {open && (
+        <div className="cja-det">
+          <div className="cja-dr"><span className="cja-dn">Te pagó el cliente{ivaMonto > 0.5 ? " (con IVA)" : ""}</span><span className="cja-dv">{fmtMXN(totalConIVA)}</span></div>
+          {ivaMonto > 0.5 && <div className="cja-dr"><span className="cja-dn">− IVA 16% <span className="cja-tag t-comis">al SAT</span></span><span className="cja-dv">−{fmtMXN(ivaMonto)}</span></div>}
+          {isrMonto > 0.5 && <div className="cja-dr"><span className="cja-dn">− ISR RESICO <span className="cja-tag t-comis">al SAT</span></span><span className="cja-dv">−{fmtMXN(isrMonto)}</span></div>}
+          <div className="cja-dr" style={{ fontWeight: 700, borderTop: "1px solid var(--line)", paddingTop: 6, marginTop: 2 }}><span className="cja-dn">Para repartir en cajas</span><span className="cja-dv">{fmtMXN(repartible)}</span></div>
         </div>
       )}
     </div>
