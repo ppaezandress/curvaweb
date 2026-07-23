@@ -1,66 +1,43 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Camera, CameraOff } from "lucide-react";
 import { useGestureControl } from "@/lib/use-gesture-control";
-import { unlockAudio, playForAction, playConfirmed } from "@/lib/gestures/sound";
-import {
-  computeThresholds, saveThresholds, clearCalibration, isCalibrated, type Sample,
-} from "@/lib/gestures/calibration";
+import { unlockAudio, playForAction } from "@/lib/gestures/sound";
 import { isSoundOn } from "@/lib/gesture-prefs";
-import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
+import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/recognizer";
 
-// Laboratorio del control por gestos (Fase 0). Existe para UNA decisión: ¿reconoce bien con
-// TU cámara, TU luz y TU oficina? Aquí NO se toca el cronómetro — se puede probar todo el día
-// sin ensuciar un solo registro de tiempo.
+// Laboratorio del control por gestos. Existe para UNA decisión honesta: ¿el modelo entrenado
+// reconoce bien con TU cámara, TU luz y TU oficina? Aquí NO se toca el cronómetro.
 //
-// Lo que hay que mirar antes de abrirlo al equipo:
-//   · que cada gesto se reconozca al primer intento,
-//   · cuántos disparos salen solos en diez minutos de trabajo normal (deberían ser cero),
-//   · que los cuadros por segundo no se desplomen y la máquina no se caliente.
-const ORDER: Gesture[] = ["uno", "dos", "tres", "palma", "dosPalmas"];
+// La pieza clave es el panel "Lo que ve el modelo": muestra la categoría CRUDA que devuelve
+// MediaPipe y su confianza. Si haces la palma y dice "Open_Palm 0.95", funciona. Si dice
+// "None 0.3", ni el modelo entrenado la clava en esta cámara — y esa es la señal para archivar
+// en vez de seguir tocando código a ciegas.
+const ORDER: Gesture[] = ["uno", "dos", "tres", "palma", "pulgar"];
 
 export default function LabGestosPage() {
   const [log, setLog] = useState<{ g: Gesture; at: string }[]>([]);
   const [fps, setFps] = useState(0);
   const [counts, setCounts] = useState<Partial<Record<Gesture, number>>>({});
-  // ── Calibración ──
-  // Dos posturas medidas (mano abierta y puño) bastan para calcular los umbrales de ESTA
-  // persona: el largo de sus dedos, su cámara y a qué distancia se sienta.
-  const [calStep, setCalStep] = useState<"idle" | "abierta" | "puno" | "listo" | "fallo">("idle");
-  const [calLeft, setCalLeft] = useState(0);
-  const [calibrated, setCalibrated] = useState(false);
-  const openSamples = useRef<Sample[]>([]);
-  const closedSamples = useRef<Sample[]>([]);
-  const calStepRef = useRef<"idle" | "abierta" | "puno" | "listo" | "fallo">("idle");
-  useEffect(() => { calStepRef.current = calStep; }, [calStep]);
-  // Leer localStorage al montar y reflejarlo: es sincronizar con algo externo a React.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setCalibrated(isCalibrated()); }, []);
-
-  const onSample = useCallback((s: Sample) => {
-    if (calStepRef.current === "abierta") openSamples.current.push(s);
-    else if (calStepRef.current === "puno") closedSamples.current.push(s);
-  }, []);
-
-  const [stats, setStats] = useState({ frames: 0, agoSec: -1, source: "—" as string, hidden: false, received: 0, pumping: false, rawBroken: false, quality: 0, hint: null as string | null });
+  const [stats, setStats] = useState({
+    frames: 0, agoSec: -1, source: "—" as string, received: 0, rawBroken: false,
+    quality: 0, read: null as string | null, raw: null as string | null,
+  });
 
   const onCommand = useCallback((g: Gesture) => {
     // Aquí no se ejecuta ningún comando, pero suena IGUAL que en la app real: practicar sirve
     // para aprenderse los sonidos, no solo las señas.
-    if (isSoundOn()) playForAction(g === "palma" ? "pause" : g === "dosPalmas" ? "resume" : "switch");
+    if (isSoundOn()) playForAction(g === "palma" ? "pause" : g === "pulgar" ? "resume" : "switch");
     setCounts((c) => ({ ...c, [g]: (c[g] || 0) + 1 }));
     setLog((l) => [{ g, at: new Date().toLocaleTimeString("es-MX") }, ...l].slice(0, 12));
   }, []);
 
-  // Desestructurado a propósito: el linter de React trata cualquier acceso a un objeto que
-  // contiene un ref como lectura de ref durante el render.
   const { status, error, candidate, progress, videoRef, start, stop, getStats } =
-    useGestureControl({ enabled: true, onCommand, onSample: calStep === "abierta" || calStep === "puno" ? onSample : undefined });
+    useGestureControl({ enabled: true, onCommand });
 
-  // Cuadros por segundo reales del <video> (no de la inferencia): sirve para ver si la cámara
-  // se está ahogando.
+  // Cuadros por segundo reales del <video>: para ver si la cámara se está ahogando.
   useEffect(() => {
     if (status !== "running") return;
     const v = videoRef.current;
@@ -72,8 +49,7 @@ export default function LabGestosPage() {
     return () => { alive = false; v.cancelVideoFrameCallback?.(id); clearInterval(iv); };
   }, [status, videoRef]);
 
-  // Diagnóstico una vez por segundo: si te cambias a otra app y vuelves, aquí se ve si el
-  // reconocimiento siguió trabajando (los cuadros suben) o si se congeló.
+  // Diagnóstico: la salida cruda del modelo + si el reconocimiento sigue vivo en segundo plano.
   useEffect(() => {
     if (status !== "running") return;
     const iv = setInterval(() => {
@@ -82,45 +58,15 @@ export default function LabGestosPage() {
         frames: s.frames,
         agoSec: s.lastFrameAt ? Math.max(0, Math.round((Date.now() - s.lastFrameAt) / 1000)) : -1,
         source: s.source,
-        hidden: s.hidden,
         received: s.received,
-        pumping: s.pumping,
         rawBroken: s.rawBroken,
         quality: s.quality,
-        hint: s.hint,
+        read: s.read,
+        raw: s.raw,
       });
-    }, 400);
+    }, 300);
     return () => clearInterval(iv);
   }, [status, getStats]);
-
-  // Cuenta atrás de cada paso de la calibración.
-  useEffect(() => {
-    if (calStep !== "abierta" && calStep !== "puno") return;
-    if (calLeft <= 0) {
-      // Avance de la cuenta atrás: el estado es el reloj de la calibración.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (calStep === "abierta") { setCalStep("puno"); setCalLeft(4); return; }
-      const t = computeThresholds(openSamples.current, closedSamples.current);
-      if (t) {
-        saveThresholds(t);
-        setCalibrated(true);
-        setCalStep("listo");
-        playConfirmed();
-      } else {
-        setCalStep("fallo");
-      }
-      return;
-    }
-    const id = setTimeout(() => setCalLeft((n) => n - 1), 1000);
-    return () => clearTimeout(id);
-  }, [calStep, calLeft]);
-
-  const startCalibration = () => {
-    openSamples.current = [];
-    closedSamples.current = [];
-    setCalStep("abierta");
-    setCalLeft(4);
-  };
 
   const running = status === "running";
 
@@ -152,7 +98,7 @@ export default function LabGestosPage() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Lo que ve la cámara, en grande — solo en el laboratorio */}
+        {/* Lo que ve la cámara */}
         <div className="overflow-hidden rounded-card border border-line bg-ink shadow-soft">
           <div className="relative aspect-video">
             <video
@@ -184,92 +130,39 @@ export default function LabGestosPage() {
           <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
             <p className="text-caption font-semibold text-muted">Qué hace cada seña</p>
             <ul className="mt-2 space-y-1 text-caption text-muted">
-              <li><b className="text-fg">1 a 3 dedos</b> · elige esa tarea del dock</li>
+              <li><b className="text-fg">☝️ índice</b> · tarea 1 · <b className="text-fg">✌️ dos</b> · tarea 2 · <b className="text-fg">🤟 cuernitos</b> · tarea 3</li>
               <li><b className="text-fg">🖐️ palma</b> · pausa lo que corre</li>
-              <li><b className="text-fg">🙌 las dos palmas</b> · sigue con lo último</li>
+              <li><b className="text-fg">👍 pulgar</b> · sigue con lo último</li>
             </ul>
             <p className="mt-2 border-t border-line pt-2 text-caption text-muted">
-              Cuenta cuántos dedos levantas, no cuáles. Sostén la seña un momento.
-            </p>
-            <p className="mt-2 flex items-center justify-between gap-2 rounded-control bg-surface-2 px-3 py-2 text-caption">
-              <span className="text-muted">Viendo ahora</span>
-              <span className="font-medium text-fg">
-                {candidate ? `${GESTURE_EMOJI[candidate]} ${GESTURE_LABEL[candidate]}` : running ? "nada claro" : "—"}
-              </span>
+              Sostén la seña un momento, de frente a la cámara.
             </p>
           </div>
 
+          {/* La pieza clave: la salida CRUDA del modelo. Es el veredicto go/no-go. */}
           <div className="rounded-card border border-accent/30 bg-surface p-4 shadow-soft">
-            <p className="text-caption font-semibold text-muted">Ajustar a tu mano</p>
-            {calStep === "abierta" || calStep === "puno" ? (
-              <>
-                <p className="mt-1 text-sm font-semibold text-fg">
-                  {calStep === "abierta" ? "Enseña la mano bien abierta" : "Ahora cierra el puño"}
-                </p>
-                <p className="text-caption text-muted">Sostenla frente a la cámara, como cuando das una orden.</p>
-                <p className="tabular mt-2 font-display text-3xl font-bold text-accent">{calLeft}</p>
-              </>
-            ) : calStep === "listo" ? (
-              <>
-                <p className="mt-1 text-sm font-semibold text-success">Listo, quedó ajustado a tu mano.</p>
-                <p className="text-caption text-muted">Prueba las señas: deberían entrar mucho mejor.</p>
-                <button onClick={startCalibration} className="focus-ring mt-2 text-caption font-medium text-accent">
-                  Volver a ajustar
-                </button>
-              </>
-            ) : calStep === "fallo" ? (
-              <>
-                <p className="mt-1 text-sm font-semibold text-warn">No pude medir bien la diferencia.</p>
-                <p className="text-caption text-muted">
-                  Ponte de frente, con buena luz, y marca bien las dos posturas.
-                </p>
-                <button onClick={startCalibration} className="focus-ring mt-2 text-caption font-medium text-accent">
-                  Intentar otra vez
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="mt-1 text-caption text-muted">
-                  Cada mano y cada cámara son distintas. Enseña dos posturas y el sistema aprende
-                  <b className="text-fg"> tus</b> medidas — es lo que arregla el “a veces no me lee”.
-                </p>
-                <button
-                  onClick={startCalibration}
-                  disabled={!running}
-                  className="focus-ring mt-2 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
-                >
-                  {calibrated ? "Volver a ajustar" : "Ajustar a mi mano"}
-                </button>
-                {!running && <p className="mt-1 text-caption text-muted">Enciende la cámara primero.</p>}
-                {calibrated && (
-                  <button
-                    onClick={() => { clearCalibration(); setCalibrated(false); }}
-                    className="focus-ring ml-3 text-caption text-muted hover:text-fg"
-                  >
-                    Borrar ajuste
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
-            <p className="text-caption font-semibold text-muted">Qué tan clara te ve</p>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2">
+            <p className="text-caption font-semibold text-muted">Lo que ve el modelo</p>
+            <p className="mt-1 text-caption text-muted">
+              La categoría exacta que reconoce Google y su confianza. Haz una seña y míralo en vivo.
+            </p>
+            <div className="mt-2.5 flex items-baseline justify-between gap-2">
+              <span className="font-mono text-lg font-bold text-fg">{running ? (stats.raw ?? "—") : "—"}</span>
+              <span className="tabular font-mono text-sm text-muted">{running ? stats.quality.toFixed(2) : "—"}</span>
+            </div>
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2">
               <div
-                className="h-full rounded-full transition-[width,background-color] duration-200"
+                className="h-full rounded-full transition-[width,background-color] duration-150"
                 style={{
                   width: `${Math.round(stats.quality * 100)}%`,
-                  background: stats.quality >= 0.8 ? "var(--success)" : stats.quality >= 0.35 ? "var(--accent)" : "var(--warn)",
+                  background: stats.quality >= 0.7 ? "var(--success)" : stats.quality >= 0.4 ? "var(--warn)" : "var(--danger)",
                 }}
               />
             </div>
             <p className="mt-1.5 text-caption text-muted">
-              {!running ? "Enciende la cámara para medir."
-                : stats.hint ? <><b className="text-fg">{stats.hint}</b> — así entra.</>
-                : stats.quality === 0 ? "No veo ninguna mano."
-                : stats.hint ? <><b className="text-fg">{stats.hint}</b> — así entra más rápido.</>
-                : "Perfecto: así se confirma en el tiempo mínimo."}
+              {!running ? "Enciende la cámara para ver."
+                : !stats.raw || stats.raw === "None" ? "No reconozco ninguna seña. Muestra la mano de frente."
+                : stats.read ? <><b className="text-fg">Entra como {GESTURE_LABEL[stats.read as Gesture]}.</b> Sostenla para ejecutar.</>
+                : "El modelo ve un gesto, pero no es uno de los nuestros."}
             </p>
           </div>
 
@@ -305,10 +198,6 @@ export default function LabGestosPage() {
                 <dd className="font-mono text-fg">{stats.agoSec >= 0 ? `hace ${stats.agoSec}s` : "—"}</dd>
               </div>
               <div className="flex justify-between gap-2">
-                <dt className="text-muted">Cuadros de cámara</dt>
-                <dd className="font-mono text-fg">{stats.received}{stats.rawBroken ? " (rechazados)" : ""}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
                 <dt className="text-muted">Origen</dt>
                 <dd className="font-mono text-fg">
                   {stats.source === "track" ? "cámara directa" : stats.source === "video" ? "video (solo visible)" : "—"}
@@ -340,7 +229,6 @@ export default function LabGestosPage() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }

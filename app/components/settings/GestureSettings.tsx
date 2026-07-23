@@ -10,7 +10,7 @@ import {
   isBackgroundOn, setBackgroundOn,
 } from "@/lib/gesture-prefs";
 import { playConfirmed, unlockAudio } from "@/lib/gestures/sound";
-import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
+import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/recognizer";
 
 // Ajustes del control por gestos. La promesa del producto es "esto es para ti, no para
 // vigilarte", así que aquí se dice sin rodeos qué hace la cámara y qué no — y se apaga en el
@@ -27,7 +27,7 @@ const VOCABULARY: { gesture: Gesture; does: string }[] = [
   { gesture: "dos", does: "Cambia a la 2ª" },
   { gesture: "tres", does: "Cambia a la 3ª" },
   { gesture: "palma", does: "Pausa lo que esté corriendo" },
-  { gesture: "dosPalmas", does: "Sigue con lo último que medías" },
+  { gesture: "pulgar", does: "Sigue con lo último que medías" },
 ];
 
 export function GestureSettings() {
@@ -138,12 +138,10 @@ export function GestureSettings() {
               ))}
             </ul>
             <p className="mt-2.5 text-caption text-muted">
-              Para elegir tarea cuenta <b>cuántos dedos</b> levantas, no cuáles: da igual si el 3
-              lo haces con el pulgar o sin él. Hay que <b>acercar la mano a la cámara</b> y
-              sostener la seña un momento, quieta y de frente. Por eso traer el celular en la
-              mano o rascarte la cara no te mueve el cronómetro: esa mano no está presentada.
-              Entre un comando y el siguiente hay que <b>retirar la mano</b>. Todo se deshace.
-              Y en <b>Practicar</b> puedes ajustar el reconocimiento a tu propia mano.
+              Muestra la seña <b>de frente a la cámara</b> y sostenla un momento. Entre un comando
+              y el siguiente hay que <b>retirar la mano</b>, para que una mano ocupada en otra
+              cosa no dispare de más. Todo se puede deshacer. Las reconoce un modelo entrenado de
+              Google — en <b>Practicar</b> ves en vivo lo que detecta.
             </p>
             <Link
               href="/labs/gestos"

@@ -7,120 +7,87 @@ escribiendo a mano o lejos de la computadora.
 
 | Seña | Qué hace |
 |---|---|
-| ☝️ 1 a 3 dedos | Cambia a esa tarea del dock |
-| 🖐️ Una palma | Pausa lo que esté corriendo |
-| 🙌 Las dos palmas | Sigue con lo último que medías |
+| ☝️ Índice arriba | Tarea 1 |
+| ✌️ Dos dedos | Tarea 2 |
+| 🤟 Cuernitos | Tarea 3 |
+| 🖐️ Palma abierta | Pausar |
+| 👍 Pulgar arriba | Seguir con lo último |
 
-Una palma suelta el trabajo, las dos palmas lo retoman. Los dedos, en medio, eligen tarea.
+Se sostiene la seña un momento, de frente a la cámara. Suena distinto según lo que pasó (sube al
+arrancar, baja al pausar) y cada acción se puede deshacer desde el aviso que aparece.
 
-**Las dos palmas es el gesto más seguro que hay**: hace falta tener las dos manos libres y
-presentadas a la vez, cosa que no pasa por accidente ni con el celular en la mano.
+**El puño y el pulgar hacia abajo no significan nada, a propósito:** son posturas de reposo o
+ambiguas, y como comando darían disparos accidentales.
 
-**Hay tres posturas que no significan nada, a propósito:** el puño (es como queda la mano al
-bajarla o al tomar el mouse), los cuatro dedos (se confundía con tres y con la palma, y dependía
-de leer bien el pulgar) y el pulgar solo. Que no signifiquen nada es parte de lo que hace
-fiable al resto.
+## Cómo se reconoce (por qué ahora sí es confiable)
 
-**Cuenta cuántos dedos levantas, no cuáles.** Da igual si el 3 lo haces con pulgar+índice+medio
-(como se cuenta en México) o con índice+medio+anular. Las dos formas valen — la primera versión
-solo aceptaba una y falló con el primer usuario real.
+Usa el **modelo entrenado de reconocimiento de gestos de MediaPipe** (Google): una red neuronal
+entrenada con manos reales que clasifica formas de mano y devuelve su propia confianza.
 
-Hay que **sostener la seña** (~1 segundo, configurable). Suena un tic cuando te reconoce y un
-tono al ejecutar, y cada acción se puede deshacer desde el aviso que aparece.
+Esto reemplazó a una versión anterior que **contaba dedos a mano** con geometría y ~68 umbrales
+ajustados a ojo. Contar "3 vs 4 dedos vs palma" en una webcam es genuinamente frágil, y por eso
+fallaba. El modelo entrenado no cuenta dedos: reconoce formas distintas (Open_Palm, Victory,
+Pointing_Up, Thumb_Up, ILoveYou), que es un problema mucho más sólido. Por eso el vocabulario son
+esas cinco formas y no un conteo del 1 al 4.
 
 ## La cámara
 
 - **Apagada por defecto.** Se activa en Ajustes → Integraciones, por persona y por dispositivo.
 - **Todo se procesa en el navegador.** El video no se graba, no se guarda y no sale del equipo:
-  ni a nuestro servidor ni a ninguno. El modelo de reconocimiento se sirve desde nuestro propio
-  dominio, así que tampoco hay un tercero enterándose de cuándo lo usas.
+  ni a nuestro servidor ni a ninguno. El modelo se sirve desde nuestro propio dominio, así que
+  tampoco hay un tercero enterándose de cuándo lo usas.
 - **La preferencia vive solo en ese dispositivo.** No se sincroniza: nadie del equipo, ni un
   admin, puede ver quién lo tiene encendido.
-- **Se ve cuando está activa**: hay un indicador permanente mientras la cámara corre, y se
-  apaga con un clic o sola tras 5 minutos sin manos.
+- **Se ve cuando está activa** y se apaga con un clic o sola tras un rato sin manos.
 
-Esto no es un detalle legal: la app promete *"esto es para ti, no para vigilarte"*, y una
-cámara es justo donde esa promesa se pone a prueba.
+La app promete *"esto es para ti, no para vigilarte"*, y una cámara es justo donde esa promesa se
+pone a prueba.
 
-## Practicar
+## Practicar / probar
 
-**Ajustes → Integraciones → Practicar sin medir tiempo** (o `/labs/gestos`). Esa pantalla mide
-cuántas veces atina cada seña y **no toca el cronómetro**: se puede usar todo lo que uno quiera
-sin ensuciar el historial.
+**Ajustes → Integraciones → Practicar sin medir tiempo** (o `/labs/gestos`). No toca el
+cronómetro. Muestra en vivo **"Lo que ve el modelo"**: la categoría exacta que reconoce y su
+confianza. Es el instrumento honesto: si haces la palma y dice `Open_Palm 0.95`, funciona; si
+dice `None 0.3`, ni el modelo entrenado la clava en esa cámara/luz.
 
 ## Funciona aunque estés en otra app
 
-Este es el punto de la función: cambiar de tarea mientras estás en Figma, en un PDF o en la
-llamada, **sin volver a la pestaña**. Viene encendido y se puede apagar (cuesta batería).
+El punto de la función: cambiar de tarea mientras estás en Figma, en un PDF o en la llamada, sin
+volver a la pestaña. Encendido por defecto, se puede apagar.
 
-Como en ese momento no ves nada en pantalla, hay dos señales:
+Como no ves nada en pantalla, hay dos señales: **el sonido** (te dice que reconoció y ejecutó) y,
+**al volver a la app**, un aviso con lo que pasó mientras no mirabas, con opción de deshacerlo.
 
-- **El sonido** te dice que te reconoció y que ejecutó. Por eso conviene no apagarlo si usas
-  esto en segundo plano.
-- **Al volver a la app** aparece un aviso con lo que pasó mientras no mirabas, con opción de
-  deshacerlo. Nunca debería pasar que tu cronómetro cambie y te enteres tres horas después.
-
-Detalle técnico: cuando la pestaña se oculta, el navegador congela `requestAnimationFrame` y
-frena los temporizadores de la página a uno por segundo — con eso un gesto de 1.2 s no se
-completaría nunca. Por eso el reloj se mueve a un Web Worker
-(`lib/gestures/metronome.ts`), que conserva su ritmo en segundo plano. El reconocimiento baja
-de 12 a 7 cuadros por segundo mientras no miras, y a 3 si no hay ninguna mano a la vista.
-
-## Ajustarlo a tu mano
-
-**Practicar → Ajustar a mi mano.** Enseñas la mano abierta y luego el puño, cuatro segundos
-cada una, y el sistema calcula TUS umbrales: el largo de tus dedos, tu cámara y a qué distancia
-te sientas. Es lo que arregla el "a veces no me lee" — los valores de fábrica son una
-estimación, y cada mano es distinta. Se guarda en tu equipo y se puede rehacer cuando cambies
-de escritorio o de luz.
+Detalle técnico: el navegador congela `requestAnimationFrame` y frena los temporizadores de una
+pestaña oculta. Lo que NO se frena es el flujo de la cámara, así que el reconocimiento cuelga de
+la llegada de cada cuadro (`MediaStreamTrackProcessor`) en vez de un temporizador. Ver
+`lib/gestures/metronome.ts` para el camino de respaldo.
 
 ## Ajustes finos
 
-**Qué tanto sostener la seña:** Rápido (0.8 s) · Normal (1.2 s) · Tranquilo (2 s). Si pasas el
-día en videollamadas, ponlo en Tranquilo — así un saludo no te mueve el cronómetro.
-
-**Sonido:** cada acción suena distinto, para saber qué pasó sin mirar la pantalla —
-**sube** al arrancar o reanudar, **baja** al pausar, **parejo** al cambiar de tarea, y una nota
-grave y sola cuando la seña se entendió pero no aplicaba (por ejemplo, pediste la tarea 3 y solo
-hay dos abiertas). Va bajito a propósito porque puede sonar en una llamada. Se puede apagar.
-
-**Precisión.** Una seña solo cuenta si parece hecha a propósito:
-
-- **Presentada a la cámara.** Es el filtro más importante. Una seña se acerca deliberadamente al
-  objetivo; sostener el celular, apoyar la mano en la cara o tenerla sobre el teclado la deja a
-  la distancia normal del cuerpo. Por debajo de ese tamaño ni se mira qué dedos hay.
-- **Una orden a la vez.** Después de ejecutar hay que retirar la mano del encuadre un instante.
-  Sin eso, una mano ocupada en otra cosa soltaba ráfagas de comandos: cada cambio de postura
-  contaba como una orden nueva.
-
-- **Quieta.** Una seña se sostiene; una mano que se rasca, se acomoda el pelo o va de paso está
-  en movimiento. Si se mueve rápido, el cuadro no cuenta.
-- **De frente.** Al apoyar la mano en la cara la palma queda de canto y los nudillos se alinean;
-  eso se detecta y se descarta.
-- **Sin dedos a medias.** Un dedo a medio estirar invalida el cuadro entero, en vez de adivinar.
-  Era lo que hacía parpadear entre 3 y 4 dedos.
-- **Sin manos lejanas.** Una mano pequeña (alguien al fondo de la sala) se ignora.
+- **Qué tanto sostener la seña:** Rápido / Normal / Tranquilo. En videollamadas conviene
+  Tranquilo, para que un saludo no mueva el cronómetro.
+- **Sonido:** cada acción suena distinto (sube = arrancar/reanudar, baja = pausar, parejo =
+  cambiar de tarea). Bajito porque puede sonar en una llamada. Se puede apagar.
+- **Una orden a la vez:** tras ejecutar hay que retirar la mano un instante, para que una mano
+  ocupada en otra cosa no suelte ráfagas.
 
 ## Cómo se enciende para el equipo
 
-Está detrás de la variable `NEXT_PUBLIC_GESTURES`. Con `=1` en Vercel, la sección aparece en
-Ajustes para todos — **apagada**, cada quien decide si la activa. Sin la variable, la función
-no existe para nadie.
+La sección aparece en Ajustes → Integraciones para todos, **apagada**; cada quien decide si la
+activa. La protección es el opt-in por persona (hubo un flag por variable de entorno y se quitó:
+dependía de que la env llegara al build y una compilación cacheada lo dejó apagado en silencio).
 
 ## Detalles técnicos
 
-- **MediaPipe Hand Landmarker** (Google) corriendo en WebAssembly dentro del navegador. El
-  modelo (7.5 MB) y el runtime se auto-hospedan en `public/mediapipe/`, generados en `prebuild`
-  por `scripts/mediapipe-assets.mjs`.
-- **Intenta GPU y cae a CPU** si no hay WebGL disponible (Safari, aceleración desactivada). Sin
-  esa caída el control no arrancaba en varias máquinas.
-- **Rendimiento:** vídeo a 320×240, inferencia a 12 cuadros por segundo, y baja a 3 cuando no
-  hay una mano a la vista. El bucle vive sobre refs y solo re-renderiza cuando cambia algo
-  visible — nunca una vez por cuadro (ver regla 2 de `AGENTS.md`).
-- **Una sola pestaña a la vez:** si la app está abierta en dos, la última que enciende se queda
-  la cámara y la otra se apaga (`lib/gestures/camera-lock.ts`).
-- **Con dos manos en cuadro** se atiende la que está más cerca de la cámara.
+- **MediaPipe GestureRecognizer** (modelo entrenado, ~8.4 MB) en WebAssembly dentro del
+  navegador. Se auto-hospeda en `public/mediapipe/` vía `scripts/mediapipe-assets.mjs` (`prebuild`).
+- **GPU con caída a CPU** si no hay WebGL (Safari, aceleración desactivada).
+- **Rendimiento:** vídeo 320×240, ~12 cuadros/s (7 en segundo plano, 3 sin manos). Bucle sobre
+  refs, sin re-render por cuadro (regla 2 de `AGENTS.md`).
+- **Una sola pestaña a la vez** (`lib/gestures/camera-lock.ts`).
 
-La lógica está separada en capas puras y probadas (`lib/gestures/vocabulary.ts`,
-`lib/gestures/stabilizer.ts`, `lib/timer-commands.ts`), compartidas con los atajos de teclado
-para que la mano y el teclado nunca signifiquen cosas distintas.
+Capas puras y probadas: `lib/gestures/recognizer.ts` (categoría del modelo → seña),
+`lib/gestures/integrator.ts` (sostener → comando), `lib/timer-commands.ts` (comando →
+cronómetro), compartida con los atajos de teclado para que la mano y el teclado nunca signifiquen
+cosas distintas.

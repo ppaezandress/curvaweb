@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { HandLandmarker } from "@mediapipe/tasks-vision";
-import { sampleOf, applyThresholds, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
-import { readFrame, adviceFor } from "@/lib/gestures/reader";
-import { loadThresholds, type Sample } from "@/lib/gestures/calibration";
+import type { GestureRecognizer } from "@mediapipe/tasks-vision";
+import { readGestures, MIN_SCORE, type Gesture } from "@/lib/gestures/recognizer";
 import { createIntegrator, type IntegratorConfig } from "@/lib/gestures/integrator";
 import { reportClientError } from "@/lib/report-error";
 import { playDetected, startKeepAlive, stopKeepAlive } from "@/lib/gestures/sound";
@@ -20,25 +18,13 @@ import { createMetronome, frameIntervalMs, type Metronome } from "@/lib/gestures
 // solo llama a setState cuando cambia algo que de verdad se ve: el gesto candidato o un
 // escalón del anillo de progreso. Nunca una vez por cuadro.
 
-const MODEL_URL = "/mediapipe/hand_landmarker.task";
+const MODEL_URL = "/mediapipe/gesture_recognizer.task";
 const WASM_PATH = "/mediapipe/wasm";
 const PROGRESS_STEPS = 12; // granularidad del anillo → máximo 12 renders por dwell
 const NO_HAND_TIMEOUT_MS = 30 * 60_000; // media hora sin ver manos → se apaga sola
 // Ahorro: si lleva un rato sin ver una mano, baja el ritmo de inferencia. La cámara sigue
 // encendida (reaccionar rápido importa) pero deja de gastar batería mirando una silla vacía.
 const IDLE_AFTER_MS = 20_000;
-
-// Diagonal del rectángulo que ocupa la mano: sirve de proxy de "qué tan cerca está".
-function spanOf(lm: Landmark[]): number {
-  let minX = 1, maxX = 0, minY = 1, maxY = 0;
-  for (const p of lm) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return Math.hypot(maxX - minX, maxY - minY);
-}
 
 export type GestureStatus =
   | "off"
@@ -63,15 +49,13 @@ export type GestureControlState = {
    * no provocar un render por cuadro. Sirve para responder la pregunta que costó una tarde:
    * ¿el reconocimiento sigue vivo cuando me cambio a otra app, y de dónde saca los cuadros?
    */
-  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean; received: number; pumping: boolean; rawBroken: boolean; quality: number; hint: string | null };
+  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean; received: number; pumping: boolean; rawBroken: boolean; quality: number; read: string | null; raw: string | null };
 };
 
 export function useGestureControl(opts: {
   enabled: boolean;
   onCommand: (g: Gesture) => void;
   stabilizer?: Partial<IntegratorConfig>;
-  /** Medidas crudas de cada cuadro. Solo lo usa la pantalla de calibración. */
-  onSample?: (s: Sample) => void;
 }): GestureControlState {
   const { enabled } = opts;
 
@@ -90,7 +74,7 @@ export function useGestureControl(opts: {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const landmarkerRef = useRef<HandLandmarker | null>(null);
+  const recognizerRef = useRef<GestureRecognizer | null>(null);
   const rafRef = useRef<number | null>(null);
   const stabRef = useRef(createIntegrator(opts.stabilizer ?? SENSITIVITY[getSensitivity()]));
   const lastFrameRef = useRef(0);
@@ -113,13 +97,9 @@ export function useGestureControl(opts: {
   const rawFramesBrokenRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—", received: 0, pumping: false, rawBroken: false, quality: 0, hint: null as string | null });
-  // Último centro de la mano y su tiempo, para medir a qué velocidad se mueve.
-  const lastCenterRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—", received: 0, pumping: false, rawBroken: false, quality: 0, read: null as string | null, raw: null as string | null });
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
-  const onSampleRef = useRef(opts.onSample);
-  useEffect(() => { onSampleRef.current = opts.onSample; }, [opts.onSample]);
 
   const teardown = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -134,14 +114,13 @@ export function useGestureControl(opts: {
     frameRef.current = null;
     pumpingRef.current = false;
     rawFramesBrokenRef.current = false;
-    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—", received: 0, pumping: false, rawBroken: false, quality: 0, hint: null };
+    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—", received: 0, pumping: false, rawBroken: false, quality: 0, read: null, raw: null };
     streamRef.current?.getTracks().forEach((t) => t.stop()); // apaga la luz de la cámara
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    landmarkerRef.current?.close();
-    landmarkerRef.current = null;
+    recognizerRef.current?.close();
+    recognizerRef.current = null;
     stabRef.current.reset();
-    lastCenterRef.current = null;
     lockRef.current?.release();
     lockRef.current = null;
     shownRef.current = { candidate: null, step: 0, cooling: false };
@@ -175,10 +154,8 @@ export function useGestureControl(opts: {
     // dice a la persona (y qué puede hacer al respecto).
     let stage: "engine" | "camera" = "engine";
 
-    // La sensibilidad y la calibración se leen AL ENCENDER: si las cambias, aplican al
-    // reactivar la cámara.
+    // La sensibilidad se lee AL ENCENDER: si la cambias en Ajustes, aplica al reactivar.
     stabRef.current = createIntegrator(opts.stabilizer ?? SENSITIVITY[getSensitivity()]);
-    applyThresholds(loadThresholds());
 
     // Si otra pestaña reclama la cámara, esta se apaga sola y lo dice.
     lockRef.current?.release();
@@ -198,18 +175,22 @@ export function useGestureControl(opts: {
         // sin WebGL disponible revienta con "emscripten_webgl_create_context returned error"
         // y el control por gestos simplemente no arranca (visto en QA headless, y es el
         // riesgo real en Safari y en máquinas con la aceleración desactivada).
+        // Modelo ENTRENADO de reconocimiento de gestos: clasifica formas de mano con su propia
+        // confianza, en vez de darnos landmarks crudos para adivinar a mano. GPU con caída a
+        // CPU (sin WebGL revienta con "emscripten_webgl_create_context"; pasa en Safari y con
+        // la aceleración desactivada).
         const build = (delegate: "GPU" | "CPU") =>
-          vision.HandLandmarker.createFromOptions(fileset, {
+          vision.GestureRecognizer.createFromOptions(fileset, {
             baseOptions: { modelAssetPath: MODEL_URL, delegate },
             runningMode: "VIDEO",
             numHands: 2, // hay dos manos en cuadro más seguido de lo que parece
           });
-        const landmarker = await build("GPU").catch(() => build("CPU"));
-        if (cancelled) { landmarker.close(); return; }
-        landmarkerRef.current = landmarker;
+        const recognizer = await build("GPU").catch(() => build("CPU"));
+        if (cancelled) { recognizer.close(); return; }
+        recognizerRef.current = recognizer;
         stage = "camera";
 
-        // Resolución baja a propósito: para contar dedos sobra, y cuesta mucho menos.
+        // Resolución baja a propósito: al modelo le sobra y cuesta mucho menos.
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 320, height: 240, facingMode: "user" },
           audio: false,
@@ -335,8 +316,7 @@ export function useGestureControl(opts: {
      */
     function maybeAnalyze() {
       const video = videoRef.current;
-      const landmarker = landmarkerRef.current;
-      if (!video || !landmarker) return;
+      if (!video || !recognizerRef.current) return;
 
       const now = performance.now();
       const idle = !hiddenRef.current && now - lastHandRef.current > IDLE_AFTER_MS;
@@ -411,8 +391,8 @@ export function useGestureControl(opts: {
      * imagen, para que quien llama pueda intentar con otra fuente.
      */
     function analyze(source: HTMLVideoElement, now: number, from: "track" | "video", frame?: VideoFrame): boolean {
-      const landmarker = landmarkerRef.current;
-      if (!landmarker) return false;
+      const recognizer = recognizerRef.current;
+      if (!recognizer) return false;
 
       if (frame) {
         const c2d = canvasCtxRef.current;
@@ -430,38 +410,23 @@ export function useGestureControl(opts: {
         statsRef.current.frames++;
         statsRef.current.lastFrameAt = Date.now();
         statsRef.current.source = from;
-        const res = landmarker.detectForVideo(source, now);
-        const hands = (res.landmarks || []) as Landmark[][];
 
-        // Velocidad del centro de la mano entre cuadros: sostener una seña ronda cero;
-        // rascarse la cara o acomodarse el pelo se dispara.
-        const prev = lastCenterRef.current;
-        const provisional = readFrame({ hands, speed: 0 });
-        let speed = 0;
-        if (prev && provisional.center) {
-          const dtSec = (now - prev.t) / 1000;
-          if (dtSec > 0) {
-            speed = Math.hypot(provisional.center.x - prev.x, provisional.center.y - prev.y) / dtSec;
-          }
-        }
+        // El modelo entrenado devuelve, POR MANO, la categoría más probable y su confianza.
+        // Aquí ya no hay geometría: solo se traduce el nombre a nuestra seña.
+        const res = recognizer.recognizeForVideo(source, now);
+        const perHand = (res.gestures || []).map((g) => ({
+          categoryName: g[0]?.categoryName ?? "None",
+          score: g[0]?.score ?? 0,
+        }));
+        if (perHand.length) lastHandRef.current = now;
 
-        // UNA sola lectura, siempre explicada: qué seña hay, qué tan buena es la evidencia y
-        // qué falla cuando no alcanza. Antes esto eran ocho filtros repartidos que podían
-        // rechazar en silencio y contradecirse entre sí.
-        const reading = readFrame({ hands, speed });
-        lastCenterRef.current = reading.center ? { ...reading.center, t: now } : null;
-        if (reading.center) lastHandRef.current = now;
-
-        // Muestras crudas para la calibración (solo si alguien las pidió).
-        if (onSampleRef.current && hands[0]?.length) {
-          const sample = sampleOf(hands[0]);
-          if (sample) onSampleRef.current(sample);
-        }
-
-        gesture = reading.gesture;
+        const reading = readGestures(perHand);
+        // La confianza la da el propio modelo; el umbral es un solo número.
+        gesture = reading.confidence >= MIN_SCORE ? reading.gesture : null;
         confidence = reading.confidence;
         statsRef.current.quality = reading.confidence;
-        statsRef.current.hint = adviceFor(reading.reason);
+        statsRef.current.read = reading.gesture;
+        statsRef.current.raw = reading.raw;
       } catch {
         return false; // el reconocedor rechazó esta imagen: quien llama probará con otra
       }

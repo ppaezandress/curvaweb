@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { X, Hand, VideoOff, HelpCircle } from "lucide-react";
-import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
+import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/recognizer";
 import { dockChip, SPRING_SNAPPY, TWEEN_FAST } from "@/lib/motion";
 
 // HUD del control por gestos.
@@ -22,7 +22,7 @@ const LEGEND: [Gesture, string][] = [
   ["dos", "2ª tarea"],
   ["tres", "3ª tarea"],
   ["palma", "pausar"],
-  ["dosPalmas", "seguir"],
+  ["pulgar", "seguir"],
 ];
 
 const RING_R = 22;

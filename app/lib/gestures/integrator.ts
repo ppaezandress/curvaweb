@@ -18,7 +18,7 @@
 //   · y si aparece otra seña, el avance se PIERDE GRADUALMENTE en vez de borrarse de golpe —
 //     un parpadeo del modelo ya no obliga a empezar de cero, que era la mitad del "a veces no
 //     me lo toma".
-import type { Gesture } from "@/lib/gestures/vocabulary";
+import type { Gesture } from "@/lib/gestures/recognizer";
 import { TUNING, RELEASE_MS, SWITCH_DECAY } from "@/lib/gestures/tuning";
 
 export type IntegratorConfig = {

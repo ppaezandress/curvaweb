@@ -15,9 +15,12 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "public", "mediapipe");
 const WASM_SRC = join(ROOT, "node_modules", "@mediapipe", "tasks-vision", "wasm");
+// Modelo ENTRENADO de reconocimiento de gestos (no solo landmarks): clasifica formas de mano
+// —Open_Palm, Victory, Pointing_Up, Thumb_Up, ILoveYou…— con su propia confianza. Reemplazó al
+// hand_landmarker crudo, sobre el que reinventábamos la clasificación a mano y salía frágil.
 const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
-const MODEL_OUT = join(OUT, "hand_landmarker.task");
+  "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task";
+const MODEL_OUT = join(OUT, "gesture_recognizer.task");
 const MIN_MODEL_BYTES = 1_000_000; // un archivo más chico = descarga cortada
 
 mkdirSync(OUT, { recursive: true });
@@ -30,7 +33,7 @@ if (!existsSync(WASM_SRC)) {
   console.log("[mediapipe] wasm copiado");
 }
 
-// 2) Modelo — 7.5 MB, se descarga una vez y se queda en el repo/caché de build.
+// 2) Modelo — ~8.4 MB, se descarga una vez y se queda en el caché de build.
 if (existsSync(MODEL_OUT) && statSync(MODEL_OUT).size > MIN_MODEL_BYTES) {
   console.log("[mediapipe] modelo ya presente");
 } else {
