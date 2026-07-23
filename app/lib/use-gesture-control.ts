@@ -61,7 +61,7 @@ export type GestureControlState = {
    * no provocar un render por cuadro. Sirve para responder la pregunta que costó una tarde:
    * ¿el reconocimiento sigue vivo cuando me cambio a otra app, y de dónde saca los cuadros?
    */
-  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean };
+  getStats: () => { frames: number; lastFrameAt: number; source: "track" | "video" | "—"; hidden: boolean; received: number; pumping: boolean; rawBroken: boolean };
 };
 
 export function useGestureControl(opts: {
@@ -72,6 +72,13 @@ export function useGestureControl(opts: {
   const { enabled } = opts;
 
   const [status, setStatus] = useState<GestureStatus>("off");
+  // Contador de arranques. El efecto de la cámara depende de ESTO, no de `status`: si
+  // dependiera del estado, el `setStatus("running")` que hace al final se re-dispararía a sí
+  // mismo, el cleanup mataría el bombeo de cuadros recién creado y quitaría el detector de
+  // cambio de pestaña. Justo el bug que dejaba los gestos muertos en segundo plano.
+  const [startToken, setStartToken] = useState(0);
+  const statusRef = useRef<GestureStatus>("off");
+  useEffect(() => { statusRef.current = status; }, [status]);
   const [error, setError] = useState<string | null>(null);
   const [candidate, setCandidate] = useState<Gesture | null>(null);
   const [progress, setProgress] = useState(0);
@@ -98,7 +105,11 @@ export function useGestureControl(opts: {
   const readerRef = useRef<ReadableStreamDefaultReader<VideoFrame> | null>(null);
   // true cuando el reloj lo lleva la cámara (y no los temporizadores del navegador).
   const pumpingRef = useRef(false);
-  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—" });
+  // Si el reconocedor rechaza los cuadros crudos de la cámara, se deja de intentar.
+  const rawFramesBrokenRef = useRef(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—", received: 0, pumping: false, rawBroken: false });
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
 
@@ -114,7 +125,8 @@ export function useGestureControl(opts: {
     frameRef.current?.close();
     frameRef.current = null;
     pumpingRef.current = false;
-    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—" };
+    rawFramesBrokenRef.current = false;
+    statsRef.current = { frames: 0, lastFrameAt: 0, source: "—", received: 0, pumping: false, rawBroken: false };
     streamRef.current?.getTracks().forEach((t) => t.stop()); // apaga la luz de la cámara
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
@@ -137,6 +149,7 @@ export function useGestureControl(opts: {
   const start = useCallback(() => {
     setError(null);
     setStatus("starting");
+    setStartToken((t) => t + 1);
   }, []);
 
   // Encendido/apagado. Solo depende de `status` y `enabled`: nada de callbacks en las deps.
@@ -144,8 +157,8 @@ export function useGestureControl(opts: {
     // Apagar la cámara ES sincronizar con un sistema externo (hardware): el aviso del linter
     // sobre setState en efectos no aplica a este caso, y dejar el stream vivo sería peor.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!enabled && status !== "off") { stop(); return; }
-    if (status !== "starting") return;
+    if (!enabled) { if (statusRef.current !== "off") stop(); return; }
+    if (startToken === 0) return; // todavía nadie ha pedido encender
 
     let cancelled = false;
     let cleanupVisibility: (() => void) | null = null;
@@ -269,6 +282,7 @@ export function useGestureControl(opts: {
         const reader = new Processor({ track }).readable.getReader();
         readerRef.current = reader;
         pumpingRef.current = true;
+        statsRef.current.pumping = true;
         (async () => {
           while (!cancelled) {
             const { value, done } = await reader.read();
@@ -276,6 +290,7 @@ export function useGestureControl(opts: {
             if (cancelled || !value) { value?.close(); break; }
 
             // Guarda siempre el cuadro más reciente y cierra el anterior.
+            statsRef.current.received++;
             const prev = frameRef.current;
             frameRef.current = value;
             prev?.close();
@@ -319,10 +334,15 @@ export function useGestureControl(opts: {
       const raw = frameRef.current;
       if (raw && !rawFramesBrokenRef.current) {
         lastFrameRef.current = now;
-        const ok = analyze(raw as unknown as HTMLVideoElement, now, "track");
+        // El reconocedor no traga un VideoFrame crudo, pero un lienzo sí. Se pinta el cuadro
+        // en un canvas propio (320×240, un drawImage) y se le pasa eso. Ese rodeo es lo que
+        // permite trabajar con la imagen del track — la única que sigue llegando cuando la
+        // pestaña está en segundo plano.
+        const canvas = ensureCanvas(raw.displayWidth || 320, raw.displayHeight || 240);
+        const ok = canvas ? analyze(canvas as unknown as HTMLVideoElement, now, "track", raw) : false;
         if (ok) return;
-        // El reconocedor no admite el cuadro crudo en este navegador: no insistir.
         rawFramesBrokenRef.current = true;
+        statsRef.current.rawBroken = true;
       }
 
       if (video.readyState < 2) return;
@@ -358,6 +378,18 @@ export function useGestureControl(opts: {
       }
     }
 
+    /** Lienzo reutilizable donde se copia el cuadro de la cámara. Uno solo, no uno por cuadro. */
+    function ensureCanvas(w: number, h: number): HTMLCanvasElement | null {
+      let c = canvasRef.current;
+      if (!c) {
+        c = document.createElement("canvas");
+        canvasRef.current = c;
+        canvasCtxRef.current = c.getContext("2d", { willReadFrequently: false });
+      }
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+      return canvasCtxRef.current ? c : null;
+    }
+
     /** Pulso de primer plano (requestAnimationFrame) y respaldo del metrónomo. */
     function tick() {
       maybeAnalyze();
@@ -367,9 +399,19 @@ export function useGestureControl(opts: {
      * Analiza un cuadro y aplica el comando. Devuelve false si el reconocedor rechazó la
      * imagen, para que quien llama pueda intentar con otra fuente.
      */
-    function analyze(source: HTMLVideoElement, now: number, from: "track" | "video"): boolean {
+    function analyze(source: HTMLVideoElement, now: number, from: "track" | "video", frame?: VideoFrame): boolean {
       const landmarker = landmarkerRef.current;
       if (!landmarker) return false;
+
+      if (frame) {
+        const c2d = canvasCtxRef.current;
+        if (!c2d) return false;
+        try {
+          c2d.drawImage(frame as unknown as CanvasImageSource, 0, 0);
+        } catch {
+          return false; // este navegador no deja pintar el cuadro: se usará el <video>
+        }
+      }
 
       let gesture: Gesture | null = null;
       try {
@@ -386,11 +428,11 @@ export function useGestureControl(opts: {
           gesture = gestureFrom(hand);
         }
       } catch {
-        return; // un cuadro suelto que falla no debe tumbar el bucle
+        return false; // el reconocedor rechazó esta imagen: quien llama probará con otra
       }
 
       // Cortesía: si llevas rato sin usarla, se apaga sola.
-      if (now - lastHandRef.current > NO_HAND_TIMEOUT_MS) { stop(); return; }
+      if (now - lastHandRef.current > NO_HAND_TIMEOUT_MS) { stop(); return true; }
 
       const out = stabRef.current.feed(gesture, now);
 
@@ -411,10 +453,11 @@ export function useGestureControl(opts: {
         if (isSoundOn()) playConfirmed();
         onCommandRef.current(out.fire);
       }
+      return true;
     }
 
     return () => { cancelled = true; cleanupVisibility?.(); };
-  }, [status, enabled, stop, teardown]);
+  }, [startToken, enabled, stop, teardown]);
 
   // Al desmontar (cerrar sesión, salir de la app) la cámara se apaga sí o sí.
   useEffect(() => () => teardown(), [teardown]);

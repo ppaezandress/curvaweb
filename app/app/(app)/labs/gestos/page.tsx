@@ -21,7 +21,7 @@ export default function LabGestosPage() {
   const [log, setLog] = useState<{ g: Gesture; at: string }[]>([]);
   const [fps, setFps] = useState(0);
   const [counts, setCounts] = useState<Partial<Record<Gesture, number>>>({});
-  const [stats, setStats] = useState({ frames: 0, agoSec: -1, source: "—" as string, hidden: false });
+  const [stats, setStats] = useState({ frames: 0, agoSec: -1, source: "—" as string, hidden: false, received: 0, pumping: false, rawBroken: false });
 
   const onCommand = useCallback((g: Gesture) => {
     setCounts((c) => ({ ...c, [g]: (c[g] || 0) + 1 }));
@@ -57,6 +57,9 @@ export default function LabGestosPage() {
         agoSec: s.lastFrameAt ? Math.max(0, Math.round((Date.now() - s.lastFrameAt) / 1000)) : -1,
         source: s.source,
         hidden: s.hidden,
+        received: s.received,
+        pumping: s.pumping,
+        rawBroken: s.rawBroken,
       });
     }, 1000);
     return () => clearInterval(iv);
@@ -163,6 +166,10 @@ export default function LabGestosPage() {
               <div className="flex justify-between gap-2">
                 <dt className="text-muted">Última imagen</dt>
                 <dd className="font-mono text-fg">{stats.agoSec >= 0 ? `hace ${stats.agoSec}s` : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Cuadros de cámara</dt>
+                <dd className="font-mono text-fg">{stats.received}{stats.rawBroken ? " (rechazados)" : ""}</dd>
               </div>
               <div className="flex justify-between gap-2">
                 <dt className="text-muted">Origen</dt>
