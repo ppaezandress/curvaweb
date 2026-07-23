@@ -105,16 +105,27 @@ export type FingerState = {
 export function fingerClarity(lm: Landmark[]): number {
   if (!lm || lm.length < 21) return 0;
   const wrist = lm[WRIST];
-  const margins: number[] = [];
-
-  for (const f of LONG_FINGERS) {
+  const margins = LONG_FINGERS.map((f) => {
     const ratio = dist(lm[f.tip], wrist) / Math.max(dist(lm[f.pip], wrist), 1e-6);
-    margins.push(marginOf(ratio, T.closedRatio, T.openRatio));
-  }
-  margins.push(marginOf(thumbSpread(lm), T.thumbNear, T.thumbFar));
-
-  // Manda el dedo MÁS dudoso: basta uno ambiguo para que el conteo pueda salir mal.
+    return marginOf(ratio, T.closedRatio, T.openRatio);
+  });
+  // Manda el dedo MÁS dudoso de los cuatro largos: basta uno ambiguo para que el conteo salga
+  // mal. El pulgar va aparte (thumbClarity) porque es ambiguo casi siempre y, metido en esta
+  // cuenta, hundía la nota de la palma abierta — que es justo la seña más usada.
   return Math.min(...margins);
+}
+
+/**
+ * Claridad del pulgar, por separado.
+ *
+ * En una palma abierta real el pulgar queda casi siempre a medio camino entre "pegado" y
+ * "abierto": es el dedo con menos recorrido y el que peor lee el modelo. Mezclarlo con los
+ * demás hacía que la palma puntuara como dudosa aunque los cuatro dedos largos estuvieran
+ * clarísimos, y entonces el reconocimiento avanzaba a media máquina o no avanzaba.
+ */
+export function thumbClarity(lm: Landmark[]): number {
+  if (!lm || lm.length < 21) return 0;
+  return marginOf(thumbSpread(lm), T.thumbNear, T.thumbFar);
 }
 
 /** 1 = lejísimos de la zona dudosa · 0 = justo en medio de ella. */

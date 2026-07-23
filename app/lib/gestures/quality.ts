@@ -15,7 +15,7 @@
 //
 // Con la nota, el estabilizador puede ser listo: una seña impecable se confirma en medio
 // segundo, una regular pide más tiempo, y una mala no avanza nunca. Se gana en las dos puntas.
-import { fingerClarity, handScale, handFullyVisible, currentThresholds, type Landmark } from "@/lib/gestures/vocabulary";
+import { fingerClarity, thumbClarity, handScale, handFullyVisible, currentThresholds, type Landmark } from "@/lib/gestures/vocabulary";
 import { palmFacing, palmFlatness, MIN_FACING } from "@/lib/gestures/intent";
 
 export type QualityInput = {
@@ -74,6 +74,7 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
   }
 
   const clarity = fingerClarity(landmarks);
+  const thumb = thumbClarity(landmarks);
 
   // Dos medidas de orientación que se complementan: la proporción de la palma (robusta, 2D) y
   // su inclinación real usando profundidad (más fina, si el modelo la reporta).
@@ -85,12 +86,15 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
   const closeness = clamp01(scale / Math.max(GOOD_SCALE, minPresent * 1.35));
   const model = clamp01(modelScore ?? 0.9);
 
-  // La claridad de los dedos pesa más que nada: de ella depende que el NÚMERO sea correcto,
-  // y equivocarse de número es el error que más molesta (te manda a otra tarea).
+  // La claridad de los cuatro dedos largos pesa más que nada: de ella depende que el NÚMERO
+  // sea correcto, y equivocarse de número es el error que más molesta (te manda a otra tarea).
+  // El pulgar aporta poco a propósito: es ambiguo hasta en una palma bien abierta, y darle
+  // peso hundía la nota de la seña más usada.
   const score =
-    0.40 * clarity +
+    0.35 * clarity +
+    0.07 * thumb +
     0.25 * facing +
-    0.20 * steadiness +
+    0.18 * steadiness +
     0.10 * closeness +
     0.05 * model;
 

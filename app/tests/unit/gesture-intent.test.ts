@@ -220,3 +220,62 @@ describe("nada de ráfagas", () => {
     expect(fires.length).toBeLessThanOrEqual(1);
   });
 });
+
+// ── La palma abierta de verdad ──────────────────────────────────────────────────────────
+// El caso que más costó: "la palma no la agarra", reportado varias veces con la función ya en
+// producción. La seña se CLASIFICABA bien, pero puntuaba como dudosa y por eso avanzaba a
+// media máquina o no llegaba al mínimo. El culpable era el pulgar: en una palma abierta real
+// queda casi siempre a medio camino, y estaba metido en el factor que más pesa.
+describe("palma abierta con el pulgar ambiguo", () => {
+  // Mano con los cuatro dedos largos clarísimamente abiertos y el pulgar a medias, que es
+  // exactamente como se ve una palma frente a una webcam.
+  function palmaReal(): Landmark[] {
+    const wrist = { x: 0.5, y: 0.75 };
+    const along = (dx: number, dy: number, d: number): Landmark => {
+      const len = Math.hypot(dx, dy);
+      return { x: wrist.x + (dx / len) * d, y: wrist.y + (dy / len) * d, z: 0 };
+    };
+    const lm: Landmark[] = [];
+    lm[0] = { ...wrist, z: 0 };
+
+    const dirs: [number, number][] = [[-0.3, -1], [-0.08, -1], [0.14, -1], [0.36, -1]];
+    dirs.forEach(([dx, dy], i) => {
+      const base = 5 + i * 4;
+      lm[base] = along(dx, dy, 0.20);
+      lm[base + 1] = along(dx, dy, 0.30);
+      lm[base + 2] = along(dx, dy, 0.36);
+      lm[base + 3] = along(dx, dy, 0.44); // todos bien estirados
+    });
+
+    // Pulgar a media apertura: ni pegado a la palma ni claramente al lado.
+    const indexMcp = lm[5];
+    const tip = { x: indexMcp.x - 0.19, y: indexMcp.y + 0.06, z: 0 };
+    lm[1] = { x: indexMcp.x - 0.05, y: indexMcp.y + 0.10, z: 0 };
+    lm[2] = { x: indexMcp.x - 0.10, y: indexMcp.y + 0.09, z: 0 };
+    lm[3] = { x: indexMcp.x - 0.15, y: indexMcp.y + 0.07, z: 0 };
+    lm[4] = tip;
+    return lm;
+  }
+
+  it("puntúa alto pese al pulgar dudoso", () => {
+    const q = frameQuality({ landmarks: palmaReal(), speed: 0.03, modelScore: 0.95 });
+    // Antes se quedaba rozando el mínimo (0.5) y avanzaba a media máquina o menos.
+    expect(q.score).toBeGreaterThan(0.7);
+  });
+
+  it("avanza a velocidad plena, no a media máquina", () => {
+    const q = frameQuality({ landmarks: palmaReal(), speed: 0.03, modelScore: 0.95 });
+    expect(advanceRate(q.score)).toBeGreaterThan(0.9);
+  });
+
+  it("los cuatro dedos largos son los que mandan en la claridad", () => {
+    // La nota de claridad no debe hundirse por el pulgar.
+    const q = frameQuality({ landmarks: palmaReal(), speed: 0 });
+    expect(q.clarity).toBeGreaterThan(0.8);
+  });
+
+  it("y sigue sin dar consejo cuando ya está bien", () => {
+    const q = frameQuality({ landmarks: palmaReal(), speed: 0.03, modelScore: 0.95 });
+    expect(qualityHint(q)).toBeNull();
+  });
+});
