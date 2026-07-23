@@ -57,18 +57,18 @@ export default function PdfReparto() {
 
   const r = useMemo(() => (proj ? compute(proj, params) : null), [proj, params]);
 
+  // Nombre del PDF (título de la pestaña): persona · proyecto (o "Reparto · proyecto"
+  // para la hoja de todos). Efecto dedicado, dep de string estable y SIN restaurar, para
+  // que ningún re-render lo revierta a "CURVA Socios". Decisión Andrés 2026-07-23.
+  const tituloPDF = proj ? `${persona || (parte === "comision" ? "Comisión" : "Reparto")} · ${proj.nombre}` : "";
+  useEffect(() => { if (tituloPDF) document.title = tituloPDF; }, [tituloPDF]);
+
   useEffect(() => {
     if (ready && proj && r) {
-      // El navegador propone el título de la página como nombre del PDF. Lo armamos con
-      // persona · proyecto (o "Reparto · proyecto" si es la hoja de todos) para que el
-      // archivo salga ya nombrado. Se restaura al desmontar. Decisión Andrés 2026-07-23.
-      const prev = document.title;
-      const quien = persona || (parte === "comision" ? "Comisión" : "Reparto");
-      document.title = `${quien} · ${proj.nombre}`;
       const t = setTimeout(() => window.print(), 600); // deja cargar fuentes
-      return () => { clearTimeout(t); document.title = prev; };
+      return () => clearTimeout(t);
     }
-  }, [ready, proj, r, persona, parte]);
+  }, [ready, proj, r]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
   if (!proj || !r) return <div className="pdf-page">No encontré ese proyecto. Ábrelo desde la app y vuelve a generar el PDF.</div>;

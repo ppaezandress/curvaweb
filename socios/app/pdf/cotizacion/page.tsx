@@ -30,13 +30,9 @@ export default function Cotizacion() {
   const plazoN = Math.max(1, Math.floor(proj?.plazoMeses || 1));
   const scope = (proj?.cotScope || "").split("\n").map((x) => x.trim()).filter(Boolean);
 
+  useEffect(() => { if (proj) document.title = `Cotización · ${proj.nombre}`; }, [proj]);
   useEffect(() => {
-    if (ready && proj) {
-      const prev = document.title;
-      document.title = `Cotización · ${proj.nombre}`;
-      const t = setTimeout(() => window.print(), 500);
-      return () => { clearTimeout(t); document.title = prev; };
-    }
+    if (ready && proj) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
   }, [ready, proj]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;

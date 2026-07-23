@@ -98,13 +98,10 @@ export default function PdfRecibo() {
     return { proyecto: p, pago: pg, base, iva, total: base + iva, conIVA };
   }, [state, q]);
 
+  const tituloPDF = pago ? `Recibo · ${pago.nombre}` : cobro ? `Recibo de cobro · ${cobro.proyecto.nombre}` : "";
+  useEffect(() => { if (tituloPDF) document.title = tituloPDF; }, [tituloPDF]);
   useEffect(() => {
-    if (ready && (pago || cobro)) {
-      const prev = document.title;
-      document.title = pago ? `Recibo · ${pago.nombre}` : cobro ? `Recibo de cobro · ${cobro.proyecto.nombre}` : prev;
-      const t = setTimeout(() => window.print(), 500);
-      return () => { clearTimeout(t); document.title = prev; };
-    }
+    if (ready && (pago || cobro)) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
   }, [ready, pago, cobro]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;

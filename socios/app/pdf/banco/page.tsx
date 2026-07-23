@@ -33,14 +33,10 @@ export default function FichaBanco() {
   const cobrado = useMemo(() => (proj?.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0) * (proj?.conIVA ? 1.16 : 1), [proj]);
   const pendiente = Math.max(0, total - cobrado);
 
+  useEffect(() => { if (proj) document.title = `Datos de cobro · ${proj.nombre}`; }, [proj]);
   useEffect(() => {
-    if (ready) {
-      const prev = document.title;
-      if (proj) document.title = `Datos de cobro · ${proj.nombre}`;
-      const t = setTimeout(() => window.print(), 500);
-      return () => { clearTimeout(t); document.title = prev; };
-    }
-  }, [ready, proj]);
+    if (ready) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
+  }, [ready]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
 
