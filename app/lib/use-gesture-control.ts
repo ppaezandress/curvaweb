@@ -415,10 +415,14 @@ export function useGestureControl(opts: {
         // 21 puntos. Las formas robustas salen de la categoría; los puntos solo se usan para
         // contar el "tres dedos", que el modelo no clasifica (ver readGestures).
         const res = recognizer.recognizeForVideo(source, now);
+        const gestures = res.gestures || [];
         const landmarks = (res.landmarks || []) as { x: number; y: number; z?: number }[][];
-        const perHand = (res.gestures || []).map((g, i) => ({
-          categoryName: g[0]?.categoryName ?? "None",
-          score: g[0]?.score ?? 0,
+        // Una entrada por mano detectada, aunque el modelo no le asigne categoría (ahí el
+        // "tres dedos" se resuelve por conteo de los puntos).
+        const nHands = Math.max(gestures.length, landmarks.length);
+        const perHand = Array.from({ length: nHands }, (_, i) => ({
+          categoryName: gestures[i]?.[0]?.categoryName ?? "None",
+          score: gestures[i]?.[0]?.score ?? 0,
           landmarks: landmarks[i],
         }));
         if (perHand.length) lastHandRef.current = now;

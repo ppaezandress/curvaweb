@@ -16,12 +16,12 @@ describe("readGestures — mapeo de categorías del modelo", () => {
     expect(readGestures([g("Open_Palm")]).gesture).toBe("palma");
     expect(readGestures([g("Pointing_Up")]).gesture).toBe("uno");
     expect(readGestures([g("Victory")]).gesture).toBe("dos");
-    expect(readGestures([g("ILoveYou")]).gesture).toBe("tres");
     expect(readGestures([g("Thumb_Up")]).gesture).toBe("pulgar");
   });
 
-  it("las categorías sin significado no son señas (puño, pulgar abajo, nada)", () => {
-    for (const cat of ["Closed_Fist", "Thumb_Down", "None"]) {
+  it("las categorías sin significado no son señas (puño, pulgar abajo, ILoveYou, nada)", () => {
+    // Sin landmarks de 3 dedos, ninguna de estas es un comando.
+    for (const cat of ["Closed_Fist", "Thumb_Down", "ILoveYou", "None"]) {
       expect(readGestures([g(cat)]).gesture, cat).toBeNull();
     }
   });
@@ -94,5 +94,71 @@ describe("etiquetas y emojis completos", () => {
       expect(GESTURE_LABEL[s]).toBeTruthy();
       expect(GESTURE_EMOJI[s]).toBeTruthy();
     }
+  });
+});
+
+// ── El "tres dedos" por conteo ──────────────────────────────────────────────────────────
+// El modelo entrenado no tiene una categoría de "tres dedos", pero Andrés quiere hacer el 3
+// con la mano. Se resuelve contando los puntos que el propio modelo devuelve, SOLO para el 3 y
+// SOLO cuando el modelo no reconoció una de sus formas. Aquí las manos sintéticas sí son
+// legítimas: countFingers es geometría simple y determinista sobre puntos tipo MediaPipe.
+import { countFingers, type Landmark } from "@/lib/gestures/recognizer";
+
+const WRIST = { x: 0.5, y: 0.78 };
+// Construye una mano con N dedos largos extendidos (índice→meñique) y opcional pulgar.
+function hand(fingers: [boolean, boolean, boolean, boolean], thumb = false): Landmark[] {
+  const along = (dx: number, dy: number, d: number): Landmark => {
+    const len = Math.hypot(dx, dy);
+    return { x: WRIST.x + (dx / len) * d, y: WRIST.y + (dy / len) * d };
+  };
+  const dirs: [number, number][] = [[-0.3, -1], [-0.08, -1], [0.14, -1], [0.36, -1]];
+  const lm: Landmark[] = [{ ...WRIST }];
+  // pulgar (0-4): recogido cruza sobre la palma; abierto se va al lado.
+  const idx0 = along(-0.3, -1, 0.09);
+  const tx = thumb ? idx0.x - 0.16 : idx0.x + 0.02;
+  lm[1] = { x: idx0.x - 0.04, y: idx0.y + 0.05 }; lm[2] = { x: idx0.x - 0.08, y: idx0.y + 0.04 };
+  lm[3] = { x: idx0.x - 0.12, y: idx0.y + 0.03 }; lm[4] = { x: tx, y: idx0.y + 0.02 };
+  dirs.forEach(([dx, dy], i) => {
+    const base = 5 + i * 4;
+    lm[base] = along(dx, dy, 0.09);
+    lm[base + 1] = along(dx, dy, 0.15);
+    lm[base + 2] = along(dx, dy, 0.19);
+    lm[base + 3] = along(dx, dy, fingers[i] ? 0.28 : 0.10);
+  });
+  return lm;
+}
+
+const withLm = (categoryName: string, landmarks: Landmark[], score = 0.2): ModelGesture =>
+  ({ categoryName, score, landmarks });
+
+describe("tres dedos por conteo", () => {
+  it("countFingers cuenta bien", () => {
+    expect(countFingers(hand([true, true, true, false]))).toBe(3); // 3 dedos, sin pulgar
+    expect(countFingers(hand([true, true, false, false], true))).toBe(3); // 3 a la mexicana
+    expect(countFingers(hand([true, true, false, false]))).toBe(2);
+    expect(countFingers(hand([true, true, true, true]))).toBe(4);
+    expect(countFingers([])).toBe(-1);
+  });
+
+  it("con 3 dedos y sin categoría del modelo, es la tarea 3", () => {
+    const r = readGestures([withLm("None", hand([true, true, true, false]))]);
+    expect(r.gesture).toBe("tres");
+    expect(r.raw).toBe("3 dedos");
+  });
+
+  it("acepta el 3 a la mexicana (pulgar + índice + medio)", () => {
+    const r = readGestures([withLm("None", hand([true, true, false, false], true))]);
+    expect(r.gesture).toBe("tres");
+  });
+
+  it("una forma robusta del modelo GANA al conteo (no se pisa la palma con 3)", () => {
+    // Si el modelo dijo Open_Palm con confianza, eso manda aunque el conteo dé otra cosa.
+    const r = readGestures([withLm("Open_Palm", hand([true, true, true, false]), 0.95)]);
+    expect(r.gesture).toBe("palma");
+  });
+
+  it("dos dedos NO se cuentan como tres", () => {
+    const r = readGestures([withLm("None", hand([true, true, false, false]))]);
+    expect(r.gesture).toBeNull();
   });
 });

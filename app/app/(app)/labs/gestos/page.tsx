@@ -130,7 +130,7 @@ export default function LabGestosPage() {
           <div className="rounded-card border border-line bg-surface p-4 shadow-soft">
             <p className="text-caption font-semibold text-muted">Qué hace cada seña</p>
             <ul className="mt-2 space-y-1 text-caption text-muted">
-              <li><b className="text-fg">☝️ índice</b> · tarea 1 · <b className="text-fg">✌️ dos</b> · tarea 2 · <b className="text-fg">🤟 cuernitos</b> · tarea 3</li>
+              <li><b className="text-fg">☝️ índice</b> · tarea 1 · <b className="text-fg">✌️ dos</b> · tarea 2 · <b className="text-fg">3️⃣ tres dedos</b> · tarea 3</li>
               <li><b className="text-fg">🖐️ palma</b> · pausa lo que corre</li>
               <li><b className="text-fg">👍 pulgar</b> · sigue con lo último</li>
             </ul>

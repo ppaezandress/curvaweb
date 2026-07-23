@@ -9,7 +9,7 @@ escribiendo a mano o lejos de la computadora.
 |---|---|
 | ☝️ Índice arriba | Tarea 1 |
 | ✌️ Dos dedos | Tarea 2 |
-| 🤟 Cuernitos | Tarea 3 |
+| 3️⃣ Tres dedos | Tarea 3 |
 | 🖐️ Palma abierta | Pausar |
 | 👍 Pulgar arriba | Seguir con lo último |
 
@@ -26,9 +26,11 @@ entrenada con manos reales que clasifica formas de mano y devuelve su propia con
 
 Esto reemplazó a una versión anterior que **contaba dedos a mano** con geometría y ~68 umbrales
 ajustados a ojo. Contar "3 vs 4 dedos vs palma" en una webcam es genuinamente frágil, y por eso
-fallaba. El modelo entrenado no cuenta dedos: reconoce formas distintas (Open_Palm, Victory,
-Pointing_Up, Thumb_Up, ILoveYou), que es un problema mucho más sólido. Por eso el vocabulario son
-esas cinco formas y no un conteo del 1 al 4.
+fallaba. El modelo entrenado reconoce formas distintas (Open_Palm, Victory, Pointing_Up, Thumb_Up) de
+forma muy sólida. La ÚNICA excepción es "tres dedos": el modelo no tiene esa categoría, así que
+se resuelve contando los puntos de la mano que el propio modelo devuelve — un solo gesto por
+conteo, no la maraña de antes, y solo cuando el modelo no reconoció una de sus formas. Vale
+tanto el 3 con índice+medio+anular como el 3 a la mexicana (pulgar+índice+medio).
 
 ## La cámara
 
