@@ -2228,8 +2228,14 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
   const cajasReparto = cajas.filter((c) => c.caja !== "isr");
   const isrMonto = cajas.find((c) => c.caja === "isr")?.total || 0;
   const conIVA = p.ivaModo === "incluido" || (p.ivaModo !== "sin" && !!p.conIVA);
-  const ivaMonto = conIVA ? Math.round(pago.monto * IVA) : 0;                 // el IVA que le cobraste al cliente (al SAT)
-  const totalConIVA = pago.monto + ivaMonto;                                  // lo que de verdad te transfirió el cliente
+  // Total con IVA de ESTE pago (lo que te transfirió el cliente). Si es un pago MENSUAL
+  // del plan (nota "Mes N"), usamos el mensual REDONDO del contrato (total con IVA ÷
+  // plazo = $50,000), no base×1.16 — que daría $49,999 por el redondeo de la base
+  // ($43,103 en vez de $43,103.45). Para pagos sueltos, sí reconstruimos base×1.16.
+  const plazoN = Math.max(1, Math.floor(p.plazoMeses || 1));
+  const esMensual = /^Mes \d+$/.test(pago.nota || "");
+  const totalConIVA = !conIVA ? pago.monto : esMensual ? Math.round(Math.round(totalCliente(p)) / plazoN) : Math.round(pago.monto * (1 + IVA));
+  const ivaMonto = totalConIVA - pago.monto;                                  // el IVA que le cobraste al cliente (al SAT)
   const repartible = pago.monto - isrMonto;                                   // lo que baja a las cajas
   const hayImpuestos = ivaMonto > 0.5 || isrMonto > 0.5;
   const [copied, setCopied] = useState(false);
