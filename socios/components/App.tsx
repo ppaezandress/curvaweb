@@ -1213,22 +1213,28 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
   // Comisión y bono del Núcleo se pintan como franjas propias (no dentro de Equipo) para
   // que barra y desglose sean idénticas franja por franja. Todo suma el ingreso exacto.
   const isrRes = active.descontarISR && P.imp > 0 ? isrReservaDe(r.t, P) : 0;
-  const netoSocios = r.utilKept - isrRes;                                    // utilidad de socios ya sin ISR
   const isrA = isrRes * P.split / 100, isrB = isrRes * (1 - P.split / 100);  // ISR que le toca a cada socio
-  // "A dónde va cada peso" — DESPUÉS de ISR: mismas franjas que el desglose (Equipo =
-  // bolsa − sombrero; el sombrero va en Ahorro CURVA), y la utilidad de socios YA sin ISR,
-  // para que TODO sume lo que de verdad se reparte (ingreso − ISR) = idéntico al desglose.
-  const equipoNeto = r.bolsaOut - r.disc + r.manualDelta;
+  // MODELO ÚNICO: cada persona muestra su TAKE COMPLETO NETO (trabajo + utilidad − ISR).
+  // Equipo = SOLO el Núcleo (el pago de trabajo de un socio va en SU franja, no en Equipo).
+  // Así el gráfico, el desglose y "cuánto cobra cada quien" muestran los MISMOS números y
+  // todo suma lo que de verdad se reparte (ingreso − ISR).
+  let equipoNucleo = r.manualDelta;                                          // Núcleo (sueldos) + ajustes a mano
+  Object.values(r.people).forEach((pe) => { if (!isSocio(pe.quien)) equipoNucleo += pe.trabajo; });
+  const socioANeto = r.socioA - isrA, socioBNeto = r.socioB - isrB;          // take completo de cada socio, ya sin ISR
+  const marginOpNeto = r.marginOp - isrRes;                                  // lo que le queda a CURVA, ya sin ISR
   const segs = [
-    { k: "Equipo", v: equipoNeto, c: "--c-equipo" },
+    { k: "Equipo", v: equipoNucleo, c: "--c-equipo" },
     { k: "Bono Núcleo", v: r.poolAmt, c: "--c-reserva" },
     { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
     { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
     { k: "Ahorro CURVA", v: r.banca, c: "--c-banca" },
-    { k: P.nombreA, v: r.sAutil - isrA, c: "--c-andres" }, { k: P.nombreB, v: r.sButil - isrB, c: "--c-balmo" },
+    { k: P.nombreA, v: socioANeto, c: "--c-andres" }, { k: P.nombreB, v: socioBNeto, c: "--c-balmo" },
   ].filter((s) => s.v > 0.5);
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
-  const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
+  // Cada socio, ya NETO de su ISR (el ISR sale de su utilidad, no del pago del Núcleo),
+  // para que "cuánto cobra cada quien" coincida con el gráfico y el desglose.
+  const rows = Object.values(r.people).map((x) => x.quien === "socioA" ? { ...x, extra: x.extra - isrA } : x.quien === "socioB" ? { ...x, extra: x.extra - isrB } : x)
+    .filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
   // "Por mes" = la MISMA comparación (todos lado a lado), pero el monto de cada quien
   // ÷ meses (promedio mensual). No es el mes-a-mes por persona (ese siempre repite el
   // mismo número con reparto parejo, no sirve para comparar). Decisión Andrés 2026-07-19.
@@ -1408,9 +1414,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
           <div className="card">
             <h2>El equipo del proyecto <span className="tip" data-tip="Elige a cada persona del equipo — la app ya sabe si es socio o Núcleo. Agrega o renombra gente en Reglas › Personas."><Info /></span></h2>
             <div className={"team-impact" + (hayManual ? " on" : "")}>
-              <div className="ti-item"><span>CURVA{porMes ? "/mes" : ""}</span><b><span key={fmtMXN((r.marginOp - r.manualDelta) * f)} className="num-anim">{fmtMXN((r.marginOp - r.manualDelta) * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.marginOp * f)}</em>}</div>
-              <div className="ti-item"><span>{P.nombreA}</span><b style={{ color: r.socioA < -0.5 ? "var(--danger)" : "var(--c-andres)" }}><span key={fmtMXN(r.socioA * f)} className="num-anim">{fmtMXN(r.socioA * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioA * f)}</em>}</div>
-              <div className="ti-item"><span>{P.nombreB}</span><b style={{ color: r.socioB < -0.5 ? "var(--danger)" : "var(--c-balmo)" }}><span key={fmtMXN(r.socioB * f)} className="num-anim">{fmtMXN(r.socioB * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioB * f)}</em>}</div>
+              <div className="ti-item"><span>CURVA{porMes ? "/mes" : ""}</span><b><span key={fmtMXN((marginOpNeto - r.manualDelta) * f)} className="num-anim">{fmtMXN((marginOpNeto - r.manualDelta) * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.marginOp * f)}</em>}</div>
+              <div className="ti-item"><span>{P.nombreA}</span><b style={{ color: socioANeto < -0.5 ? "var(--danger)" : "var(--c-andres)" }}><span key={fmtMXN(socioANeto * f)} className="num-anim">{fmtMXN(socioANeto * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioA * f)}</em>}</div>
+              <div className="ti-item"><span>{P.nombreB}</span><b style={{ color: socioBNeto < -0.5 ? "var(--danger)" : "var(--c-balmo)" }}><span key={fmtMXN(socioBNeto * f)} className="num-anim">{fmtMXN(socioBNeto * f)}</span></b>{hayManual && <em>era {fmtMXN(rBase.socioB * f)}</em>}</div>
             </div>
             {active.members.map((m, i) => {
               const val = personVal(m);
@@ -1467,9 +1473,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             </div>
           )}
           <div className="tiles rise">
-            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN((r.marginOp - r.manualDelta) * f)} p={`${pctFmt((r.marginOp - r.manualDelta) / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Ahorro CURVA) después de pagarle al equipo (incluye ajustes manuales), la comisión y apartar la caja del proyecto." />
-            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(r.socioA * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
-            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(r.socioB * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
+            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN((marginOpNeto - r.manualDelta) * f)} p={`${pctFmt((marginOpNeto - r.manualDelta) / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Ahorro CURVA), ya sin ISR, después de pagarle al equipo (incluye ajustes manuales), la comisión y apartar la caja del proyecto." />
+            <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(socioANeto * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto, ya sin ISR: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
+            <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(socioBNeto * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto, ya sin ISR: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
             <Tile k="k-banca" l={porMes ? "Ahorro CURVA / mes" : "Al Ahorro CURVA"} v={fmtMXN(r.banca * f)} p={`el colchón${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
           </div>
           <div className="card">
@@ -1485,7 +1491,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             </p>}
             <div className="health" style={{ marginTop: 16 }}>
               <span className={"hpill " + (Math.abs(leak) < 1 ? "ok" : "bad")}>{Math.abs(leak) < 1 ? "Cuadra a $0" : "Descuadre"}</span>
-              <span className={"hpill " + ((r.marginOp - r.manualDelta) >= (r.bolsaOut + r.manualDelta) ? "ok" : "warn")}>{(r.marginOp - r.manualDelta) >= (r.bolsaOut + r.manualDelta) ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
+              <span className={"hpill " + ((marginOpNeto - r.manualDelta) >= (r.bolsaOut + r.manualDelta) ? "ok" : "warn")}>{(marginOpNeto - r.manualDelta) >= (r.bolsaOut + r.manualDelta) ? "CURVA ≥ equipo" : "Equipo se lleva más"}</span>
               <span className={"hpill " + (mr >= 0.4 ? "ok" : mr >= 0.25 ? "warn" : "bad")}>{mr >= 0.4 ? "Sano" : mr >= 0.25 ? "Justo" : "Bajo"} ({pctFmt(mr)})</span>
               <span className="tip" data-tip="Montos brutos (antes de ISR). El neto real está en el Panel y en Personas."><Info /></span>
             </div>
@@ -1503,17 +1509,14 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {bd("", "Ingreso del proyecto", r.t)}
                 {isrRes > 0.5 && bd("sub", `− ISR (${P.imp}% · RESICO, al SAT — no se reparte)`, -isrRes)}
                 {isrRes > 0.5 && bd("eq", "Queda para repartir (después de ISR)", r.t - isrRes)}
-                {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
-                {r.comisPaid > 0.5 && bd("sub", `− Comisión de origen → ${active.origenPersona || "quien lo trajo"}`, -r.comisPaid)}
-                {bd("eq", "Utilidad bruta", r.t - isrRes - (r.bolsaOut - r.disc) - r.comisPaid)}
-                {bd("sub", "− Caja del proyecto", -r.cajaProj)}
-                {bd("eq", "Utilidad operativa", r.t - isrRes - (r.bolsaOut - r.disc) - r.comisPaid - r.cajaProj)}
-                {r.banca > 0.5 && bd("sub", "− Ahorro CURVA (el % del margen + tu sombrero de socio)", -r.banca)}
+                {equipoNucleo > 0.5 && bd("sub", `− Equipo · sueldos del Núcleo (${pctFmt(equipoNucleo / (r.t || 1))})`, -equipoNucleo)}
                 {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
-                {Math.abs(r.manualDelta) > 0.5 && bd("sub", r.manualDelta > 0 ? "− Extra al equipo (a mano)" : "+ Menos sueldo al equipo (a mano)", -r.manualDelta)}
-                {bd("strong", `Utilidad a repartir (socios)${isrRes > 0.5 ? " · ya sin ISR" : ""}`, netoSocios)}
-                {bd("sub", `→ ${P.nombreA} (${P.split}%)`, netoSocios * P.split / 100)}
-                {bd("sub", `→ ${P.nombreB} (${100 - P.split}%)`, netoSocios * (100 - P.split) / 100)}
+                {r.comisPaid > 0.5 && bd("sub", `− Comisión de origen → ${active.origenPersona || "quien lo trajo"}`, -r.comisPaid)}
+                {r.cajaProj > 0.5 && bd("sub", "− Caja del proyecto", -r.cajaProj)}
+                {r.banca > 0.5 && bd("sub", "− Ahorro CURVA (el % del margen + el sombrero de socio)", -r.banca)}
+                {bd("strong", `Para los socios · su trabajo + utilidad${isrRes > 0.5 ? " · ya sin ISR" : ""}`, socioANeto + socioBNeto)}
+                {bd("sub", `→ ${P.nombreA}`, socioANeto)}
+                {bd("sub", `→ ${P.nombreB}`, socioBNeto)}
               </div>
               <div className="card">
                 <h2>A dónde va cada peso{isrRes > 0.5 ? " · después de ISR" : ""}{porMes ? " · al mes" : ""}</h2>
@@ -1529,9 +1532,9 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
       {reglasDrawer && (
         <ReglasDrawer st={st} update={update} setSec={setSec} onClose={() => setReglasDrawer(false)}
           preview={[
-            { l: porMes ? "CURVA / mes" : "CURVA se queda", v: fmtMXN(r.marginOp * f), c: "--pos" },
-            { l: P.nombreA, v: fmtMXN(r.socioA * f), c: "--c-andres" },
-            { l: P.nombreB, v: fmtMXN(r.socioB * f), c: "--c-balmo" },
+            { l: porMes ? "CURVA / mes" : "CURVA se queda", v: fmtMXN(marginOpNeto * f), c: "--pos" },
+            { l: P.nombreA, v: fmtMXN(socioANeto * f), c: "--c-andres" },
+            { l: P.nombreB, v: fmtMXN(socioBNeto * f), c: "--c-balmo" },
             { l: porMes ? "Ahorro CURVA / mes" : "Al Ahorro CURVA", v: fmtMXN(r.banca * f), c: "--c-banca" },
           ]} />
       )}
@@ -1587,9 +1590,14 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec, setToas
   const conIVA = active.ivaModo === "incluido" || (active.ivaModo !== "sin" && !!active.conIVA);
   const base = active.ticket;
   const total = conIVA ? Math.round(base * (1 + IVA) * 100) / 100 : base;
-  const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
-  const mr = (r.marginOp - r.manualDelta) / t;           // margen que se queda CURVA
-  const curva = r.marginOp - r.manualDelta;
+  // Todo el cotizador va DESPUÉS de ISR (el ISR no se reparte), igual que la Calculadora.
+  const isrDe = (rr: ReturnType<typeof compute>) => active.descontarISR && P.imp > 0 ? isrReservaDe(rr.t, P) : 0;
+  const isrRes = isrDe(r), isrA = isrRes * P.split / 100, isrB = isrRes * (1 - P.split / 100);
+  const socioANeto = r.socioA - isrA, socioBNeto = r.socioB - isrB;
+  const rows = Object.values(r.people).map((x) => x.quien === "socioA" ? { ...x, extra: x.extra - isrA } : x.quien === "socioB" ? { ...x, extra: x.extra - isrB } : x)
+    .filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
+  const curva = r.marginOp - r.manualDelta - isrRes;     // lo que se queda CURVA, ya sin ISR
+  const mr = curva / t;                                  // margen que se queda CURVA
 
   // Explorador: recalcula el reparto a varios precios (misma base ± %). Al hacer
   // clic fija ese precio. Así ves de un vistazo el costo de cobrar de menos.
@@ -1597,7 +1605,8 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec, setToas
   const explor = puntos.map((d) => {
     const nt = Math.max(0, Math.round(base * (1 + d)));
     const rr = compute(membersResolved({ ...active, ticket: nt }, st.roster, P), P);
-    return { d, nt, tot: conIVA ? Math.round(nt * (1 + IVA)) : nt, curva: rr.marginOp - rr.manualDelta, mr: (rr.marginOp - rr.manualDelta) / (rr.t || 1) };
+    const cv = rr.marginOp - rr.manualDelta - isrDe(rr);
+    return { d, nt, tot: conIVA ? Math.round(nt * (1 + IVA)) : nt, curva: cv, mr: cv / (rr.t || 1) };
   });
 
   // ── Selector de personas (mismo patrón que la Calculadora) ──
@@ -1674,7 +1683,7 @@ function Cotizador({ st, active, clientes, update, updateActive, setSec, setToas
         <div className="cotz-side keeps">
           <span className="cotz-lbl">CURVA se queda</span>
           <span className="cotz-big"><span key={fmtMXN(curva)} className="num-anim">{fmtMXN(curva)}</span></span>
-          <span className="cotz-sub">{pctFmt(mr)} del ingreso · {P.nombreA} {fmtMXN(r.socioA)} · {P.nombreB} {fmtMXN(r.socioB)}</span>
+          <span className="cotz-sub">{pctFmt(mr)} del ingreso · {P.nombreA} {fmtMXN(socioANeto)} · {P.nombreB} {fmtMXN(socioBNeto)}</span>
         </div>
       </div>
 
