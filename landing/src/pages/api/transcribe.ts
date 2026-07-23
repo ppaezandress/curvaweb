@@ -14,7 +14,9 @@ function json(data: unknown, status = 200) {
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!sameOrigin(request)) return json({ error: 'Origen no permitido' }, 403);
-  const ip = (request.headers.get('x-forwarded-for') || clientAddress || 'unknown').split(',')[0].trim();
+  // clientAddress = IP confiable de Vercel; el x-forwarded-for del cliente es
+  // falsificable, solo de respaldo tomando el valor más a la derecha.
+  const ip = (clientAddress || request.headers.get('x-forwarded-for')?.split(',').pop() || 'unknown').trim();
   const rl = await rateLimit(`transcribe:ip:${ip}`, 40, 3600);
   if (!rl.ok) return json({ error: 'Demasiados audios en poco tiempo.' }, 429);
 

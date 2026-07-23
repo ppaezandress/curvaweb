@@ -35,7 +35,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!parsed.success) return json({ error: 'Datos inválidos. Revisa el correo.' }, 400);
   const { email, plantilla, nombre, monto } = parsed.data;
 
-  const ip = (request.headers.get('x-forwarded-for') || clientAddress || 'unknown').split(',')[0].trim();
+  // clientAddress = IP confiable de Vercel; el x-forwarded-for del cliente es
+  // falsificable, solo de respaldo tomando el valor más a la derecha.
+  const ip = (clientAddress || request.headers.get('x-forwarded-for')?.split(',').pop() || 'unknown').trim();
   const rl = await rateLimit(`checkout:ip:${ip}`, 20, 3600);
   if (!rl.ok) return json({ error: 'Demasiados intentos. Espera un momento.' }, 429);
 

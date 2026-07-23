@@ -37,10 +37,16 @@
   /* Acento de confianza — cian (antes "gold" azul) */
   --color-gold: #38bdf8;
 
-  /* Acento POTENTE — naranja (energía, CTAs de alto impacto) */
+  /* Acento POTENTE — naranja (energía, CTAs de alto impacto).
+     700/800 son tonos profundos accesibles: pasan WCAG AA de texto/botón
+     sobre blanco (el #f97316 vibrante NO lo hace: ~2.9:1). Úsalos para texto
+     de acento y botones sobre superficies claras; el vibrante, para fondos
+     oscuros, gradientes y orbes. */
   --color-flare-300: #fdba74;
   --color-flare:     #f97316;
   --color-flare-600: #ea580c;
+  --color-flare-700: #c2410c; /* AA sobre blanco ~5.2:1 (texto/CTA) */
+  --color-flare-800: #9a3412; /* AAA sobre blanco ~7.3:1 (hover/deep) */
 
   /* Acento IA — violeta eléctrico (marca "IA / Claude": composer, clases de Claude) */
   --color-ai-300: #c4b5fd;
@@ -1156,7 +1162,7 @@ html:not(.js) .od-reel {
 .pg-num {
   display: inline-block; font-family: var(--font-display, inherit);
   font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums;
-  color: var(--color-sand-400);
+  color: var(--color-sand-500);
   transition: color var(--pg-dur) var(--ease-pitch); transition-delay: var(--stagger);
 }
 #pg-toggle:checked ~ .pg-list .pg-num { color: var(--pg-blue); }
