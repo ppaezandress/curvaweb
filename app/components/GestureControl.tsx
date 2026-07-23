@@ -11,7 +11,7 @@ import { GestureHud, GestureError, GestureToggleButton } from "@/components/Gest
 import { toast } from "@/lib/toast";
 import { playForAction, unlockAudio } from "@/lib/gestures/sound";
 import {
-  GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, hasOnboarded,
+  GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn,
 } from "@/lib/gesture-prefs";
 
 // Host del control por gestos, montado en el layout. Si la persona no lo activó, este
@@ -21,14 +21,11 @@ export function GestureControl() {
   const { openTasks, active, switchTo, pause } = useApp();
   const { taskById } = useData();
   const [optIn, setOptIn] = useState(false);
-  // ¿La persona ya conoce la función? Solo entonces aparece el botón flotante para prenderla —
-  // no le metemos un botón de cámara al home de quien nunca la activó.
-  const [known, setKnown] = useState(false);
 
   // El opt-in vive en el dispositivo (no se sincroniza a ningún lado: nadie más tiene por
   // qué saber quién usa esto). Se escucha el evento para reaccionar a cualquier cambio.
   useEffect(() => {
-    const read = () => { setOptIn(isGestureOptIn()); setKnown(hasOnboarded() || isGestureOptIn()); };
+    const read = () => setOptIn(isGestureOptIn());
     read();
     window.addEventListener(GESTURE_ENABLED_EVENT, read);
     return () => window.removeEventListener(GESTURE_ENABLED_EVENT, read);
@@ -138,9 +135,6 @@ export function GestureControl() {
     if (optIn && status === "off") start();
     if (!optIn && status !== "off") stop();
   }, [optIn, status, start, stop]);
-
-  // Quien nunca activó la función no ve nada (ni botón): se descubre en Ajustes, como hasta hoy.
-  if (!known) return null;
 
   return (
     <AnimatePresence mode="wait">
