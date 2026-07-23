@@ -36,8 +36,11 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   const { email, messages } = parsed.data;
   if (messages[messages.length - 1].role !== 'user') return json({ error: 'Falta tu mensaje.' }, 400);
 
-  // Anti-abuso: por correo y por IP.
-  const ip = (request.headers.get('x-forwarded-for') || clientAddress || 'unknown').split(',')[0].trim();
+  // Anti-abuso: por correo y por IP. Usamos clientAddress (IP confiable que
+  // inyecta Vercel); el x-forwarded-for del cliente es falsificable, así que
+  // solo lo usamos de respaldo tomando el valor MÁS a la derecha (el que añade
+  // el proxy de Vercel), no el de más a la izquierda que controla el atacante.
+  const ip = (clientAddress || request.headers.get('x-forwarded-for')?.split(',').pop() || 'unknown').trim();
   const [byEmail, byIp] = await Promise.all([
     rateLimit(`chat:email:${email}`, 30, 3600),
     rateLimit(`chat:ip:${ip}`, 60, 3600),

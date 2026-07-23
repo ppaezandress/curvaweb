@@ -21,18 +21,20 @@ import { waLink as buildWa } from '../../data/site';
 const waLink = buildWa();
 
 // ── DOS MUNDOS. Digital = red/sistemas, cobalto+cian (frío, tech). Negocio =
-// estructura/organización, violeta profundo (cálido, humano). Todo lo visual se
-// deriva de este flag; las CSS vars del mundo viven en el <style> scoped.
+// estructura/organización, naranja cálido (energía, humano). Paleta "Cobalto &
+// aire": el morado queda reservado SOLO para IA, así que Negocio usa el acento
+// flare. Todo lo visual se deriva de este flag; las CSS vars del mundo viven en
+// el <style> scoped.
 const isEmber = f.accent === 'ember';
 const world = isEmber ? 'digital' : 'negocio';
 
 // Acento de texto por mundo (contraste verificado):
-//   sobre oscuro → cian-300 #7dd3fc / violeta-300 #c4b5fd
-//   sobre claro  → cobalto #2563eb / violeta #7c3aed  (ambos AA sobre blanco)
-const darkAccent = isEmber ? 'text-jade-300' : 'text-ai-300';
-const lightAccent = isEmber ? 'text-ember' : 'text-ai';
-const ctaBtn = isEmber ? 'bg-ember hover:bg-ember-600' : 'bg-ai hover:bg-ai-600';
-const skipBg = isEmber ? 'focus:bg-ember' : 'focus:bg-ai';
+//   sobre oscuro → cian-300 #7dd3fc / flare-300 #fdba74
+//   sobre claro  → cobalto #2563eb / flare-700 #c2410c  (ambos AA sobre blanco)
+const darkAccent = isEmber ? 'text-jade-300' : 'text-flare-300';
+const lightAccent = isEmber ? 'text-ember' : 'text-flare-700';
+const ctaBtn = isEmber ? 'bg-ember hover:bg-ember-600' : 'bg-flare-700 hover:bg-flare-800';
+const skipBg = isEmber ? 'focus:bg-ember' : 'focus:bg-flare-700';
 const sceneLabel = isEmber ? 'Ver el sistema' : 'Ver la estructura';
 
 // Casos (solo el frente Digital los tiene): mapas por acento del caso.
@@ -77,7 +79,7 @@ const jsonLd = [
   <main id="contenido" tabindex="-1" class="cst-world" data-world={world}>
 
   <!-- ============================================================
-       HERO — editorial-kinético. Atmósfera del MUNDO (cobalto vs violeta).
+       HERO — editorial-kinético. Atmósfera del MUNDO (cobalto vs naranja).
        ============================================================ -->
   <section class="cst-shell surface-ink grain text-sand-50 relative pt-32 sm:pt-40 pb-24 sm:pb-32 px-6 sm:px-10 overflow-hidden">
     <div class="cst-orb cst-orb-1" aria-hidden="true"></div>
@@ -462,7 +464,7 @@ const jsonLd = [
 <style>
   /* ============================================================
      CONSULTORÍA — plantilla de frente, DOS MUNDOS.
-     El mundo (Digital cobalto / Negocio violeta) se selecciona con
+     El mundo (Digital cobalto / Negocio naranja) se selecciona con
      [data-world] en .cst-world y solo cambia CSS vars.
      ============================================================ */
 
@@ -479,20 +481,20 @@ const jsonLd = [
     --w-sky: transparent;
   }
   .cst-world[data-world="negocio"] {
-    --w1: #7c3aed;
-    --w2: #a855f7;
-    --w-soft: #c4b5fd;
-    --w-deep: #6d28d9;
-    --w-grad: linear-gradient(110deg, #6d28d9, #a855f7);
+    --w1: #f97316;
+    --w2: #fb923c;
+    --w-soft: #fdba74;
+    --w-deep: #c2410c;
+    --w-grad: linear-gradient(110deg, #c2410c, #fb923c);
     --w-sky:
-      radial-gradient(58% 72% at 6% -6%, rgba(124, 58, 237, 0.6), transparent 55%),
-      radial-gradient(50% 60% at 102% 6%, rgba(168, 85, 247, 0.42), transparent 58%),
-      radial-gradient(72% 82% at 14% 106%, rgba(109, 40, 217, 0.55), transparent 60%),
-      radial-gradient(60% 70% at 98% 100%, rgba(196, 181, 253, 0.2), transparent 60%),
-      linear-gradient(160deg, rgba(40, 14, 92, 0.55) 0%, rgba(24, 10, 58, 0.14) 62%);
+      radial-gradient(58% 72% at 6% -6%, rgba(249, 115, 22, 0.55), transparent 55%),
+      radial-gradient(50% 60% at 102% 6%, rgba(251, 146, 60, 0.4), transparent 58%),
+      radial-gradient(72% 82% at 14% 106%, rgba(194, 65, 12, 0.5), transparent 60%),
+      radial-gradient(60% 70% at 98% 100%, rgba(253, 186, 116, 0.2), transparent 60%),
+      linear-gradient(160deg, rgba(92, 40, 10, 0.55) 0%, rgba(58, 26, 8, 0.14) 62%);
   }
 
-  /* Capa de atmósfera del mundo sobre surface-ink (para Negocio domina el violeta) */
+  /* Capa de atmósfera del mundo sobre surface-ink (para Negocio domina el naranja) */
   .cst-shell { position: relative; isolation: isolate; }
   .cst-world[data-world="negocio"] .cst-shell::before {
     content: "";

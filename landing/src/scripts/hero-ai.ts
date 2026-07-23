@@ -163,10 +163,17 @@ export function initHeroAI(): void {
       const a = document.createElement('a');
       a.href = l.href;
       a.className = 'hero-ai-route';
-      a.innerHTML =
-        '<span class="hero-ai-route-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>' +
-        `<span>${l.label}</span>` +
-        '<svg class="hero-ai-route-arrow w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3"/></svg>';
+      // Iconos estáticos por innerHTML; el label del LLM va por textContent (anti-XSS).
+      const ico = document.createElement('span');
+      ico.className = 'hero-ai-route-ico';
+      ico.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+      const labelEl = document.createElement('span');
+      labelEl.textContent = l.label;
+      const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      arrow.setAttribute('class', 'hero-ai-route-arrow w-4 h-4');
+      arrow.setAttribute('viewBox', '0 0 24 24');
+      arrow.innerHTML = '<path d="M13.5 4.5L21 12l-7.5 7.5M21 12H3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
+      a.append(ico, labelEl, arrow);
       list.appendChild(a);
     }
     wrap.appendChild(list);

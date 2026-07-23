@@ -81,7 +81,12 @@ export function initChat() {
       const a = document.createElement('a');
       a.href = l.href;
       a.className = 'inline-flex items-center gap-1.5 text-sm font-semibold text-ember border border-ember/30 bg-ember/10 rounded-full px-3.5 py-1.5 hover:bg-ember/20 transition-colors';
-      a.innerHTML = `${l.label} <span aria-hidden="true">→</span>`;
+      // label viene del LLM: usar textContent (no innerHTML) para evitar XSS.
+      a.append(document.createTextNode(l.label + ' '));
+      const arrow = document.createElement('span');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      a.appendChild(arrow);
       wrap.appendChild(a);
     }
     row.appendChild(wrap);
