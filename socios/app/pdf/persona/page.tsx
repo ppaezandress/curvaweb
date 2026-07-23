@@ -137,8 +137,10 @@ export default function PdfPersona() {
               {/* 3 números clave */}
               <div className="pmr-stats">
                 <div className="pmr-stat"><span className="pmr-stat-l">Promedio al mes</span><b>{fmtMXN(prom)}</b></div>
-                <div className="pmr-stat"><span className="pmr-stat-l">Por venir ({futuros.length} {futuros.length === 1 ? "mes" : "meses"})</span><b style={{ color: "var(--cobalt)" }}>{fmtMXN(futuroTot)}</b></div>
-                <div className="pmr-stat"><span className="pmr-stat-l">Neto est. · ISR {netoPct}</span><b style={{ color: "var(--pos)" }}>{fmtMXN(a.neto)}</b></div>
+                {futuros.length > 0
+                  ? <div className="pmr-stat"><span className="pmr-stat-l">Por venir · {futuros.length} {futuros.length === 1 ? "mes" : "meses"}</span><b style={{ color: "var(--cobalt)" }}>{fmtMXN(futuroTot)}</b></div>
+                  : <div className="pmr-stat"><span className="pmr-stat-l">Total del periodo</span><b>{fmtMXN(a.total)}</b></div>}
+                <div className="pmr-stat"><span className="pmr-stat-l">Neto estimado{esSoc(a.quien) ? ` · ISR ${netoPct}` : ""}</span><b style={{ color: "var(--pos)" }}>{fmtMXN(a.neto)}</b></div>
               </div>
 
               {/* Línea de tiempo mes a mes */}
@@ -191,7 +193,7 @@ export default function PdfPersona() {
               <div className="pmr-outlook">
                 {futuros.length > 0
                   ? <>En los próximos <b>{futuros.length} {futuros.length === 1 ? "mes" : "meses"}</b> vas a ganar <b>{fmtMXN(futuroTot)}</b> más. Tu trabajo con CURVA llega hasta <b>{mesLabel(finProy)}</b>.</>
-                  : <>Este mes cierras tus proyectos actuales. Vienen más 🚀</>}
+                  : <>Este mes cierras tus proyectos actuales. Cuando entren nuevos, aquí los verás.</>}
               </div>
 
               <div className="pdf-foot">
