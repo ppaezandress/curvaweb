@@ -266,6 +266,7 @@ export default function LabGestosPage() {
             </div>
             <p className="mt-1.5 text-caption text-muted">
               {!running ? "Enciende la cámara para medir."
+                : stats.hint ? <><b className="text-fg">{stats.hint}</b> — así entra.</>
                 : stats.quality === 0 ? "No veo ninguna mano."
                 : stats.hint ? <><b className="text-fg">{stats.hint}</b> — así entra más rápido.</>
                 : "Perfecto: así se confirma en el tiempo mínimo."}

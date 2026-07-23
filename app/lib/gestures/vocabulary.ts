@@ -194,11 +194,33 @@ export function handScale(lm: Landmark[]): number {
   return dist(lm[WRIST], lm[9]);
 }
 
-// ¿Está la mano entera dentro del cuadro? Una mano cortada por el borde da conteos falsos
-// (los dedos que se salen "desaparecen"), así que mejor no adivinar.
-export function handFullyVisible(lm: Landmark[], margin = 0.02): boolean {
+/**
+ * ¿Se ve lo suficiente de la mano para decidir?
+ *
+ * Antes se exigía que los 21 puntos estuvieran dentro del cuadro, y eso chocaba de frente con
+ * el otro requisito: acercar la mano a la cámara. La palma abierta ocupa mucho más espacio que
+ * uno o dos dedos, así que al acercarla SIEMPRE se sale alguna punta — y la seña se descartaba
+ * entera. Era la razón de que la pausa casi nunca entrara.
+ *
+ * Ahora se pide que esté completo lo que de verdad se usa para contar: la muñeca, los nudillos
+ * y las puntas de los dedos. Que un nudillo intermedio roce el borde no invalida nada.
+ */
+const CORE_POINTS = [0, 1, 2, 5, 9, 13, 17]; // muñeca, base del pulgar y los cuatro nudillos
+const TIP_POINTS = [4, 8, 12, 16, 20]; // las cinco puntas
+/** Cuántas puntas pueden salirse del cuadro sin invalidar la lectura. */
+const TIPS_ALLOWED_OUT = 1;
+
+function inside(p: Landmark, margin: number): boolean {
+  return p.x > margin && p.x < 1 - margin && p.y > margin && p.y < 1 - margin;
+}
+
+export function handFullyVisible(lm: Landmark[], margin = 0.01): boolean {
   if (!lm || lm.length < 21) return false;
-  return lm.every((p) => p.x > margin && p.x < 1 - margin && p.y > margin && p.y < 1 - margin);
+  // El esqueleto de la palma sí tiene que verse entero: de ahí salen el tamaño y la orientación.
+  if (!CORE_POINTS.every((i) => inside(lm[i], margin))) return false;
+  // Y casi todas las puntas: se tolera que una roce el borde.
+  const tipsOut = TIP_POINTS.filter((i) => !inside(lm[i], margin)).length;
+  return tipsOut <= TIPS_ALLOWED_OUT;
 }
 
 // Cuenta CUÁNTOS dedos hay levantados, sin importar cuáles.

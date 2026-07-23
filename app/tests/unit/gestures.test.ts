@@ -408,3 +408,32 @@ describe("dos palmas", () => {
     expect(gestureFromHands([])).toBeNull();
   });
 });
+
+// ── La palma tiene que caber ────────────────────────────────────────────────────────────
+// Caso reportado en producción: "la palma no la agarra". Chocaban dos reglas mías — pedir que
+// la mano se acerque a la cámara y, a la vez, que los 21 puntos estén dentro del cuadro. La
+// palma abierta ocupa mucho más que uno o dos dedos, así que al acercarla siempre se salía
+// alguna punta y la seña se descartaba entera.
+describe("encuadre de la palma", () => {
+  const moverPunta = (lm: Landmark[], idx: number, dy: number): Landmark[] =>
+    lm.map((p, i) => (i === idx ? { ...p, y: p.y + dy } : p));
+
+  it("una punta que roza el borde ya no invalida la seña", () => {
+    // La punta del meñique se sale por arriba, como al acercar la palma abierta.
+    const casi = moverPunta(HANDS.palma, 20, -0.75);
+    expect(casi[20].y).toBeLessThan(0); // de verdad quedó fuera
+    expect(gestureFrom(casi)).toBe("palma");
+  });
+
+  it("pero si se salen varias puntas ya no se adivina", () => {
+    let fuera = moverPunta(HANDS.palma, 20, -0.75);
+    fuera = moverPunta(fuera, 16, -0.75);
+    expect(gestureFrom(fuera)).toBeNull();
+  });
+
+  it("el esqueleto de la palma sí tiene que verse entero", () => {
+    // Si se sale un nudillo, se pierden el tamaño y la orientación: no hay nada que hacer.
+    const sinNudillo = moverPunta(HANDS.palma, 9, -0.8);
+    expect(gestureFrom(sinNudillo)).toBeNull();
+  });
+});

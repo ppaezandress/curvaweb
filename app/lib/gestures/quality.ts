@@ -15,9 +15,8 @@
 //
 // Con la nota, el estabilizador puede ser listo: una seña impecable se confirma en medio
 // segundo, una regular pide más tiempo, y una mala no avanza nunca. Se gana en las dos puntas.
-import { fingerClarity, handScale, type Landmark } from "@/lib/gestures/vocabulary";
+import { fingerClarity, handScale, handFullyVisible, currentThresholds, type Landmark } from "@/lib/gestures/vocabulary";
 import { palmFacing, palmFlatness, MIN_FACING } from "@/lib/gestures/intent";
-import { currentThresholds } from "@/lib/gestures/vocabulary";
 
 export type QualityInput = {
   landmarks: Landmark[];
@@ -34,6 +33,8 @@ export type Quality = {
   facing: number;
   steadiness: number;
   closeness: number;
+  /** false = la mano no cabe en el encuadre y no se puede contar bien. */
+  visible: boolean;
 };
 
 /** Debajo de esto la evidencia es tan pobre que el cuadro se ignora. */
@@ -61,8 +62,15 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
   // tenga — no te está hablando a ti. Aquí mueren el celular en la mano y la mano en la cara.
   const scale = handScale(landmarks);
   const minPresent = currentThresholds().minPresentScale;
+
+  // Si la mano no cabe, no hay nada que contar — y hay que DECIRLO, porque el remedio es el
+  // contrario al de casi todo lo demás: aquí toca alejarse, no acercarse.
+  if (!handFullyVisible(landmarks)) {
+    return { score: 0, clarity: 0, facing: 0, steadiness: 0, closeness: clamp01(scale / minPresent), visible: false };
+  }
+
   if (scale < minPresent) {
-    return { score: 0, clarity: 0, facing: 0, steadiness: 0, closeness: scale / minPresent };
+    return { score: 0, clarity: 0, facing: 0, steadiness: 0, closeness: scale / minPresent, visible: true };
   }
 
   const clarity = fingerClarity(landmarks);
@@ -86,7 +94,7 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
     0.10 * closeness +
     0.05 * model;
 
-  return { score: clamp01(score), clarity, facing, steadiness, closeness };
+  return { score: clamp01(score), clarity, facing, steadiness, closeness, visible: true };
 }
 
 /** A partir de esta nota la seña se considera impecable y va a velocidad plena. */
@@ -121,7 +129,10 @@ export function advanceRate(score: number): number {
  */
 export function qualityHint(q: Quality): string | null {
   if (q.score >= 0.8) return null;
-  // La cercanía se avisa primero: es requisito, no una nota más.
+  // Primero lo que impide leer del todo, y en su orden: si no cabe hay que alejarse, y si
+  // cabe pero está lejos hay que acercarse. Confundir estos dos consejos sería peor que no dar
+  // ninguno.
+  if (!q.visible) return "Aléjate un poco: no cabe tu mano";
   if (q.closeness < 1) return "Acerca la mano a la cámara";
   const worst = [
     { v: q.clarity, tip: "Estira o recoge bien los dedos" },
