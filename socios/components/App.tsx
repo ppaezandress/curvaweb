@@ -498,11 +498,38 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   st.gastos.filter((g) => g.proyectoId && !g.esIngreso).forEach((g) => { const ym = mesDe(g.fecha); if (ym && porMes[ym]) porMes[ym].gastos += +g.m || 0; });
   Object.values(porMes).forEach((Mm) => { Mm.gastos += overhead; });
 
-  const allYM = Object.keys(porMes).sort();
+  // ── Agregación REAL: SOLO lo cobrado. Cada pago reparte compute()×(monto/ticket)
+  //    en el MES de su fecha. Refleja la realidad y se mueve cuando marcas un pago. ──
+  const porMesReal: Record<string, MesAgg> = {};
+  vivos.forEach((p) => {
+    const R = reglasDe(p, st.params);
+    const rr = compute(membersResolved(p, st.roster, R), R);
+    const t = rr.t || 1;
+    (p.pagos || []).forEach((pago) => {
+      const ym = mesDe(pago.fecha); if (!ym) return;
+      const monto = +pago.monto || 0; const frac = Math.min(1, monto / t);
+      const Mm = (porMesReal[ym] = porMesReal[ym] || nuevoMes());
+      Mm.banca += rr.banca * frac; Mm.caja += rr.cajaProj * frac; Mm.proys.add(p.id);
+      if (p.descontarISR) Mm.baseISR += monto;
+      Object.values(rr.people).forEach((pe) => {
+        const v = (pe.trabajo + pe.extra + (pe.comision || 0)) * frac;
+        if (isSocio(pe.quien)) { Mm.socios += v; Mm.utilSocios += pe.extra * frac; } else Mm.equipo += v;
+        const k = pe.nombre + "|" + pe.quien;
+        const a = (Mm.ppl[k] = Mm.ppl[k] || { nombre: pe.nombre, quien: pe.quien, trabajo: 0, extra: 0, comision: 0 });
+        a.trabajo += pe.trabajo * frac; a.extra += pe.extra * frac; a.comision += (pe.comision || 0) * frac;
+      });
+    });
+  });
+  st.gastos.filter((g) => g.proyectoId && !g.esIngreso).forEach((g) => { const ym = mesDe(g.fecha); if (ym && porMesReal[ym]) porMesReal[ym].gastos += +g.m || 0; });
+  Object.values(porMesReal).forEach((Mm) => { Mm.gastos += overhead; });
+
+  const [vista, setVista] = useState<"real" | "proy">("real"); // Real = lo cobrado (default) · Proy = lo que viene
+  const agg = vista === "real" ? porMesReal : porMes;
+  const allYM = Object.keys(agg).sort();
   const curYM = todayISO().slice(0, 7);
   const [ymSel, setYmSel] = useState<string>("");
   const selYM = allYM.includes(ymSel) ? ymSel : allYM.includes(curYM) ? curYM : (allYM[0] || curYM);
-  const M = porMes[selYM] || nuevoMes();
+  const M = agg[selYM] || nuevoMes();
   const ingresoMes = M.equipo + M.socios + M.banca + M.caja;
   // ISR = % sobre la facturación de los proyectos con "Descontar ISR" (base × tasa),
   // apartado del neto de socios. Antes se calculaba mal sobre la utilidad de socios.
@@ -518,13 +545,15 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   proysDelMes.forEach((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
 
   // ── Proyección acumulada (todos los proyectos vivos, a valor completo) ──
-  let sAndres = 0, sBalmo = 0, sEquipo = 0, sBancaAll = 0, sCobrado = 0, sTicket = 0, proysPorCobrar = 0;
+  let sAndres = 0, sBalmo = 0, sEquipo = 0, sBancaAll = 0, sCobrado = 0, sTicket = 0, proysPorCobrar = 0, faltaCobrar = 0;
   vivos.forEach((p) => {
     const rr = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params));
     sTicket += rr.t;
     const cobP = (p.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0);
     sCobrado += cobP;
-    if (cobP > 0.5 && cobP < rr.t - 0.5) proysPorCobrar++;
+    // "Por cobrar" = proyectos que YA arrancaron a cobrar pero les falta. La falta que se
+    // muestra es la de ESOS proyectos (no el total, que mezclaba cotizaciones sin cobrar).
+    if (cobP > 0.5 && cobP < rr.t - 0.5) { proysPorCobrar++; faltaCobrar += rr.t - cobP; }
     sBancaAll += rr.banca;
     Object.values(rr.people).forEach((a) => {
       const v = a.trabajo + a.extra + (a.comision || 0);
@@ -543,7 +572,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   // Flujo por mes (= ingreso del mes) y Cortes: derivados de porMes (todo devengado).
   const flujoVal = (x: MesAgg) => x.equipo + x.socios + x.banca + x.caja;
   const mesesFlujo = allYM.slice(0, 9);
-  const maxFlujo = Math.max(1, ...mesesFlujo.map((m) => flujoVal(porMes[m])));
+  const maxFlujo = Math.max(1, ...mesesFlujo.map((m) => flujoVal(agg[m])));
   const mesesCorte = allYM.slice(0, 12);
   const corteCols: [string, (x: MesAgg) => number][] = [
     ["Total", flujoVal], ["Equipo", (x) => x.equipo], ["Socios", (x) => x.socios],
@@ -552,14 +581,26 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
 
   return (
     <>
-      <div className="page-h"><div><h1>{yoNombre ? `Hola, ${yoNombre}` : "Panel"}</h1><p>El estado de CURVA, mes a mes. Elige el mes para ver sus números (proyectado según el plazo de cada proyecto).</p></div></div>
-      {allYM.length > 0 && (
-        <div className="proj-bar" style={{ flexWrap: "wrap" }}>
+      <div className="page-h"><div><h1>{yoNombre ? `Hola, ${yoNombre}` : "Panel"}</h1><p>El estado de CURVA, mes a mes. {vista === "real" ? "Muestra lo que de verdad entró (lo cobrado)." : "Muestra lo proyectado según el plazo de cada proyecto."}</p></div></div>
+      <div className="proj-bar" style={{ flexWrap: "wrap", gap: 14 }}>
+        <div className="pb-group">
+          <span className="pb-cap">Ver</span>
+          <div className="chips">
+            <button className="chip-btn sm" aria-pressed={vista === "real"} onClick={() => setVista("real")}>Real · lo cobrado</button>
+            <button className="chip-btn sm" aria-pressed={vista === "proy"} onClick={() => setVista("proy")}>Proyectado</button>
+          </div>
+        </div>
+        {allYM.length > 0 && (
           <div className="pb-group"><span className="pb-cap"><CalendarRange size={13} style={{ verticalAlign: -2 }} /> Mes</span>
             <div className="chips scroll">
               {allYM.map((m) => <button key={m} className="chip-btn" aria-pressed={m === selYM} onClick={() => setYmSel(m)}>{mesLabel(m)}</button>)}
             </div>
           </div>
+        )}
+      </div>
+      {allYM.length === 0 && vista === "real" && (
+        <div className="card" style={{ textAlign: "center", padding: "28px 24px", marginBottom: 18 }}>
+          <p className="hint" style={{ margin: 0 }}>Aún no registras pagos cobrados. Marca los meses cobrados en <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setSec?.("proyectos")}>Proyectos</b>, o cambia a <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setVista("proy")}>Proyectado</b> para ver el plan.</p>
         </div>
       )}
 
@@ -577,7 +618,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
           ) : (
             <div className="atn-list">
               {porAutorizar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t"><b>{porAutorizar}</b> proyecto{porAutorizar !== 1 ? "s" : ""} por autorizar (sueldos a mano)</span><ChevronRight size={15} /></button>}
-              {proysPorCobrar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic cob"><Wallet size={15} /></span><span className="atn-t"><b>{proysPorCobrar}</b> proyecto{proysPorCobrar !== 1 ? "s" : ""} por cobrar · falta {fmtMXN(porCobrar)}</span><ChevronRight size={15} /></button>}
+              {proysPorCobrar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic cob"><Wallet size={15} /></span><span className="atn-t"><b>{proysPorCobrar}</b> proyecto{proysPorCobrar !== 1 ? "s" : ""} por cobrar · falta {fmtMXN(faltaCobrar)}</span><ChevronRight size={15} /></button>}
               {bancaCorta && <button className="atn-row" onClick={() => setSec?.("cajas")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t">La Banca de {mesLabel(selYM)} va corta para la meta del colchón</span><ChevronRight size={15} /></button>}
             </div>
           )}
@@ -585,7 +626,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
       </div>
 
       <div className="tiles rise">
-        <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · proyectado`} tip="Lo que los proyectos activos reparten en el mes elegido (equipo + socios + Banca + caja), según su plazo. Es proyectado (devengado), no lo cobrado." />
+        <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · ${vista === "real" ? "cobrado real" : "proyectado"}`} tip={vista === "real" ? "Lo que de VERDAD entró en el mes elegido (los pagos cobrados), repartido entre equipo + socios + Banca + caja." : "Lo que los proyectos activos reparten en el mes elegido según su plazo (proyectado/devengado), no lo cobrado."} />
         <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
         <Tile k="k-banca" l="A la Banca del mes" v={fmtMXN(M.banca)} p="colchón" tip="Lo que va al colchón de CURVA en el mes elegido (caja de ahorro + sombrero de socio)." />
         <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR (tasa sobre la facturación de los proyectos con “Descontar ISR” activo)." />
@@ -618,20 +659,20 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
           <div className="flow">
             {mesesFlujo.map((m) => (
               <div className="flow-col" key={m}>
-                <div className="flow-v">{fmtMXN(flujoVal(porMes[m]))}</div>
-                <div className="flow-bar" style={{ height: Math.max(6, flujoVal(porMes[m]) / maxFlujo * 96) + "px" }}><div className="flow-seg" style={{ height: "100%", background: "var(--grad)" }} /></div>
+                <div className="flow-v">{fmtMXN(flujoVal(agg[m]))}</div>
+                <div className="flow-bar" style={{ height: Math.max(6, flujoVal(agg[m]) / maxFlujo * 96) + "px" }}><div className="flow-seg" style={{ height: "100%", background: "var(--grad)" }} /></div>
                 <div className="flow-x">{mesLabel(m)}</div>
               </div>
             ))}
           </div>
         ) : <div className="hint">Agrega proyectos con fecha de inicio para ver el flujo.</div>}
-        <p className="foot">Cada proyecto se reparte en el tiempo según su plazo (Método A). Ingresos proyectados, sin IVA.</p>
+        <p className="foot">{vista === "real" ? "Lo que de verdad entró cada mes (lo cobrado), sin IVA." : "Cada proyecto se reparte en el tiempo según su plazo (Método A). Ingresos proyectados, sin IVA."}</p>
       </div>
 
       {mesesCorte.length > 0 && (
         <div className="card">
           <h2>Cortes mensuales — a dónde va cada peso</h2>
-          <p className="hint" style={{ marginTop: 0 }}>Mes a mes (según el plazo de cada proyecto): cuánto se reparte a cada bolsa y los gastos del mes (incluye el overhead fijo).</p>
+          <p className="hint" style={{ marginTop: 0 }}>Mes a mes ({vista === "real" ? "lo cobrado" : "proyectado según el plazo"}): cuánto se reparte a cada bolsa y los gastos del mes (incluye el overhead fijo).</p>
           <div style={{ overflowX: "auto" }}>
             <div style={{ display: "grid", gridTemplateColumns: `minmax(72px,0.9fr) repeat(${corteCols.length}, minmax(78px,1fr))`, gap: "5px 12px", minWidth: 580, fontSize: 13, alignItems: "center" }}>
               <div style={{ fontWeight: 700, opacity: 0.55, fontSize: 12, textTransform: "uppercase" }}>Mes</div>
@@ -639,7 +680,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
               {mesesCorte.flatMap((ym) => [
                 <div key={ym + "-m"} style={{ fontWeight: 700, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{mesLabel(ym)}</div>,
                 ...corteCols.map(([label, fn]) => (
-                  <div key={ym + "-" + label} style={{ textAlign: "right", fontFamily: "var(--mono)", fontWeight: label === "Total" ? 700 : 400, color: label === "Total" ? "var(--cobalt)" : label === "Gastos" ? "var(--c-caja)" : undefined, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{fmtMXN(fn(porMes[ym]))}</div>
+                  <div key={ym + "-" + label} style={{ textAlign: "right", fontFamily: "var(--mono)", fontWeight: label === "Total" ? 700 : 400, color: label === "Total" ? "var(--cobalt)" : label === "Gastos" ? "var(--c-caja)" : undefined, borderTop: "1px solid var(--border)", paddingTop: 4 }}>{fmtMXN(fn(agg[ym]))}</div>
                 )),
               ])}
             </div>

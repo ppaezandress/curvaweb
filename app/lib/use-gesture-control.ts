@@ -21,7 +21,7 @@ import { createMetronome, frameIntervalMs, type Metronome } from "@/lib/gestures
 const MODEL_URL = "/mediapipe/hand_landmarker.task";
 const WASM_PATH = "/mediapipe/wasm";
 const PROGRESS_STEPS = 12; // granularidad del anillo → máximo 12 renders por dwell
-const NO_HAND_TIMEOUT_MS = 5 * 60_000; // sin ver manos 5 min → se apaga sola
+const NO_HAND_TIMEOUT_MS = 30 * 60_000; // media hora sin ver manos → se apaga sola
 // Ahorro: si lleva un rato sin ver una mano, baja el ritmo de inferencia. La cámara sigue
 // encendida (reaccionar rápido importa) pero deja de gastar batería mirando una silla vacía.
 const IDLE_AFTER_MS = 20_000;
@@ -96,6 +96,8 @@ export function useGestureControl(opts: {
   // Último cuadro llegado del track de la cámara (ver startFramePump) y su lector.
   const frameRef = useRef<VideoFrame | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<VideoFrame> | null>(null);
+  // true cuando el reloj lo lleva la cámara (y no los temporizadores del navegador).
+  const pumpingRef = useRef(false);
   const statsRef = useRef({ frames: 0, lastFrameAt: 0, source: "—" as "track" | "video" | "—" });
   const onCommandRef = useRef(opts.onCommand);
   useEffect(() => { onCommandRef.current = opts.onCommand; }, [opts.onCommand]);
@@ -111,6 +113,7 @@ export function useGestureControl(opts: {
     readerRef.current = null;
     frameRef.current?.close();
     frameRef.current = null;
+    pumpingRef.current = false;
     statsRef.current = { frames: 0, lastFrameAt: 0, source: "—" };
     streamRef.current?.getTracks().forEach((t) => t.stop()); // apaga la luz de la cámara
     streamRef.current = null;
@@ -242,30 +245,52 @@ export function useGestureControl(opts: {
       }
     })();
 
-    // Bombeo de cuadros del track de la cámara. Guarda siempre el más reciente y cierra el
-    // anterior (un VideoFrame que no se cierra agota el pool del navegador y congela la
-    // cámara). Corre a la cadencia de la cámara; el reconocimiento consume al ritmo que
-    // decida `frameIntervalMs`, así que la mayoría de los cuadros solo se descartan.
+    // LA CÁMARA ES EL RELOJ.
+    //
+    // Aquí está la clave de que esto funcione con la pestaña en segundo plano. Un navegador
+    // frena a una pestaña oculta por todos lados: congela requestAnimationFrame y limita los
+    // temporizadores a uno por segundo — también los de un Web Worker. Con ese ritmo una seña
+    // de 1.2 s no llega a confirmarse nunca, que es exactamente el síntoma que reportó Andrés.
+    //
+    // Lo que NO se frena es el flujo de la cámara: por eso en una videollamada tu cámara sigue
+    // transmitiendo aunque te cambies de pestaña. Así que en vez de preguntarle la hora a un
+    // temporizador, el reconocimiento cuelga de la llegada de cada cuadro. Sin temporizadores,
+    // no hay nada que frenar.
+    //
+    // Cada VideoFrame hay que cerrarlo: si se acumulan, se agota el pool y la cámara se cuelga.
     function startFramePump(stream: MediaStream) {
       const Processor = (window as unknown as {
         MediaStreamTrackProcessor?: new (o: { track: MediaStreamTrack }) => { readable: ReadableStream<VideoFrame> };
       }).MediaStreamTrackProcessor;
       const track = stream.getVideoTracks()[0];
-      if (!Processor || !track) return; // sin soporte: se usa el <video> (solo app a la vista)
+      if (!Processor || !track) return; // sin soporte: se cae a los temporizadores (ver abajo)
 
       try {
         const reader = new Processor({ track }).readable.getReader();
         readerRef.current = reader;
+        pumpingRef.current = true;
         (async () => {
           while (!cancelled) {
             const { value, done } = await reader.read();
             if (done) break;
-            if (cancelled) { value?.close(); break; }
-            frameRef.current?.close();
-            frameRef.current = value ?? null;
+            if (cancelled || !value) { value?.close(); break; }
+
+            // Solo se analiza al ritmo que toque; el resto de cuadros se descartan enseguida
+            // para no acumular memoria.
+            const now = performance.now();
+            const idle = !hiddenRef.current && now - lastHandRef.current > IDLE_AFTER_MS;
+            if (now - lastFrameRef.current >= frameIntervalMs({ hidden: hiddenRef.current, idle })) {
+              lastFrameRef.current = now;
+              frameRef.current?.close();
+              frameRef.current = value;
+              analyze(value as unknown as HTMLVideoElement, now);
+            } else {
+              value.close();
+            }
           }
         })().catch(() => {
-          // Si el bombeo muere, el <video> sigue sirviendo con la app a la vista.
+          // Si el bombeo muere, quedan el <video> y los temporizadores (solo app a la vista).
+          pumpingRef.current = false;
           frameRef.current?.close();
           frameRef.current = null;
         });
@@ -289,8 +314,9 @@ export function useGestureControl(opts: {
       if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
 
       if (hidden && isBackgroundOn()) {
-        // Ritmo del metrónomo: el mismo que usaría el bucle visible, pero más espaciado.
-        metroRef.current?.setInterval(frameIntervalMs({ hidden: true, idle: false }));
+        // Con la cámara de reloj no hace falta metrónomo (y sería frenado igual). Solo se usa
+        // en el camino de respaldo del <video>.
+        metroRef.current?.setInterval(pumpingRef.current ? 0 : frameIntervalMs({ hidden: true, idle: false }));
         // Mantiene vivo el audio: en segundo plano el tono es la ÚNICA señal de que te
         // reconoció, y de paso libra a la pestaña del frenado que aplica el navegador.
         startKeepAlive();
@@ -301,25 +327,33 @@ export function useGestureControl(opts: {
       }
     }
 
+    // Camino de respaldo: sin acceso directo al flujo de la cámara (Safari, Firefox) se sigue
+    // usando el <video> con requestAnimationFrame y el metrónomo. Ahí el modo segundo plano
+    // queda a merced de lo que permita el navegador.
     function tick() {
+      if (pumpingRef.current) return; // manda la cámara; este camino sobra
       const video = videoRef.current;
       const landmarker = landmarkerRef.current;
       if (!video || !landmarker || video.readyState < 2) return;
 
       const now = performance.now();
       // Ritmo normal mientras hay una mano a la vista; a paso lento cuando no hay nadie.
-      const idle = now - lastHandRef.current > IDLE_AFTER_MS;
+      const idle = !hiddenRef.current && now - lastHandRef.current > IDLE_AFTER_MS;
       if (now - lastFrameRef.current < frameIntervalMs({ hidden: hiddenRef.current, idle })) return;
       lastFrameRef.current = now;
+      analyze(video, now);
+    }
+
+    /** Analiza un cuadro (venga del flujo de la cámara o del <video>) y aplica el comando. */
+    function analyze(source: HTMLVideoElement, now: number) {
+      const landmarker = landmarkerRef.current;
+      if (!landmarker) return;
 
       let gesture: Gesture | null = null;
       try {
-        // El cuadro del track manda cuando existe: es el único que sigue vivo con la pestaña
-        // oculta. El <video> queda de respaldo.
-        const source = (frameRef.current ?? video) as unknown as HTMLVideoElement;
         statsRef.current.frames++;
         statsRef.current.lastFrameAt = Date.now();
-        statsRef.current.source = frameRef.current ? "track" : "video";
+        statsRef.current.source = pumpingRef.current ? "track" : "video";
         const res = landmarker.detectForVideo(source, now);
         // Con dos manos en cuadro (pasa: la otra sobre el teclado, alguien pasando detrás)
         // mandamos la que está MÁS CERCA de la cámara, que es la que te estás presentando.
