@@ -17,6 +17,7 @@
 // segundo, una regular pide más tiempo, y una mala no avanza nunca. Se gana en las dos puntas.
 import { fingerClarity, handScale, type Landmark } from "@/lib/gestures/vocabulary";
 import { palmFacing, palmFlatness, MIN_FACING } from "@/lib/gestures/intent";
+import { currentThresholds } from "@/lib/gestures/vocabulary";
 
 export type QualityInput = {
   landmarks: Landmark[];
@@ -59,8 +60,9 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
   // Requisito duro: la mano tiene que estar presentada. Si no lo está, no importa qué dedos
   // tenga — no te está hablando a ti. Aquí mueren el celular en la mano y la mano en la cara.
   const scale = handScale(landmarks);
-  if (scale < MIN_PRESENT_SCALE) {
-    return { score: 0, clarity: 0, facing: 0, steadiness: 0, closeness: scale / MIN_PRESENT_SCALE };
+  const minPresent = currentThresholds().minPresentScale;
+  if (scale < minPresent) {
+    return { score: 0, clarity: 0, facing: 0, steadiness: 0, closeness: scale / minPresent };
   }
 
   const clarity = fingerClarity(landmarks);
@@ -72,7 +74,7 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
   const facing = clamp01(0.5 * facingRatio + 0.5 * palmFlatness(landmarks));
 
   const steadiness = clamp01(1 - speed / STEADY_LIMIT);
-  const closeness = clamp01(scale / GOOD_SCALE);
+  const closeness = clamp01(scale / Math.max(GOOD_SCALE, minPresent * 1.35));
   const model = clamp01(modelScore ?? 0.9);
 
   // La claridad de los dedos pesa más que nada: de ella depende que el NÚMERO sea correcto,

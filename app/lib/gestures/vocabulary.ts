@@ -11,6 +11,7 @@
 // "Palma" y "cinco" son el mismo gesto físico, por eso los gestos llegan solo hasta la tarea 4.
 // El teclado sigue cubriendo del 1 al 9.
 import type { TimerCommand } from "@/lib/timer-commands";
+import { DEFAULT_THRESHOLDS, type Thresholds } from "@/lib/gestures/calibration";
 
 export type Landmark = { x: number; y: number; z?: number };
 export type Handedness = "Left" | "Right";
@@ -55,8 +56,19 @@ function dist(a: Landmark, b: Landmark): number {
 // oscila entre abierto y cerrado de un cuadro a otro, y el gesto parpadea entre 3 y 4 — que es
 // justo el error que se reportó. Si un dedo cae en la zona dudosa, el cuadro entero se
 // descarta: es preferible tardar un cuadro más que ejecutar el comando equivocado.
-const OPEN_RATIO = 1.16; // claramente estirado
-const CLOSED_RATIO = 1.02; // claramente recogido
+// Umbrales ACTIVOS. Arrancan en los de fábrica y los sustituye la calibración de cada quien
+// (ver lib/gestures/calibration.ts). Vive en un módulo porque el reconocimiento corre en un
+// bucle caliente: pasarlos por parámetro en cada llamada no aportaría nada.
+let T: Thresholds = DEFAULT_THRESHOLDS;
+
+/** Aplica los umbrales de esta persona. Sin argumento, vuelve a los de fábrica. */
+export function useThresholds(t?: Thresholds) {
+  T = t ?? DEFAULT_THRESHOLDS;
+}
+
+export function currentThresholds(): Thresholds {
+  return T;
+}
 
 // El pulgar se mide APARTE y de otra forma. Compararlo contra la muñeca como a los demás
 // dedos casi no lo movía del umbral: al abrir la palma se quedaba en la zona dudosa y, como un
@@ -64,8 +76,6 @@ const CLOSED_RATIO = 1.02; // claramente recogido
 //
 // Lo que sí lo separa con claridad es cuánto se aleja del nudillo del índice, medido en
 // tamaños de mano: recogido cruza sobre la palma y queda encima; abierto se va al lado.
-const THUMB_FAR = 1.15; // claramente abierto
-const THUMB_NEAR = 0.75; // claramente recogido sobre la palma
 const INDEX_MCP = 5;
 const MIDDLE_MCP = 9;
 
@@ -100,9 +110,9 @@ export function fingerClarity(lm: Landmark[]): number {
 
   for (const f of LONG_FINGERS) {
     const ratio = dist(lm[f.tip], wrist) / Math.max(dist(lm[f.pip], wrist), 1e-6);
-    margins.push(marginOf(ratio, CLOSED_RATIO, OPEN_RATIO));
+    margins.push(marginOf(ratio, T.closedRatio, T.openRatio));
   }
-  margins.push(marginOf(thumbSpread(lm), THUMB_NEAR, THUMB_FAR));
+  margins.push(marginOf(thumbSpread(lm), T.thumbNear, T.thumbFar));
 
   // Manda el dedo MÁS dudoso: basta uno ambiguo para que el conteo pueda salir mal.
   return Math.min(...margins);
@@ -123,12 +133,12 @@ export function fingersUp(lm: Landmark[]): FingerState | null {
 
   const read: Record<string, Tri> = {};
   for (const f of LONG_FINGERS) {
-    read[f.name] = readFinger(dist(lm[f.tip], wrist), dist(lm[f.pip], wrist), OPEN_RATIO, CLOSED_RATIO);
+    read[f.name] = readFinger(dist(lm[f.tip], wrist), dist(lm[f.pip], wrist), T.openRatio, T.closedRatio);
   }
 
   // El pulgar, con su propia medida (ver THUMB_FAR / THUMB_NEAR).
   const spread = thumbSpread(lm);
-  let thumb: Tri = spread > THUMB_FAR ? true : spread < THUMB_NEAR ? false : null;
+  let thumb: Tri = spread > T.thumbFar ? true : spread < T.thumbNear ? false : null;
 
   const longs = [read.index, read.middle, read.ring, read.pinky];
   if (longs.some((v) => v === null)) return null; // un dedo largo a medias invalida el cuadro
@@ -158,6 +168,17 @@ export function fingersUp(lm: Landmark[]): FingerState | null {
 export function thumbSpread(lm: Landmark[]): number {
   const scale = Math.max(dist(lm[WRIST], lm[MIDDLE_MCP]), 1e-6);
   return dist(lm[THUMB_TIP], lm[INDEX_MCP]) / scale;
+}
+
+/** Medidas crudas de un cuadro. Es lo que consume la calibración. */
+export function sampleOf(lm: Landmark[]): { fingers: number[]; thumb: number; scale: number } | null {
+  if (!lm || lm.length < 21) return null;
+  const wrist = lm[WRIST];
+  return {
+    fingers: LONG_FINGERS.map((f) => dist(lm[f.tip], wrist) / Math.max(dist(lm[f.pip], wrist), 1e-6)),
+    thumb: thumbSpread(lm),
+    scale: handScale(lm),
+  };
 }
 
 /** Centro de la palma. Sirve para exigir que la mano esté quieta antes de hacer caso. */

@@ -1501,13 +1501,11 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {isrRes > 0.5 && bd("sub", `− ISR (${P.imp}% · RESICO, al SAT — no se reparte)`, -isrRes)}
                 {isrRes > 0.5 && bd("eq", "Queda para repartir (después de ISR)", r.t - isrRes)}
                 {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
-                {r.disc > 0.5 && bd("sub", "− Sombrero de socio (va a tu Ahorro CURVA)", -r.disc)}
-                {r.comis > 0.5 && bd("sub", `− Comisión de origen ${r.comisBanca > 0.5 ? "(a Banca)" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
-                {bd("eq", "Utilidad bruta", r.t - isrRes - r.bolsaOut - r.comis)}
+                {r.comisPaid > 0.5 && bd("sub", `− Comisión de origen → ${active.origenPersona || "quien lo trajo"}`, -r.comisPaid)}
+                {bd("eq", "Utilidad bruta", r.t - isrRes - (r.bolsaOut - r.disc) - r.comisPaid)}
                 {bd("sub", "− Caja del proyecto", -r.cajaProj)}
-                {bd("eq", "Utilidad operativa", r.marginOp - isrRes)}
-                {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (va a tu Ahorro CURVA)", -r.cajaAhorro)}
-                {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
+                {bd("eq", "Utilidad operativa", r.t - isrRes - (r.bolsaOut - r.disc) - r.comisPaid - r.cajaProj)}
+                {r.banca > 0.5 && bd("sub", "− Ahorro CURVA (el % del margen + tu sombrero de socio)", -r.banca)}
                 {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
                 {Math.abs(r.manualDelta) > 0.5 && bd("sub", r.manualDelta > 0 ? "− Extra al equipo (a mano)" : "+ Menos sueldo al equipo (a mano)", -r.manualDelta)}
                 {bd("strong", `Utilidad a repartir (socios)${isrRes > 0.5 ? " · ya sin ISR" : ""}`, netoSocios)}
