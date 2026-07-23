@@ -56,6 +56,13 @@ const GOOD_SCALE = 0.22;
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Quality {
+  // Requisito duro: la mano tiene que estar presentada. Si no lo está, no importa qué dedos
+  // tenga — no te está hablando a ti. Aquí mueren el celular en la mano y la mano en la cara.
+  const scale = handScale(landmarks);
+  if (scale < MIN_PRESENT_SCALE) {
+    return { score: 0, clarity: 0, facing: 0, steadiness: 0, closeness: scale / MIN_PRESENT_SCALE };
+  }
+
   const clarity = fingerClarity(landmarks);
 
   // Dos medidas de orientación que se complementan: la proporción de la palma (robusta, 2D) y
@@ -65,7 +72,7 @@ export function frameQuality({ landmarks, speed, modelScore }: QualityInput): Qu
   const facing = clamp01(0.5 * facingRatio + 0.5 * palmFlatness(landmarks));
 
   const steadiness = clamp01(1 - speed / STEADY_LIMIT);
-  const closeness = clamp01(handScale(landmarks) / GOOD_SCALE);
+  const closeness = clamp01(scale / GOOD_SCALE);
   const model = clamp01(modelScore ?? 0.9);
 
   // La claridad de los dedos pesa más que nada: de ella depende que el NÚMERO sea correcto,
@@ -112,11 +119,12 @@ export function advanceRate(score: number): number {
  */
 export function qualityHint(q: Quality): string | null {
   if (q.score >= 0.8) return null;
+  // La cercanía se avisa primero: es requisito, no una nota más.
+  if (q.closeness < 1) return "Acerca la mano a la cámara";
   const worst = [
     { v: q.clarity, tip: "Estira o recoge bien los dedos" },
     { v: q.facing, tip: "Muestra la palma de frente" },
     { v: q.steadiness, tip: "Mantén la mano quieta" },
-    { v: q.closeness, tip: "Acerca un poco la mano" },
   ].reduce((a, b) => (b.v < a.v ? b : a));
   return worst.v < 0.75 ? worst.tip : null;
 }

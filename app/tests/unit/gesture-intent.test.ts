@@ -80,10 +80,11 @@ describe("quietud", () => {
 
 // ── Puntuación del cuadro ────────────────────────────────────────────────────────────────
 // El corazón del "más inteligente": en vez de aceptar o rechazar, se puntúa la evidencia.
-import { frameQuality, advanceRate, MIN_QUALITY } from "@/lib/gestures/quality";
+import { frameQuality, advanceRate, qualityHint, MIN_QUALITY } from "@/lib/gestures/quality";
 import { fingerClarity } from "@/lib/gestures/vocabulary";
 
-// Mano completa y bien formada, con los dedos claramente estirados o recogidos.
+// Mano completa y bien formada, del tamaño con el que uno PRESENTA una seña a la cámara
+// (la anterior era del tamaño de una mano al fondo del cuadro y ya no califica).
 function goodHand(): Landmark[] {
   const wrist = { x: 0.5, y: 0.72 };
   const along = (dx: number, dy: number, d: number): Landmark => {
@@ -93,17 +94,17 @@ function goodHand(): Landmark[] {
   const lm: Landmark[] = [];
   lm[0] = { ...wrist, z: 0 };
   // pulgar recogido
-  lm[1] = { x: 0.46, y: 0.66, z: 0 }; lm[2] = { x: 0.44, y: 0.64, z: 0 };
-  lm[3] = { x: 0.42, y: 0.63, z: 0 }; lm[4] = { x: 0.43, y: 0.62, z: 0 };
+  lm[1] = { x: 0.42, y: 0.62, z: 0 }; lm[2] = { x: 0.38, y: 0.58, z: 0 };
+  lm[3] = { x: 0.34, y: 0.56, z: 0 }; lm[4] = { x: 0.36, y: 0.54, z: 0 };
   // índice y medio estirados, anular y meñique recogidos
   const dirs: [number, number][] = [[-0.25, -1], [0, -1], [0.25, -1], [0.5, -1]];
   const open = [true, true, false, false];
   dirs.forEach(([dx, dy], i) => {
     const base = 5 + i * 4;
-    lm[base] = along(dx, dy, 0.09);
-    lm[base + 1] = along(dx, dy, 0.15);
-    lm[base + 2] = along(dx, dy, 0.19);
-    lm[base + 3] = along(dx, dy, open[i] ? 0.28 : 0.09);
+    lm[base] = along(dx, dy, 0.20); // nudillo: define el tamaño aparente de la mano
+    lm[base + 1] = along(dx, dy, 0.30);
+    lm[base + 2] = along(dx, dy, 0.35);
+    lm[base + 3] = along(dx, dy, open[i] ? 0.44 : 0.19);
   });
   return lm;
 }
@@ -130,7 +131,9 @@ describe("frameQuality", () => {
       speed: 0,
     });
     expect(lejos.closeness).toBeLessThan(cerca.closeness);
-    expect(lejos.score).toBeLessThan(cerca.score);
+    // Una mano que no está presentada ni siquiera se evalúa: sostener el celular o apoyarse la
+    // mano en la cara deja la mano a distancia normal del cuerpo, no acercada a la cámara.
+    expect(lejos.score).toBe(0);
   });
 
   it("la nota siempre queda entre 0 y 1", () => {
@@ -178,5 +181,83 @@ describe("fingerClarity", () => {
 
   it("sin datos no inventa claridad", () => {
     expect(fingerClarity([])).toBe(0);
+  });
+});
+
+// ── Los casos reales que se colaban ──────────────────────────────────────────────────────
+// Reportados con la función ya funcionando: "agarro mi celular y se vuelve loco" y "me pongo
+// la mano en la cara e igual me lo toma". Los dos comparten una cosa: la mano está ocupada en
+// algo suyo, a la distancia normal del cuerpo, no PRESENTADA a la cámara.
+import { createStabilizer } from "@/lib/gestures/stabilizer";
+import { MIN_PRESENT_SCALE } from "@/lib/gestures/quality";
+
+describe("manos que no te están hablando", () => {
+  const atDistance = (k: number) =>
+    goodHand().map((p) => ({ x: 0.5 + (p.x - 0.5) * k, y: 0.72 + (p.y - 0.72) * k, z: p.z }));
+
+  it("una mano a la distancia del cuerpo (celular, cara, teclado) no puntúa", () => {
+    // ~40% del tamaño de una seña presentada: lo que se ve al sostener el teléfono.
+    expect(frameQuality({ landmarks: atDistance(0.4), speed: 0.05 }).score).toBe(0);
+  });
+
+  it("la misma mano acercada a la cámara sí cuenta", () => {
+    expect(frameQuality({ landmarks: goodHand(), speed: 0.05 }).score).toBeGreaterThan(0.5);
+  });
+
+  it("el aviso dice justo qué hacer", () => {
+    const q = frameQuality({ landmarks: atDistance(0.4), speed: 0.05 });
+    expect(qualityHint(q)).toBe("Acerca la mano a la cámara");
+  });
+
+  it("el mínimo para 'presentada' está por encima de una mano en reposo", () => {
+    expect(MIN_PRESENT_SCALE).toBeGreaterThan(0.1);
+  });
+});
+
+describe("nada de ráfagas", () => {
+  // "Se vuelve loco": manipular el celular cambiaba de postura sin parar y cada cambio contaba
+  // como una orden nueva. Ahora hay que RETIRAR la mano entre un comando y el siguiente.
+  const feed = (st: ReturnType<typeof createStabilizer>, g: "dos" | "tres" | null, ms: number, t0: number) => {
+    const fires: string[] = [];
+    for (let t = t0; t < t0 + ms; t += 50) {
+      const out = st.feed(g, t, 1);
+      if (out.fire) fires.push(out.fire);
+    }
+    return { fires, endT: t0 + ms };
+  };
+
+  it("cambiar de seña sin retirar la mano NO dispara otra vez", () => {
+    const st = createStabilizer();
+    const a = feed(st, "dos", 2000, 0);
+    expect(a.fires).toEqual(["dos"]); // el primero sí
+
+    // La mano sigue en cuadro y cambia de postura, como al manipular el celular.
+    const b = feed(st, "tres", 3000, a.endT);
+    expect(b.fires).toEqual([]);
+  });
+
+  it("retirando la mano un momento, el siguiente comando sí entra", () => {
+    const st = createStabilizer();
+    const a = feed(st, "dos", 2000, 0);
+    expect(a.fires).toEqual(["dos"]);
+
+    const pausa = feed(st, null, 1000, a.endT); // la mano sale de cuadro
+    expect(pausa.fires).toEqual([]);
+
+    const b = feed(st, "tres", 2000, pausa.endT);
+    expect(b.fires).toEqual(["tres"]);
+  });
+
+  it("una mano inquieta en cuadro no suelta comandos en cadena", () => {
+    const st = createStabilizer();
+    let t = 0;
+    const fires: string[] = [];
+    // Diez segundos alternando posturas sin retirar nunca la mano.
+    for (let i = 0; i < 10; i++) {
+      const r = feed(st, i % 2 === 0 ? "dos" : "tres", 1000, t);
+      fires.push(...r.fires);
+      t = r.endT;
+    }
+    expect(fires.length).toBeLessThanOrEqual(1);
   });
 });

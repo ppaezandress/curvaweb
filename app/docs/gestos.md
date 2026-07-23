@@ -73,6 +73,13 @@ hay dos abiertas). Va bajito a propósito porque puede sonar en una llamada. Se 
 
 **Precisión.** Una seña solo cuenta si parece hecha a propósito:
 
+- **Presentada a la cámara.** Es el filtro más importante. Una seña se acerca deliberadamente al
+  objetivo; sostener el celular, apoyar la mano en la cara o tenerla sobre el teclado la deja a
+  la distancia normal del cuerpo. Por debajo de ese tamaño ni se mira qué dedos hay.
+- **Una orden a la vez.** Después de ejecutar hay que retirar la mano del encuadre un instante.
+  Sin eso, una mano ocupada en otra cosa soltaba ráfagas de comandos: cada cambio de postura
+  contaba como una orden nueva.
+
 - **Quieta.** Una seña se sostiene; una mano que se rasca, se acomoda el pelo o va de paso está
   en movimiento. Si se mueve rápido, el cuadro no cuenta.
 - **De frente.** Al apoyar la mano en la cara la palma queda de canto y los nudillos se alinean;

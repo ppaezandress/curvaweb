@@ -510,17 +510,20 @@ export function desembolsoDePago(pr: Proyecto, R: Reglas, idx: number): Desembol
 // reales donde el socio parquea el dinero. La Masa salarial junta a todo el equipo
 // (sueldos) + comisiones; los socios y las cajas tienen su propia cuenta. ──
 export type CajaKind = "masaSalarial" | "socioA" | "socioB" | "cajaProyecto" | "cajaAhorro" | "banca" | "isr";
-export const CAJA_ORDER: CajaKind[] = ["masaSalarial", "socioA", "socioB", "cajaProyecto", "cajaAhorro", "banca", "isr"];
+// "banca" (el sombrero de socio) se FUSIONA en cajaAhorro = "Ahorro CURVA": Andrés maneja
+// UNA sola cuenta de ahorro en Revolut. Decisión Andrés 2026-07-23. "banca" sigue en el tipo
+// por compatibilidad de saldos viejos, pero ya no es una cuenta separada en la lista.
+export const CAJA_ORDER: CajaKind[] = ["masaSalarial", "socioA", "socioB", "cajaProyecto", "cajaAhorro", "isr"];
 export type CajaDetalle = { nombre: string; concepto: "sueldo" | "comisión" | "bono"; monto: number; quien?: Quien };
 export type CajaGrupo = { caja: CajaKind; label: string; quien?: Quien; total: number; detalle: CajaDetalle[] };
 
 const DESTINO_A_CAJA: Record<DestinoKind, CajaKind> = {
   equipo: "masaSalarial", comision: "masaSalarial", nucleoBono: "masaSalarial",
-  socioA: "socioA", socioB: "socioB", cajaProyecto: "cajaProyecto", cajaAhorro: "cajaAhorro", banca: "banca", isr: "isr",
+  socioA: "socioA", socioB: "socioB", cajaProyecto: "cajaProyecto", cajaAhorro: "cajaAhorro", banca: "cajaAhorro", isr: "isr",
 };
 export const cajaLabel = (c: CajaKind, R: Reglas): string =>
   c === "masaSalarial" ? "Masa salarial" : c === "socioA" ? R.nombreA : c === "socioB" ? R.nombreB
-    : c === "cajaProyecto" ? "Caja del proyecto" : c === "cajaAhorro" ? "Caja de ahorro" : c === "isr" ? "ISR (aparta para el SAT)" : "La Banca";
+    : c === "cajaProyecto" ? "Caja del proyecto" : c === "cajaAhorro" ? "Ahorro CURVA" : c === "isr" ? "ISR (aparta para el SAT)" : "Ahorro CURVA";
 
 // Toma los Movimiento del desembolso y los reparte en las cajas de Revolut (+ la reserva ISR).
 export function agrupaCajas(mv: Movimiento[], R: Reglas): CajaGrupo[] {

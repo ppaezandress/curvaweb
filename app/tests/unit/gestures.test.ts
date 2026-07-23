@@ -35,9 +35,17 @@ const CURLED = 0.1; // punta recogida, más cerca que el nudillo
 type Up = { thumb?: boolean; index?: boolean; middle?: boolean; ring?: boolean; pinky?: boolean };
 
 function makeHand(up: Up): Landmark[] {
-  const pinkyMcp = along(DIRS.pinky, 0.09);
-  // El pulgar se abre hacia el lado contrario al meñique.
-  const thumbAt = (d: number): Landmark => ({ x: pinkyMcp.x - d, y: pinkyMcp.y });
+  // El pulgar, como en una mano de verdad: abierto se va al lado, y recogido CRUZA sobre la
+  // palma quedando casi encima del nudillo del índice. La versión anterior lo dejaba siempre
+  // separado, y por eso no distinguía uno de otro.
+  const indexMcp = along(DIRS.index, 0.09);
+  const thumbTip: Landmark = up.thumb
+    ? { x: indexMcp.x - 0.16, y: indexMcp.y + 0.02 }
+    : { x: indexMcp.x + 0.03, y: indexMcp.y + 0.02 };
+  const lerp = (t: number): Landmark => ({
+    x: indexMcp.x + (thumbTip.x - indexMcp.x) * t + 0.02,
+    y: indexMcp.y + (thumbTip.y - indexMcp.y) * t + 0.06,
+  });
 
   const finger = (dir: readonly [number, number] | number[], open?: boolean) => [
     along(dir, 0.09), // MCP
@@ -48,9 +56,9 @@ function makeHand(up: Up): Landmark[] {
 
   return [
     WRIST,
-    thumbAt(0.08), thumbAt(0.14), // CMC, MCP
-    thumbAt(0.2), // IP
-    thumbAt(up.thumb ? 0.3 : 0.15), // TIP
+    lerp(0.2), lerp(0.5), // CMC, MCP
+    lerp(0.75), // IP
+    thumbTip,
     ...finger(DIRS.index, up.index),
     ...finger(DIRS.middle, up.middle),
     ...finger(DIRS.ring, up.ring),
@@ -123,6 +131,21 @@ describe("gestureFrom", () => {
   it("el puño NO significa nada: es la postura natural de una mano en reposo", () => {
     // Usarlo como comando garantizaba disparos accidentales al bajar la mano o tomar el mouse.
     expect(gestureFrom(makeHand({}))).toBeNull();
+  });
+
+  it("la palma entra aunque el pulgar no esté del todo claro", () => {
+    // El caso reportado: "la palma casi no la agarra". El pulgar es el dedo que peor se lee, y
+    // al quedar dudoso invalidaba el cuadro entero. Con los cuatro dedos largos abiertos la
+    // intención es inequívoca, así que en la duda se resuelve como palma.
+    const indexMcp = along(DIRS.index, 0.09);
+    const conPulgarDudoso = makeHand({ index: true, middle: true, ring: true, pinky: true });
+    // Pulgar a media apertura: ni sobre la palma ni claramente al lado.
+    conPulgarDudoso[4] = { x: indexMcp.x - 0.085, y: indexMcp.y + 0.02 };
+    expect(gestureFrom(conPulgarDudoso)).toBe("palma");
+  });
+
+  it("con el pulgar claramente recogido sí son cuatro dedos", () => {
+    expect(gestureFrom(HANDS.cuatro)).toBe("cuatro");
   });
 
   it("el pulgar arriba es su propia seña, distinta de 'un dedo'", () => {

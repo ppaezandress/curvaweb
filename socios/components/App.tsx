@@ -539,9 +539,9 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   const proysDelMes = vivos.filter((p) => M.proys.has(p.id));
 
   const alerts: [string, string][] = [];
-  if (M.banca < meta * 0.34) alerts.push(["warn", `La Banca de ${mesLabel(selYM)} (${fmtMXN(M.banca)}) va corta para la meta mensual del colchón (${fmtMXN(meta)}).`]);
-  else if (M.banca < meta) alerts.push(["info", `La Banca de ${mesLabel(selYM)} va en ${Math.round(M.banca / (meta || 1) * 100)}% de la meta mensual (${fmtMXN(meta)}). Vas bien.`]);
-  else alerts.push(["ok", `La Banca de ${mesLabel(selYM)} ya cubre la meta del colchón. Sano.`]);
+  if (M.banca < meta * 0.34) alerts.push(["warn", `El Ahorro CURVA de ${mesLabel(selYM)} (${fmtMXN(M.banca)}) va corto para la meta mensual (${fmtMXN(meta)}).`]);
+  else if (M.banca < meta) alerts.push(["info", `El Ahorro CURVA de ${mesLabel(selYM)} va en ${Math.round(M.banca / (meta || 1) * 100)}% de la meta mensual (${fmtMXN(meta)}). Vas bien.`]);
+  else alerts.push(["ok", `El Ahorro CURVA de ${mesLabel(selYM)} ya cubre la meta. Sano.`]);
   proysDelMes.forEach((p) => { const r = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params)); const mr = r.marginOp / (r.t || 1); if (mr < 0.25) alerts.push(["warn", `${p.nombre}: margen bajo (${pctFmt(mr)}). Sube precio o baja gente.`]); });
 
   // ── Proyección acumulada (todos los proyectos vivos, a valor completo) ──
@@ -619,24 +619,24 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
             <div className="atn-list">
               {porAutorizar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t"><b>{porAutorizar}</b> proyecto{porAutorizar !== 1 ? "s" : ""} por autorizar (sueldos a mano)</span><ChevronRight size={15} /></button>}
               {proysPorCobrar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic cob"><Wallet size={15} /></span><span className="atn-t"><b>{proysPorCobrar}</b> proyecto{proysPorCobrar !== 1 ? "s" : ""} por cobrar · falta {fmtMXN(faltaCobrar)}</span><ChevronRight size={15} /></button>}
-              {bancaCorta && <button className="atn-row" onClick={() => setSec?.("cajas")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t">La Banca de {mesLabel(selYM)} va corta para la meta del colchón</span><ChevronRight size={15} /></button>}
+              {bancaCorta && <button className="atn-row" onClick={() => setSec?.("cajas")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t">El Ahorro CURVA de {mesLabel(selYM)} va corto para la meta</span><ChevronRight size={15} /></button>}
             </div>
           )}
         </div>
       </div>
 
       <div className="tiles rise">
-        <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · ${vista === "real" ? "cobrado real" : "proyectado"}`} tip={vista === "real" ? "Lo que de VERDAD entró en el mes elegido (los pagos cobrados), repartido entre equipo + socios + Banca + caja." : "Lo que los proyectos activos reparten en el mes elegido según su plazo (proyectado/devengado), no lo cobrado."} />
+        <Tile k="k-fact" l={`Ingreso de ${mesLabel(selYM)}`} v={fmtMXN(ingresoMes)} p={`${proysDelMes.length} proyecto${proysDelMes.length !== 1 ? "s" : ""} · ${vista === "real" ? "cobrado real" : "proyectado"}`} tip={vista === "real" ? "Lo que de VERDAD entró en el mes elegido (los pagos cobrados), repartido entre equipo + socios + Ahorro CURVA + caja." : "Lo que los proyectos activos reparten en el mes elegido según su plazo (proyectado/devengado), no lo cobrado."} />
         <Tile k="k-a" l="Utilidad socios del mes" v={fmtMXN(M.utilSocios)} p="antes de gastos" tip="La utilidad de dueños de Andrés y Balmo en el mes elegido, ANTES de gastos e impuestos (no cuenta lo que cobran por trabajar el proyecto)." />
-        <Tile k="k-banca" l="Al colchón del mes" v={fmtMXN(M.banca)} p="Caja de ahorro + Banca" tip="El ahorro total de CURVA este mes. Son DOS cuentas de Revolut: la Caja de ahorro (el % que apartas de cada proyecto) y La Banca (el sombrero de socio, solo cuando tú o Balmo trabajan). El Panel las suma; en Cajas van por separado." />
+        <Tile k="k-banca" l="Ahorro CURVA del mes" v={fmtMXN(M.banca)} p="el colchón" tip="Lo que CURVA ahorra este mes (tu colchón). Junta el % que apartas de cada proyecto + el descuento de socio cuando tú o Balmo trabajan. Todo cae en tu cuenta de Ahorro CURVA." />
         <Tile k="k-neto" l="Neto socios del mes" v={fmtMXN(netoMes)} p="después de gastos e imp." tip="Utilidad de socios del mes − gastos fijos (overhead) − ISR (tasa sobre la facturación de los proyectos con “Descontar ISR” activo)." />
       </div>
       <div className="two rise r2">
         <div className="card">
-          <h2>Colchón de CURVA (ahorro)</h2>
+          <h2>Ahorro CURVA (el colchón)</h2>
           <div className="prog"><i style={{ width: Math.min(100, M.banca / (meta || 1) * 100) + "%" }} /></div>
           <div className="prog-lbl"><span>{mesLabel(selYM)}: <b>{fmtMXN(M.banca)}</b></span><span>Meta mensual: <b>{fmtMXN(meta)}</b></span></div>
-          <p className="foot">El ahorro de CURVA se guarda en <b>dos cuentas</b>: la <b>Caja de ahorro</b> (un % del margen de cada proyecto) y <b>La Banca</b> (el sombrero de socio, cuando tú o Balmo trabajan un proyecto). Juntas son el colchón de emergencia y el trampolín para pasar a alguien a nómina. Meta por mes: <b>{fmtMXN(meta)}</b>.</p>
+          <p className="foot">Tu <b>única cuenta de ahorro</b>. Junta el % que apartas de cada proyecto + el descuento de socio (cuando tú o Balmo trabajan un proyecto, cobran con descuento y ese pedazo se ahorra aquí). Es el colchón de emergencia y el trampolín para pasar a alguien a nómina. Meta por mes: <b>{fmtMXN(meta)}</b>.</p>
         </div>
         <div className="card"><h2>Alertas</h2>{alerts.map((a, i) => <div key={i} className={"alert " + a[0]}>{a[1]}</div>)}</div>
       </div>
@@ -650,7 +650,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
         <div className="split3" style={{ marginBottom: 18 }}>
           <div className="s3" style={{ background: "var(--cobalt-soft)" }}><div className="s3l"><i style={{ background: "var(--c-andres)" }} />Tú ({st.params.nombreA})</div><div className="s3v" style={{ color: "var(--c-andres)" }}>{fmtMXN(sAndres)}</div><div className="s3p">tu parte total (trabajo + utilidad)</div></div>
           <div className="s3"><div className="s3l"><i style={{ background: "var(--c-equipo)" }} />El equipo</div><div className="s3v">{fmtMXN(sEquipo)}</div><div className="s3p">{st.params.nombreB}: {fmtMXN(sBalmo)} aparte</div></div>
-          <div className="s3"><div className="s3l"><i style={{ background: "var(--c-banca)" }} />La Banca</div><div className="s3v" style={{ color: "var(--c-banca)" }}>{fmtMXN(sBancaAll)}</div><div className="s3p">colchón de CURVA</div></div>
+          <div className="s3"><div className="s3l"><i style={{ background: "var(--c-banca)" }} />Ahorro CURVA</div><div className="s3v" style={{ color: "var(--c-banca)" }}>{fmtMXN(sBancaAll)}</div><div className="s3p">el colchón</div></div>
         </div>
         <div className="prog-lbl" style={{ marginBottom: 4 }}><span>Cobrado: <b>{fmtMXN(sCobrado)}</b></span><span>Por cobrar: <b>{fmtMXN(porCobrar)}</b></span></div>
         <div className="prog"><i style={{ width: Math.min(100, sCobrado / (sTicket || 1) * 100) + "%" }} /></div>
@@ -685,7 +685,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
               ])}
             </div>
           </div>
-          <p className="foot">“Total” = lo que se reparte ese mes (equipo + socios + Banca + cajas). Los gastos salen de la caja de cada proyecto; el overhead es el costo fijo de la empresa cada mes.</p>
+          <p className="foot">“Total” = lo que se reparte ese mes (equipo + socios + Ahorro CURVA + cajas). Los gastos salen de la caja de cada proyecto; el overhead es el costo fijo de la empresa cada mes.</p>
         </div>
       )}
 
@@ -1369,7 +1369,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
               const detalle = o === "empresa"
                 ? `La marca lo trajo → sin comisión: ese ${P.comisPct}% se queda dentro y engorda la utilidad de los socios.`
                 : o === "socio"
-                ? `Un socio lo trajo → la comisión (${fmtMXN(comisPot)}) va a la Banca, no a un bolsillo — pagársela a un socio le quitaría al otro.`
+                ? `Un socio lo trajo → la comisión (${fmtMXN(comisPot)}) va al Ahorro CURVA, no a un bolsillo — pagársela a un socio le quitaría al otro.`
                 : `Alguien del equipo lo trajo → esa persona cobra la comisión (${fmtMXN(comisPot)}) por conseguir al cliente, sin diluir a nadie.`;
               return (
                 <div className="field"><label>¿Quién trajo este cliente? <span className="tip" data-tip={`Decide quién se lleva la comisión (${P.comisPct}% del margen) por conseguir al cliente. No cambia lo que paga el cliente, solo a dónde va. · ${detalle}`}><Info /></span></label>
@@ -1464,10 +1464,10 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             </div>
           )}
           <div className="tiles rise">
-            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN((r.marginOp - r.manualDelta) * f)} p={`${pctFmt((r.marginOp - r.manualDelta) / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Banca) después de pagarle al equipo (incluye ajustes manuales), la comisión y apartar la caja del proyecto." />
+            <Tile k="k-curva" l={porMes ? "CURVA se queda / mes" : "CURVA se queda"} v={fmtMXN((r.marginOp - r.manualDelta) * f)} p={`${pctFmt((r.marginOp - r.manualDelta) / t)} del ingreso${uLbl}`} tip="Lo que le queda a CURVA (utilidad de socios + Ahorro CURVA) después de pagarle al equipo (incluye ajustes manuales), la comisión y apartar la caja del proyecto." />
             <Tile k="k-a" l={r.sAseat > 0 ? `${P.nombreA} · trabaja` : P.nombreA} v={fmtMXN(r.socioA * f)} p={r.sAseat > 0 ? `sombrero ${fmtMXN(r.sAseat * f)}${uLbl}` : `socio ${P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreA} en este proyecto: su utilidad de socio${r.sAseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
             <Tile k="k-b" l={r.sBseat > 0 ? `${P.nombreB} · trabaja` : P.nombreB} v={fmtMXN(r.socioB * f)} p={r.sBseat > 0 ? `sombrero ${fmtMXN(r.sBseat * f)}${uLbl}` : `socio ${100 - P.split}%${uLbl}`} tip={`Todo lo que gana ${P.nombreB} en este proyecto: su utilidad de socio${r.sBseat > 0 ? " + lo que cobra por trabajarlo (sombrero)" : ""}.`} />
-            <Tile k="k-banca" l={porMes ? "A la Banca / mes" : "A la Banca"} v={fmtMXN(r.banca * f)} p={`ahorro CURVA${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
+            <Tile k="k-banca" l={porMes ? "Ahorro CURVA / mes" : "Al Ahorro CURVA"} v={fmtMXN(r.banca * f)} p={`el colchón${uLbl}`} tip="El colchón de ahorro de CURVA que genera este proyecto (caja de ahorro + descuentos de socio). No es de nadie: es la reserva de la empresa." />
           </div>
           <div className="card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -1531,7 +1531,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
             { l: porMes ? "CURVA / mes" : "CURVA se queda", v: fmtMXN(r.marginOp * f), c: "--pos" },
             { l: P.nombreA, v: fmtMXN(r.socioA * f), c: "--c-andres" },
             { l: P.nombreB, v: fmtMXN(r.socioB * f), c: "--c-balmo" },
-            { l: porMes ? "Banca / mes" : "A la Banca", v: fmtMXN(r.banca * f), c: "--c-banca" },
+            { l: porMes ? "Ahorro CURVA / mes" : "Al Ahorro CURVA", v: fmtMXN(r.banca * f), c: "--c-banca" },
           ]} />
       )}
       {simDrawer && <SimulacionDrawer st={st} active={active} onClose={() => setSimDrawer(false)} />}
@@ -2084,7 +2084,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
           ["Comisión de origen", `${R.comisPct}% (tope ${fmtMXN(R.comisTope)})`],
           ["Pesos de rol", `Piloto ${R.pesoP} · Especialista ${R.pesoE} · Apoyo ${R.pesoA}`],
           ["Seniority de un nuevo", `×${R.smNuevo}`],
-          ["Meta de la Banca", fmtMXN(R.metaBancaMonto)],
+          ["Meta de Ahorro CURVA", fmtMXN(R.metaBancaMonto)],
           ["Caja de ESTE proyecto", `${p.cajaPct}%`],
         ];
         const tramos = [
@@ -2661,7 +2661,7 @@ function ReglasDrawer({ st, update, onClose, setSec, preview }: {
           )}
           {knob("split", `Para ${P.nombreA} (resto para ${P.nombreB})`, "cómo se reparte la utilidad entre ustedes", 50, 80)}
           {knob("pool", "Bono del Núcleo", "extra para tu gente de planta · sale de tu utilidad", 0, 30)}
-          {knob("ahorro", "Caja de ahorro", "% de la utilidad que apartas a la Banca", 0, 25)}
+          {knob("ahorro", "Ahorro CURVA", "% de la utilidad que apartas al colchón", 0, 25)}
           <button className="rd-more" aria-expanded={avz} onClick={() => setAvz((v) => !v)}>
             {avz ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Avanzado <span className="rd-more-s">ISR · comisión · sombrero de socio · barrido</span>
           </button>
@@ -2806,7 +2806,7 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         <div className="card"><h2>Compensación</h2>
           {pct("alpha", "Cuánto cobra un socio de su trabajo", 0, 100, 5)}
           <p className="hint" style={{ marginTop: -2 }}>Cuando tú o Balmo trabajan un proyecto, cobran este % de su tarifa; el resto ({100 - P.alpha}%) se guarda en la Banca (tu ahorro). No cambia lo que gana CURVA — solo mueve tu dinero: <b>bolsa hoy vs. ahorro</b>. No diluye al otro socio.</p>
-          {pct("beta", "β — barrer utilidad a la Banca", 0, 50, 5)}
+          {pct("beta", "β — barrer utilidad al Ahorro CURVA", 0, 50, 5)}
           {pct("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
           {pct("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
           {pct("imp", "Tasa de ISR (% que reservas)", 0, 20, 0.5)}
@@ -2897,9 +2897,9 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
       </div>
 
       <div className="two">
-        <div className="card"><h2>Banca y seniority</h2>
+        <div className="card"><h2>Ahorro CURVA y seniority</h2>
           {mult("smNuevo", "Seniority de un integrante nuevo")}
-          {money("metaBancaMonto", "Meta de la Banca (colchón)")}
+          {money("metaBancaMonto", "Meta de Ahorro CURVA (colchón)")}
           {money("metaFacturacion", "Meta de facturación del mes (venta)")}
           <p className="foot">El colchón de emergencia de CURVA y el trampolín para pasar a alguien a nómina. Sugerido ~$48k (1 nómina medio año). Súbelo cuando crezcan.</p>
         </div>

@@ -57,8 +57,17 @@ function dist(a: Landmark, b: Landmark): number {
 // descarta: es preferible tardar un cuadro más que ejecutar el comando equivocado.
 const OPEN_RATIO = 1.16; // claramente estirado
 const CLOSED_RATIO = 1.02; // claramente recogido
-const THUMB_OPEN = 1.12;
-const THUMB_CLOSED = 1.0;
+
+// El pulgar se mide APARTE y de otra forma. Compararlo contra la muñeca como a los demás
+// dedos casi no lo movía del umbral: al abrir la palma se quedaba en la zona dudosa y, como un
+// dedo dudoso invalida el cuadro entero, la palma abierta casi nunca se reconocía.
+//
+// Lo que sí lo separa con claridad es cuánto se aleja del nudillo del índice, medido en
+// tamaños de mano: recogido cruza sobre la palma y queda encima; abierto se va al lado.
+const THUMB_FAR = 1.15; // claramente abierto
+const THUMB_NEAR = 0.75; // claramente recogido sobre la palma
+const INDEX_MCP = 5;
+const MIDDLE_MCP = 9;
 
 /** Estado de un dedo: `null` = no está claro. */
 type Tri = boolean | null;
@@ -93,9 +102,7 @@ export function fingerClarity(lm: Landmark[]): number {
     const ratio = dist(lm[f.tip], wrist) / Math.max(dist(lm[f.pip], wrist), 1e-6);
     margins.push(marginOf(ratio, CLOSED_RATIO, OPEN_RATIO));
   }
-  const pinkyMcp = lm[PINKY_MCP];
-  const thumbRatio = dist(lm[THUMB_TIP], pinkyMcp) / Math.max(dist(lm[THUMB_IP], pinkyMcp), 1e-6);
-  margins.push(marginOf(thumbRatio, THUMB_CLOSED, THUMB_OPEN));
+  margins.push(marginOf(thumbSpread(lm), THUMB_NEAR, THUMB_FAR));
 
   // Manda el dedo MÁS dudoso: basta uno ambiguo para que el conteo pueda salir mal.
   return Math.min(...margins);
@@ -119,14 +126,21 @@ export function fingersUp(lm: Landmark[]): FingerState | null {
     read[f.name] = readFinger(dist(lm[f.tip], wrist), dist(lm[f.pip], wrist), OPEN_RATIO, CLOSED_RATIO);
   }
 
-  // El pulgar no se puede medir contra la muñeca (casi no cambia de distancia al doblarse):
-  // se mide si la punta se aleja del nudillo del meñique, que es el eje del "pulgar abierto".
-  // Funciona igual con mano izquierda o derecha, y de frente o de espaldas.
-  const pinkyMcp = lm[PINKY_MCP];
-  const thumb = readFinger(dist(lm[THUMB_TIP], pinkyMcp), dist(lm[THUMB_IP], pinkyMcp), THUMB_OPEN, THUMB_CLOSED);
+  // El pulgar, con su propia medida (ver THUMB_FAR / THUMB_NEAR).
+  const spread = thumbSpread(lm);
+  let thumb: Tri = spread > THUMB_FAR ? true : spread < THUMB_NEAR ? false : null;
 
-  const all = [thumb, read.index, read.middle, read.ring, read.pinky];
-  if (all.some((v) => v === null)) return null; // un dedo a medias invalida el cuadro
+  const longs = [read.index, read.middle, read.ring, read.pinky];
+  if (longs.some((v) => v === null)) return null; // un dedo largo a medias invalida el cuadro
+
+  // Desempate a favor de la PALMA. El pulgar es el dedo que peor se lee, y con los cuatro
+  // dedos largos abiertos la intención es inequívoca: nadie enseña cuatro dedos abiertos
+  // queriendo decir otra cosa. Para que cuente como "cuatro" el pulgar tiene que estar
+  // claramente recogido; en la duda, es palma.
+  if (thumb === null) {
+    if (longs.every((v) => v === true)) thumb = true;
+    else return null;
+  }
 
   return {
     thumb: thumb as boolean,
@@ -135,6 +149,15 @@ export function fingersUp(lm: Landmark[]): FingerState | null {
     ring: read.ring as boolean,
     pinky: read.pinky as boolean,
   };
+}
+
+/**
+ * Cuánto se aleja el pulgar del nudillo del índice, en tamaños de mano.
+ * Recogido cruza sobre la palma (valor bajo); abierto se va al lado (valor alto).
+ */
+export function thumbSpread(lm: Landmark[]): number {
+  const scale = Math.max(dist(lm[WRIST], lm[MIDDLE_MCP]), 1e-6);
+  return dist(lm[THUMB_TIP], lm[INDEX_MCP]) / scale;
 }
 
 /** Centro de la palma. Sirve para exigir que la mano esté quieta antes de hacer caso. */

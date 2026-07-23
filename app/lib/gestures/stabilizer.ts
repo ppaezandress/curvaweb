@@ -23,6 +23,15 @@ export type StabilizerConfig = {
   minFrames: number;
   /** Cuántos cuadros seguidos puede fallar el candidato sin perder el progreso. */
   missTolerance: number;
+  /**
+   * Tras ejecutar, hay que RETIRAR la mano: se exige este tiempo seguido sin ninguna seña
+   * antes de admitir el siguiente comando.
+   *
+   * Sin esto, una mano ocupada en otra cosa (manipular el celular, gesticular al hablar) suelta
+   * ráfagas de comandos — cada cambio de postura contaba como una orden nueva. Obligar a que la
+   * mano desaparezca entre una y otra convierte cada comando en un acto deliberado.
+   */
+  releaseMs: number;
 };
 
 export const DEFAULT_STABILIZER: StabilizerConfig = {
@@ -34,6 +43,7 @@ export const DEFAULT_STABILIZER: StabilizerConfig = {
   minAgreeRatio: 0.85,
   minFrames: 4,
   missTolerance: 3,
+  releaseMs: 700,
 };
 
 export type StabilizerOutput = {
@@ -73,9 +83,10 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
   // parpadea, y reiniciar el progreso a cero por un solo cuadro malo era la causa de que una
   // seña bien hecha "a veces no la tomara".
   let misses = 0;
-  // Tras disparar hay que "soltar": ver algo distinto al gesto que disparó antes de volver a
-  // armarlo. Evita que sostener la mano repita el comando para siempre.
-  let mustRelease: Gesture | null = null;
+  // Tras disparar hay que RETIRAR la mano: no basta con cambiar de seña. Se cuenta desde
+  // cuándo no se ve ninguna seña; hasta cumplir `releaseMs` no se admite nada nuevo.
+  let awaitingRelease = false;
+  let clearSince = 0;
 
   const reset = () => {
     window = [];
@@ -84,10 +95,9 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
     progressAcc = 0;
     lastT = 0;
     misses = 0;
-    mustRelease = null;
+    awaitingRelease = false;
+    clearSince = 0;
   };
-
-  const countIn = (g: Gesture) => window.reduce((n, x) => (x === g ? n + 1 : n), 0);
 
   // Gesto que domina la ventana. El acuerdo se mide sobre los cuadros que HAY, no sobre el
   // tamaño máximo: si exigiéramos la ventana llena, el dwell real sería el que se ve en
@@ -110,12 +120,15 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
 
     const top = dominant();
 
-    // Soltar: se libera cuando el gesto que disparó DEJA de estar presente de verdad. Ojo, no
-    // basta con `top !== mustRelease`: al vaciar la ventana tras un disparo, `top` es null por
-    // falta de cuadros y eso se leía como "ya soltó" → sostener la mano disparaba en bucle.
-    if (mustRelease && window.length >= c.windowSize) {
-      const still = countIn(mustRelease) >= Math.ceil(window.length * c.minAgreeRatio);
-      if (!still) mustRelease = null;
+    // Contabiliza cuánto lleva la escena SIN ninguna seña: es lo que libera el siguiente
+    // comando. Basta con que aparezca cualquier seña para reiniciar la cuenta.
+    if (gesture === null) {
+      if (!clearSince) clearSince = tMs;
+    } else {
+      clearSince = 0;
+    }
+    if (awaitingRelease && clearSince && tMs - clearSince >= c.releaseMs) {
+      awaitingRelease = false;
     }
 
     if (tMs < cooldownUntil) {
@@ -124,7 +137,13 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
       return { ...IDLE, cooling: true };
     }
 
-    if (!top || top === mustRelease) {
+    if (awaitingRelease) {
+      candidate = null;
+      progressAcc = 0;
+      return { ...IDLE, cooling: true };
+    }
+
+    if (!top) {
       // Un tropiezo suelto no tira el progreso: se conserva unos cuadros por si el modelo solo
       // parpadeó. Pasado ese margen sí se abandona.
       if (candidate && misses < c.missTolerance) {
@@ -150,7 +169,8 @@ export function createStabilizer(cfg: Partial<StabilizerConfig> = {}): Stabilize
 
     // Disparo.
     cooldownUntil = tMs + c.cooldownMs;
-    mustRelease = top;
+    awaitingRelease = true;
+    clearSince = 0;
     candidate = null;
     progressAcc = 0;
     window = [];

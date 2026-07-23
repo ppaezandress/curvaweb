@@ -137,9 +137,10 @@ export function GestureSettings() {
             </ul>
             <p className="mt-2.5 text-caption text-muted">
               Para elegir tarea cuenta <b>cuántos dedos</b> levantas, no cuáles: da igual si el 3
-              lo haces con el pulgar o sin él. La seña hay que <b>sostenerla</b> un momento,
-              <b>quieta y de frente</b> — por eso rascarte la cara no te mueve el cronómetro. El
-              puño no hace nada a propósito: es como queda la mano en reposo. Todo se deshace.
+              lo haces con el pulgar o sin él. Hay que <b>acercar la mano a la cámara</b> y
+              sostener la seña un momento, quieta y de frente. Por eso traer el celular en la
+              mano o rascarte la cara no te mueve el cronómetro: esa mano no está presentada.
+              Entre un comando y el siguiente hay que <b>retirar la mano</b>. Todo se deshace.
             </p>
             <Link
               href="/labs/gestos"
