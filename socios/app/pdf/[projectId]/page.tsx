@@ -78,6 +78,10 @@ export default function PdfReparto() {
   const fecha = new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
   const hayComis = Object.values(r.people).some((a) => (a.comision || 0) > 0.5);
   const plazoN = Math.max(1, Math.floor(proj.plazoMeses || 1)); // para mostrar el reparto al mes
+  // En proyectos a varios meses: mostrar el MENSUAL como número principal (no el total
+  // de los N meses) y decir "durante N meses". Decisión Andrés 2026-07-23.
+  const multiMes = plazoN > 1;
+  const fMes = multiMes ? 1 / plazoN : 1;
 
   return (
     <div className="pdf-page">
@@ -107,14 +111,14 @@ export default function PdfReparto() {
             </div>
             <div className="pdf-body">
               <span className="pdf-role">{soloComis ? "Comisión por traer el cliente" : rol}</span>
-              <div className="pdf-amount">{fmtMXN(tot)}<span className="pdf-cur">MXN</span></div>
-              {plazoN > 1 && <div className="pdf-permes">≈ <b>{fmtMXN(tot / plazoN)}</b> / mes · {plazoN} meses parejos</div>}
-              <div className="pdf-foot" style={{ marginTop: 0, marginBottom: 22 }}>{soloComis ? "Tu comisión por traer este cliente." : soloPago ? "Tu pago por el trabajo en este proyecto." : plazoN > 1 ? `Lo que ganas en este proyecto (${fmtMXN(tot)} en total, repartido en ${plazoN} meses).` : "Lo que ganas en este proyecto."}</div>
+              <div className="pdf-amount">{fmtMXN(tot * fMes)}<span className="pdf-cur">MXN{multiMes ? " / mes" : ""}</span></div>
+              {multiMes && <div className="pdf-permes">cada mes · durante <b>{plazoN} meses</b></div>}
+              <div className="pdf-foot" style={{ marginTop: 0, marginBottom: 22 }}>{soloComis ? "Tu comisión por traer este cliente." : soloPago ? "Tu pago por el trabajo en este proyecto." : multiMes ? `Lo que ganas cada mes en este proyecto, durante ${plazoN} meses.` : "Lo que ganas en este proyecto."}</div>
 
-              {base > 0.5 && a.trabajo > 0.5 && <div className="pdf-line"><span className="pl">Por tu trabajo ({rol})</span><span className="pv">{fmtMXN(a.trabajo)}</span></div>}
-              {base > 0.5 && a.extra > 0.5 && <div className="pdf-line"><span className="pl">{esSocio ? "Utilidad de socio" : "Bono del Núcleo"}</span><span className="pv">{fmtMXN(a.extra)}</span></div>}
-              {comis > 0.5 && <div className="pdf-line"><span className="pl">Comisión por traer el cliente</span><span className="pv">{fmtMXN(comis)}</span></div>}
-              <div className="pdf-line"><span className="pl"><b>Total</b></span><span className="pv"><b>{fmtMXN(tot)}</b></span></div>
+              {base > 0.5 && a.trabajo > 0.5 && <div className="pdf-line"><span className="pl">Por tu trabajo ({rol}){multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(a.trabajo * fMes)}</span></div>}
+              {base > 0.5 && a.extra > 0.5 && <div className="pdf-line"><span className="pl">{esSocio ? "Utilidad de socio" : "Bono del Núcleo"}{multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(a.extra * fMes)}</span></div>}
+              {comis > 0.5 && <div className="pdf-line"><span className="pl">Comisión por traer el cliente{multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(comis * fMes)}</span></div>}
+              <div className="pdf-line"><span className="pl"><b>Total{multiMes ? " al mes" : ""}</b></span><span className="pv"><b>{fmtMXN(tot * fMes)}</b></span></div>
 
               <div className="pdf-foot">
                 Proyecto de {proj.plazoMeses ?? 1} mes{(proj.plazoMeses ?? 1) !== 1 ? "es" : ""} · cobro {(proj.modoCobro ?? "golpe") === "mensual" ? "mensual" : "de golpe"}{esSocio ? ` · valor ${fmtMXN(r.t)}${proj.conIVA ? ` (+ IVA = ${fmtMXN(totalCliente(proj))})` : ""}` : ""}.<br />
