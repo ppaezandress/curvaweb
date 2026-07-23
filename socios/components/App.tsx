@@ -2251,7 +2251,7 @@ function PagoRow({ p, params, idx, pago, onToggleDesemb, onDelete }: {
     <div className={"pago" + (pago.desembolsado ? " done" : "")}>
       <div className="pago-head">
         <div>
-          <b>{fmtMXN(pago.monto)}</b> <span className="hint" style={{ margin: 0 }}>· {pago.fecha}{pago.nota ? " · " + pago.nota : ""}</span>
+          <b>{fmtMXN(totalConIVA)}</b> <span className="hint" style={{ margin: 0 }}>· {conIVA ? "con IVA · " : ""}{pago.fecha}{pago.nota ? " · " + pago.nota : ""}</span>
         </div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <button className="icon-btn" title="Recibo de cobro para el cliente" onClick={() => window.open("/pdf/recibo?tipo=cobro&proyecto=" + p.id + "&pago=" + pago.id, "_blank")}><FileText size={13} /></button>
@@ -2316,6 +2316,7 @@ function PagoImpuestos({ totalConIVA, ivaMonto, isrMonto, repartible }: { totalC
         <div className="cja-det">
           <div className="cja-dr"><span className="cja-dn">Te pagó el cliente{ivaMonto > 0.5 ? " (con IVA)" : ""}</span><span className="cja-dv">{fmtMXN(totalConIVA)}</span></div>
           {ivaMonto > 0.5 && <div className="cja-dr"><span className="cja-dn">− IVA 16% <span className="cja-tag t-comis">al SAT</span></span><span className="cja-dv">−{fmtMXN(ivaMonto)}</span></div>}
+          {ivaMonto > 0.5 && <div className="cja-dr"><span className="cja-dn">Facturación (base)</span><span className="cja-dv">{fmtMXN(totalConIVA - ivaMonto)}</span></div>}
           {isrMonto > 0.5 && <div className="cja-dr"><span className="cja-dn">− ISR RESICO <span className="cja-tag t-comis">al SAT</span></span><span className="cja-dv">−{fmtMXN(isrMonto)}</span></div>}
           <div className="cja-dr" style={{ fontWeight: 700, borderTop: "1px solid var(--line)", paddingTop: 6, marginTop: 2 }}><span className="cja-dn">Para repartir en cajas</span><span className="cja-dv">{fmtMXN(repartible)}</span></div>
         </div>
