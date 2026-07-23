@@ -4,14 +4,11 @@
 // dedos quedan en una posición que coincide con una seña y el cronómetro se movía solo. Contar
 // dedos no basta — hay que distinguir la intención.
 //
-// Dos señales separan un gesto de un movimiento cualquiera:
+// Aquí vive la medida de ORIENTACIÓN: una seña se le muestra a la cámara de frente, mientras
+// que una mano apoyada en la cara casi siempre queda de canto y la palma se ve aplastada.
 //
-//   1. QUIETUD. Una seña se sostiene en el aire; una mano que se rasca, se acomoda el pelo o
-//      va de paso está siempre en movimiento.
-//   2. DE FRENTE. Una seña se le muestra a la cámara de frente; una mano apoyada en la cara
-//      casi siempre queda de perfil o de canto, y entonces la palma se ve aplastada.
-//
-// Todo puro y con el tiempo inyectado, para poder probarlo sin cámara.
+// La quietud y el resto de señales se combinan en lib/gestures/quality.ts, que las puntúa
+// todas juntas en vez de aceptar o rechazar por separado.
 import type { Landmark } from "@/lib/gestures/vocabulary";
 
 // ── De frente ───────────────────────────────────────────────────────────────────────────
@@ -64,44 +61,3 @@ export function palmFlatness(lm: Landmark[]): number {
 
 /** Por debajo de esto la mano está de canto: no se le hace caso. */
 export const MIN_FACING = 0.45;
-
-export function isFacingCamera(lm: Landmark[]): boolean {
-  return palmFacing(lm) >= MIN_FACING;
-}
-
-// ── Quietud ─────────────────────────────────────────────────────────────────────────────
-
-export type SteadyGate = {
-  /** ¿Estaba la mano lo bastante quieta en este cuadro? */
-  feed: (center: { x: number; y: number } | null, tMs: number) => boolean;
-  reset: () => void;
-};
-
-/**
- * @param maxSpeed desplazamiento máximo por segundo, en fracción de pantalla. 0.9 ≈ cruzar el
- * cuadro entero en poco más de un segundo: sostener una seña queda muy por debajo, y rascarse
- * o acomodarse el pelo queda muy por encima.
- */
-export function createSteadyGate(maxSpeed = 0.9): SteadyGate {
-  let last: { x: number; y: number; t: number } | null = null;
-
-  return {
-    feed(center, tMs) {
-      if (!center) {
-        last = null;
-        return false;
-      }
-      const prev = last;
-      last = { ...center, t: tMs };
-      if (!prev) return false; // primer cuadro: sin referencia, no se decide todavía
-
-      const dt = (tMs - prev.t) / 1000;
-      if (dt <= 0) return true;
-      const speed = Math.hypot(center.x - prev.x, center.y - prev.y) / dt;
-      return speed <= maxSpeed;
-    },
-    reset() {
-      last = null;
-    },
-  };
-}

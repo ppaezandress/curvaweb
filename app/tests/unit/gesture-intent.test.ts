@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createSteadyGate, palmFacing, isFacingCamera, MIN_FACING } from "@/lib/gestures/intent";
+import { palmFacing, MIN_FACING } from "@/lib/gestures/intent";
 import type { Landmark } from "@/lib/gestures/vocabulary";
 
 // Estas dos defensas existen por un falso positivo real: al rascarse la cara o apoyar la mano
@@ -24,57 +24,16 @@ function handSideways(): Landmark[] {
 }
 
 describe("palma de frente", () => {
-  it("una mano de frente pasa el filtro", () => {
+  it("una mano de frente puntúa alto en orientación", () => {
     expect(palmFacing(handFacing())).toBeGreaterThan(MIN_FACING);
-    expect(isFacingCamera(handFacing())).toBe(true);
   });
 
-  it("una mano de canto (apoyada en la cara) no cuenta como seña", () => {
+  it("una mano de canto (apoyada en la cara) puntúa bajo", () => {
     expect(palmFacing(handSideways())).toBeLessThan(MIN_FACING);
-    expect(isFacingCamera(handSideways())).toBe(false);
   });
 
   it("no revienta con datos incompletos", () => {
     expect(palmFacing([])).toBe(0);
-    expect(isFacingCamera([])).toBe(false);
-  });
-});
-
-describe("quietud", () => {
-  const at = (x: number, y: number) => ({ x, y });
-
-  it("una mano sostenida en el aire cuenta", () => {
-    const gate = createSteadyGate();
-    gate.feed(at(0.5, 0.5), 0);
-    // Micro-temblor normal de sostener la mano: ~0.002 por cuadro a 20/s.
-    expect(gate.feed(at(0.502, 0.501), 50)).toBe(true);
-    expect(gate.feed(at(0.503, 0.5), 100)).toBe(true);
-  });
-
-  it("una mano que va de paso (rascarse, acomodarse el pelo) NO cuenta", () => {
-    const gate = createSteadyGate();
-    gate.feed(at(0.2, 0.8), 0);
-    expect(gate.feed(at(0.35, 0.6), 50)).toBe(false); // cruza medio cuadro en 50 ms
-  });
-
-  it("el primer cuadro nunca decide: hace falta una referencia", () => {
-    const gate = createSteadyGate();
-    expect(gate.feed(at(0.5, 0.5), 0)).toBe(false);
-  });
-
-  it("si la mano desaparece, se pierde la referencia", () => {
-    const gate = createSteadyGate();
-    gate.feed(at(0.5, 0.5), 0);
-    gate.feed(at(0.5, 0.5), 50);
-    expect(gate.feed(null, 100)).toBe(false);
-    expect(gate.feed(at(0.5, 0.5), 150)).toBe(false); // vuelve a empezar
-  });
-
-  it("reset deja el filtro como nuevo", () => {
-    const gate = createSteadyGate();
-    gate.feed(at(0.5, 0.5), 0);
-    gate.reset();
-    expect(gate.feed(at(0.5, 0.5), 50)).toBe(false);
   });
 });
 

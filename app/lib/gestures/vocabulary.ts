@@ -2,14 +2,15 @@
 // gestos que entiende la app. Función PURA — no sabe de cámaras ni de React, así que se prueba
 // con puntos fijos (tests/unit/gestures.test.ts).
 //
-//   ☝️  uno    → tarea 1 del dock
-//   ✌️  dos    → tarea 2
-//   🤟  tres   → tarea 3
-//   🖖  cuatro → tarea 4
-//   🖐️  palma  → pausar
+//   ☝️  uno       → tarea 1 del dock
+//   ✌️  dos       → tarea 2
+//   🤟  tres      → tarea 3
+//   🖐️  palma     → pausar
+//   🙌  dosPalmas → seguir con lo último
 //
-// "Palma" y "cinco" son el mismo gesto físico, por eso los gestos llegan solo hasta la tarea 4.
-// El teclado sigue cubriendo del 1 al 9.
+// El vocabulario es corto a propósito: cuantas menos señas y más separadas entre sí, menos se
+// confunden. El puño, los cuatro dedos y el pulgar solo NO significan nada — se probaron y
+// daban demasiados disparos accidentales. Para la 4ª tarea en adelante está el teclado (1-9).
 import type { TimerCommand } from "@/lib/timer-commands";
 import { DEFAULT_THRESHOLDS, type Thresholds } from "@/lib/gestures/calibration";
 
