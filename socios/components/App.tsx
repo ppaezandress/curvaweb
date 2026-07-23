@@ -78,7 +78,7 @@ const compressFirma = (file: File): Promise<string> => new Promise((resolve, rej
 const DEF_ROSTER: RosterPerson[] = [
   { id: "r_ivana", nombre: "Ivana", quien: "nucleo" },
   { id: "r_lomba", nombre: "Lomba", quien: "nucleo" },
-  { id: "r_yannick", nombre: "Yannick", quien: "nucleo" },
+  { id: "r_yannick", nombre: "Yannik", quien: "nucleo" },
   { id: "r_diana", nombre: "Diana", quien: "nucleo" },
 ];
 
