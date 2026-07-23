@@ -8,7 +8,6 @@ import { useGestureControl } from "@/lib/use-gesture-control";
 import { commandForGesture, type Gesture } from "@/lib/gestures/vocabulary";
 import { resolveCommand, describeAction } from "@/lib/timer-commands";
 import { GestureHud, GestureError } from "@/components/GestureHud";
-import { PILOT } from "@/lib/pilot-flags";
 import { toast } from "@/lib/toast";
 import { isSoundOn } from "@/lib/gesture-prefs";
 import { playForAction } from "@/lib/gestures/sound";
@@ -125,7 +124,7 @@ export function GestureControl() {
     if (!optIn && status !== "off") stop();
   }, [optIn, status, start, stop]);
 
-  if (!PILOT.gestures || !optIn) return null;
+  if (!optIn) return null;
 
   return (
     <AnimatePresence>

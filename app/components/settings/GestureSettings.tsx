@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Hand, ShieldCheck, Volume2, AppWindow, AlertTriangle } from "lucide-react";
 import { Toggle } from "@/components/ui/Toggle";
-import { PILOT } from "@/lib/pilot-flags";
 import {
   GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, setSoundOn,
   getSensitivity, setSensitivity, SENSITIVITY, type Sensitivity,
@@ -16,6 +15,12 @@ import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocab
 // Ajustes del control por gestos. La promesa del producto es "esto es para ti, no para
 // vigilarte", así que aquí se dice sin rodeos qué hace la cámara y qué no — y se apaga en el
 // mismo lugar donde se prende.
+//
+// La sección se muestra SIEMPRE y el interruptor nace apagado: la protección de verdad es que
+// cada persona tenga que activarlo en su equipo. Hubo un flag de disponibilidad por variable
+// de entorno y se quitó — no añadía seguridad (el opt-in ya la da) y sí añadía una pieza
+// frágil: dependía de que la variable llegara al build, y una compilación cacheada la dejaba
+// en falso sin que nada lo avisara.
 
 const VOCABULARY: { gesture: Gesture; does: string }[] = [
   { gesture: "uno", does: "Mide la 1ª tarea del dock" },
@@ -37,8 +42,6 @@ export function GestureSettings() {
     window.addEventListener(GESTURE_ENABLED_EVENT, read);
     return () => window.removeEventListener(GESTURE_ENABLED_EVENT, read);
   }, []);
-
-  if (!PILOT.gestures) return null;
 
   return (
     <div>
