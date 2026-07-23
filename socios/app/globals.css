@@ -695,13 +695,21 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .firma-picker .btn{padding:6px 12px;font-size:13px}
 
 @media print{
-  @page{margin:0}
+  @page{size:A4;margin:12mm 13mm}
   body{background:#fff}body::before{display:none}
   .side,.pdf-toolbar{display:none!important}
   .pdf-page{max-width:none;margin:0;padding:0}
-  .pdf-sheet{border:none;border-radius:0;margin:0;page-break-after:always;min-height:100vh;box-shadow:none}
+  /* Sin min-height:100vh (forzaba página completa y desbordaba). El contenido fluye y
+     cada bloque se mantiene entero → nada se parte a la mitad entre páginas. */
+  .pdf-sheet{border:none;border-radius:0;margin:0;box-shadow:none;page-break-after:always}
   .pdf-sheet:last-child{page-break-after:auto}
-  .pdf-hero,.pdf-role,.pdf-bar,.recibo-firma-img{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pdf-hero{padding:26px 30px}
+  .pdf-body{padding:22px 30px 20px}
+  /* No partir secciones/bloques a la mitad */
+  .pmr-block,.pmr-head,.pmr-sec,.pmr-chart,.pmr-stack,.pmr-comp-leg,.pmr-stats,.pmr-stat,.pmr-proj,.pmr-outlook,.pdf-foot,.pdf-amount,.pdf-line,.recibo-firma{break-inside:avoid}
+  /* Mantener un título con lo que sigue, y la gráfica/barra con su leyenda */
+  .pdf-h3,.pdf-role,.pmr-chart,.pmr-stack,.pmr-leg{break-after:avoid}
+  .pdf-hero,.pdf-role,.pdf-bar,.pmr-bar,.pmr-gorra,.pmr-dot,.pmr-stack>div,.pmr-outlook,.recibo-firma-img{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 
 /* ── IVA: una sola pregunta + desglose claro (Calculadora) ── */
