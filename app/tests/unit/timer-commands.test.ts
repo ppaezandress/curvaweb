@@ -45,6 +45,22 @@ describe("resolveCommand — pausar", () => {
   });
 });
 
+describe("resolveCommand — reanudar (puño)", () => {
+  it("sigue con la primera tarea del dock sin tener que recordar su número", () => {
+    expect(resolveCommand({ kind: "resume" }, ctx(["a", "b"], null))).toEqual({
+      kind: "switch", taskId: "a", index: 0,
+    });
+  });
+
+  it("si ya está corriendo no hace nada (no reinicia el tramo)", () => {
+    expect(resolveCommand({ kind: "resume" }, ctx(["a", "b"], "b"))).toBeNull();
+  });
+
+  it("con el dock vacío no hay nada que reanudar", () => {
+    expect(resolveCommand({ kind: "resume" }, ctx([], null))).toBeNull();
+  });
+});
+
 describe("resolveCommand — toggle (Espacio)", () => {
   it("pausa si algo corre", () => {
     expect(resolveCommand({ kind: "toggle" }, ctx(["a", "b"], "b"))).toEqual({ kind: "pause", taskId: "b" });

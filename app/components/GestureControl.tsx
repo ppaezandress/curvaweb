@@ -69,8 +69,15 @@ export function GestureControl() {
     const action = resolveCommand(commandForGesture(candidate), {
       openTasks, activeTaskId: active?.taskId ?? null,
     });
-    if (!action) return "Sin tarea ahí";
-    return action.kind === "pause" ? "Pausar" : nameOf(action.taskId) || "Cambiar de tarea";
+    if (!action) {
+      // Decir POR QUÉ no va a pasar nada: "sin tarea ahí" cuando pides una que no está
+      // abierta, y "ya vas" cuando el gesto no aplica al estado actual.
+      if (candidate === "puno") return active ? "Ya vas" : "Nada que reanudar";
+      if (candidate === "palma") return "Nada corriendo";
+      return "Sin tarea ahí";
+    }
+    if (action.kind === "pause") return "Pausar";
+    return `${candidate === "puno" ? "Seguir · " : ""}${nameOf(action.taskId) || "Cambiar de tarea"}`;
   })();
 
   // Autoencendido tras el opt-in: la persona ya dijo que sí en Ajustes.

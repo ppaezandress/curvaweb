@@ -15,7 +15,7 @@ import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocab
 //   · que cada gesto se reconozca al primer intento,
 //   · cuántos disparos salen solos en diez minutos de trabajo normal (deberían ser cero),
 //   · que los cuadros por segundo no se desplomen y la máquina no se caliente.
-const ORDER: Gesture[] = ["uno", "dos", "tres", "cuatro", "palma"];
+const ORDER: Gesture[] = ["uno", "dos", "tres", "cuatro", "palma", "puno"];
 
 export default function LabGestosPage() {
   const { isAdmin, adminResolved } = useApp();

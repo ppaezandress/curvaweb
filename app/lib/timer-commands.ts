@@ -11,6 +11,7 @@
 export type TimerCommand =
   | { kind: "switch"; index: number } // ir a la n-ésima tarea del dock (0-based)
   | { kind: "pause" } // parar el reloj
+  | { kind: "resume" } // seguir con lo último, sin tener que recordar qué número era
   | { kind: "toggle" }; // pausar si corre; si no, reanudar la primera del dock
 
 export type CommandContext = {
@@ -38,6 +39,14 @@ export function resolveCommand(cmd: TimerCommand, ctx: CommandContext): Resolved
   if (cmd.kind === "pause") {
     if (!activeTaskId) return null;
     return { kind: "pause", taskId: activeTaskId };
+  }
+
+  // Reanudar: el complemento de pausar. Mano abierta suelta el trabajo, mano cerrada lo
+  // vuelve a agarrar — sin obligar a nadie a recordar en qué número del dock estaba.
+  if (cmd.kind === "resume") {
+    if (activeTaskId) return null; // ya está corriendo: no hay nada que reanudar
+    const first = openTasks[0];
+    return first ? { kind: "switch", taskId: first, index: 0 } : null;
   }
 
   // toggle (tecla Espacio): pausa lo que corre, o reanuda la primera del dock.

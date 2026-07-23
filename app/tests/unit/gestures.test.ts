@@ -57,6 +57,7 @@ function makeHand(up: Up): Landmark[] {
 }
 
 const HANDS: Record<Gesture, Landmark[]> = {
+  puno: makeHand({}),
   uno: makeHand({ index: true }),
   dos: makeHand({ index: true, middle: true }),
   tres: makeHand({ index: true, middle: true, ring: true }),
@@ -101,11 +102,25 @@ describe("gestureFrom", () => {
     }
   });
 
-  it("ignora las combinaciones que no significan nada", () => {
-    expect(gestureFrom(makeHand({}))).toBeNull(); // puño
-    expect(gestureFrom(makeHand({ pinky: true }))).toBeNull(); // meñique solo
-    expect(gestureFrom(makeHand({ index: true, pinky: true }))).toBeNull(); // cuernos
-    expect(gestureFrom(makeHand({ thumb: true }))).toBeNull(); // pulgar arriba
+  it("cuenta CUÁNTOS dedos hay, no cuáles — cada quien cuenta como aprendió", () => {
+    // Este es el bug que reportó el primer usuario real: en México el 3 se hace con
+    // pulgar+índice+medio, no con índice+medio+anular. Exigir una combinación exacta era
+    // pedirle a la gente que contara "como la app quiere".
+    expect(gestureFrom(makeHand({ thumb: true, index: true, middle: true }))).toBe("tres");
+    expect(gestureFrom(makeHand({ index: true, middle: true, ring: true }))).toBe("tres");
+
+    expect(gestureFrom(makeHand({ thumb: true, index: true }))).toBe("dos"); // 2 a la mexicana
+    expect(gestureFrom(makeHand({ index: true, middle: true }))).toBe("dos"); // 2 con la V
+
+    expect(gestureFrom(makeHand({ thumb: true }))).toBe("uno"); // pulgar arriba
+    expect(gestureFrom(makeHand({ pinky: true }))).toBe("uno"); // meñique solo
+    expect(gestureFrom(makeHand({ index: true, pinky: true }))).toBe("dos"); // cuernos
+
+    expect(gestureFrom(makeHand({ thumb: true, index: true, middle: true, ring: true }))).toBe("cuatro");
+  });
+
+  it("el puño es un gesto de verdad, no 'nada'", () => {
+    expect(gestureFrom(HANDS.puno)).toBe("puno");
   });
 
   it("no interpreta una mano cortada por el borde del cuadro", () => {
@@ -114,17 +129,18 @@ describe("gestureFrom", () => {
     expect(gestureFrom(fuera)).toBeNull();
   });
 
-  it("distingue 'cuatro' de 'palma' solo por el pulgar", () => {
+  it("cuatro dedos y la mano entera abierta son cosas distintas", () => {
     expect(gestureFrom(HANDS.cuatro)).toBe("cuatro");
     expect(gestureFrom(HANDS.palma)).toBe("palma");
   });
 });
 
 describe("commandForGesture", () => {
-  it("los dedos mandan a la tarea del dock y la palma pausa", () => {
+  it("los dedos mandan a la tarea del dock; mano abierta pausa y mano cerrada reanuda", () => {
     expect(commandForGesture("uno")).toEqual({ kind: "switch", index: 0 });
     expect(commandForGesture("cuatro")).toEqual({ kind: "switch", index: 3 });
     expect(commandForGesture("palma")).toEqual({ kind: "pause" });
+    expect(commandForGesture("puno")).toEqual({ kind: "resume" });
   });
 });
 

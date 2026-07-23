@@ -15,9 +15,10 @@ import type { TimerCommand } from "@/lib/timer-commands";
 export type Landmark = { x: number; y: number; z?: number };
 export type Handedness = "Left" | "Right";
 
-export type Gesture = "uno" | "dos" | "tres" | "cuatro" | "palma";
+export type Gesture = "puno" | "uno" | "dos" | "tres" | "cuatro" | "palma";
 
 export const GESTURE_LABEL: Record<Gesture, string> = {
+  puno: "Puño",
   uno: "1 dedo",
   dos: "2 dedos",
   tres: "3 dedos",
@@ -26,7 +27,7 @@ export const GESTURE_LABEL: Record<Gesture, string> = {
 };
 
 export const GESTURE_EMOJI: Record<Gesture, string> = {
-  uno: "☝️", dos: "✌️", tres: "🤟", cuatro: "🖖", palma: "🖐️",
+  puno: "✊", uno: "☝️", dos: "✌️", tres: "🤟", cuatro: "🖖", palma: "🖐️",
 };
 
 // Índices de MediaPipe Hands: 0 muñeca · 1-4 pulgar · 5-8 índice · 9-12 medio · 13-16 anular ·
@@ -90,16 +91,27 @@ export function handFullyVisible(lm: Landmark[], margin = 0.02): boolean {
   return lm.every((p) => p.x > margin && p.x < 1 - margin && p.y > margin && p.y < 1 - margin);
 }
 
-// Solo estas cinco combinaciones significan algo. Cualquier otra (meñique solo, cuernos, la
-// mano a medio cerrar) se ignora — es preferible no reaccionar que reaccionar mal.
+// Cuenta CUÁNTOS dedos hay levantados, sin importar cuáles.
+//
+// La primera versión exigía combinaciones exactas (el 3 tenía que ser índice+medio+anular) y
+// falló con el primer usuario real: en México el 3 se hace con pulgar+índice+medio. Pedirle a
+// alguien que cuente "como la app quiere" es pedirle lo imposible — cada quien cuenta como
+// aprendió, y las dos formas son igual de válidas. Contar la cantidad las acepta todas.
+export function countFingers(f: FingerState): number {
+  return [f.thumb, f.index, f.middle, f.ring, f.pinky].filter(Boolean).length;
+}
+
+const BY_COUNT: Record<number, Gesture> = {
+  0: "puno",
+  1: "uno",
+  2: "dos",
+  3: "tres",
+  4: "cuatro",
+  5: "palma",
+};
+
 function match(f: FingerState): Gesture | null {
-  const { thumb, index, middle, ring, pinky } = f;
-  if (index && !middle && !ring && !pinky) return "uno";
-  if (index && middle && !ring && !pinky) return "dos";
-  if (index && middle && ring && !pinky) return "tres";
-  if (index && middle && ring && pinky && !thumb) return "cuatro";
-  if (index && middle && ring && pinky && thumb) return "palma";
-  return null;
+  return BY_COUNT[countFingers(f)] ?? null;
 }
 
 /** Gesto de una mano detectada, o `null` si no reconoce nada fiable. */
@@ -110,7 +122,10 @@ export function gestureFrom(lm: Landmark[]): Gesture | null {
 }
 
 // ── Mando: gestos ──
+// Mano abierta suelta el trabajo, mano cerrada lo vuelve a agarrar. Los dedos, en medio,
+// eligen tarea.
 export const GESTURE_COMMAND: Record<Gesture, TimerCommand> = {
+  puno: { kind: "resume" },
   uno: { kind: "switch", index: 0 },
   dos: { kind: "switch", index: 1 },
   tres: { kind: "switch", index: 2 },

@@ -5,6 +5,7 @@ import type { HandLandmarker } from "@mediapipe/tasks-vision";
 import { gestureFrom, type Gesture, type Landmark } from "@/lib/gestures/vocabulary";
 import { createStabilizer, type StabilizerConfig } from "@/lib/gestures/stabilizer";
 import { reportClientError } from "@/lib/report-error";
+import { isSoundOn, playConfirmed, playDetected } from "@/lib/gestures/sound";
 
 // Motor del control por gestos. Todo ocurre DENTRO del navegador: se lee la cámara, se buscan
 // las manos y se decide el comando. Ningún cuadro se guarda ni se envía a ningún lado.
@@ -204,11 +205,20 @@ export function useGestureControl(opts: {
       // Aquí está la clave del rendimiento: setState SOLO si cambió lo que se ve.
       const step = Math.round(out.progress * PROGRESS_STEPS);
       const shown = shownRef.current;
-      if (out.candidate !== shown.candidate) { shownRef.current.candidate = out.candidate; setCandidate(out.candidate); }
+      if (out.candidate !== shown.candidate) {
+        // Avisa que SÍ está viendo la mano. Sin esta señal uno se queda haciendo señas al
+        // aire sin saber si falla el gesto, la luz o la cámara.
+        if (out.candidate && isSoundOn()) playDetected();
+        shownRef.current.candidate = out.candidate;
+        setCandidate(out.candidate);
+      }
       if (step !== shown.step) { shownRef.current.step = step; setProgress(step / PROGRESS_STEPS); }
       if (out.cooling !== shown.cooling) { shownRef.current.cooling = out.cooling; setCooling(out.cooling); }
 
-      if (out.fire) onCommandRef.current(out.fire);
+      if (out.fire) {
+        if (isSoundOn()) playConfirmed();
+        onCommandRef.current(out.fire);
+      }
     }
 
     return () => { cancelled = true; };

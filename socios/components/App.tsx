@@ -2567,16 +2567,21 @@ function ReglasDrawer({ st, update, onClose, setSec, preview }: {
   preview: { l: string; v: string; c?: string }[];
 }) {
   const P = st.params;
+  const [avz, setAvz] = useState(false);
   const setN = (k: keyof Reglas, v: number) => update((s) => { (s.params[k] as number) = v; return s; });
+  // Bolsa del equipo plana (los 4 tramos iguales) = el % que se lleva el equipo.
+  const bolsaPlana = P.brkChico === P.brkMediano && P.brkMediano === P.brkGrande && P.brkGrande === P.brkTope;
+  const setFlat = (v: number) => update((s) => { s.params.brkChico = v; s.params.brkMediano = v; s.params.brkGrande = v; s.params.brkTope = v; return s; });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const knob = (k: keyof Reglas, label: string, min: number, max: number, step = 1) => (
+  const knob = (k: keyof Reglas, label: string, hint: string, min: number, max: number, step = 1, suf = "%") => (
     <div className="rd-knob">
-      <div className="rd-knob-h"><span>{label}</span><span className="rd-knob-v">{P[k] as number}%</span></div>
+      <div className="rd-knob-h"><span className="rd-knob-l">{label}</span><span className="rd-knob-v">{P[k] as number}{suf}</span></div>
       <input type="range" min={min} max={max} step={step} value={P[k] as number} onChange={(e) => setN(k, +e.target.value)} />
+      {hint && <span className="rd-knob-hint">{hint}</span>}
     </div>
   );
   return (
@@ -2591,13 +2596,30 @@ function ReglasDrawer({ st, update, onClose, setSec, preview }: {
           {preview.map((p) => <div key={p.l} className="rd-pv"><span className="rd-pv-l">{p.l}</span><b style={p.c ? { color: `var(${p.c})` } : undefined}><span key={p.v} className="num-anim">{p.v}</span></b></div>)}
         </div>
         <div className="rd-body">
-          {knob("alpha", "Cuánto cobra un socio de su trabajo", 0, 100, 5)}
-          {knob("split", `Reparto ${P.nombreA} (resto ${P.nombreB})`, 50, 80)}
-          {knob("ahorro", "Caja de ahorro (% del margen op.)", 0, 25)}
-          {knob("beta", "Barrido de utilidad a Banca (β)", 0, 50, 5)}
-          {knob("pool", "Bono del Núcleo (% utilidad)", 0, 30)}
-          {knob("imp", "Tasa de ISR", 0, 20, 0.5)}
-          {knob("comisPct", "Comisión de origen (% del margen)", 0, 30)}
+          <div className="rd-group">Lo que más mueve la aguja</div>
+          {bolsaPlana ? (
+            <div className="rd-knob rd-star">
+              <div className="rd-knob-h"><span className="rd-knob-l">El equipo se lleva</span><span className="rd-knob-v">{P.brkChico}%</span></div>
+              <input type="range" min={0} max={60} step={1} value={P.brkChico} onChange={(e) => setFlat(+e.target.value)} />
+              <span className="rd-knob-hint">de cada proyecto · súbelo para que el equipo gane más</span>
+            </div>
+          ) : (
+            <div className="rd-knob"><div className="rd-knob-h"><span className="rd-knob-l">El equipo (por tramos)</span></div><span className="rd-knob-hint">Estás en modo avanzado por tramos — ajústalo en Reglas completas.</span></div>
+          )}
+          {knob("split", `Para ${P.nombreA} (resto para ${P.nombreB})`, "cómo se reparte la utilidad entre ustedes", 50, 80)}
+          {knob("pool", "Bono del Núcleo", "extra para tu gente de planta · sale de tu utilidad", 0, 30)}
+          {knob("ahorro", "Caja de ahorro", "% de la utilidad que apartas a la Banca", 0, 25)}
+          <button className="rd-more" aria-expanded={avz} onClick={() => setAvz((v) => !v)}>
+            {avz ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Avanzado <span className="rd-more-s">ISR · comisión · sombrero de socio · barrido</span>
+          </button>
+          {avz && (
+            <div className="rd-adv">
+              {knob("imp", "Tasa de ISR", "lo que apartas para el SAT (sobre la facturación)", 0, 20, 0.5)}
+              {knob("comisPct", "Comisión de origen", "% del margen a quien trae el cliente", 0, 30)}
+              {knob("alpha", "Sombrero de socio", "cuánto cobra un socio al trabajar · el resto va a Banca", 0, 100, 5)}
+              {knob("beta", "Barrido a Banca (β)", "% de utilidad que se va directo al ahorro", 0, 50, 5)}
+            </div>
+          )}
         </div>
         <div className="rd-foot">
           <button className="btn ghost" onClick={() => { onClose(); setSec("reglas"); }}><SlidersHorizontal size={14} /> Abrir Reglas completas</button>

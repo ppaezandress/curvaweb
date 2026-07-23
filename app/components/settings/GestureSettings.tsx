@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Hand, ShieldCheck } from "lucide-react";
+import { Hand, ShieldCheck, Volume2 } from "lucide-react";
 import { Toggle } from "@/components/ui/Toggle";
 import { PILOT } from "@/lib/pilot-flags";
 import { GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn } from "@/lib/gesture-prefs";
+import { isSoundOn, setSoundOn, playConfirmed } from "@/lib/gestures/sound";
 import { GESTURE_EMOJI, GESTURE_LABEL, type Gesture } from "@/lib/gestures/vocabulary";
 
 // Ajustes del control por gestos. La promesa del producto es "esto es para ti, no para
@@ -17,13 +18,15 @@ const VOCABULARY: { gesture: Gesture; does: string }[] = [
   { gesture: "tres", does: "Cambia a la 3ª" },
   { gesture: "cuatro", does: "Cambia a la 4ª" },
   { gesture: "palma", does: "Pausa lo que esté corriendo" },
+  { gesture: "puno", does: "Sigue con lo último que medías" },
 ];
 
 export function GestureSettings() {
   const [on, setOn] = useState(false);
+  const [sound, setSound] = useState(true);
 
   useEffect(() => {
-    const read = () => setOn(isGestureOptIn());
+    const read = () => { setOn(isGestureOptIn()); setSound(isSoundOn()); };
     read();
     window.addEventListener(GESTURE_ENABLED_EVENT, read);
     return () => window.removeEventListener(GESTURE_ENABLED_EVENT, read);
@@ -51,6 +54,18 @@ export function GestureSettings() {
         />
 
         {on && (
+          <div className="border-t border-line">
+            <Toggle
+              icon={<Volume2 size={16} />}
+              label="Avisarme con un sonido"
+              hint="Un tic al reconocer tu mano y un tono al ejecutar. Así sabes que la cámara te está viendo."
+              on={sound}
+              onChange={(v) => { setSoundOn(v); setSound(v); if (v) playConfirmed(); }}
+            />
+          </div>
+        )}
+
+        {on && (
           <div className="border-t border-line px-5 py-4">
             <p className="mb-2 text-caption font-semibold text-muted">Los gestos</p>
             <ul className="grid gap-1.5 sm:grid-cols-2">
@@ -65,8 +80,9 @@ export function GestureSettings() {
               ))}
             </ul>
             <p className="mt-2.5 text-caption text-muted">
-              Hay que <b>sostener</b> el gesto un segundo para que cuente — así un saludo en una
-              junta no te mueve el cronómetro. Y todo cambio se puede deshacer al instante.
+              Cuenta <b>cuántos dedos</b> levantas, no cuáles: da igual si el 3 lo haces con el
+              pulgar o sin él. Hay que <b>sostener</b> la seña un segundo para que cuente — así
+              un saludo en una junta no te mueve el cronómetro — y todo se puede deshacer.
             </p>
           </div>
         )}
