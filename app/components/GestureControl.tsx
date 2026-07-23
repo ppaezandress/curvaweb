@@ -7,11 +7,12 @@ import { useData } from "@/lib/data-context";
 import { useGestureControl } from "@/lib/use-gesture-control";
 import { commandForGesture, type Gesture } from "@/lib/gestures/recognizer";
 import { resolveCommand, describeAction } from "@/lib/timer-commands";
-import { GestureHud, GestureError } from "@/components/GestureHud";
+import { GestureHud, GestureError, GestureToggleButton } from "@/components/GestureHud";
 import { toast } from "@/lib/toast";
-import { isSoundOn } from "@/lib/gesture-prefs";
-import { playForAction } from "@/lib/gestures/sound";
-import { GESTURE_ENABLED_EVENT, isGestureOptIn } from "@/lib/gesture-prefs";
+import { playForAction, unlockAudio } from "@/lib/gestures/sound";
+import {
+  GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, hasOnboarded,
+} from "@/lib/gesture-prefs";
 
 // Host del control por gestos, montado en el layout. Si la persona no lo activó, este
 // componente no hace absolutamente nada: no importa MediaPipe, no toca la cámara, no pide
@@ -20,15 +21,29 @@ export function GestureControl() {
   const { openTasks, active, switchTo, pause } = useApp();
   const { taskById } = useData();
   const [optIn, setOptIn] = useState(false);
+  // ¿La persona ya conoce la función? Solo entonces aparece el botón flotante para prenderla —
+  // no le metemos un botón de cámara al home de quien nunca la activó.
+  const [known, setKnown] = useState(false);
 
   // El opt-in vive en el dispositivo (no se sincroniza a ningún lado: nadie más tiene por
-  // qué saber quién usa esto). Se escucha el evento para reaccionar al toggle de Ajustes.
+  // qué saber quién usa esto). Se escucha el evento para reaccionar a cualquier cambio.
   useEffect(() => {
-    const read = () => setOptIn(isGestureOptIn());
+    const read = () => { setOptIn(isGestureOptIn()); setKnown(hasOnboarded() || isGestureOptIn()); };
     read();
     window.addEventListener(GESTURE_ENABLED_EVENT, read);
     return () => window.removeEventListener(GESTURE_ENABLED_EVENT, read);
   }, []);
+
+  // Prender/apagar desde el flotante: cambia el opt-in (persistente), no solo el stream. Un
+  // apagado "de verdad" —antes el X del HUD solo llamaba a stop() y el efecto lo re-encendía
+  // porque el opt-in seguía activo—.
+  const enable = useCallback(() => {
+    // Este clic es el momento para desbloquear el audio (un AudioContext creado fuera de un
+    // gesto del usuario nace mudo), igual que en Ajustes.
+    unlockAudio();
+    setGestureOptIn(true);
+  }, []);
+  const disable = useCallback(() => setGestureOptIn(false), []);
 
   // Lo que el cronómetro tiene AHORA, leído por ref: el bucle de la cámara vive fuera de
   // React y necesita el estado fresco sin re-suscribirse (ni reiniciar la cámara) en cada
@@ -124,11 +139,12 @@ export function GestureControl() {
     if (!optIn && status !== "off") stop();
   }, [optIn, status, start, stop]);
 
-  if (!optIn) return null;
+  // Quien nunca activó la función no ve nada (ni botón): se descubre en Ajustes, como hasta hoy.
+  if (!known) return null;
 
   return (
-    <AnimatePresence>
-      {(status === "running" || status === "starting") && (
+    <AnimatePresence mode="wait">
+      {(status === "running" || status === "starting") ? (
         <GestureHud
           key="hud"
           candidate={candidate}
@@ -136,11 +152,13 @@ export function GestureControl() {
           cooling={cooling}
           hint={hint}
           videoRef={videoRef}
-          onStop={stop}
+          onStop={disable}
         />
-      )}
-      {error && status !== "running" && (
-        <GestureError key="err" message={error} onDismiss={stop} />
+      ) : error ? (
+        <GestureError key="err" message={error} onDismiss={disable} />
+      ) : (
+        // Apagado: un botón discreto para volver a prender sin ir a Ajustes.
+        <GestureToggleButton key="toggle" onEnable={enable} />
       )}
     </AnimatePresence>
   );

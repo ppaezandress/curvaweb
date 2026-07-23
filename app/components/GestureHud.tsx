@@ -181,6 +181,30 @@ export function GestureHud({ candidate, progress, cooling, hint, videoRef, onSto
   );
 }
 
+/**
+ * Botón flotante para PRENDER los gestos sin ir a Ajustes.
+ *
+ * Vive en la misma esquina que el HUD (nunca coexisten: si la cámara corre, manda el HUD). Es
+ * deliberadamente discreto en reposo —una pastilla con la mano tachada— para no gritar "cámara"
+ * en el home de quien no la está usando; al encenderla, el HUD toma el relevo con su punto vivo.
+ */
+export function GestureToggleButton({ onEnable }: { onEnable: () => void }) {
+  return (
+    <motion.button
+      variants={dockChip}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      onClick={onEnable}
+      className="focus-ring pointer-events-auto fixed bottom-20 right-4 z-40 hidden items-center gap-2 rounded-hero border border-line bg-surface/92 py-2 pl-3 pr-3.5 text-sm font-medium text-muted shadow-float backdrop-blur-xl transition hover:border-accent/40 hover:text-fg sm:inline-flex"
+      title="Prender el control por gestos"
+    >
+      <Hand size={16} aria-hidden />
+      Gestos
+    </motion.button>
+  );
+}
+
 /** Aviso compacto cuando la cámara no se pudo encender. */
 export function GestureError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (

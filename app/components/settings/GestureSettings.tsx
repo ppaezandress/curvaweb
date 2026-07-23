@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Hand, ShieldCheck, Volume2, AppWindow, AlertTriangle } from "lucide-react";
 import { Toggle } from "@/components/ui/Toggle";
 import {
-  GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, setSoundOn,
+  GESTURE_ENABLED_EVENT, isGestureOptIn, setGestureOptIn, isSoundOn, setSoundOn, markOnboarded,
   getSensitivity, setSensitivity, SENSITIVITY, type Sensitivity,
   isBackgroundOn, setBackgroundOn,
 } from "@/lib/gesture-prefs";
@@ -62,7 +62,7 @@ export function GestureSettings() {
           onChange={(v) => {
             // El audio se desbloquea AQUÍ, dentro del clic: un AudioContext creado fuera de un
             // gesto del usuario nace bloqueado y los tonos no suenan nunca.
-            if (v) unlockAudio();
+            if (v) { unlockAudio(); markOnboarded(); }
             setGestureOptIn(v);
           }}
         />
