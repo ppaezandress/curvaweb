@@ -96,7 +96,12 @@ export default function PdfRecibo() {
   }, [state, q]);
 
   useEffect(() => {
-    if (ready && (pago || cobro)) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
+    if (ready && (pago || cobro)) {
+      const prev = document.title;
+      document.title = pago ? `Recibo · ${pago.nombre}` : cobro ? `Recibo de cobro · ${cobro.proyecto.nombre}` : prev;
+      const t = setTimeout(() => window.print(), 500);
+      return () => { clearTimeout(t); document.title = prev; };
+    }
   }, [ready, pago, cobro]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;

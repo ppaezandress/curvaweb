@@ -77,10 +77,13 @@ export default function PdfPersona() {
 
   useEffect(() => {
     if (ready && rows.length) {
+      // Nombre del PDF = persona · reporte mensual (o "Reporte del equipo" si son todos).
+      const prev = document.title;
+      document.title = `${persona || (rows.length === 1 ? rows[0].nombre : "Reporte del equipo")} · reporte mensual`;
       const t = setTimeout(() => window.print(), 600); // deja cargar fuentes
-      return () => clearTimeout(t);
+      return () => { clearTimeout(t); document.title = prev; };
     }
-  }, [ready, rows]);
+  }, [ready, rows, persona]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
   if (!rows.length) return <div className="pdf-page">No hay reparto por persona todavía. Guarda proyectos en la app y vuelve a generar el PDF.</div>;

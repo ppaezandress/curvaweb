@@ -59,10 +59,16 @@ export default function PdfReparto() {
 
   useEffect(() => {
     if (ready && proj && r) {
+      // El navegador propone el título de la página como nombre del PDF. Lo armamos con
+      // persona · proyecto (o "Reparto · proyecto" si es la hoja de todos) para que el
+      // archivo salga ya nombrado. Se restaura al desmontar. Decisión Andrés 2026-07-23.
+      const prev = document.title;
+      const quien = persona || (parte === "comision" ? "Comisión" : "Reparto");
+      document.title = `${quien} · ${proj.nombre}`;
       const t = setTimeout(() => window.print(), 600); // deja cargar fuentes
-      return () => clearTimeout(t);
+      return () => { clearTimeout(t); document.title = prev; };
     }
-  }, [ready, proj, r]);
+  }, [ready, proj, r, persona, parte]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
   if (!proj || !r) return <div className="pdf-page">No encontré ese proyecto. Ábrelo desde la app y vuelve a generar el PDF.</div>;

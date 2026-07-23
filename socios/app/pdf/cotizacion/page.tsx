@@ -31,7 +31,12 @@ export default function Cotizacion() {
   const scope = (proj?.cotScope || "").split("\n").map((x) => x.trim()).filter(Boolean);
 
   useEffect(() => {
-    if (ready && proj) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
+    if (ready && proj) {
+      const prev = document.title;
+      document.title = `Cotización · ${proj.nombre}`;
+      const t = setTimeout(() => window.print(), 500);
+      return () => { clearTimeout(t); document.title = prev; };
+    }
   }, [ready, proj]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;

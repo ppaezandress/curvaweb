@@ -34,8 +34,13 @@ export default function FichaBanco() {
   const pendiente = Math.max(0, total - cobrado);
 
   useEffect(() => {
-    if (ready) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
-  }, [ready]);
+    if (ready) {
+      const prev = document.title;
+      if (proj) document.title = `Datos de cobro · ${proj.nombre}`;
+      const t = setTimeout(() => window.print(), 500);
+      return () => { clearTimeout(t); document.title = prev; };
+    }
+  }, [ready, proj]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
 
