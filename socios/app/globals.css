@@ -601,7 +601,9 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
 .member-pay.on .mp-l{color:var(--cobalt)}
 .mp-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--cobalt);background:var(--cobalt-soft);padding:1px 6px;border-radius:6px;margin-left:4px}
 .money-in.sm{flex:1;max-width:150px}
-.money-in.sm input{padding:7px 9px;font-size:13px}
+.money-in.sm input{padding:8px 11px 8px 24px;font-size:13.5px;font-variant-numeric:tabular-nums;font-weight:600}
+.money-in.sm span{left:11px;font-size:13px}
+.member-pay.on .money-in.sm input{border-color:var(--cobalt);background:var(--cobalt-soft)}
 .mp-auto{border:1px solid var(--border-2);background:var(--panel);color:var(--ink-2);font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;cursor:pointer}
 .mp-auto:hover:not(:disabled){background:var(--panel-2);color:var(--ink)}
 .mp-auto:disabled{opacity:.5;cursor:default}
