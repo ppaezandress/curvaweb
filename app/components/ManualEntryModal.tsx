@@ -58,7 +58,7 @@ const BANDS = [
 const TICKS = [0, 4, 8, 12, 16, 20, 24].map((h) => h * 60);
 
 export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolean; onClose: () => void; presetTaskId?: string }) {
-  const { currentUserId } = useApp();
+  const { currentUserId, addManualEntry } = useApp();
   const { tasks, clients, clientById, members, memberById, taskTypes, taskTypeById, reload, recentEntries, addRecentEntries } = useData();
   const me = currentUserId ? memberById[currentUserId] : undefined;
 
@@ -247,7 +247,29 @@ export function ManualEntryModal({ open, onClose, presetTaskId }: { open: boolea
         // Vuelca los registros creados al buffer compartido → el historial de la tarea y el
         // "Trabajado hoy" los muestran al instante (sin esperar el indexado de Notion) y
         // bloquean un re-registro.
-        if (Array.isArray(body.records)) addRecentEntries(body.records);
+        if (Array.isArray(body.records)) {
+          addRecentEntries(body.records);
+          // Registra MI tramo en la maquinaria de la tarea → el TOTAL de la tarjeta se mueve al
+          // instante (antes solo el historial y "Trabajado hoy" lo veían; la tarjeta esperaba a
+          // que Notion indexara el rollup — queja de Emiliano ×2 / Ivana). El notionId evita el
+          // doble conteo (Trabajado hoy ya deduplica por notionId; reconcile lo marca synced
+          // cuando el baseline crece).
+          if (taskId && me) {
+            const mine = (body.records as { person?: string; minutes?: number; id?: string; start?: string }[])
+              .find((rec) => (rec.person || "").trim() === me.name.trim());
+            if (mine && (mine.minutes ?? 0) > 0) {
+              const startMs = mine.start ? new Date(mine.start).getTime() : startedAt;
+              const baseSec = tasks.find((t) => t.id === taskId)?.baselineSeconds ?? 0;
+              addManualEntry({
+                taskId,
+                seconds: Math.round((mine.minutes as number) * 60),
+                endedAt: startMs + (mine.minutes as number) * 60000,
+                notionId: mine.id,
+                baselineAtPost: baseSec,
+              });
+            }
+          }
+        }
         await reload();
         setTimeout(() => { reload(); }, 2000);
         // Reconcilia los registros de tiempo con Notion (que indexa con lag) para que las

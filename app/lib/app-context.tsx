@@ -77,6 +77,7 @@ type AppState = {
   stop: () => void;
   removeEntry: (id: string) => void; // quitar un registro mal medido
   markEntryPosted: (id: string, notionId?: string, baselineAtPost?: number) => void; // NotionSync confirmó la escritura
+  addManualEntry: (e: { taskId: string; seconds: number; endedAt: number; notionId?: string; baselineAtPost: number }) => void; // registro "a mano" → total de la tarea al instante
   reconcileEntries: (baselineByTask?: Record<string, number>) => void; // baseline fresco de Notion (por tarea, en segundos)
 
   // Timer "olvidado" detectado al reabrir (corría > 8h). Se avisa y NO se cuenta solo.
@@ -578,6 +579,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const markEntryPosted = (id: string, notionId?: string, baselineAtPost?: number) =>
     setEntries((e) => e.map((x) => (x.id === id ? { ...x, posted: true, notionId, baselineAtPost } : x)));
 
+  // Registra un tramo del botón "Registrar tiempo" (a mano) en la maquinaria local, para que
+  // cuente en el total de la TARJETA de la tarea de inmediato — como un tramo del cronómetro —
+  // hasta que el rollup de Notion lo absorba. Antes el manual solo iba a recentEntries
+  // (data-context) + Notion, así que el historial y "Trabajado hoy" lo mostraban pero el total
+  // de la tarjeta NO se movía hasta que Notion indexaba (queja de Emiliano ×2 / Ivana). El
+  // `notionId` evita el doble conteo: "Trabajado hoy" ya deduplica por notionId, y reconcile lo
+  // marca synced cuando el baseline crece.
+  const addManualEntry = (e: { taskId: string; seconds: number; endedAt: number; notionId?: string; baselineAtPost: number }) => {
+    if (!e.taskId || e.seconds <= 0) return;
+    counter.current += 1;
+    setEntries((prev) => [
+      ...prev,
+      {
+        id: `m${e.endedAt}-${counter.current}`,
+        taskId: e.taskId,
+        userId: userRef.current ?? "",
+        startedAt: e.endedAt - e.seconds * 1000,
+        endedAt: e.endedAt,
+        seconds: e.seconds,
+        inactiveSeconds: 0,
+        mode: "manual",
+        posted: true,
+        synced: false,
+        notionId: e.notionId,
+        baselineAtPost: e.baselineAtPost,
+      },
+    ]);
+  };
+
   // Reconciliación: se llama cuando llega baseline fresco de Notion (reload de /api/data),
   // recibiendo el baseline por tarea (segundos). Un tramo posteado pasa a `synced` (deja de
   // sumarse localmente) SOLO cuando el baseline de su tarea creció lo suficiente para incluirlo
@@ -677,7 +707,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value: AppState = {
     ready, currentUserId, setCurrentUser, logout, isAdmin, adminResolved,
-    active, entries, start, stop, removeEntry, markEntryPosted, reconcileEntries,
+    active, entries, start, stop, removeEntry, markEntryPosted, addManualEntry, reconcileEntries,
     staleTimer, dismissStaleTimer,
     aiActive, startAI, stopAI, toggleAI, isAI, autoResumed,
     openTasks, openTask, switchTo, pause, closeTask,
