@@ -75,17 +75,18 @@ export default function PdfPersona() {
       .sort((a, b) => b.total - a.total);
   }, [state, persona]);
 
-  // Nombre del PDF = título de la pestaña. Efecto dedicado con dep de string estable y
-  // SIN restaurar, para que ningún re-render lo revierta a "CURVA Socios".
+  // Nombre del archivo PDF = título de la pestaña. OJO: Next.js (App Router) reaplica el
+  // <title> del metadata durante la hidratación, así que setearlo en un useEffect al montar
+  // NO pega (Next lo pisa a "CURVA Socios"). Hay que ponerlo JUSTO antes de window.print(),
+  // cuando el metadata de Next ya se asentó. Auditado en navegador. Andrés 2026-07-24.
   const tituloPDF = rows.length ? `${persona || (rows.length === 1 ? rows[0].nombre : "Reporte del equipo")} · reporte mensual` : "";
-  useEffect(() => { if (tituloPDF) document.title = tituloPDF; }, [tituloPDF]);
-
+  const doPrint = () => { if (tituloPDF) document.title = tituloPDF; window.print(); };
   useEffect(() => {
     if (ready && rows.length) {
-      const t = setTimeout(() => window.print(), 600); // deja cargar fuentes
+      const t = setTimeout(doPrint, 600); // deja cargar fuentes; setea el título al final
       return () => clearTimeout(t);
     }
-  }, [ready, rows]);
+  }, [ready, rows, tituloPDF]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
   if (!rows.length) return <div className="pdf-page">No hay reparto por persona todavía. Guarda proyectos en la app y vuelve a generar el PDF.</div>;
@@ -98,7 +99,7 @@ export default function PdfPersona() {
     <div className="pdf-page">
       <div className="pdf-toolbar">
         <button className="btn" onClick={() => window.close()}>Cerrar</button>
-        <button className="btn primary" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+        <button className="btn primary" onClick={doPrint}>Imprimir / Guardar PDF</button>
       </div>
 
       {rows.map((a, i) => {

@@ -30,9 +30,10 @@ export default function Cotizacion() {
   const plazoN = Math.max(1, Math.floor(proj?.plazoMeses || 1));
   const scope = (proj?.cotScope || "").split("\n").map((x) => x.trim()).filter(Boolean);
 
-  useEffect(() => { if (proj) document.title = `Cotización · ${proj.nombre}`; }, [proj]);
+  // Título justo antes de imprimir (Next reaplica el metadata en la hidratación).
+  const doPrint = () => { if (proj) document.title = `Cotización · ${proj.nombre}`; window.print(); };
   useEffect(() => {
-    if (ready && proj) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
+    if (ready && proj) { const t = setTimeout(doPrint, 500); return () => clearTimeout(t); }
   }, [ready, proj]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
@@ -49,7 +50,7 @@ export default function Cotizacion() {
     <div className="pdf-page">
       <div className="pdf-toolbar">
         <button className="btn" onClick={() => window.close()}>Cerrar</button>
-        <button className="btn primary" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+        <button className="btn primary" onClick={doPrint}>Imprimir / Guardar PDF</button>
       </div>
 
       <div className="pdf-sheet">

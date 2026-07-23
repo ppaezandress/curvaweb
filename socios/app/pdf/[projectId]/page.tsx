@@ -60,15 +60,17 @@ export default function PdfReparto() {
   // Nombre del PDF (título de la pestaña): persona · proyecto (o "Reparto · proyecto"
   // para la hoja de todos). Efecto dedicado, dep de string estable y SIN restaurar, para
   // que ningún re-render lo revierta a "CURVA Socios". Decisión Andrés 2026-07-23.
+  // OJO: Next.js reaplica el <title> del metadata en la hidratación, así que setearlo al
+  // montar NO pega. Se pone JUSTO antes de window.print(). Auditado. Andrés 2026-07-24.
   const tituloPDF = proj ? `${persona || (parte === "comision" ? "Comisión" : "Reparto")} · ${proj.nombre}` : "";
-  useEffect(() => { if (tituloPDF) document.title = tituloPDF; }, [tituloPDF]);
+  const doPrint = () => { if (tituloPDF) document.title = tituloPDF; window.print(); };
 
   useEffect(() => {
     if (ready && proj && r) {
-      const t = setTimeout(() => window.print(), 600); // deja cargar fuentes
+      const t = setTimeout(doPrint, 600); // deja cargar fuentes; setea el título al final
       return () => clearTimeout(t);
     }
-  }, [ready, proj, r]);
+  }, [ready, proj, r, tituloPDF]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
   if (!proj || !r) return <div className="pdf-page">No encontré ese proyecto. Ábrelo desde la app y vuelve a generar el PDF.</div>;
@@ -105,7 +107,7 @@ export default function PdfReparto() {
             Mostrar comisión
           </label>
         )}
-        <button className="btn primary" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+        <button className="btn primary" onClick={doPrint}>Imprimir / Guardar PDF</button>
       </div>
 
       {gente.map((a, i) => {

@@ -33,10 +33,11 @@ export default function FichaBanco() {
   const cobrado = useMemo(() => (proj?.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0) * (proj?.conIVA ? 1.16 : 1), [proj]);
   const pendiente = Math.max(0, total - cobrado);
 
-  useEffect(() => { if (proj) document.title = `Datos de cobro · ${proj.nombre}`; }, [proj]);
+  // Título justo antes de imprimir (Next reaplica el metadata en la hidratación).
+  const doPrint = () => { if (proj) document.title = `Datos de cobro · ${proj.nombre}`; window.print(); };
   useEffect(() => {
-    if (ready) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
-  }, [ready]);
+    if (ready && proj) { const t = setTimeout(doPrint, 500); return () => clearTimeout(t); }
+  }, [ready, proj]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
 
@@ -59,7 +60,7 @@ export default function FichaBanco() {
             <label className="pdf-toggle"><input type="checkbox" checked={incPend} onChange={(e) => setIncPend(e.target.checked)} /> Incluir pendiente</label>
           </>
         )}
-        <button className="btn primary" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+        <button className="btn primary" onClick={doPrint}>Imprimir / Guardar PDF</button>
       </div>
 
       <div className="pdf-sheet">

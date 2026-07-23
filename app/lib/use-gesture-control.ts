@@ -411,12 +411,15 @@ export function useGestureControl(opts: {
         statsRef.current.lastFrameAt = Date.now();
         statsRef.current.source = from;
 
-        // El modelo entrenado devuelve, POR MANO, la categoría más probable y su confianza.
-        // Aquí ya no hay geometría: solo se traduce el nombre a nuestra seña.
+        // El modelo entrenado devuelve, POR MANO, la categoría más probable, su confianza y los
+        // 21 puntos. Las formas robustas salen de la categoría; los puntos solo se usan para
+        // contar el "tres dedos", que el modelo no clasifica (ver readGestures).
         const res = recognizer.recognizeForVideo(source, now);
-        const perHand = (res.gestures || []).map((g) => ({
+        const landmarks = (res.landmarks || []) as { x: number; y: number; z?: number }[][];
+        const perHand = (res.gestures || []).map((g, i) => ({
           categoryName: g[0]?.categoryName ?? "None",
           score: g[0]?.score ?? 0,
+          landmarks: landmarks[i],
         }));
         if (perHand.length) lastHandRef.current = now;
 

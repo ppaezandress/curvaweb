@@ -98,11 +98,12 @@ export default function PdfRecibo() {
     return { proyecto: p, pago: pg, base, iva, total: base + iva, conIVA };
   }, [state, q]);
 
+  // Título justo antes de imprimir (Next reaplica el metadata en la hidratación).
   const tituloPDF = pago ? `Recibo · ${pago.nombre}` : cobro ? `Recibo de cobro · ${cobro.proyecto.nombre}` : "";
-  useEffect(() => { if (tituloPDF) document.title = tituloPDF; }, [tituloPDF]);
+  const doPrint = () => { if (tituloPDF) document.title = tituloPDF; window.print(); };
   useEffect(() => {
-    if (ready && (pago || cobro)) { const t = setTimeout(() => window.print(), 500); return () => clearTimeout(t); }
-  }, [ready, pago, cobro]);
+    if (ready && (pago || cobro)) { const t = setTimeout(doPrint, 500); return () => clearTimeout(t); }
+  }, [ready, pago, cobro, tituloPDF]);
 
   if (!ready) return <div className="pdf-page">Cargando…</div>;
   if (!pago && !cobro) return <div className="pdf-page">No encontré datos para este comprobante. Genéralo desde la app.</div>;
@@ -122,7 +123,7 @@ export default function PdfRecibo() {
           </div>
         </div>
         <button className="btn" onClick={() => window.close()}>Cerrar</button>
-        <button className="btn primary" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+        <button className="btn primary" onClick={doPrint}>Imprimir / Guardar PDF</button>
       </div>
 
       {/* ── Comprobante de pago a la gente ── */}
