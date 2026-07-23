@@ -703,15 +703,19 @@ input[type=checkbox]{accent-color:var(--cobalt);width:17px;height:17px;cursor:po
      cada bloque se mantiene entero → nada se parte a la mitad entre páginas. */
   .pdf-sheet{border:none;border-radius:0;margin:0;box-shadow:none;page-break-after:always}
   .pdf-sheet:last-child{page-break-after:auto}
-  .pdf-hero{padding:22px 30px}
-  .pdf-body{padding:20px 30px 16px}
-  /* compactar un poco para caber mejor */
-  .pdf-amount{font-size:38px;margin:12px 0 2px}
-  .pdf-h3{margin:15px 0 8px}
-  .pmr-stats{margin:4px 0 8px}
-  .pmr-chart{height:132px}
-  .pmr-proj{padding:9px 0}
-  .pmr-outlook{margin-top:14px}
+  .pdf-hero{padding:18px 30px}
+  .pdf-body{padding:16px 30px 12px}
+  /* compactar para que un reporte típico (4 proyectos) quepa en UNA página */
+  .pdf-role{padding:5px 11px}
+  .pdf-amount{font-size:34px;margin:9px 0 2px}
+  .pdf-h3{margin:12px 0 6px}
+  .pmr-stats{margin:3px 0 6px}.pmr-stat{padding:9px 11px}
+  .pmr-chart{height:116px}
+  .pmr-leg{margin-bottom:2px}
+  .pmr-stack{margin-bottom:7px}
+  .pmr-proj{padding:7px 0}
+  .pmr-outlook{margin-top:10px;padding:11px 14px}
+  .pdf-foot{margin-top:14px}
   /* No partir secciones/bloques a la mitad */
   .pmr-block,.pmr-head,.pmr-sec,.pmr-chart,.pmr-stack,.pmr-comp-leg,.pmr-stats,.pmr-stat,.pmr-proj,.pmr-outlook,.pdf-foot,.pdf-amount,.pdf-line,.recibo-firma{break-inside:avoid}
   /* Mantener un título con lo que sigue, y la gráfica/barra con su leyenda */
