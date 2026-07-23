@@ -576,7 +576,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   const mesesCorte = allYM.slice(0, 12);
   const corteCols: [string, (x: MesAgg) => number][] = [
     ["Total", flujoVal], ["Equipo", (x) => x.equipo], ["Socios", (x) => x.socios],
-    ["Banca", (x) => x.banca], ["Caja proy.", (x) => x.caja], ["Gastos", (x) => x.gastos],
+    ["Ahorro CURVA", (x) => x.banca], ["Caja proy.", (x) => x.caja], ["Gastos", (x) => x.gastos],
   ];
 
   return (
@@ -1218,7 +1218,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
     { k: "Comisión", v: r.comisPaid, c: "--c-reserva" },
     { k: "Bono Núcleo", v: r.poolAmt, c: "--c-reserva" },
     { k: "Caja proyecto", v: Math.max(0, r.cajaProj), c: "--c-caja" },
-    { k: "Banca", v: r.banca, c: "--c-banca" }, { k: P.nombreA, v: r.sAutil, c: "--c-andres" }, { k: P.nombreB, v: r.sButil, c: "--c-balmo" },
+    { k: "Ahorro CURVA", v: r.banca, c: "--c-banca" }, { k: P.nombreA, v: r.sAutil, c: "--c-andres" }, { k: P.nombreB, v: r.sButil, c: "--c-balmo" },
   ].filter((s) => s.v > 0.5);
   const totSeg = segs.reduce((s, x) => s + x.v, 0) || 1;
   const rows = Object.values(r.people).filter((x) => x.trabajo + x.extra + (x.comision || 0) > 0.5).sort((a, b) => (b.trabajo + b.extra + (b.comision || 0)) - (a.trabajo + a.extra + (a.comision || 0)) || order[a.quien] - order[b.quien]);
@@ -1501,12 +1501,12 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                 {isrRes > 0.5 && bd("sub", `− ISR (${P.imp}% · RESICO, al SAT — no se reparte)`, -isrRes)}
                 {isrRes > 0.5 && bd("eq", "Queda para repartir (después de ISR)", r.t - isrRes)}
                 {bd("sub", `− Pago al equipo (${pctFmt((r.bolsaOut - r.disc) / (r.t || 1))})`, -(r.bolsaOut - r.disc))}
-                {r.disc > 0.5 && bd("sub", "− Sombrero de socio (reserva a Banca)", -r.disc)}
+                {r.disc > 0.5 && bd("sub", "− Sombrero de socio (va a tu Ahorro CURVA)", -r.disc)}
                 {r.comis > 0.5 && bd("sub", `− Comisión de origen ${r.comisBanca > 0.5 ? "(a Banca)" : "→ " + (active.origenPersona || "quien lo trajo")}`, -r.comis)}
                 {bd("eq", "Utilidad bruta", r.t - isrRes - r.bolsaOut - r.comis)}
                 {bd("sub", "− Caja del proyecto", -r.cajaProj)}
                 {bd("eq", "Utilidad operativa", r.marginOp - isrRes)}
-                {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (reserva a Banca)", -r.cajaAhorro)}
+                {r.cajaAhorro > 0.5 && bd("sub", "− Caja de ahorro (va a tu Ahorro CURVA)", -r.cajaAhorro)}
                 {r.utilSwept > 0.5 && bd("sub", "− Barrido de utilidad (a Banca)", -r.utilSwept)}
                 {r.poolAmt > 0.5 && bd("sub", "− Bono del Núcleo", -r.poolAmt)}
                 {Math.abs(r.manualDelta) > 0.5 && bd("sub", r.manualDelta > 0 ? "− Extra al equipo (a mano)" : "+ Menos sueldo al equipo (a mano)", -r.manualDelta)}
@@ -2669,7 +2669,7 @@ function ReglasDrawer({ st, update, onClose, setSec, preview }: {
             <div className="rd-adv">
               {knob("imp", "Tasa de ISR", "lo que apartas para el SAT (sobre la facturación)", 0, 20, 0.5)}
               {knob("comisPct", "Comisión de origen", "% del margen a quien trae el cliente", 0, 30)}
-              {knob("alpha", "Sombrero de socio", "cuánto cobra un socio al trabajar · el resto va a Banca", 0, 100, 5)}
+              {knob("alpha", "Sombrero de socio", "cuánto cobra un socio al trabajar · el resto va al Ahorro CURVA", 0, 100, 5)}
               {knob("beta", "Barrido a Banca (β)", "% de utilidad que se va directo al ahorro", 0, 50, 5)}
             </div>
           )}
@@ -2815,7 +2815,7 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         <div className="card"><h2>Comisión de origen</h2>
           {pct("comisPct", "% del margen a quien trae el lead", 0, 25)}
           {money("comisTope", "Tope de la comisión")}
-          <p className="foot">Solo aplica al primer módulo (exploración). Los leads rápidos van sin comisión. Por proyecto decides si aplica y si va a Banca o al equipo.</p>
+          <p className="foot">Solo aplica al primer módulo (exploración). Los leads rápidos van sin comisión. Por proyecto decides si aplica y si va al Ahorro CURVA o al equipo.</p>
         </div>
       </div>
 
