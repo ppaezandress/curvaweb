@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { compute, fmtMXN, totalCliente, REGLAS_DEFAULT, type Proyecto, type Reglas, type Quien } from "@/lib/reparto";
+import { compute, fmtMXN, totalCliente, isrReservaDe, REGLAS_DEFAULT, type Proyecto, type Reglas, type Quien } from "@/lib/reparto";
 
 const KEY = "curva_socios_v1";
 type RosterPerson = { id: string; nombre: string; quien: Quien };
@@ -69,8 +69,14 @@ export default function PdfReparto() {
 
   const soloComis = parte === "comision"; // PDF solo de la comisión
   const soloPago = parte === "pago";      // PDF solo del pago (sin comisión)
+  // ISR de CURVA (RESICO): sale de la utilidad de los SOCIOS (no del sueldo del Núcleo).
+  // Se lo restamos a cada socio para que el PDF cuadre EXACTO con lo que reparte el pago
+  // y con lo que muestra la app (que ya van netos). Decisión Andrés 2026-07-23.
+  const isrRes = proj.descontarISR && params.imp > 0 ? isrReservaDe(r.t, params) : 0;
+  const isrDe = (q: Quien) => q === "socioA" ? isrRes * params.split / 100 : q === "socioB" ? isrRes * (1 - params.split / 100) : 0;
   const cm = (a: { comision?: number }) => (soloPago ? 0 : soloComis ? (a.comision || 0) : showComis ? a.comision || 0 : 0);
-  const baseOf = (a: { trabajo: number; extra: number }) => (soloComis ? 0 : a.trabajo + a.extra);
+  const extraOf = (a: { quien: Quien; extra: number }) => Math.max(0, a.extra - isrDe(a.quien)); // utilidad de socio ya sin ISR
+  const baseOf = (a: { quien: Quien; trabajo: number; extra: number }) => (soloComis ? 0 : a.trabajo + extraOf(a));
   const gente = Object.values(r.people)
     .filter((a) => baseOf(a) + cm(a) > 0.5)
     .filter((a) => !persona || a.nombre === persona) // ?persona= → solo esa hoja
@@ -116,13 +122,13 @@ export default function PdfReparto() {
               <div className="pdf-foot" style={{ marginTop: 0, marginBottom: 22 }}>{soloComis ? "Tu comisión por traer este cliente." : soloPago ? "Tu pago por el trabajo en este proyecto." : multiMes ? `Lo que ganas cada mes en este proyecto, durante ${plazoN} meses.` : "Lo que ganas en este proyecto."}</div>
 
               {base > 0.5 && a.trabajo > 0.5 && <div className="pdf-line"><span className="pl">Por tu trabajo ({rol}){multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(a.trabajo * fMes)}</span></div>}
-              {base > 0.5 && a.extra > 0.5 && <div className="pdf-line"><span className="pl">{esSocio ? "Utilidad de socio" : "Bono del Núcleo"}{multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(a.extra * fMes)}</span></div>}
+              {base > 0.5 && extraOf(a) > 0.5 && <div className="pdf-line"><span className="pl">{esSocio ? `Utilidad de socio${isrRes > 0.5 ? " · ya sin ISR" : ""}` : "Bono del Núcleo"}{multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(extraOf(a) * fMes)}</span></div>}
               {comis > 0.5 && <div className="pdf-line"><span className="pl">Comisión por traer el cliente{multiMes ? " · al mes" : ""}</span><span className="pv">{fmtMXN(comis * fMes)}</span></div>}
               <div className="pdf-line"><span className="pl"><b>Total{multiMes ? " al mes" : ""}</b></span><span className="pv"><b>{fmtMXN(tot * fMes)}</b></span></div>
 
               <div className="pdf-foot">
                 Proyecto de {proj.plazoMeses ?? 1} mes{(proj.plazoMeses ?? 1) !== 1 ? "es" : ""} · cobro {(proj.modoCobro ?? "golpe") === "mensual" ? "mensual" : "de golpe"}{esSocio ? ` · valor ${fmtMXN(r.t)}${proj.conIVA ? ` (+ IVA = ${fmtMXN(totalCliente(proj))})` : ""}` : ""}.<br />
-                Los montos son brutos (antes de impuestos) y se liberan conforme entran los pagos del cliente.<br />
+                {esSocio ? (isrRes > 0.5 ? "Tu utilidad ya trae descontado el ISR de CURVA (RESICO). " : "") : "Monto bruto (tu ISR personal va por tu cuenta). "}Se libera conforme entran los pagos del cliente.<br />
                 <b>CURVA</b> · {fecha}
               </div>
             </div>
