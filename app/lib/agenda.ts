@@ -45,7 +45,8 @@ export function dayLabel(ms: number, now: number): string {
   const k = dayKey(ms);
   if (k === dayKey(now)) return "Hoy";
   if (k === dayKey(now + DAY)) return "Mañana";
-  return new Date(ms).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" }).replace(".", "");
+  const s = new Date(ms).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "");
+  return s.charAt(0).toUpperCase() + s.slice(1); // "Dom 26 jul"
 }
 
 const durMin = (e: AgendaEvent) => Math.max(0, Math.round((e.end - e.start) / 60_000));
