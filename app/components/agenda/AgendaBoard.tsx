@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, type Variants } from "motion/react";
 import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles, List, CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { Modal } from "@/components/Modal";
 import { cn } from "@/lib/cn";
 import type { Member } from "@/lib/mock-data";
 import {
@@ -197,23 +198,75 @@ function ModeToggle({ mode, onMode }: { mode: AgendaMode; onMode: (m: AgendaMode
   );
 }
 
-// Fila compacta de junta para el panel del día seleccionado en el calendario.
-function CalRow({ ev, memberByEmail }: { ev: AgendaEvent; memberByEmail: Record<string, Member> }) {
+// Fila compacta de junta para el panel del día. Al tocarla abre el detalle (quién está);
+// el botón Unirse queda aparte.
+function CalRow({ ev, memberByEmail, onOpen }: { ev: AgendaEvent; memberByEmail: Record<string, Member>; onOpen: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3 py-2.5">
-      <div className="w-10 shrink-0">
-        <p className="tabular text-sm font-bold text-fg">{hhmm(ev.start)}</p>
-        <p className="tabular text-caption text-muted">{shortDur(Math.round((ev.end - ev.start) / 60_000))}</p>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-fg">{ev.title}</p>
-        {ev.attendees.length > 0 && (
-          <p className="mt-0.5 inline-flex items-center gap-1 text-caption text-muted"><Users size={11} /> {ev.attendees.length}</p>
-        )}
-      </div>
+    <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3 py-2.5 transition hover:border-accent/30">
+      <button onClick={onOpen} className="focus-ring flex min-w-0 flex-1 items-center gap-3 rounded text-left">
+        <div className="w-10 shrink-0">
+          <p className="tabular text-sm font-bold text-fg">{hhmm(ev.start)}</p>
+          <p className="tabular text-caption text-muted">{shortDur(Math.round((ev.end - ev.start) / 60_000))}</p>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-fg">{ev.title}</p>
+          {ev.attendees.length > 0 && (
+            <p className="mt-0.5 inline-flex items-center gap-1 text-caption text-muted"><Users size={11} /> {ev.attendees.length}</p>
+          )}
+        </div>
+      </button>
       <div className="hidden sm:block"><Attendees emails={ev.attendees} memberByEmail={memberByEmail} /></div>
       {ev.hangoutLink && <JoinButton href={ev.hangoutLink} />}
     </div>
+  );
+}
+
+// Detalle de una junta (al tocar un chip o una fila): quién está y botón para unirse.
+function MeetingDetailModal({ ev, memberByEmail, onClose }: { ev: AgendaEvent; memberByEmail: Record<string, Member>; onClose: () => void }) {
+  const d = new Date(ev.start);
+  const date = d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  const when = `${date.charAt(0).toUpperCase()}${date.slice(1)} · ${hhmm(ev.start)}–${hhmm(ev.end)}`;
+  return (
+    <Modal open onClose={onClose} title="Junta">
+      <div className="space-y-4">
+        <div>
+          <p className="font-display text-lg font-bold leading-snug text-fg">{ev.title}</p>
+          <p className="tabular mt-1 text-sm text-muted">{when}</p>
+        </div>
+        {ev.attendees.length > 0 && (
+          <div>
+            <p className="mb-2 text-caption font-bold uppercase tracking-wide text-muted">Asistentes ({ev.attendees.length})</p>
+            <ul className="max-h-52 space-y-1.5 overflow-y-auto">
+              {ev.attendees.map((email) => {
+                const m = memberByEmail[email.toLowerCase()];
+                const name = m?.name || email.split("@")[0];
+                return (
+                  <li key={email} className="flex items-center gap-2.5">
+                    <Avatar member={m} name={m ? undefined : name} size={28} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-fg">{name}</p>
+                      <p className="truncate text-caption text-muted">{email}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+        {ev.hangoutLink ? (
+          <a
+            href={ev.hangoutLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="glow-accent flex w-full items-center justify-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]"
+          >
+            <Video size={16} /> Unirse a la videollamada
+          </a>
+        ) : (
+          <p className="rounded-control border border-line bg-surface-2/40 py-2.5 text-center text-caption text-muted">Sin videollamada</p>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -245,6 +298,7 @@ function CalendarMonth({
   const grid = useMemo(() => buildMonthGrid(events, anchor, now), [events, anchor, now]);
   const selMeetings = useMemo(() => (selectedMs ? meetingsOn(events, selectedMs) : []), [events, selectedMs]);
   const selKey = selectedMs ? new Date(selectedMs).toDateString() : null;
+  const [detail, setDetail] = useState<AgendaEvent | null>(null); // junta abierta (detalle + unirse)
 
   return (
     <motion.div variants={reveal} className="space-y-4">
@@ -271,37 +325,61 @@ function CalendarMonth({
             const selected = selKey === new Date(c.ms).toDateString();
             const visible = c.count > MAX ? c.meetings.slice(0, MAX - 1) : c.meetings;
             const overflow = c.count - visible.length;
+            const dayNum = (interactive: boolean) => (
+              <span className={cn(
+                "tabular grid h-6 w-6 shrink-0 place-items-center self-start rounded-full text-xs transition",
+                c.isToday ? "bg-accent font-bold text-white" : c.inMonth ? "font-semibold text-fg" : "text-muted/40",
+                interactive && !c.isToday && "hover:bg-surface-2",
+              )}>{c.day}</span>
+            );
             return (
-              <button
+              <div
                 key={c.ms}
-                onClick={() => onSelect(c.ms)}
-                aria-pressed={selected}
                 className={cn(
-                  "focus-ring flex min-h-[4.25rem] flex-col gap-1 border-b border-r border-line p-1 text-left transition sm:min-h-[7rem] sm:p-1.5",
-                  selected ? "bg-accent/[0.07] ring-1 ring-inset ring-accent/40" : "hover:bg-surface-2/50",
+                  "border-b border-r border-line transition",
+                  selected ? "bg-accent/[0.07] ring-1 ring-inset ring-accent/40" : "",
                   !c.inMonth && "bg-surface-2/20",
                 )}
               >
-                <span className={cn(
-                  "tabular grid h-6 w-6 shrink-0 place-items-center self-start rounded-full text-xs",
-                  c.isToday ? "bg-accent font-bold text-white" : c.inMonth ? "font-semibold text-fg" : "text-muted/40",
-                )}>{c.day}</span>
+                {/* Móvil: toda la celda abre el día (el texto no cabe → puntos) */}
+                <button
+                  onClick={() => onSelect(c.ms)}
+                  aria-pressed={selected}
+                  aria-label={`Ver día ${c.day}`}
+                  className="focus-ring flex min-h-[4.25rem] w-full flex-col gap-1 p-1 text-left transition hover:bg-surface-2/40 sm:hidden"
+                >
+                  {dayNum(false)}
+                  {c.count > 0 && (
+                    <span className="flex gap-0.5 pl-1">
+                      {Array.from({ length: Math.min(3, c.count) }).map((_, i) => (
+                        <span key={i} className="h-1 w-1 rounded-full bg-accent" />
+                      ))}
+                    </span>
+                  )}
+                </button>
 
-                {/* Desktop: chips de juntas dentro del cuadro */}
-                <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
-                  {visible.map((ev) => <EventChip key={ev.id} ev={ev} now={now} dim={!c.inMonth} />)}
-                  {overflow > 0 && <span className="px-1 text-[11px] font-semibold text-muted">+{overflow} más</span>}
+                {/* Desktop: número abre el día; cada chip abre el detalle de esa junta */}
+                <div className="hidden min-h-[7rem] flex-col gap-0.5 p-1.5 sm:flex">
+                  <button onClick={() => onSelect(c.ms)} aria-label={`Ver día ${c.day}`} className="focus-ring self-start rounded-full">
+                    {dayNum(true)}
+                  </button>
+                  {visible.map((ev) => (
+                    <button
+                      key={ev.id}
+                      onClick={() => setDetail(ev)}
+                      title={ev.title}
+                      className="focus-ring block w-full min-w-0 rounded text-left transition hover:brightness-95"
+                    >
+                      <EventChip ev={ev} now={now} dim={!c.inMonth} />
+                    </button>
+                  ))}
+                  {overflow > 0 && (
+                    <button onClick={() => onSelect(c.ms)} className="focus-ring self-start rounded px-1 text-[11px] font-semibold text-muted transition hover:text-fg">
+                      +{overflow} más
+                    </button>
+                  )}
                 </div>
-
-                {/* Móvil: puntos (el texto no cabe en celdas tan angostas) */}
-                {c.count > 0 && (
-                  <span className="flex gap-0.5 pl-1 sm:hidden">
-                    {Array.from({ length: Math.min(3, c.count) }).map((_, i) => (
-                      <span key={i} className="h-1 w-1 rounded-full bg-accent" />
-                    ))}
-                  </span>
-                )}
-              </button>
+              </div>
             );
           })}
         </div>
@@ -328,11 +406,13 @@ function CalendarMonth({
             <p className="rounded-card border border-line bg-surface px-3 py-4 text-center text-caption text-muted">Día despejado. Nada agendado.</p>
           ) : (
             <ul className="space-y-1.5">
-              {selMeetings.map((ev) => <li key={ev.id}><CalRow ev={ev} memberByEmail={memberByEmail} /></li>)}
+              {selMeetings.map((ev) => <li key={ev.id}><CalRow ev={ev} memberByEmail={memberByEmail} onOpen={() => setDetail(ev)} /></li>)}
             </ul>
           )}
         </motion.div>
       )}
+
+      {detail && <MeetingDetailModal ev={detail} memberByEmail={memberByEmail} onClose={() => setDetail(null)} />}
     </motion.div>
   );
 }
