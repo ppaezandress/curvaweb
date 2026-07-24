@@ -115,7 +115,7 @@ export function minutesLabel(min: number): string {
 
 // ── Vista de calendario (rejilla de mes) ────────────────────────────────────
 
-export type MonthCell = { ms: number; day: number; inMonth: boolean; isToday: boolean; count: number };
+export type MonthCell = { ms: number; day: number; inMonth: boolean; isToday: boolean; count: number; meetings: AgendaEvent[] };
 export type MonthGrid = { label: string; weekdays: string[]; weeks: MonthCell[][] };
 
 // Medianoche local del día que contiene `ms`.
@@ -159,11 +159,11 @@ export function buildMonthGrid(events: AgendaEvent[], anchorMs: number, now: num
   const { from } = monthGridRange(anchorMs, weekStartsOn);
   const todayS = startOfDay(now);
 
-  // Conteo de juntas por día (clave = medianoche local).
-  const countByDay = new Map<number, number>();
-  for (const ev of events ?? []) {
+  // Juntas por día (clave = medianoche local), ordenadas por hora.
+  const byDay = new Map<number, AgendaEvent[]>();
+  for (const ev of [...(events ?? [])].sort((a, b) => a.start - b.start)) {
     const k = startOfDay(ev.start);
-    countByDay.set(k, (countByDay.get(k) || 0) + 1);
+    (byDay.get(k) ?? byDay.set(k, []).get(k)!).push(ev);
   }
 
   const weeks: MonthCell[][] = [];
@@ -172,9 +172,10 @@ export function buildMonthGrid(events: AgendaEvent[], anchorMs: number, now: num
     for (let d = 0; d < 7; d++) {
       const ms = from + (w * 7 + d) * DAY;
       const date = new Date(ms);
+      const meetings = byDay.get(startOfDay(ms)) ?? [];
       row.push({
         ms, day: date.getDate(), inMonth: date.getMonth() === month,
-        isToday: startOfDay(ms) === todayS, count: countByDay.get(startOfDay(ms)) || 0,
+        isToday: startOfDay(ms) === todayS, count: meetings.length, meetings,
       });
     }
     weeks.push(row);

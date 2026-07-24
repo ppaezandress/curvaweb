@@ -217,53 +217,87 @@ function CalRow({ ev, memberByEmail }: { ev: AgendaEvent; memberByEmail: Record<
   );
 }
 
-// Vista de calendario: rejilla del mes (juntas por día) + panel del día elegido.
+// Chip de una junta dentro de una celda del calendario (estilo Google Calendar).
+function EventChip({ ev, now, dim }: { ev: AgendaEvent; now: number; dim?: boolean }) {
+  const live = now >= ev.start && now < ev.end;
+  return (
+    <span className={cn(
+      "flex items-center gap-1 truncate rounded px-1 py-0.5 text-[11px] leading-tight",
+      live ? "bg-accent text-white" : dim ? "bg-surface-2 text-muted" : "bg-accent/12 text-accent",
+    )}>
+      <span className="tabular shrink-0 font-semibold">{hhmm(ev.start)}</span>
+      <span className="truncate font-medium">{ev.title}</span>
+    </span>
+  );
+}
+
+// Vista de calendario estilo Google Calendar: rejilla del mes con las juntas DENTRO de cada
+// día. En pantallas chicas (celdas muy angostas para texto) → puntos + panel del día abajo.
 function CalendarMonth({
-  events, anchor, selectedMs, now, memberByEmail, onSelect, onPrev, onNext, onNewMeeting,
+  events, anchor, selectedMs, now, memberByEmail, onSelect, onPrev, onNext, onToday, onNewMeeting,
 }: {
   events: AgendaEvent[]; anchor: number; selectedMs: number | null; now: number;
   memberByEmail: Record<string, Member>;
-  onSelect: (ms: number) => void; onPrev: () => void; onNext: () => void;
+  onSelect: (ms: number) => void; onPrev: () => void; onNext: () => void; onToday: () => void;
   onNewMeeting: (dayMs?: number) => void;
 }) {
+  const MAX = 3; // chips visibles por celda antes de "+N más"
   const grid = useMemo(() => buildMonthGrid(events, anchor, now), [events, anchor, now]);
   const selMeetings = useMemo(() => (selectedMs ? meetingsOn(events, selectedMs) : []), [events, selectedMs]);
   const selKey = selectedMs ? new Date(selectedMs).toDateString() : null;
 
   return (
     <motion.div variants={reveal} className="space-y-4">
-      <div className="glass rounded-hero p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="glass rounded-hero p-3 sm:p-4">
+        <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="font-display text-lg font-bold tracking-tight text-fg">{grid.label}</h2>
           <div className="flex items-center gap-1">
+            <button onClick={onToday} className="focus-ring mr-1 rounded-full border border-line px-2.5 py-1 text-caption font-semibold text-muted transition hover:bg-surface-2 active:scale-95">Hoy</button>
             <button onClick={onPrev} aria-label="Mes anterior" className="focus-ring grid h-8 w-8 place-items-center rounded-full text-muted transition hover:bg-surface-2 active:scale-95"><ChevronLeft size={18} /></button>
             <button onClick={onNext} aria-label="Mes siguiente" className="focus-ring grid h-8 w-8 place-items-center rounded-full text-muted transition hover:bg-surface-2 active:scale-95"><ChevronRight size={18} /></button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        {/* Encabezados de día */}
+        <div className="grid grid-cols-7">
           {grid.weekdays.map((w, i) => (
-            <div key={i} className="pb-1 text-center text-caption font-bold uppercase tracking-wide text-muted/70">{w}</div>
+            <div key={i} className="pb-1.5 text-center text-caption font-bold uppercase tracking-wide text-muted/70">{w}</div>
           ))}
+        </div>
+
+        {/* Rejilla con bordes (cada día = un cuadro con sus juntas dentro) */}
+        <div className="grid grid-cols-7 overflow-hidden rounded-tile border-l border-t border-line">
           {grid.weeks.flat().map((c) => {
             const selected = selKey === new Date(c.ms).toDateString();
+            const visible = c.count > MAX ? c.meetings.slice(0, MAX - 1) : c.meetings;
+            const overflow = c.count - visible.length;
             return (
               <button
                 key={c.ms}
                 onClick={() => onSelect(c.ms)}
                 aria-pressed={selected}
                 className={cn(
-                  "focus-ring flex h-14 flex-col items-center justify-center gap-1 rounded-tile text-sm transition active:scale-95 sm:h-16",
-                  selected ? "bg-accent text-white" :
-                    c.isToday ? "bg-accent/10 font-bold text-accent ring-1 ring-accent/30" :
-                    c.inMonth ? "text-fg hover:bg-surface-2" : "text-muted/40 hover:bg-surface-2/50",
+                  "focus-ring flex min-h-[4.25rem] flex-col gap-1 border-b border-r border-line p-1 text-left transition sm:min-h-[7rem] sm:p-1.5",
+                  selected ? "bg-accent/[0.07] ring-1 ring-inset ring-accent/40" : "hover:bg-surface-2/50",
+                  !c.inMonth && "bg-surface-2/20",
                 )}
               >
-                <span className={cn("tabular leading-none", c.isToday && !selected && "font-bold")}>{c.day}</span>
+                <span className={cn(
+                  "tabular grid h-6 w-6 shrink-0 place-items-center self-start rounded-full text-xs",
+                  c.isToday ? "bg-accent font-bold text-white" : c.inMonth ? "font-semibold text-fg" : "text-muted/40",
+                )}>{c.day}</span>
+
+                {/* Desktop: chips de juntas dentro del cuadro */}
+                <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
+                  {visible.map((ev) => <EventChip key={ev.id} ev={ev} now={now} dim={!c.inMonth} />)}
+                  {overflow > 0 && <span className="px-1 text-[11px] font-semibold text-muted">+{overflow} más</span>}
+                </div>
+
+                {/* Móvil: puntos (el texto no cabe en celdas tan angostas) */}
                 {c.count > 0 && (
-                  <span className="flex gap-0.5">
+                  <span className="flex gap-0.5 pl-1 sm:hidden">
                     {Array.from({ length: Math.min(3, c.count) }).map((_, i) => (
-                      <span key={i} className={cn("h-1 w-1 rounded-full", selected ? "bg-white/90" : "bg-accent")} />
+                      <span key={i} className="h-1 w-1 rounded-full bg-accent" />
                     ))}
                   </span>
                 )}
@@ -275,7 +309,7 @@ function CalendarMonth({
 
       {/* Panel del día elegido */}
       {selectedMs && (
-        <motion.div variants={reveal} className="space-y-2">
+        <motion.div variants={reveal} className="mx-auto w-full max-w-2xl space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-display text-base font-bold tracking-tight text-fg">
               {dayLabel(selectedMs, now)}
@@ -309,7 +343,7 @@ export type AgendaStatus = "loading" | "disconnected" | "ready";
 // tablero se puede previsualizar con datos de ejemplo fuera del gate de auth.
 export function AgendaBoard({
   status, view, memberByEmail, now,
-  mode, onMode, calEvents, monthAnchor, selectedMs, onSelectDay, onPrevMonth, onNextMonth, onNewMeeting,
+  mode, onMode, calEvents, monthAnchor, selectedMs, onSelectDay, onPrevMonth, onNextMonth, onToday, onNewMeeting,
 }: {
   status: AgendaStatus;
   view: AgendaView | null;
@@ -323,10 +357,11 @@ export function AgendaBoard({
   onSelectDay: (ms: number) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onToday: () => void;
   onNewMeeting: (dayMs?: number) => void;
 }) {
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className={cn("mx-auto w-full transition-[max-width]", mode === "calendario" ? "max-w-4xl" : "max-w-2xl")}>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
         <motion.header variants={reveal} className="flex flex-wrap items-end justify-between gap-3">
           <div className="space-y-1">
@@ -366,7 +401,7 @@ export function AgendaBoard({
           <CalendarMonth
             events={calEvents} anchor={monthAnchor} selectedMs={selectedMs} now={now}
             memberByEmail={memberByEmail} onSelect={onSelectDay} onPrev={onPrevMonth} onNext={onNextMonth}
-            onNewMeeting={onNewMeeting}
+            onToday={onToday} onNewMeeting={onNewMeeting}
           />
         ) : !view || view.total === 0 ? (
           <motion.div variants={reveal} className="glass rounded-hero p-10 text-center sm:p-12">

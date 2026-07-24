@@ -87,6 +87,7 @@ export default function AgendaPage() {
         onSelectDay={setSelectedMs}
         onPrevMonth={() => setMonthAnchor((a) => shiftMonth(a, -1))}
         onNextMonth={() => setMonthAnchor((a) => shiftMonth(a, 1))}
+        onToday={() => { setMonthAnchor(firstOfThisMonth()); setSelectedMs(startOfToday()); }}
         onNewMeeting={onNewMeeting}
       />
       {newMeeting.open && (
