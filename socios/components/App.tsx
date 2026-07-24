@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
   Scale, CalendarRange, Users, Share2, Copy, Settings, History, Send, Download,
+  TrendingUp, TrendingDown, Minus,
 } from "lucide-react";
 import { cotizar, mergeCotConfig, COT_CONFIG_DEFAULT, COT_FORM_DEFAULT, type CotConfig, type CotForm } from "@/lib/cotizador";
 import {
@@ -192,6 +193,7 @@ function initialState(): State {
 
 const NAV = [
   { k: "panel", label: "Panel", Icon: LayoutDashboard },
+  { k: "crecimiento", label: "Crecimiento", Icon: TrendingUp },
   { k: "calculadora", label: "Calculadora", Icon: Calculator },
   { k: "cotizador", label: "Cotizador", Icon: FileText },
   { k: "proyectos", label: "Proyectos", Icon: FolderKanban },
@@ -440,6 +442,7 @@ export default function App() {
       <main className="main">
         <ErrorBoundary key={sec}>
           {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={setSec} />}
+          {sec === "crecimiento" && <Crecimiento st={st} setSec={setSec} />}
           {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
           {sec === "cotizador" && <Cotizador st={st} update={update} />}
           {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} log={log} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
@@ -939,6 +942,146 @@ function Actividad({ st }: { st: State }) {
           <p className="foot" style={{ marginTop: 2 }}>Se guardan los últimos 120 movimientos, sincronizados entre los dos socios.</p>
         </div>
       )}
+    </>
+  );
+}
+
+/* ---------------- Crecimiento (memoria histórica: ¿CURVA crece?) ----------------
+   Deriva la historia REAL de los pagos cobrados (NO snapshots manuales: los pagos ya
+   son la verdad histórica, así siempre cuadra y no hay que "cerrar meses"). Muestra
+   ingreso mes a mes, veredicto de crecimiento, acumulados y rentabilidad por cliente.
+   Es el primer ladrillo del Nivel 3 (el negocio completo). */
+function Crecimiento({ st, setSec }: { st: State; setSec: (s: string) => void }) {
+  const P = st.params;
+  const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
+
+  type Mes = { ym: string; ingreso: number; equipo: number; socios: number; utilSocios: number; banca: number; caja: number };
+  const mm: Record<string, Mes> = {};
+  const nm = (ym: string): Mes => (mm[ym] = mm[ym] || { ym, ingreso: 0, equipo: 0, socios: 0, utilSocios: 0, banca: 0, caja: 0 });
+  type Cli = { cliente: string; cobrado: number; ticket: number; margenAbs: number; n: number };
+  const cli: Record<string, Cli> = {};
+
+  vivos.forEach((p) => {
+    const R = reglasDe(p, P);
+    const rr = compute(membersResolved(p, st.roster, R), R);
+    const t = rr.t || 1;
+    const cobP = (p.pagos || []).reduce((a, x) => a + (+x.monto || 0), 0);
+    (p.pagos || []).forEach((pago) => {
+      const ym = mesDe(pago.fecha); if (!ym) return;
+      const frac = Math.min(1, (+pago.monto || 0) / t);
+      const M = nm(ym);
+      M.banca += rr.banca * frac; M.caja += rr.cajaProj * frac;
+      Object.values(rr.people).forEach((pe) => {
+        const v = (pe.trabajo + pe.extra + (pe.comision || 0)) * frac;
+        if (isSocio(pe.quien)) { M.socios += v; M.utilSocios += pe.extra * frac; } else M.equipo += v;
+      });
+    });
+    if (cobP > 0.5) {
+      const key = p.clienteNombre?.trim() || p.nombre;
+      const c = (cli[key] = cli[key] || { cliente: key, cobrado: 0, ticket: 0, margenAbs: 0, n: 0 });
+      c.cobrado += cobP; c.ticket += rr.t; c.margenAbs += rr.marginOp; c.n++;
+    }
+  });
+  Object.values(mm).forEach((M) => { M.ingreso = M.equipo + M.socios + M.banca + M.caja; });
+  const meses = Object.values(mm).sort((a, b) => a.ym.localeCompare(b.ym));
+  const clientes = Object.values(cli).sort((a, b) => b.cobrado - a.cobrado);
+  const n = meses.length;
+
+  const curYM = todayISO().slice(0, 7);
+  const anio = curYM.slice(0, 4);
+
+  // Veredicto: suma de los últimos k meses vs los k anteriores (k hasta 3).
+  let verdict: { estado: "crece" | "estable" | "baja"; pct: number; recent: number; prev: number; k: number } | null = null;
+  if (n >= 2) {
+    const k = Math.max(1, Math.min(3, Math.floor(n / 2)));
+    const recent = meses.slice(n - k).reduce((a, m) => a + m.ingreso, 0);
+    const prev = meses.slice(n - 2 * k, n - k).reduce((a, m) => a + m.ingreso, 0);
+    const pct = prev > 0 ? (recent - prev) / prev : (recent > 0 ? 1 : 0);
+    verdict = { estado: pct > 0.05 ? "crece" : pct < -0.05 ? "baja" : "estable", pct, recent, prev, k };
+  }
+
+  const ingCur = mm[curYM]?.ingreso || 0;
+  const prevYM = addMonths(curYM + "-01", -1).slice(0, 7);
+  const ingPrev = mm[prevYM]?.ingreso || 0;
+  const deltaMes = ingPrev > 0 ? (ingCur - ingPrev) / ingPrev : 0;
+  const ytd = meses.filter((m) => m.ym.startsWith(anio)).reduce((a, m) => a + m.ingreso, 0);
+  const ahorroAcum = meses.reduce((a, m) => a + m.banca, 0);
+  const promMes = n ? meses.reduce((a, m) => a + m.ingreso, 0) / n : 0;
+
+  const shown = meses.slice(-12);
+  const maxIng = Math.max(1, ...shown.map((m) => m.ingreso));
+
+  if (n === 0) return (
+    <>
+      <div className="page-h"><div><h1>Crecimiento</h1><p>La historia real de CURVA, calculada de tus pagos cobrados.</p></div></div>
+      <div className="card" style={{ textAlign: "center", padding: "34px 24px" }}>
+        <p className="hint" style={{ margin: 0 }}>Aún no hay pagos cobrados. Marca meses cobrados o registra pagos en <button className="link" onClick={() => setSec("proyectos")}>Proyectos</button> y aquí verás si CURVA crece.</p>
+      </div>
+    </>
+  );
+
+  const veredictoTxt = !verdict ? "Necesitas al menos 2 meses cobrados para ver la tendencia."
+    : verdict.estado === "crece" ? "Sí — CURVA está creciendo." : verdict.estado === "baja" ? "CURVA va a la baja." : "CURVA va estable.";
+  const estadoCls = verdict?.estado || "poco";
+
+  return (
+    <>
+      <div className="page-h"><div><h1>Crecimiento</h1><p>La historia real de CURVA, calculada de tus pagos cobrados. Sin trucos: solo lo que de verdad entró.</p></div></div>
+
+      <div className={"crece-hero " + estadoCls}>
+        <div className="crece-verdict">
+          {estadoCls === "crece" && <TrendingUp size={22} />}
+          {estadoCls === "baja" && <TrendingDown size={22} />}
+          {(estadoCls === "estable" || estadoCls === "poco") && <Minus size={22} />}
+          <span>{veredictoTxt}</span>
+        </div>
+        {verdict && (
+          <div className="crece-hero-num">
+            <b style={{ color: verdict.estado === "crece" ? "var(--pos-ink)" : verdict.estado === "baja" ? "var(--neg-ink)" : "var(--cobalt)" }}>{verdict.pct >= 0 ? "▲" : "▼"} {pctFmt(Math.abs(verdict.pct))}</b>
+            <span>últimos {verdict.k === 1 ? "1 mes" : `${verdict.k} meses`} ({fmtMXN(verdict.recent)}) vs los {verdict.k === 1 ? "1 anterior" : `${verdict.k} anteriores`} ({fmtMXN(verdict.prev)})</span>
+          </div>
+        )}
+      </div>
+
+      <div className="tiles rise" style={{ marginTop: 16 }}>
+        <Tile k="k-fact" l={`Ingreso de ${mesLabel(curYM)}`} v={fmtMXN(ingCur)} p={ingPrev > 0 ? `${deltaMes >= 0 ? "▲" : "▼"} ${pctFmt(Math.abs(deltaMes))} vs ${mesLabel(prevYM)}` : "sin mes anterior"} tip="Lo cobrado de verdad en el mes en curso, repartido entre equipo + socios + Ahorro CURVA + caja." />
+        <Tile k="k-a" l={`Acumulado ${anio}`} v={fmtMXN(ytd)} p="lo cobrado en el año" tip="Todo lo que entró en lo que va del año." />
+        <Tile k="k-banca" l="Ahorro CURVA acumulado" v={fmtMXN(ahorroAcum)} p="el colchón en el tiempo" tip="Suma de todo lo que CURVA ha apartado a su Ahorro mes con mes según lo cobrado." />
+        <Tile k="k-neto" l="Promedio mensual" v={fmtMXN(promMes)} p={`${n} ${n === 1 ? "mes" : "meses"} con datos`} tip="Ingreso promedio por mes en toda la historia con datos." />
+      </div>
+
+      <div className="card rise">
+        <h2>Ingreso real mes a mes</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Lo que de verdad entró cada mes (sin IVA). Tu promedio: <b>{fmtMXN(promMes)}</b>.</p>
+        <div className="flow">
+          {shown.map((m) => (
+            <div className="flow-col" key={m.ym}>
+              <div className="flow-v">{fmtMXN(m.ingreso)}</div>
+              <div className="flow-bar" style={{ height: Math.max(6, m.ingreso / maxIng * 96) + "px" }}><div className="flow-seg" style={{ height: "100%", background: m.ym === curYM ? "var(--cobalt)" : "var(--grad)" }} /></div>
+              <div className="flow-x">{mesLabel(m.ym)}</div>
+            </div>
+          ))}
+        </div>
+        {meses.length > 12 && <p className="foot">Mostrando los últimos 12 meses de {meses.length}.</p>}
+      </div>
+
+      <div className="card rise">
+        <h2>Rentabilidad por cliente</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Quién te deja más: lo cobrado real y el margen del proyecto. Solo clientes que ya pagaron algo.</p>
+        <div className="cli-tab">
+          <div className="cli-h"><span>Cliente</span><span>Cobrado</span><span>Margen</span></div>
+          {clientes.map((c) => {
+            const mp = c.ticket > 0 ? c.margenAbs / c.ticket : 0;
+            return (
+              <div className="cli-row" key={c.cliente}>
+                <span className="cli-n"><b>{c.cliente}</b><em>{c.n} proyecto{c.n !== 1 ? "s" : ""}</em></span>
+                <span className="cli-v">{fmtMXN(c.cobrado)}</span>
+                <span className="cli-m" style={{ color: mp < 0.25 ? "var(--neg)" : mp > 0.45 ? "var(--pos)" : "var(--ink-2)" }}>{pctFmt(mp)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </>
   );
 }
