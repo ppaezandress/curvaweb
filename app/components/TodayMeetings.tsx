@@ -45,7 +45,7 @@ export function TodayMeetings() {
         <h3 className="text-sm font-bold text-fg">Juntas de hoy</h3>
         <span className="rounded-full bg-surface-2 px-1.5 text-caption font-semibold text-muted">{upcoming.length}</span>
         <Link href="/agenda" className="ml-auto text-caption font-semibold text-accent transition hover:opacity-80 focus-ring">
-          Mi semana →
+          Ver agenda →
         </Link>
       </div>
       <ul className="space-y-1.5">
