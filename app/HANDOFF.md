@@ -137,3 +137,6 @@ Proyecto Supabase ref: `aafbrygvgkiynpmmihbt`. Conexión directa para migracione
 - Deploy a Vercel para el equipo (segundo proyecto, Root Dir `app`).
 - Calendar producción: webhooks (en vez de polling), Google Workspace a nivel organización, Spotify Extended Quota >25 users.
 - Campo "Tipo de entregable" en Notion Tasks Tracker (para pricing por tipo).
+
+## Agenda (2026-07-24)
+Vista Agenda: Lista + Calendario estilo Google Calendar (juntas dentro de cada día), crear juntas con invitados (EventModal→/api/gcal/create), y nube/popover anclada al chip con asistentes + Unirse. Lógica pura en lib/agenda.ts (160 tests). Commits 6bae5ab→b46bcfd.
