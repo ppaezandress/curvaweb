@@ -561,16 +561,19 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
     if (cobP > 0.5 && cobP < rr.t - 0.5) {
       proysPorCobrar++; faltaCobrar += rr.t - cobP;
       // Vencido = lo que YA se debería haber cobrado según meses transcurridos vs plazo.
-      // Solo sobre proyectos que ya arrancaron a cobrar (mismo filtro), para no marcar
-      // cotizaciones como atrasadas. esperado = ticket × (meses corridos / plazo).
-      const ini = (p.fechaInicio || todayISO()).slice(0, 7);
-      const [iy, im] = ini.split("-").map(Number);
-      const [cy, cm] = curYM.split("-").map(Number);
+      // SOLO proyectos a MESES (plazo > 1): un proyecto de golpe no tiene calendario, su
+      // falta ya la cubre "por cobrar". Y solo los que ya arrancaron a cobrar (mismo filtro),
+      // para no marcar cotizaciones. esperado = ticket × (meses corridos / plazo).
       const plazoN = Math.max(1, Math.floor(p.plazoMeses || 1));
-      const corridos = Math.max(0, Math.min(plazoN, (cy - iy) * 12 + (cm - im) + 1));
-      const esperado = rr.t * (corridos / plazoN);
-      const venc = esperado - cobP;
-      if (venc > 1) { vencidoTotal += venc; vencidoCount++; }
+      if (plazoN > 1) {
+        const ini = (p.fechaInicio || todayISO()).slice(0, 7);
+        const [iy, im] = ini.split("-").map(Number);
+        const [cy, cm] = curYM.split("-").map(Number);
+        const corridos = Math.max(0, Math.min(plazoN, (cy - iy) * 12 + (cm - im) + 1));
+        const esperado = rr.t * (corridos / plazoN);
+        const venc = esperado - cobP;
+        if (venc > 1) { vencidoTotal += venc; vencidoCount++; }
+      }
     }
     sBancaAll += rr.banca;
     Object.values(rr.people).forEach((a) => {
