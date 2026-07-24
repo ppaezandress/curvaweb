@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, type Variants } from "motion/react";
-import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles, List, CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { cn } from "@/lib/cn";
 import type { Member } from "@/lib/mock-data";
@@ -219,11 +219,12 @@ function CalRow({ ev, memberByEmail }: { ev: AgendaEvent; memberByEmail: Record<
 
 // Vista de calendario: rejilla del mes (juntas por día) + panel del día elegido.
 function CalendarMonth({
-  events, anchor, selectedMs, now, memberByEmail, onSelect, onPrev, onNext,
+  events, anchor, selectedMs, now, memberByEmail, onSelect, onPrev, onNext, onNewMeeting,
 }: {
   events: AgendaEvent[]; anchor: number; selectedMs: number | null; now: number;
   memberByEmail: Record<string, Member>;
   onSelect: (ms: number) => void; onPrev: () => void; onNext: () => void;
+  onNewMeeting: (dayMs?: number) => void;
 }) {
   const grid = useMemo(() => buildMonthGrid(events, anchor, now), [events, anchor, now]);
   const selMeetings = useMemo(() => (selectedMs ? meetingsOn(events, selectedMs) : []), [events, selectedMs]);
@@ -275,12 +276,20 @@ function CalendarMonth({
       {/* Panel del día elegido */}
       {selectedMs && (
         <motion.div variants={reveal} className="space-y-2">
-          <h3 className="font-display text-base font-bold tracking-tight text-fg">
-            {dayLabel(selectedMs, now)}
-            <span className="ml-2 text-caption font-medium text-muted">
-              {selMeetings.length ? `${selMeetings.length} ${selMeetings.length === 1 ? "junta" : "juntas"}` : "sin juntas"}
-            </span>
-          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-display text-base font-bold tracking-tight text-fg">
+              {dayLabel(selectedMs, now)}
+              <span className="ml-2 text-caption font-medium text-muted">
+                {selMeetings.length ? `${selMeetings.length} ${selMeetings.length === 1 ? "junta" : "juntas"}` : "sin juntas"}
+              </span>
+            </h3>
+            <button
+              onClick={() => onNewMeeting(selectedMs)}
+              className="focus-ring inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-caption font-semibold text-accent transition hover:bg-accent/15 active:scale-[0.97]"
+            >
+              <Plus size={12} /> Agendar
+            </button>
+          </div>
           {selMeetings.length === 0 ? (
             <p className="rounded-card border border-line bg-surface px-3 py-4 text-center text-caption text-muted">Día despejado. Nada agendado.</p>
           ) : (
@@ -300,7 +309,7 @@ export type AgendaStatus = "loading" | "disconnected" | "ready";
 // tablero se puede previsualizar con datos de ejemplo fuera del gate de auth.
 export function AgendaBoard({
   status, view, memberByEmail, now,
-  mode, onMode, calEvents, monthAnchor, selectedMs, onSelectDay, onPrevMonth, onNextMonth,
+  mode, onMode, calEvents, monthAnchor, selectedMs, onSelectDay, onPrevMonth, onNextMonth, onNewMeeting,
 }: {
   status: AgendaStatus;
   view: AgendaView | null;
@@ -314,6 +323,7 @@ export function AgendaBoard({
   onSelectDay: (ms: number) => void;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onNewMeeting: (dayMs?: number) => void;
 }) {
   return (
     <div className="mx-auto max-w-2xl">
@@ -323,7 +333,17 @@ export function AgendaBoard({
             <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-fg sm:text-3xl">Agenda</h1>
             <p className="text-sm text-muted">Tus juntas de hoy y los próximos días, directo de tu calendario.</p>
           </div>
-          {status === "ready" && <ModeToggle mode={mode} onMode={onMode} />}
+          {status === "ready" && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onNewMeeting()}
+                className="glow-accent focus-ring inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-white transition active:scale-[0.97]"
+              >
+                <Plus size={15} /> Nueva junta
+              </button>
+              <ModeToggle mode={mode} onMode={onMode} />
+            </div>
+          )}
         </motion.header>
 
         {status === "loading" ? (
@@ -346,6 +366,7 @@ export function AgendaBoard({
           <CalendarMonth
             events={calEvents} anchor={monthAnchor} selectedMs={selectedMs} now={now}
             memberByEmail={memberByEmail} onSelect={onSelectDay} onPrev={onPrevMonth} onNext={onNextMonth}
+            onNewMeeting={onNewMeeting}
           />
         ) : !view || view.total === 0 ? (
           <motion.div variants={reveal} className="glass rounded-hero p-10 text-center sm:p-12">

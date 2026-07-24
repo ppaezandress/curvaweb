@@ -11,7 +11,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 // Modal para crear una junta/evento en Google Calendar con invitados, desde el chat.
 export function EventModal({
-  open, onClose, people, defaultInvitees, onCreated, onInstant, channelName,
+  open, onClose, people, defaultInvitees, onCreated, onInstant, channelName, defaultDate,
 }: {
   open: boolean;
   onClose: () => void;
@@ -20,10 +20,11 @@ export function EventModal({
   onCreated: (summary: { title: string; whenLabel: string; link: string | null; attendees: string[] }) => void;
   onInstant?: (link: string) => void;
   channelName?: string;
+  defaultDate?: string; // "YYYY-MM-DD" para prefijar el día (p. ej. al agendar desde el calendario)
 }) {
   const now = new Date();
   const [title, setTitle] = useState("");
-  const [date, setDate] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+  const [date, setDate] = useState(defaultDate || `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
   const [time, setTime] = useState(`${pad((now.getHours() + 1) % 24)}:00`);
   const [dur, setDur] = useState(60);
   const [withMeet, setWithMeet] = useState(true);
