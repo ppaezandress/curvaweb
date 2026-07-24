@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback, useRef, Component, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useState, useCallback, useRef, Component, type ReactNode, type CSSProperties, type PointerEvent as ReactPointerEvent, type ChangeEvent } from "react";
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange, Users, Share2, Copy, Settings, History, Send,
+  Scale, CalendarRange, Users, Share2, Copy, Settings, History, Send, Download,
 } from "lucide-react";
 import { cotizar, mergeCotConfig, COT_CONFIG_DEFAULT, COT_FORM_DEFAULT, type CotConfig, type CotForm } from "@/lib/cotizador";
 import {
@@ -448,7 +448,7 @@ export default function App() {
           {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} log={log} />}
           {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
           {sec === "actividad" && <Actividad st={st} />}
-          {sec === "reglas" && <ReglasView st={st} update={update} />}
+          {sec === "reglas" && <ReglasView st={st} update={update} log={log} setToast={setToast} />}
         </ErrorBoundary>
       </main>
       {toast && <div className="toast"><Check size={15} /> {toast}</div>}
@@ -2886,7 +2886,91 @@ function SimulacionDrawer({ st, active, onClose }: { st: State; active: Proyecto
   );
 }
 
-function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => State) => void }) {
+/* ---------------- Respaldo de datos (exportar / restaurar) ----------------
+   "No perder datos" del Nivel 2: descarga TODO el estado en un JSON que Andrés
+   guarda, y lo restaura desde ese archivo si algo se pierde. Restaurar hace un
+   REEMPLAZO completo: setSt(importado) → el sync (que ya calcula deleteIds) lo
+   propaga al server como full-replace. Borradores locales NO se exportan. */
+function RespaldoDatos({ st, update, log, setToast }: { st: State; update: (fn: (s: State) => State) => void; log?: (act: string, det: string) => void; setToast?: (m: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [pend, setPend] = useState<State | null>(null);   // import leído, pendiente de confirmar
+  const [pendInfo, setPendInfo] = useState("");
+
+  const exportar = () => {
+    const limpios = st.projects.filter((p) => !p.borrador);
+    const payload = {
+      __curvaSocios: true, version: RULES_VERSION, exportedAt: new Date().toISOString(),
+      state: {
+        params: st.params, projects: limpios, gastos: st.gastos, roster: st.roster,
+        saldosIniciales: mergeSaldos(st.saldosIniciales), banco: mergeBanco(st.banco),
+        bitacora: st.bitacora || [], cotConfig: mergeCotConfig(st.cotConfig),
+      },
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = `curva-socios-respaldo-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    log?.("exportó un respaldo", `${limpios.length} proyecto${limpios.length !== 1 ? "s" : ""}`);
+    setToast?.("Respaldo descargado.");
+  };
+
+  const onFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const d = JSON.parse(String(reader.result || ""));
+        if (!d || !d.__curvaSocios || !d.state || !Array.isArray(d.state.projects)) { setToast?.("Ese archivo no es un respaldo de CURVA Socios."); return; }
+        const s = d.state;
+        const imported: State = {
+          params: { ...REGLAS_DEFAULT, ...(s.params || {}) },
+          projects: (s.projects || []).filter((p: Proyecto) => p && p.id),
+          gastos: s.gastos || [], roster: s.roster || [],
+          activeId: s.projects?.[0]?.id || "",
+          rulesVersion: RULES_VERSION,
+          saldosIniciales: mergeSaldos(s.saldosIniciales), banco: mergeBanco(s.banco),
+          bitacora: s.bitacora || [], cotConfig: mergeCotConfig(s.cotConfig),
+        };
+        const fechaExp = d.exportedAt ? new Date(d.exportedAt).toLocaleString("es-MX", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "fecha desconocida";
+        setPend(imported);
+        setPendInfo(`${imported.projects.length} proyecto${imported.projects.length !== 1 ? "s" : ""} · respaldo del ${fechaExp}`);
+      } catch { setToast?.("No pude leer ese archivo (¿JSON dañado?)."); }
+    };
+    reader.readAsText(f);
+  };
+
+  const confirmar = () => {
+    if (!pend) return;
+    update(() => pend);
+    log?.("restauró un respaldo", pendInfo);
+    setToast?.("Respaldo restaurado.");
+    setPend(null); setPendInfo("");
+  };
+
+  return (
+    <div className="card">
+      <h2 style={{ marginTop: 0 }}>Respaldo de datos</h2>
+      <p className="hint" style={{ marginTop: 0 }}>Descarga <b>todo</b> (proyectos, pagos, personas, reglas, cajas y bitácora) en un archivo que tú guardas. Si algo se pierde o se descompone, lo restauras desde ahí. Guárdalo cada tanto.</p>
+      <div className="respaldo-btns">
+        <button className="btn primary" onClick={exportar}><Download size={15} /> Exportar todo</button>
+        <button className="btn" onClick={() => fileRef.current?.click()}><UploadCloud size={15} /> Restaurar de un archivo…</button>
+        <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} aria-label="Archivo de respaldo para restaurar" />
+      </div>
+      {pend && (
+        <div className="respaldo-confirm">
+          <p><AlertTriangle size={15} /> Vas a <b>reemplazar TODO</b> lo que hay ahora por el archivo ({pendInfo}). Se sincroniza también para {st.params.nombreB} y no se puede deshacer — si tienes duda, exporta primero lo actual.</p>
+          <div className="respaldo-confirm-btns">
+            <button className="btn danger" onClick={confirmar}>Sí, restaurar y reemplazar</button>
+            <button className="btn ghost" onClick={() => { setPend(null); setPendInfo(""); }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReglasView({ st, update, log, setToast }: { st: State; update: (fn: (s: State) => State) => void; log?: (act: string, det: string) => void; setToast?: (m: string) => void }) {
   const P = st.params;
   const [confirmReset, setConfirmReset] = useState(false);
   const [ticketEj, setTicketEj] = useState(100000); // ticket de ejemplo para explicar los tramos
@@ -3068,6 +3152,8 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
         {pct("pool", "Bono del Núcleo — % de la utilidad de socios para el Núcleo", 0, 25)}
         <p className="foot">Un extra para tu gente de planta (Núcleo) <b>además</b> de su pago por trabajo. Sale de tu utilidad y la de {P.nombreB}, y se reparte en partes iguales entre el Núcleo. {P.pool > 0 ? <>Prendido al <b>{P.pool}%</b>.</> : "Hoy apagado."} Aplica a proyectos <b>nuevos</b>; los ya guardados conservan su reparto congelado.</p>
       </div>
+
+      <RespaldoDatos st={st} update={update} log={log} setToast={setToast} />
 
       <div className="card reset-card">
         <div className="reset-row">
