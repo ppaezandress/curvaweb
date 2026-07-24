@@ -69,6 +69,7 @@ export type TimeRecord = {
   mode: "manual" | "ai"; // manual (tus manos) o ai (espera/IA trabajando)
   origin?: "timer" | "manual"; // cómo se capturó: cronómetro vs tecleado a mano (undefined = legado)
   activity?: string; // tipo de actividad (Área: Trabajo enfocado / Reunión / Llamada / Junta …)
+  label?: string; // título del registro (nombre de la junta/llamada de GCal); útil cuando no hay tarea vinculada
 };
 
 async function getTimeRecordsUncached(): Promise<TimeRecord[]> {
@@ -97,6 +98,16 @@ async function getTimeRecordsUncached(): Promise<TimeRecord[]> {
           return o === "A mano" ? "manual" : o === "Cronómetro" ? "timer" : undefined;
         })() as "timer" | "manual" | undefined,
         activity: P(pg, "Área")?.select?.name || undefined,
+        // El "Nombre" se guarda como "usuario · título" (ver /api/time-entries). Nos quedamos
+        // con el título — es el nombre real de la junta/llamada de GCal. Sirve para que en
+        // "Trabajado hoy" un registro sin tarea muestre su título en vez de "Sin proyecto".
+        label: (() => {
+          const t = title(pg, "Nombre");
+          if (!t) return undefined;
+          const i = t.indexOf(" · ");
+          const l = (i >= 0 ? t.slice(i + 3) : t).trim();
+          return l || undefined;
+        })(),
       };
     })
     .filter((r) => r.minutes > 0);

@@ -120,6 +120,30 @@ describe("buildDaySessions", () => {
     }, maps);
     expect(s.map((x) => x.id)).toEqual(["temprano", "tarde"]);
   });
+
+  it("una junta de GCal sin tarea muestra su título, no 'Sin proyecto' (feedback Balmori)", () => {
+    const [s] = buildDaySessions({
+      records: [rec({
+        id: "junta", start: new Date(at(11)).toISOString(), minutes: 60,
+        taskId: "", activity: "Junta", label: "Junta con Pepe y Dra Pilar",
+      })],
+      recentEntries: [], entries: [], myName: YO, dayStart: DAY_START, now: NOW,
+    }, maps);
+    // El nombre visible de la sesión ({s.task || s.project} en la UI) es el título de la junta.
+    expect(s.task).toBe("Junta con Pepe y Dra Pilar");
+    expect(s.project).toBe("Sin proyecto"); // el proyecto sigue vacío; el título vive en task
+  });
+
+  it("con tarea vinculada gana el nombre de la tarea, el label se ignora", () => {
+    const [s] = buildDaySessions({
+      records: [rec({
+        id: "conTarea", start: new Date(at(11)).toISOString(), minutes: 60,
+        taskId: "a", label: "algún título viejo del Nombre",
+      })],
+      recentEntries: [], entries: [], myName: YO, dayStart: DAY_START, now: NOW,
+    }, maps);
+    expect(s.task).toBe("Tarea a");
+  });
 });
 
 describe("analyzeDay", () => {

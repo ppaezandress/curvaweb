@@ -170,6 +170,9 @@ export async function POST(req: Request) {
           id, taskId: taskId || "", person: a.name,
           start: new Date(startedAt).toISOString(), minutes: mins,
           inactiveMinutes: 0, mode: "manual", origin: "manual",
+          // Para que el registro se vea correcto YA (antes de que Notion reconcilie): el
+          // área (junta vs trabajo) y el título de la llamada, no "Sin proyecto".
+          activity: area, label: taskName,
         });
       }
       invalidateTimeCaches();

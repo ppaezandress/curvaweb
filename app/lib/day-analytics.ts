@@ -121,7 +121,11 @@ export function buildDaySessions(
     if (!(ms >= dayStart) || ms >= dayEnd || ms > now || !(r.minutes > 0)) continue;
     known.add(r.id);
     const end = r.end ? new Date(r.end).getTime() : ms + r.minutes * 60000;
-    out.push({ id: r.id, start: ms, end: Math.max(end, ms), minutes: r.minutes, inactiveMinutes: r.inactiveMinutes || 0, taskId: r.taskId, origin: r.origin, mode: r.mode, activity: clean(r.activity), ...meta(r.taskId) });
+    const m = meta(r.taskId);
+    out.push({ id: r.id, start: ms, end: Math.max(end, ms), minutes: r.minutes, inactiveMinutes: r.inactiveMinutes || 0, taskId: r.taskId, origin: r.origin, mode: r.mode, activity: clean(r.activity), ...m,
+      // Sin tarea vinculada (típico de juntas de Google Calendar): muestra el título del
+      // registro en vez de caer a "Sin proyecto" (feedback de Balmori).
+      task: m.task || r.label });
   }
   for (const e of entries) {
     if (e.synced || !(e.startedAt >= dayStart) || e.startedAt >= dayEnd || e.startedAt > now || (e.seconds || 0) <= 0) continue;
