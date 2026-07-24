@@ -112,3 +112,76 @@ export function minutesLabel(min: number): string {
   const m = min % 60;
   return m ? `${h} h ${m} min` : `${h} h`;
 }
+
+// ── Vista de calendario (rejilla de mes) ────────────────────────────────────
+
+export type MonthCell = { ms: number; day: number; inMonth: boolean; isToday: boolean; count: number };
+export type MonthGrid = { label: string; weekdays: string[]; weeks: MonthCell[][] };
+
+// Medianoche local del día que contiene `ms`.
+function startOfDay(ms: number): number {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+// Desplazamiento (0..6) del inicio de semana. weekStartsOn=1 → lunes.
+function weekdayOffset(ms: number, weekStartsOn: number): number {
+  return (new Date(ms).getDay() - weekStartsOn + 7) % 7;
+}
+
+// Rango [from, to] que cubre la rejilla de 6 semanas del mes que contiene `anchorMs`.
+// La página pide exactamente esto a /api/gcal/range.
+export function monthGridRange(anchorMs: number, weekStartsOn = 1): { from: number; to: number } {
+  const a = new Date(anchorMs);
+  const firstOfMonth = startOfDay(new Date(a.getFullYear(), a.getMonth(), 1).getTime());
+  const from = firstOfMonth - weekdayOffset(firstOfMonth, weekStartsOn) * DAY;
+  return { from, to: from + 42 * DAY };
+}
+
+// Suma o resta meses a un ancla (para navegar ‹ ›), fijando el día 1 para no desbordar.
+export function shiftMonth(anchorMs: number, delta: number): number {
+  const a = new Date(anchorMs);
+  return new Date(a.getFullYear(), a.getMonth() + delta, 1).getTime();
+}
+
+// Juntas de un día concreto, ordenadas por hora.
+export function meetingsOn(events: AgendaEvent[], dayMs: number): AgendaEvent[] {
+  const s = startOfDay(dayMs);
+  const e = s + DAY;
+  return (events ?? []).filter((ev) => ev.start >= s && ev.start < e).sort((a, b) => a.start - b.start);
+}
+
+// Construye la rejilla de 6×7 del mes que contiene `anchorMs`, con el conteo de juntas por día.
+export function buildMonthGrid(events: AgendaEvent[], anchorMs: number, now: number, weekStartsOn = 1): MonthGrid {
+  const a = new Date(anchorMs);
+  const month = a.getMonth();
+  const { from } = monthGridRange(anchorMs, weekStartsOn);
+  const todayS = startOfDay(now);
+
+  // Conteo de juntas por día (clave = medianoche local).
+  const countByDay = new Map<number, number>();
+  for (const ev of events ?? []) {
+    const k = startOfDay(ev.start);
+    countByDay.set(k, (countByDay.get(k) || 0) + 1);
+  }
+
+  const weeks: MonthCell[][] = [];
+  for (let w = 0; w < 6; w++) {
+    const row: MonthCell[] = [];
+    for (let d = 0; d < 7; d++) {
+      const ms = from + (w * 7 + d) * DAY;
+      const date = new Date(ms);
+      row.push({
+        ms, day: date.getDate(), inMonth: date.getMonth() === month,
+        isToday: startOfDay(ms) === todayS, count: countByDay.get(startOfDay(ms)) || 0,
+      });
+    }
+    weeks.push(row);
+  }
+
+  const mes = new Date(anchorMs).toLocaleDateString("es-MX", { month: "long" });
+  const label = `${mes.charAt(0).toUpperCase()}${mes.slice(1)} ${a.getFullYear()}`; // "Julio 2026"
+  const weekdays = weekStartsOn === 1 ? ["L", "M", "M", "J", "V", "S", "D"] : ["D", "L", "M", "M", "J", "V", "S"];
+  return { label, weekdays, weeks };
+}

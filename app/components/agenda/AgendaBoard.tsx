@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, type Variants } from "motion/react";
-import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles } from "lucide-react";
+import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
+import { cn } from "@/lib/cn";
 import type { Member } from "@/lib/mock-data";
 import {
-  untilLabel, progressOf, minutesLabel,
-  type AgendaView,
+  untilLabel, progressOf, minutesLabel, dayLabel, buildMonthGrid, meetingsOn,
+  type AgendaView, type AgendaEvent,
 } from "@/lib/agenda";
+
+export type AgendaMode = "lista" | "calendario";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 // 24h compacto ("23:32", "09:00"): nunca se parte de línea y es consistente con /dia.
@@ -169,24 +172,158 @@ function Spotlight({ view, memberByEmail }: { view: AgendaView; memberByEmail: R
   );
 }
 
+// Toggle Lista / Calendario (segmentado, mismo estilo que SegmentedNav pero por estado).
+function ModeToggle({ mode, onMode }: { mode: AgendaMode; onMode: (m: AgendaMode) => void }) {
+  const tabs: { id: AgendaMode; label: string; Icon: typeof List }[] = [
+    { id: "lista", label: "Lista", Icon: List },
+    { id: "calendario", label: "Calendario", Icon: CalendarDays },
+  ];
+  return (
+    <div className="inline-flex gap-1 rounded-full border border-line bg-surface p-1 shadow-soft">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onMode(t.id)}
+          aria-pressed={mode === t.id}
+          className={cn(
+            "focus-ring inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition active:scale-[0.97]",
+            mode === t.id ? "bg-ink text-white" : "text-muted hover:bg-surface-2",
+          )}
+        >
+          <t.Icon size={15} /> {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Fila compacta de junta para el panel del día seleccionado en el calendario.
+function CalRow({ ev, memberByEmail }: { ev: AgendaEvent; memberByEmail: Record<string, Member> }) {
+  return (
+    <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3 py-2.5">
+      <div className="w-10 shrink-0">
+        <p className="tabular text-sm font-bold text-fg">{hhmm(ev.start)}</p>
+        <p className="tabular text-caption text-muted">{shortDur(Math.round((ev.end - ev.start) / 60_000))}</p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-fg">{ev.title}</p>
+        {ev.attendees.length > 0 && (
+          <p className="mt-0.5 inline-flex items-center gap-1 text-caption text-muted"><Users size={11} /> {ev.attendees.length}</p>
+        )}
+      </div>
+      <div className="hidden sm:block"><Attendees emails={ev.attendees} memberByEmail={memberByEmail} /></div>
+      {ev.hangoutLink && <JoinButton href={ev.hangoutLink} />}
+    </div>
+  );
+}
+
+// Vista de calendario: rejilla del mes (juntas por día) + panel del día elegido.
+function CalendarMonth({
+  events, anchor, selectedMs, now, memberByEmail, onSelect, onPrev, onNext,
+}: {
+  events: AgendaEvent[]; anchor: number; selectedMs: number | null; now: number;
+  memberByEmail: Record<string, Member>;
+  onSelect: (ms: number) => void; onPrev: () => void; onNext: () => void;
+}) {
+  const grid = useMemo(() => buildMonthGrid(events, anchor, now), [events, anchor, now]);
+  const selMeetings = useMemo(() => (selectedMs ? meetingsOn(events, selectedMs) : []), [events, selectedMs]);
+  const selKey = selectedMs ? new Date(selectedMs).toDateString() : null;
+
+  return (
+    <motion.div variants={reveal} className="space-y-4">
+      <div className="glass rounded-hero p-4 sm:p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold tracking-tight text-fg">{grid.label}</h2>
+          <div className="flex items-center gap-1">
+            <button onClick={onPrev} aria-label="Mes anterior" className="focus-ring grid h-8 w-8 place-items-center rounded-full text-muted transition hover:bg-surface-2 active:scale-95"><ChevronLeft size={18} /></button>
+            <button onClick={onNext} aria-label="Mes siguiente" className="focus-ring grid h-8 w-8 place-items-center rounded-full text-muted transition hover:bg-surface-2 active:scale-95"><ChevronRight size={18} /></button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {grid.weekdays.map((w, i) => (
+            <div key={i} className="pb-1 text-center text-caption font-bold uppercase tracking-wide text-muted/70">{w}</div>
+          ))}
+          {grid.weeks.flat().map((c) => {
+            const selected = selKey === new Date(c.ms).toDateString();
+            return (
+              <button
+                key={c.ms}
+                onClick={() => onSelect(c.ms)}
+                aria-pressed={selected}
+                className={cn(
+                  "focus-ring flex h-14 flex-col items-center justify-center gap-1 rounded-tile text-sm transition active:scale-95 sm:h-16",
+                  selected ? "bg-accent text-white" :
+                    c.isToday ? "bg-accent/10 font-bold text-accent ring-1 ring-accent/30" :
+                    c.inMonth ? "text-fg hover:bg-surface-2" : "text-muted/40 hover:bg-surface-2/50",
+                )}
+              >
+                <span className={cn("tabular leading-none", c.isToday && !selected && "font-bold")}>{c.day}</span>
+                {c.count > 0 && (
+                  <span className="flex gap-0.5">
+                    {Array.from({ length: Math.min(3, c.count) }).map((_, i) => (
+                      <span key={i} className={cn("h-1 w-1 rounded-full", selected ? "bg-white/90" : "bg-accent")} />
+                    ))}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Panel del día elegido */}
+      {selectedMs && (
+        <motion.div variants={reveal} className="space-y-2">
+          <h3 className="font-display text-base font-bold tracking-tight text-fg">
+            {dayLabel(selectedMs, now)}
+            <span className="ml-2 text-caption font-medium text-muted">
+              {selMeetings.length ? `${selMeetings.length} ${selMeetings.length === 1 ? "junta" : "juntas"}` : "sin juntas"}
+            </span>
+          </h3>
+          {selMeetings.length === 0 ? (
+            <p className="rounded-card border border-line bg-surface px-3 py-4 text-center text-caption text-muted">Día despejado. Nada agendado.</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {selMeetings.map((ev) => <li key={ev.id}><CalRow ev={ev} memberByEmail={memberByEmail} /></li>)}
+            </ul>
+          )}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
 export type AgendaStatus = "loading" | "disconnected" | "ready";
 
 // Toda la parte visual de la agenda. La página le pasa el estado ya resuelto; así el mismo
 // tablero se puede previsualizar con datos de ejemplo fuera del gate de auth.
 export function AgendaBoard({
   status, view, memberByEmail, now,
+  mode, onMode, calEvents, monthAnchor, selectedMs, onSelectDay, onPrevMonth, onNextMonth,
 }: {
   status: AgendaStatus;
   view: AgendaView | null;
   memberByEmail: Record<string, Member>;
   now: number;
+  mode: AgendaMode;
+  onMode: (m: AgendaMode) => void;
+  calEvents: AgendaEvent[];
+  monthAnchor: number;
+  selectedMs: number | null;
+  onSelectDay: (ms: number) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
 }) {
   return (
     <div className="mx-auto max-w-2xl">
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
-        <motion.header variants={reveal} className="space-y-1">
-          <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-fg sm:text-3xl">Agenda</h1>
-          <p className="text-sm text-muted">Tus juntas de hoy y los próximos días, directo de tu calendario.</p>
+        <motion.header variants={reveal} className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-fg sm:text-3xl">Agenda</h1>
+            <p className="text-sm text-muted">Tus juntas de hoy y los próximos días, directo de tu calendario.</p>
+          </div>
+          {status === "ready" && <ModeToggle mode={mode} onMode={onMode} />}
         </motion.header>
 
         {status === "loading" ? (
@@ -205,6 +342,11 @@ export function AgendaBoard({
               Ir a Integraciones <ArrowRight size={15} />
             </Link>
           </motion.div>
+        ) : mode === "calendario" ? (
+          <CalendarMonth
+            events={calEvents} anchor={monthAnchor} selectedMs={selectedMs} now={now}
+            memberByEmail={memberByEmail} onSelect={onSelectDay} onPrev={onPrevMonth} onNext={onNextMonth}
+          />
         ) : !view || view.total === 0 ? (
           <motion.div variants={reveal} className="glass rounded-hero p-10 text-center sm:p-12">
             <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-surface-2 text-muted"><Coffee size={22} /></div>

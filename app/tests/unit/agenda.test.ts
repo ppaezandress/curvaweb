@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildAgenda, dayLabel, untilLabel, progressOf, minutesLabel, type AgendaEvent } from "@/lib/agenda";
+import {
+  buildAgenda, dayLabel, untilLabel, progressOf, minutesLabel,
+  buildMonthGrid, monthGridRange, shiftMonth, meetingsOn, type AgendaEvent,
+} from "@/lib/agenda";
 
 // Corre en America/Mexico_City (vitest config) para atrapar bugs de día local.
 const DAY_START = new Date(2026, 6, 15, 0, 0, 0, 0).getTime(); // miércoles 15 jul 2026, local
@@ -105,5 +108,56 @@ describe("minutesLabel", () => {
     expect(minutesLabel(45)).toBe("45 min");
     expect(minutesLabel(60)).toBe("1 h");
     expect(minutesLabel(90)).toBe("1 h 30 min");
+  });
+});
+
+describe("calendario (rejilla de mes)", () => {
+  // Ancla dentro de julio 2026 (miércoles 15).
+  const JULY = new Date(2026, 6, 15, 10, 0, 0).getTime();
+
+  it("la rejilla es 6×7, empieza en lunes y etiqueta el mes capitalizado", () => {
+    const g = buildMonthGrid([], JULY, JULY);
+    expect(g.weeks).toHaveLength(6);
+    expect(g.weeks.every((w) => w.length === 7)).toBe(true);
+    expect(g.weekdays[0]).toBe("L");
+    expect(g.label).toBe("Julio 2026");
+    // Julio 2026 empieza en miércoles → la 1a celda (lunes) es 29 jun, fuera de mes.
+    expect(g.weeks[0][0].inMonth).toBe(false);
+    expect(g.weeks[0][0].day).toBe(29);
+    // El día 1 de julio cae en la 1a semana, columna del miércoles (índice 2).
+    expect(g.weeks[0][2]).toMatchObject({ day: 1, inMonth: true });
+  });
+
+  it("marca hoy y cuenta las juntas por día", () => {
+    const at = (d: number, h: number) => new Date(2026, 6, d, h, 0, 0).getTime();
+    const ev = (id: string, d: number, h: number): AgendaEvent => ({ id, title: id, start: at(d, h), end: at(d, h) + 3_600_000, attendees: [] });
+    const g = buildMonthGrid([ev("a", 15, 9), ev("b", 15, 14), ev("c", 16, 10)], JULY, JULY);
+    const cell = (day: number) => g.weeks.flat().find((c) => c.inMonth && c.day === day)!;
+    expect(cell(15).isToday).toBe(true);
+    expect(cell(15).count).toBe(2);
+    expect(cell(16).count).toBe(1);
+    expect(cell(17).count).toBe(0);
+  });
+
+  it("monthGridRange cubre 42 días desde el lunes anterior al día 1", () => {
+    const { from, to } = monthGridRange(JULY);
+    expect(new Date(from).getDate()).toBe(29); // lunes 29 jun
+    expect(new Date(from).getMonth()).toBe(5); // junio
+    expect(Math.round((to - from) / 86_400_000)).toBe(42);
+  });
+
+  it("shiftMonth navega meses fijando el día 1", () => {
+    const prev = shiftMonth(JULY, -1);
+    const next = shiftMonth(JULY, 1);
+    expect(new Date(prev).getMonth()).toBe(5); // junio
+    expect(new Date(next).getMonth()).toBe(7); // agosto
+    expect(new Date(next).getDate()).toBe(1);
+  });
+
+  it("meetingsOn devuelve las juntas del día ordenadas", () => {
+    const at = (d: number, h: number) => new Date(2026, 6, d, h, 0, 0).getTime();
+    const ev = (id: string, d: number, h: number): AgendaEvent => ({ id, title: id, start: at(d, h), end: at(d, h) + 3_600_000, attendees: [] });
+    const evs = [ev("tarde", 15, 16), ev("otro-dia", 16, 9), ev("mañana", 15, 8)];
+    expect(meetingsOn(evs, at(15, 0)).map((e) => e.id)).toEqual(["mañana", "tarde"]);
   });
 });
