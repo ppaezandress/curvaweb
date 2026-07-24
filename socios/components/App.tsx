@@ -1578,12 +1578,15 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
   const editArea = (id: string, patch: Partial<{ nombre: string; peso: number }>) => setCfg({ areas: cfg.areas.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
 
   // Campo numérico reusable (dinero o cantidad, con sufijo opcional).
-  const cli = (label: string, val: number, on: (v: number) => void, o?: { money?: boolean; step?: number; suf?: string; ph?: string }) => (
-    <div className="cot-field">
-      <label>{label}</label>
-      <div className="num-in">{o?.money && <span className="fix">$</span>}<input type="number" min={0} step={o?.step ?? 1} value={val || ""} placeholder={o?.ph ?? "0"} onChange={(e) => on(Math.max(0, +e.target.value || 0))} />{o?.suf && <span className="fix">{o.suf}</span>}</div>
-    </div>
-  );
+  const cli = (label: string, val: number, on: (v: number) => void, o?: { money?: boolean; step?: number; suf?: string; ph?: string }) => {
+    const fid = "cot-" + label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    return (
+      <div className="cot-field">
+        <label htmlFor={fid}>{label}</label>
+        <div className="num-in">{o?.money && <span className="fix">$</span>}<input id={fid} type="number" min={0} step={o?.step ?? 1} value={val || ""} placeholder={o?.ph ?? "0"} onChange={(e) => on(Math.max(0, +e.target.value || 0))} />{o?.suf && <span className="fix">{o.suf}</span>}</div>
+      </div>
+    );
+  };
   // Contador con botones − / + (para nº de personas).
   const stepper = (label: string, val: number, on: (v: number) => void) => (
     <div className="cot-count">
@@ -1651,9 +1654,9 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
               <div className="cot-field">
                 <label>Viáticos (reembolso directo)</label>
                 <div className="cot-row3">
-                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} placeholder="Transp." value={form.transporte || ""} onChange={(e) => setF({ transporte: Math.max(0, +e.target.value || 0) })} /></div>
-                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} placeholder="TAG" value={form.tag || ""} onChange={(e) => setF({ tag: Math.max(0, +e.target.value || 0) })} /></div>
-                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} placeholder="Comida" value={form.comida || ""} onChange={(e) => setF({ comida: Math.max(0, +e.target.value || 0) })} /></div>
+                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} aria-label="Viáticos: transporte" placeholder="Transp." value={form.transporte || ""} onChange={(e) => setF({ transporte: Math.max(0, +e.target.value || 0) })} /></div>
+                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} aria-label="Viáticos: TAG (caseta)" placeholder="TAG" value={form.tag || ""} onChange={(e) => setF({ tag: Math.max(0, +e.target.value || 0) })} /></div>
+                  <div className="num-in"><span className="fix">$</span><input type="number" min={0} aria-label="Viáticos: comida" placeholder="Comida" value={form.comida || ""} onChange={(e) => setF({ comida: Math.max(0, +e.target.value || 0) })} /></div>
                 </div>
                 <p className="hint" style={{ marginBottom: 0 }}>Se suman tal cual (no dejan margen) + fee de presencialidad {cfg.pctPresencialidad}% sobre el subtotal.</p>
               </div>
@@ -2113,10 +2116,10 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
               {cajaRestante < 0 && <p className="hint" style={{ color: "var(--c-caja)", marginTop: 4 }}>Te pasaste del presupuesto de la caja por {fmtMXN(-cajaRestante)}.</p>}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.9fr 1fr 1.1fr", gap: 6, marginBottom: 6 }}>
-              <input type="text" placeholder="Concepto (ej. vuelo CDMX)" value={gConcepto} onChange={(e) => setGConcepto(e.target.value)} />
-              <div className="money-in"><span>$</span><input type="number" min={0} value={gMonto || ""} onChange={(e) => setGMonto(+e.target.value || 0)} /></div>
-              <select value={gCat} onChange={(e) => setGCat(e.target.value)}>{CAT_GASTO.map((c) => <option key={c} value={c}>{c}</option>)}</select>
-              <input type="date" value={gFecha} onChange={(e) => setGFecha(e.target.value)} />
+              <input type="text" aria-label="Concepto del gasto" placeholder="Concepto (ej. vuelo CDMX)" value={gConcepto} onChange={(e) => setGConcepto(e.target.value)} />
+              <div className="money-in"><span>$</span><input type="number" min={0} aria-label="Monto del gasto" value={gMonto || ""} onChange={(e) => setGMonto(+e.target.value || 0)} /></div>
+              <select aria-label="Categoría del gasto" value={gCat} onChange={(e) => setGCat(e.target.value)}>{CAT_GASTO.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+              <input type="date" aria-label="Fecha del gasto" value={gFecha} onChange={(e) => setGFecha(e.target.value)} />
             </div>
             <button className="btn primary" style={{ width: "100%", marginBottom: 10 }} disabled={gMonto <= 0 || !gConcepto.trim()} onClick={addGasto}><Plus size={14} /> Agregar gasto</button>
             {misGastos.length === 0 ? (
@@ -2800,31 +2803,31 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
   // Slider en % (0–100)
   const pct = (k: keyof Reglas, label: string, min: number, max: number, step = 1) => (
     <div className="field" style={rowStyle}>
-      <label style={{ margin: 0, flex: 1 }}>{label}</label>
-      <input style={{ flex: 1.3 }} type="range" min={min} max={max} step={step} value={P[k] as number} onChange={(e) => setN(k, +e.target.value)} />
+      <label htmlFor={String(k)} style={{ margin: 0, flex: 1 }}>{label}</label>
+      <input id={String(k)} style={{ flex: 1.3 }} type="range" min={min} max={max} step={step} value={P[k] as number} onChange={(e) => setN(k, +e.target.value)} />
       <span style={valStyle}>{P[k] as number}%</span>
     </div>
   );
   // Monto en $
   const money = (k: keyof Reglas, label: string) => (
     <div className="field" style={rowStyle}>
-      <label style={{ margin: 0, flex: 1 }}>{label}</label>
-      <div className="money-in" style={{ flex: 1.3 }}><span>$</span><input type="number" min={0} step={500} value={P[k] as number} onChange={(e) => setN(k, +e.target.value || 0)} /></div>
+      <label htmlFor={String(k)} style={{ margin: 0, flex: 1 }}>{label}</label>
+      <div className="money-in" style={{ flex: 1.3 }}><span>$</span><input id={String(k)} type="number" min={0} step={500} value={P[k] as number} onChange={(e) => setN(k, +e.target.value || 0)} /></div>
     </div>
   );
   // Multiplicador (peso o seniority)
   const mult = (k: keyof Reglas, label: string) => (
     <div className="field" style={rowStyle}>
-      <label style={{ margin: 0, flex: 1 }}>{label}</label>
-      <input style={numInput} type="number" min={0} step={0.1} value={P[k] as number} onChange={(e) => setN(k, +e.target.value || 0)} />
+      <label htmlFor={String(k)} style={{ margin: 0, flex: 1 }}>{label}</label>
+      <input id={String(k)} style={numInput} type="number" min={0} step={0.1} value={P[k] as number} onChange={(e) => setN(k, +e.target.value || 0)} />
       <span style={{ ...valStyle, minWidth: 20 }}>×</span>
     </div>
   );
   // Texto (nombres)
   const text = (k: keyof Reglas, label: string) => (
     <div className="field" style={rowStyle}>
-      <label style={{ margin: 0, flex: 1 }}>{label}</label>
-      <input style={{ flex: 1.3 }} type="text" value={P[k] as string} onChange={(e) => setS(k, e.target.value)} />
+      <label htmlFor={String(k)} style={{ margin: 0, flex: 1 }}>{label}</label>
+      <input id={String(k)} style={{ flex: 1.3 }} type="text" value={P[k] as string} onChange={(e) => setS(k, e.target.value)} />
     </div>
   );
 
