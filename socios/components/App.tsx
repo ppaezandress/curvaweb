@@ -2554,6 +2554,7 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
   const P = st.params;
   const proyectos = st.projects.filter((p) => !p.borrador && !p.soloRegistro); // los saldados (histórico) no cuentan en tesorería
   const [editSaldos, setEditSaldos] = useState(false);
+  const [extraMes, setExtraMes] = useState(0);   // gasto mensual extra a simular en el Runway
   const semillas = mergeSaldos(st.saldosIniciales); // saldo que ya tenías antes de la app
   const setSeed = (c: CajaKind, v: number) => update((s) => { s.saldosIniciales = { ...mergeSaldos(s.saldosIniciales), [c]: v }; return s; });
 
@@ -2630,9 +2631,51 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
     return s;
   });
 
+  // ── Runway: cuántos meses aguanta CURVA con el colchón (Ahorro CURVA) si no entra
+  //    un peso. Reserva = misma caja "Ahorro CURVA" que se muestra abajo. Costo fijo =
+  //    gastos SIN proyecto (el overhead de la empresa). Simulador de gasto extra. ──
+  const reservaAhorro = saldos.cajaAhorro + semillas.cajaAhorro;
+  const overheadMes = st.gastos.filter((g) => !g.proyectoId && !g.esIngreso).reduce((a, g) => a + (+g.m || 0), 0);
+  const costoSim = overheadMes + Math.max(0, extraMes);
+  const fmtMeses = (m: number): string => {
+    if (!isFinite(m) || m > 999) return "sin límite";
+    if (m <= 0.02) return "0 meses";
+    const meses = Math.floor(m), dias = Math.round((m - meses) * 30);
+    if (meses === 0) return `${dias} día${dias !== 1 ? "s" : ""}`;
+    return `${meses} ${meses === 1 ? "mes" : "meses"}${dias > 0 ? ` y ${dias} d` : ""}`;
+  };
+  const runwayBase = overheadMes > 0 ? reservaAhorro / overheadMes : Infinity;
+  const runwaySim = costoSim > 0 ? reservaAhorro / costoSim : Infinity;
+
   return (
     <>
       <div className="page-h"><div><h1>Cajas</h1><p>Tus cuentas de Revolut y a quién le debes de la masa salarial. Le transfieres a cada quien lo que ya cobraste y guardaste en cajas, sin esperar al 100% del proyecto.</p></div></div>
+
+      <div className="card rise runway-card">
+        <h2 style={{ marginTop: 0 }}>¿Cuánto aguanta CURVA?</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Con el colchón de Ahorro CURVA, cuántos meses cubres el costo fijo si <b>no entrara ni un peso nuevo</b>.</p>
+        {overheadMes <= 0 ? (
+          <p className="hint" style={{ margin: "8px 0 0" }}>Aún no capturas gastos fijos de la empresa (sin proyecto). Agrégalos en <button className="link" onClick={() => setSec("facturas")}>Facturas</button> para ver el aguante. Tu colchón hoy: <b>{fmtMXN(reservaAhorro)}</b>.</p>
+        ) : (
+          <>
+            <div className="runway-hero">
+              <div className="runway-big"><b>{fmtMeses(runwayBase)}</b><span>de aguante sin cobrar nada</span></div>
+              <div className="runway-facts">
+                <div className="rf"><span className="rf-l">Colchón (Ahorro CURVA)</span><span className="rf-v">{fmtMXN(reservaAhorro)}</span></div>
+                <div className="rf"><span className="rf-l">Costo fijo al mes</span><span className="rf-v">{fmtMXN(overheadMes)}</span></div>
+              </div>
+            </div>
+            <div className="runway-sim">
+              <div className="rs-head"><Calculator size={14} /> Simula: ¿y si sube el gasto mensual?</div>
+              <div className="rs-row">
+                <span>Sumar al mes (contratación, renta, herramienta…)</span>
+                <div className="money-in sm"><span>$</span><input type="number" step="500" min="0" value={extraMes || ""} placeholder="0" onChange={(e) => setExtraMes(Math.max(0, +e.target.value || 0))} aria-label="Gasto mensual extra a simular" /></div>
+              </div>
+              {extraMes > 0 && <p className="rs-out">Con <b>{fmtMXN(costoSim)}</b> de costo al mes, CURVA aguantaría <b>{fmtMeses(runwaySim)}</b> <span className="rs-was">(antes {fmtMeses(runwayBase)})</span>.</p>}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="rise">
         <div className="card">
