@@ -3,14 +3,14 @@ import { useEffect, useState, useCallback, useRef, Component, type ReactNode, ty
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange, Users, Share2, Copy, Settings, History,
+  Scale, CalendarRange, Users, Share2, Copy, Settings, History, Send,
 } from "lucide-react";
 import { cotizar, mergeCotConfig, COT_CONFIG_DEFAULT, COT_FORM_DEFAULT, type CotConfig, type CotForm } from "@/lib/cotizador";
 import {
   compute, fmtMXN, pctFmt, metaBanca, totalCliente, pctRecibido, desembolso, desembolsoDePago, agrupaCajas,
   cajaLabel, CAJA_ORDER, isSocio,
   repartoPorMes, ticketSinIVA, baseBolsaDesglose, reglasDifierenDinero, isrReservaDe,
-  todayISO, addMonths, mesLabel, mesDe, membersResolved, reglasDe,
+  todayISO, addMonths, mesLabel, mesDe, membersResolved, reglasDe, listoParaTransferir,
   REGLAS_DEFAULT, IVA, ROLNAME, type Proyecto, type Reglas, type Miembro, type Quien, type Pago, type ReparteMes,
   type EstadoProyecto, type Rol, type CajaKind, type CajaGrupo, type DatosBancarios,
 } from "@/lib/reparto";
@@ -550,6 +550,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
 
   // ── Proyección acumulada (todos los proyectos vivos, a valor completo) ──
   let sAndres = 0, sBalmo = 0, sEquipo = 0, sBancaAll = 0, sCobrado = 0, sTicket = 0, proysPorCobrar = 0, faltaCobrar = 0;
+  let vencidoTotal = 0, vencidoCount = 0; // cobros ATRASADOS: lo que el cliente ya debía según el calendario
   vivos.forEach((p) => {
     const rr = compute(membersResolved(p, st.roster, reglasDe(p, st.params)), reglasDe(p, st.params));
     sTicket += rr.t;
@@ -557,7 +558,20 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
     sCobrado += cobP;
     // "Por cobrar" = proyectos que YA arrancaron a cobrar pero les falta. La falta que se
     // muestra es la de ESOS proyectos (no el total, que mezclaba cotizaciones sin cobrar).
-    if (cobP > 0.5 && cobP < rr.t - 0.5) { proysPorCobrar++; faltaCobrar += rr.t - cobP; }
+    if (cobP > 0.5 && cobP < rr.t - 0.5) {
+      proysPorCobrar++; faltaCobrar += rr.t - cobP;
+      // Vencido = lo que YA se debería haber cobrado según meses transcurridos vs plazo.
+      // Solo sobre proyectos que ya arrancaron a cobrar (mismo filtro), para no marcar
+      // cotizaciones como atrasadas. esperado = ticket × (meses corridos / plazo).
+      const ini = (p.fechaInicio || todayISO()).slice(0, 7);
+      const [iy, im] = ini.split("-").map(Number);
+      const [cy, cm] = curYM.split("-").map(Number);
+      const plazoN = Math.max(1, Math.floor(p.plazoMeses || 1));
+      const corridos = Math.max(0, Math.min(plazoN, (cy - iy) * 12 + (cm - im) + 1));
+      const esperado = rr.t * (corridos / plazoN);
+      const venc = esperado - cobP;
+      if (venc > 1) { vencidoTotal += venc; vencidoCount++; }
+    }
     sBancaAll += rr.banca;
     Object.values(rr.people).forEach((a) => {
       const v = a.trabajo + a.extra + (a.comision || 0);
@@ -572,6 +586,9 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
   // Pendientes por atender (para el centro de mando).
   const porAutorizar = vivos.filter((p) => p.members.some((m) => typeof m.montoManual === "number") && !p.manualOK).length;
   const bancaCorta = M.banca < meta;
+  // Transferencias listas: dinero del equipo (meses completos guardados) listo para enviar.
+  // Mismo cálculo que la vista Cajas (helper compartido) para que cuadre al peso.
+  const transf = listoParaTransferir(st.projects, st.params, st.roster);
 
   // Flujo por mes (= ingreso del mes) y Cortes: derivados de porMes (todo devengado).
   const flujoVal = (x: MesAgg) => x.equipo + x.socios + x.banca + x.caja;
@@ -617,12 +634,14 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
         </div>
         <div className="atn-card">
           <div className="atn-head">Qué necesita tu atención</div>
-          {(porAutorizar + proysPorCobrar + (bancaCorta ? 1 : 0)) === 0 ? (
+          {(porAutorizar + proysPorCobrar + (bancaCorta ? 1 : 0) + (transf.total > 0.5 ? 1 : 0)) === 0 ? (
             <div className="atn-empty"><Check size={16} /> Todo al día. Nada pendiente.</div>
           ) : (
             <div className="atn-list">
               {porAutorizar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t"><b>{porAutorizar}</b> proyecto{porAutorizar !== 1 ? "s" : ""} por autorizar (sueldos a mano)</span><ChevronRight size={15} /></button>}
-              {proysPorCobrar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic cob"><Wallet size={15} /></span><span className="atn-t"><b>{proysPorCobrar}</b> proyecto{proysPorCobrar !== 1 ? "s" : ""} por cobrar · falta {fmtMXN(faltaCobrar)}</span><ChevronRight size={15} /></button>}
+              {vencidoTotal > 1 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic neg"><AlertTriangle size={15} /></span><span className="atn-t"><b>{fmtMXN(vencidoTotal)}</b> de cobro atrasado · el cliente ya debía haber pagado</span><ChevronRight size={15} /></button>}
+              {transf.total > 0.5 && <button className="atn-row" onClick={() => setSec?.("cajas")}><span className="atn-ic pos"><Send size={15} /></span><span className="atn-t"><b>{fmtMXN(transf.total)}</b> listo para enviar al equipo{transf.personas.length ? ` · ${transf.personas.length} ${transf.personas.length === 1 ? "persona" : "personas"}` : ""}</span><ChevronRight size={15} /></button>}
+              {proysPorCobrar > 0 && <button className="atn-row" onClick={() => setSec?.("proyectos")}><span className="atn-ic cob"><Wallet size={15} /></span><span className="atn-t"><b>{proysPorCobrar}</b> proyecto{proysPorCobrar !== 1 ? "s" : ""} por cobrar · falta {fmtMXN(faltaCobrar)} en total</span><ChevronRight size={15} /></button>}
               {bancaCorta && <button className="atn-row" onClick={() => setSec?.("cajas")}><span className="atn-ic warn"><AlertTriangle size={15} /></span><span className="atn-t">El Ahorro CURVA de {mesLabel(selYM)} va corto para la meta</span><ChevronRight size={15} /></button>}
             </div>
           )}

@@ -108,6 +108,8 @@ body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14.5px;line-hei
 .atn-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
 .atn-ic.warn{background:var(--warn-soft);color:var(--warn)}
 .atn-ic.cob{background:var(--cobalt-soft);color:var(--cobalt)}
+.atn-ic.pos{background:var(--pos-soft);color:var(--pos)}
+.atn-ic.neg{background:var(--neg-soft);color:var(--neg)}
 .atn-t{flex:1;font-size:13.5px;font-weight:500}.atn-t b{font-weight:750}
 .atn-row>svg:last-child{color:var(--muted);flex:none}
 @media(max-width:760px){.meta-nums b{font-size:26px}}

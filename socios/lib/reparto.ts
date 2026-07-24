@@ -599,3 +599,35 @@ export function reglasDe(pr: Proyecto, params: Reglas): Reglas {
   // sale siempre de las Reglas vivas (como los nombres), no mueve el reparto.
   return { ...pr.reglas, nombreA: params.nombreA, nombreB: params.nombreB, imp: params.imp };
 }
+
+// Total "listo para transferir" al equipo: meses COMPLETOS cobrados+guardados que
+// aún no se han pagado. Es la MISMA matemática que la vista Cajas (components/App.tsx,
+// función Cajas) — se extrae aquí para que el panel "qué atender" cuadre al peso con
+// Cajas. Si cambia la lógica en un lado, cambiarla en el otro. Excluye borradores y
+// proyectos histórico (soloRegistro), igual que Cajas.
+export function listoParaTransferir(
+  projects: Proyecto[], P: Reglas, roster: RosterPerson[]
+): { total: number; personas: { nombre: string; monto: number }[] } {
+  const porPersona: Record<string, number> = {};
+  projects.filter((p) => !p.borrador && !p.soloRegistro).forEach((p) => {
+    const R = reglasDe(p, P);
+    const r = compute(membersResolved(p, roster, R), R);
+    const ticket = r.t; if (ticket <= 0) return;
+    const enCaja = (p.pagos || []).filter((x) => x.desembolsado).reduce((a, x) => a + (+x.monto || 0), 0);
+    const plazoN = Math.max(1, Math.floor(p.plazoMeses || 1));
+    const mensualBase = ticket / plazoN;
+    const mesesListos = mensualBase > 0 ? Math.floor(enCaja / mensualBase + 0.02) : 0;
+    const pctTransfer = Math.min(1, mesesListos / plazoN);
+    Object.values(r.people).forEach((per) => {
+      if (isSocio(per.quien)) return;
+      const cut = per.trabajo + per.extra + (per.comision || 0);
+      if (cut <= 0.5) return;
+      const ep = p.equipoPagado?.[per.nombre];
+      const pagadoMonto = typeof ep === "string" ? cut : (ep?.monto || 0);
+      const listoPersona = Math.max(0, cut * pctTransfer - pagadoMonto);
+      if (listoPersona > 0.5) porPersona[per.nombre] = (porPersona[per.nombre] || 0) + listoPersona;
+    });
+  });
+  const personas = Object.entries(porPersona).map(([nombre, monto]) => ({ nombre, monto })).sort((a, b) => b.monto - a.monto);
+  return { total: personas.reduce((a, x) => a + x.monto, 0), personas };
+}
