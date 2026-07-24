@@ -955,9 +955,9 @@ function Crecimiento({ st, setSec }: { st: State; setSec: (s: string) => void })
   const P = st.params;
   const vivos = st.projects.filter((p) => (p.estado ?? "cotizacion") !== "cancelado" && !p.borrador);
 
-  type Mes = { ym: string; ingreso: number; equipo: number; socios: number; utilSocios: number; banca: number; caja: number };
+  type Mes = { ym: string; ingreso: number; equipo: number; socios: number; utilSocios: number; banca: number; caja: number; andres: number; balmo: number };
   const mm: Record<string, Mes> = {};
-  const nm = (ym: string): Mes => (mm[ym] = mm[ym] || { ym, ingreso: 0, equipo: 0, socios: 0, utilSocios: 0, banca: 0, caja: 0 });
+  const nm = (ym: string): Mes => (mm[ym] = mm[ym] || { ym, ingreso: 0, equipo: 0, socios: 0, utilSocios: 0, banca: 0, caja: 0, andres: 0, balmo: 0 });
   type Cli = { cliente: string; cobrado: number; ticket: number; margenAbs: number; n: number };
   const cli: Record<string, Cli> = {};
 
@@ -973,7 +973,7 @@ function Crecimiento({ st, setSec }: { st: State; setSec: (s: string) => void })
       M.banca += rr.banca * frac; M.caja += rr.cajaProj * frac;
       Object.values(rr.people).forEach((pe) => {
         const v = (pe.trabajo + pe.extra + (pe.comision || 0)) * frac;
-        if (isSocio(pe.quien)) { M.socios += v; M.utilSocios += pe.extra * frac; } else M.equipo += v;
+        if (isSocio(pe.quien)) { M.socios += v; M.utilSocios += pe.extra * frac; if (pe.quien === "socioA") M.andres += v; else M.balmo += v; } else M.equipo += v;
       });
     });
     if (cobP > 0.5) {
@@ -1063,6 +1063,26 @@ function Crecimiento({ st, setSec }: { st: State; setSec: (s: string) => void })
           ))}
         </div>
         {meses.length > 12 && <p className="foot">Mostrando los últimos 12 meses de {meses.length}.</p>}
+      </div>
+
+      <div className="card rise">
+        <h2>Lo que sacan los socios, mes a mes</h2>
+        <p className="hint" style={{ marginTop: 0 }}>Cuánto se llevó cada socio (trabajo + utilidad + comisión) según lo cobrado. La pregunta: <b>¿va creciendo tu parte?</b></p>
+        <div className="soc-tab">
+          <div className="soc-h"><span>Mes</span><span style={{ color: "var(--c-andres)" }}>{P.nombreA}</span><span style={{ color: "var(--c-balmo)" }}>{P.nombreB}</span></div>
+          {shown.map((m) => (
+            <div className="soc-row" key={m.ym}>
+              <span className="soc-m">{mesLabel(m.ym)}{m.ym === curYM ? " · hoy" : ""}</span>
+              <span className="soc-v">{fmtMXN(m.andres)}</span>
+              <span className="soc-v">{fmtMXN(m.balmo)}</span>
+            </div>
+          ))}
+          <div className="soc-row soc-tot">
+            <span className="soc-m">Total</span>
+            <span className="soc-v">{fmtMXN(meses.reduce((a, m) => a + m.andres, 0))}</span>
+            <span className="soc-v">{fmtMXN(meses.reduce((a, m) => a + m.balmo, 0))}</span>
+          </div>
+        </div>
       </div>
 
       <div className="card rise">
