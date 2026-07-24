@@ -602,7 +602,7 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
       </div>
       {allYM.length === 0 && vista === "real" && (
         <div className="card" style={{ textAlign: "center", padding: "28px 24px", marginBottom: 18 }}>
-          <p className="hint" style={{ margin: 0 }}>Aún no registras pagos cobrados. Marca los meses cobrados en <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setSec?.("proyectos")}>Proyectos</b>, o cambia a <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setVista("proy")}>Proyectado</b> para ver el plan.</p>
+          <p className="hint" style={{ margin: 0 }}>Aún no registras pagos cobrados. Marca los meses cobrados en <button className="link" onClick={() => setSec?.("proyectos")}>Proyectos</button>, o cambia a <button className="link" onClick={() => setVista("proy")}>Proyectado</button> para ver el plan.</p>
         </div>
       )}
 
@@ -926,7 +926,7 @@ function MiMes({ st, setSec, yoNombre }: { st: State; setSec: (s: string) => voi
 
           <div className="card">
             <h2>Reparto del mes por persona</h2>
-            <p className="hint" style={{ marginTop: 0 }}>Ordenado de mayor a menor. El <b>semáforo</b> avisa si alguien del equipo se dispara respecto al promedio (<span style={{ color: "var(--warn)", fontWeight: 700 }}>●</span> &gt;1.6× · <span style={{ color: "var(--neg)", fontWeight: 700 }}>●</span> &gt;2×). Los socios no se marcan: su utilidad es por diseño.</p>
+            <p className="hint" style={{ marginTop: 0 }}>Ordenado de mayor a menor. El <b>semáforo</b> avisa si alguien del equipo se dispara respecto al promedio (<span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--warn)", verticalAlign: "middle" }} /> &gt;1.6× · <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--neg)", verticalAlign: "middle" }} /> &gt;2×). Los socios no se marcan: su utilidad es por diseño.</p>
             {rows.length === 0 ? <div className="hint">Nadie trabaja proyectos este mes.</div> : (
               <div className="rank">
                 {rows.map((a, i) => {
@@ -1410,7 +1410,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                     <div className={"member-pay" + (comisEsManual ? " on" : "")} style={{ marginTop: 10 }}>
                       <span className="mp-l">Comisión {comisEsManual && <b className="mp-tag">a mano</b>}<span className="tip" data-tip={`Por default es el ${P.comisPct}% del margen (tope ${fmtMXN(P.comisTope)}). Ponla a mano si solo aplica al primer pago o quieres otro monto.`}><Info /></span></span>
                       <div className="money-in sm"><span>$</span><input type="number" min={0} value={Math.round(r.comis)} onChange={(e) => updateActive((p) => { p.comisManual = Math.max(0, Math.round(+e.target.value || 0)); })} title="Escribe la comisión exacta (ej. solo la del primer pago)." /></div>
-                      <button className="mp-auto" disabled={!comisEsManual} title={comisEsManual ? `Volver al ${P.comisPct}% automático` : "Cálculo automático"} onClick={() => updateActive((p) => { delete p.comisManual; })}>{comisEsManual ? "auto" : "auto ✓"}</button>
+                      <button className="mp-auto" disabled={!comisEsManual} title={comisEsManual ? `Volver al ${P.comisPct}% automático` : "Cálculo automático"} onClick={() => updateActive((p) => { delete p.comisManual; })}>{comisEsManual ? "auto" : <><Check size={11} /> auto</>}</button>
                     </div>
                   )}
                 </div>
@@ -1460,7 +1460,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
                   <div className={"member-pay" + (manual ? " on" : "")}>
                     <span className="mp-l">{esSocioM ? "Tu trabajo" : "Gana"}{plazoN > 1 ? "/mes" : ""} {manual && <b className="mp-tag">a mano</b>}<span className="tip" data-tip={esSocioM ? "Lo que cobras por TRABAJAR este proyecto (tu sombrero) — aparte de tu utilidad de socio. Edítalo a mano; la diferencia sale de la utilidad de los socios." : "Lo que gana por trabajar. Edítalo a mano y el extra sale de la utilidad de los socios."}><Info /></span></span>
                     <div className="money-in sm"><span>$</span><input type="number" min={0} value={Math.round(mensual)} onChange={(e) => setManual(+e.target.value || 0)} title="Escribe cuánto quieres que gane; el resto se ajusta y el extra sale de la utilidad de los socios." /></div>
-                    <button className="mp-auto" disabled={!manual} title={manual ? "Volver al cálculo automático" : "Cálculo automático"} onClick={clearManual}>{manual ? "auto" : "auto ✓"}</button>
+                    <button className="mp-auto" disabled={!manual} title={manual ? "Volver al cálculo automático" : "Cálculo automático"} onClick={clearManual}>{manual ? "auto" : <><Check size={11} /> auto</>}</button>
                   </div>
                 )}
               </div>
@@ -1613,7 +1613,7 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
             <h2>El proyecto</h2>
 
             <div className="cot-field">
-              <label>Áreas del proyecto <span className="tip" data-tip="El peso promedio de las áreas ajusta el precio ±10% por cada punto arriba/abajo de 3.">ⓘ</span></label>
+              <label>Áreas del proyecto <span className="tip" data-tip="El peso promedio de las áreas ajusta el precio ±10% por cada punto arriba/abajo de 3."><Info size={13} /></span></label>
               <div className="cot-areas">
                 {cfg.areas.map((a) => (
                   <button key={a.id} type="button" className={"cot-area" + (form.areasSel.includes(a.id) ? " on" : "")} onClick={() => toggleArea(a.id)}>
@@ -1693,7 +1693,7 @@ function Cotizador({ st, update }: { st: State; update: (fn: (s: State) => State
                 {r.nApoyo > 0 && <div className="bd-row sub"><span className="bl">Apoyo ×{r.nApoyo} <em className="cot-cada">{fmtMXN(r.pagoApoyoCada)} c/u</em></span><span className="bv">{fmtMXN(r.pagoApoyoTotal)}</span></div>}
 
                 {r.pilotoFuera && (
-                  <div className="alert warn cot-alert"><AlertTriangle size={15} /> <span>El pago del piloto (<b>{fmtMXN(r.pagoPiloto)}</b>) se sale del rango sano {fmtMXN(cfg.pilotoMin)}–{fmtMXN(cfg.pilotoMax)}. Calibra la <b className="cot-link" onClick={() => setModo("config")}>tarifa base</b> o ajusta las horas.</span></div>
+                  <div className="alert warn cot-alert"><AlertTriangle size={15} /> <span>El pago del piloto (<b>{fmtMXN(r.pagoPiloto)}</b>) se sale del rango sano {fmtMXN(cfg.pilotoMin)}–{fmtMXN(cfg.pilotoMax)}. Calibra la <button className="link" onClick={() => setModo("config")}>tarifa base</button> o ajusta las horas.</span></div>
                 )}
               </>
             )}
@@ -2032,7 +2032,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
           <div className="pdf-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pdf-modal-h">
               <div><b>Exportar PDF · {p.nombre}</b><div className="hint" style={{ margin: "2px 0 0" }}>Uno por persona. A quien no es socio no le aparece cuánto costó el proyecto.</div></div>
-              <button className="rmv" onClick={() => setPdfOpen(false)}>×</button>
+              <button className="rd-x" aria-label="Cerrar" onClick={() => setPdfOpen(false)}>×</button>
             </div>
             <div className="pdf-modal-list">
               {gentePdf.map((a) => {
@@ -2078,7 +2078,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
             <div className="pdf-modal" onClick={(e) => e.stopPropagation()}>
               <div className="pdf-modal-h">
                 <div><b>Reglas de {p.nombre}</b><div className="hint" style={{ margin: "2px 0 0" }}>{p.reglas ? "Parámetros congelados al guardar este proyecto. Solo lectura." : "Este proyecto aún usa las reglas actuales (sin foto congelada)."}</div></div>
-                <button className="rmv" onClick={() => setReglasOpen(false)}>×</button>
+                <button className="rd-x" aria-label="Cerrar" onClick={() => setReglasOpen(false)}>×</button>
               </div>
               <div style={{ display: "grid", gap: 6, fontSize: 14 }}>
                 {filas.map(([k, v]) => (
@@ -2102,7 +2102,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
           <div className="pdf-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pdf-modal-h">
               <div><b>Gastos de {p.nombre}</b><div className="hint" style={{ margin: "2px 0 0" }}>Salen de la caja del proyecto ({p.cajaPct}% del ticket = {fmtMXN(cajaBudget)}).</div></div>
-              <button className="rmv" onClick={() => setGastosOpen(false)}>×</button>
+              <button className="rd-x" aria-label="Cerrar" onClick={() => setGastosOpen(false)}>×</button>
             </div>
             <div style={{ marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 4 }}>
@@ -2133,7 +2133,7 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
                       <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}>
                         <span style={{ flex: 1 }}>{g.n} <span className="badge" style={{ opacity: 0.7, marginLeft: 4 }}>{g.categoria || "Otros"}</span></span>
                         <span style={{ fontFamily: "var(--mono)", fontWeight: 700 }}>{fmtMXN(g.m)}</span>
-                        <button className="rmv" onClick={() => g.id && delGasto(g.id)}>×</button>
+                        <button className="rmv" aria-label="Quitar gasto" onClick={() => g.id && delGasto(g.id)}>×</button>
                       </div>
                     ))}
                   </div>
@@ -2416,7 +2416,7 @@ function Cajas({ st, update, setSec, log }: { st: State; update: (fn: (s: State)
             <h2 style={{ margin: 0 }}>Masa salarial → equipo</h2>
             <div className="tes-sum"><span className="tes-listo">{fmtMXN(totalListo)} por pagar</span>{totalAcum > 0.5 && <span className="tes-acum">+ {fmtMXN(totalAcum)} acumulando</span>}</div>
           </div>
-          {!hayPagos && <div className="hint">Aún no hay pagos. Registra un cobro en <b style={{ cursor: "pointer", color: "var(--cobalt)" }} onClick={() => setSec("proyectos")}>Proyectos</b> y aquí verás a quién le debes.</div>}
+          {!hayPagos && <div className="hint">Aún no hay pagos. Registra un cobro en <button className="link" onClick={() => setSec("proyectos")}>Proyectos</button> y aquí verás a quién le debes.</div>}
           {hayPagos && filas.length === 0 && <div className="hint">Nadie del equipo tiene saldo pendiente ahora mismo.</div>}
           {filas.map((d) => <DeudaRow key={d.nombre} d={d} onPagar={() => pagarPersona(d.nombre, d.listos.map((x) => ({ id: x.id, monto: x.monto })))} />)}
           {pagados.length > 0 && <PagadosLista pagados={pagados} onDeshacer={deshacer} />}
@@ -2950,7 +2950,7 @@ function ReglasView({ st, update }: { st: State; update: (fn: (s: State) => Stat
                 <button key={q} className="chip-btn" aria-pressed={rp.quien === q} onClick={() => setRoster(rp.id, (r) => { r.quien = q; })}>{q === "nucleo" ? "Núcleo" : "Nuevo"}</button>
               ))}
             </div>
-            <button className="rmv" onClick={() => rmRoster(rp.id)}>×</button>
+            <button className="rmv" aria-label="Quitar persona" onClick={() => rmRoster(rp.id)}>×</button>
           </div>
         ))}
         <button className="add" onClick={addRoster}>+ Agregar persona al equipo</button>
