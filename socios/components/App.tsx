@@ -191,19 +191,34 @@ function initialState(): State {
   return { params: { ...REGLAS_DEFAULT }, gastos: DEF_GASTOS.slice(), projects: [p1, p2], roster: DEF_ROSTER.slice(), activeId: p1.id, rulesVersion: RULES_VERSION, saldosIniciales: { ...DEF_SALDOS }, banco: { ...DEF_BANCO }, cotConfig: mergeCotConfig(null) };
 }
 
+// Menú consolidado (7 secciones). Las familias con varias vistas viven en una sola
+// sección con sub-pestañas (SubNav): Panel=Ahora/Crecimiento · Equipo=Mi mes/Personas
+// · Dinero=Cajas/Facturas · Ajustes=Reglas/Actividad. Decisión Andrés 2026-07-24.
 const NAV = [
   { k: "panel", label: "Panel", Icon: LayoutDashboard },
-  { k: "crecimiento", label: "Crecimiento", Icon: TrendingUp },
   { k: "calculadora", label: "Calculadora", Icon: Calculator },
-  { k: "cotizador", label: "Cotizador", Icon: FileText },
   { k: "proyectos", label: "Proyectos", Icon: FolderKanban },
-  { k: "mimes", label: "Mi mes", Icon: Scale },
-  { k: "personas", label: "Personas", Icon: Users },
-  { k: "cajas", label: "Cajas", Icon: Wallet },
-  { k: "facturas", label: "Facturas", Icon: Receipt },
-  { k: "actividad", label: "Actividad", Icon: History },
-  { k: "reglas", label: "Reglas", Icon: SlidersHorizontal },
+  { k: "cotizador", label: "Cotizador", Icon: FileText },
+  { k: "equipo", label: "Equipo", Icon: Users },
+  { k: "dinero", label: "Dinero", Icon: Wallet },
+  { k: "ajustes", label: "Ajustes", Icon: SlidersHorizontal },
 ] as const;
+// Sub-pestaña inicial de cada sección agrupada.
+const SUB_DEFAULT: Record<string, string> = { panel: "ahora", equipo: "mimes", dinero: "cajas", ajustes: "reglas" };
+// Rutas viejas (usadas por botones internos "ver todo", "por cobrar", etc.) → sección + sub.
+const NAV_ALIAS: Record<string, [string, string]> = {
+  crecimiento: ["panel", "crecimiento"], mimes: ["equipo", "mimes"], personas: ["equipo", "personas"],
+  cajas: ["dinero", "cajas"], facturas: ["dinero", "facturas"], reglas: ["ajustes", "reglas"], actividad: ["ajustes", "actividad"],
+};
+
+// Sub-pestañas de una sección agrupada (segmented control, reusa .chip-btn).
+function SubNav({ items, val, set }: { items: [string, string][]; val: string; set: (v: string) => void }) {
+  return (
+    <div className="subnav chips">
+      {items.map(([v, l]) => <button key={v} type="button" className="chip-btn" aria-pressed={val === v} onClick={() => set(v)}>{l}</button>)}
+    </div>
+  );
+}
 
 // Red de seguridad: si una vista lanza una excepción en render (p. ej. un dato viejo
 // con forma rara), en vez de tumbar TODA la app (pantalla en blanco) mostramos un aviso
@@ -248,6 +263,15 @@ function IdentityGate({ nombreA, nombreB, onPick }: { nombreA: string; nombreB: 
 export default function App() {
   const [st, setSt] = useState<State | null>(null);
   const [sec, setSec] = useState<string>("panel");
+  const [subTab, setSubTab] = useState<Record<string, string>>(SUB_DEFAULT); // sub-pestaña activa por sección
+  // Navega respetando el menú consolidado: rutas viejas (cajas, actividad, mimes…) se
+  // redirigen a su sección + sub-pestaña. Se pasa a los hijos como su `setSec`.
+  const navTo = useCallback((key: string) => {
+    const a = NAV_ALIAS[key];
+    if (a) { setSubTab((s) => ({ ...s, [a[0]]: a[1] })); setSec(a[0]); }
+    else setSec(key);
+  }, []);
+  const setSub = (sec: string, v: string) => setSubTab((s) => ({ ...s, [sec]: v }));
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   // Identidad del socio en ESTE equipo (device-local). "A"=Andrés, "B"=Balmo. Sin
@@ -441,17 +465,27 @@ export default function App() {
 
       <main className="main">
         <ErrorBoundary key={sec}>
-          {sec === "panel" && <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={setSec} />}
-          {sec === "crecimiento" && <Crecimiento st={st} setSec={setSec} />}
-          {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={setSec} setToast={setToast} log={log} />}
-          {sec === "cotizador" && <Cotizador st={st} update={update} />}
+          {sec === "panel" && <>
+            <SubNav items={[["ahora", "Ahora"], ["crecimiento", "Crecimiento"]]} val={subTab.panel || "ahora"} set={(v) => setSub("panel", v)} />
+            {(subTab.panel || "ahora") === "ahora"
+              ? <Panel st={st} overhead={overhead} update={update} yoNombre={yoNombre} setSec={navTo} />
+              : <Crecimiento st={st} setSec={navTo} />}
+          </>}
+          {sec === "calculadora" && <Calculadora st={st} active={active} clientes={clientes} update={update} updateActive={updateActive} setSec={navTo} setToast={setToast} log={log} />}
           {sec === "proyectos" && <Proyectos st={st} update={update} otroNombre={otroNombre} log={log} setActive={(id) => { update((s) => { s.activeId = id; return s; }); setSec("calculadora"); }} />}
-          {sec === "mimes" && <MiMes st={st} setSec={setSec} yoNombre={yoNombre} />}
-          {sec === "personas" && <Personas st={st} />}
-          {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} log={log} />}
-          {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
-          {sec === "actividad" && <Actividad st={st} />}
-          {sec === "reglas" && <ReglasView st={st} update={update} log={log} setToast={setToast} />}
+          {sec === "cotizador" && <Cotizador st={st} update={update} />}
+          {sec === "equipo" && <>
+            <SubNav items={[["mimes", "Mi mes"], ["personas", "Personas"]]} val={subTab.equipo || "mimes"} set={(v) => setSub("equipo", v)} />
+            {(subTab.equipo || "mimes") === "mimes" ? <MiMes st={st} setSec={navTo} yoNombre={yoNombre} /> : <Personas st={st} />}
+          </>}
+          {sec === "dinero" && <>
+            <SubNav items={[["cajas", "Cajas"], ["facturas", "Facturas"]]} val={subTab.dinero || "cajas"} set={(v) => setSub("dinero", v)} />
+            {(subTab.dinero || "cajas") === "cajas" ? <Cajas st={st} update={update} setSec={navTo} log={log} /> : <Facturas st={st} clientes={clientes} update={update} />}
+          </>}
+          {sec === "ajustes" && <>
+            <SubNav items={[["reglas", "Reglas"], ["actividad", "Actividad"]]} val={subTab.ajustes || "reglas"} set={(v) => setSub("ajustes", v)} />
+            {(subTab.ajustes || "reglas") === "reglas" ? <ReglasView st={st} update={update} log={log} setToast={setToast} /> : <Actividad st={st} />}
+          </>}
         </ErrorBoundary>
       </main>
       {toast && <div className="toast"><Check size={15} /> {toast}</div>}
