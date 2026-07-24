@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { motion, type Variants } from "motion/react";
-import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles, List, CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarClock, Video, Users, Link2, Coffee, ArrowRight, Sparkles, List, CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
-import { Modal } from "@/components/Modal";
 import { cn } from "@/lib/cn";
 import type { Member } from "@/lib/mock-data";
 import {
@@ -200,10 +200,10 @@ function ModeToggle({ mode, onMode }: { mode: AgendaMode; onMode: (m: AgendaMode
 
 // Fila compacta de junta para el panel del día. Al tocarla abre el detalle (quién está);
 // el botón Unirse queda aparte.
-function CalRow({ ev, memberByEmail, onOpen }: { ev: AgendaEvent; memberByEmail: Record<string, Member>; onOpen: () => void }) {
+function CalRow({ ev, memberByEmail, onOpen }: { ev: AgendaEvent; memberByEmail: Record<string, Member>; onOpen: (rect: DOMRect) => void }) {
   return (
     <div className="flex items-center gap-3 rounded-control border border-line bg-surface px-3 py-2.5 transition hover:border-accent/30">
-      <button onClick={onOpen} className="focus-ring flex min-w-0 flex-1 items-center gap-3 rounded text-left">
+      <button onClick={(e) => onOpen(e.currentTarget.getBoundingClientRect())} className="focus-ring flex min-w-0 flex-1 items-center gap-3 rounded text-left">
         <div className="w-10 shrink-0">
           <p className="tabular text-sm font-bold text-fg">{hhmm(ev.start)}</p>
           <p className="tabular text-caption text-muted">{shortDur(Math.round((ev.end - ev.start) / 60_000))}</p>
@@ -221,52 +221,84 @@ function CalRow({ ev, memberByEmail, onOpen }: { ev: AgendaEvent; memberByEmail:
   );
 }
 
-// Detalle de una junta (al tocar un chip o una fila): quién está y botón para unirse.
-function MeetingDetailModal({ ev, memberByEmail, onClose }: { ev: AgendaEvent; memberByEmail: Record<string, Member>; onClose: () => void }) {
+// Nube de detalle: al tocar una junta en el calendario se abre un popover ANCLADO al chip
+// (como Google Calendar), no un modal centrado. Muestra quién está y el botón para unirse.
+function MeetingPopover({ ev, anchor, memberByEmail, onClose }: { ev: AgendaEvent; anchor: DOMRect; memberByEmail: Record<string, Member>; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  // Posición junto al chip, con flip (derecha→izquierda) y clamp al viewport. Se mide tras
+  // el primer render (por eso arranca invisible: nunca parpadea en el lugar equivocado).
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return;
+    const W = el.offsetWidth, Hh = el.offsetHeight, GAP = 8, PAD = 8;
+    let left = anchor.right + GAP;
+    if (left + W > window.innerWidth - PAD) left = anchor.left - W - GAP; // no cabe a la derecha → izquierda
+    left = Math.min(Math.max(PAD, left), window.innerWidth - W - PAD);
+    let top = anchor.top;
+    top = Math.min(Math.max(PAD, top), window.innerHeight - Hh - PAD);
+    setPos({ left, top });
+  }, [anchor]);
+
+  // Cerrar al hacer click fuera, con Escape o al hacer scroll (para que no quede colgada).
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onClose, true);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); window.removeEventListener("scroll", onClose, true); };
+  }, [onClose]);
+
   const d = new Date(ev.start);
   const date = d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
   const when = `${date.charAt(0).toUpperCase()}${date.slice(1)} · ${hhmm(ev.start)}–${hhmm(ev.end)}`;
-  return (
-    <Modal open onClose={onClose} title="Junta">
-      <div className="space-y-4">
-        <div>
-          <p className="font-display text-lg font-bold leading-snug text-fg">{ev.title}</p>
-          <p className="tabular mt-1 text-sm text-muted">{when}</p>
+
+  return createPortal(
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+      role="dialog"
+      style={{ position: "fixed", left: pos?.left ?? -9999, top: pos?.top ?? -9999, width: 300, maxWidth: "calc(100vw - 16px)", visibility: pos ? "visible" : "hidden" }}
+      className="z-[100] overflow-hidden rounded-card border border-line bg-[var(--surface-solid)] shadow-float"
+    >
+      <div className="flex items-start justify-between gap-2 p-3.5 pb-2">
+        <div className="min-w-0">
+          <p className="font-display text-base font-bold leading-snug text-fg">{ev.title}</p>
+          <p className="tabular mt-0.5 text-caption text-muted">{when}</p>
         </div>
-        {ev.attendees.length > 0 && (
-          <div>
-            <p className="mb-2 text-caption font-bold uppercase tracking-wide text-muted">Asistentes ({ev.attendees.length})</p>
-            <ul className="max-h-52 space-y-1.5 overflow-y-auto">
-              {ev.attendees.map((email) => {
-                const m = memberByEmail[email.toLowerCase()];
-                const name = m?.name || email.split("@")[0];
-                return (
-                  <li key={email} className="flex items-center gap-2.5">
-                    <Avatar member={m} name={m ? undefined : name} size={28} />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-fg">{name}</p>
-                      <p className="truncate text-caption text-muted">{email}</p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+        <button onClick={onClose} aria-label="Cerrar" className="focus-ring -mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface-2"><X size={15} /></button>
+      </div>
+      {ev.attendees.length > 0 && (
+        <div className="px-3.5 pb-1">
+          <p className="mb-1.5 text-caption font-semibold uppercase tracking-wide text-muted/80">Asistentes · {ev.attendees.length}</p>
+          <ul className="max-h-40 space-y-1 overflow-y-auto pr-1">
+            {ev.attendees.map((email) => {
+              const m = memberByEmail[email.toLowerCase()];
+              const name = m?.name || email.split("@")[0];
+              return (
+                <li key={email} className="flex items-center gap-2">
+                  <Avatar member={m} name={m ? undefined : name} size={22} />
+                  <span className="truncate text-xs text-fg">{name}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      <div className="p-3 pt-2">
         {ev.hangoutLink ? (
-          <a
-            href={ev.hangoutLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="glow-accent flex w-full items-center justify-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-white transition active:scale-[0.98]"
-          >
-            <Video size={16} /> Unirse a la videollamada
+          <a href={ev.hangoutLink} target="_blank" rel="noopener noreferrer" className="glow-accent flex w-full items-center justify-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition active:scale-[0.98]">
+            <Video size={15} /> Unirse
           </a>
         ) : (
-          <p className="rounded-control border border-line bg-surface-2/40 py-2.5 text-center text-caption text-muted">Sin videollamada</p>
+          <p className="rounded-control border border-line bg-surface-2/40 py-2 text-center text-caption text-muted">Sin videollamada</p>
         )}
       </div>
-    </Modal>
+    </motion.div>,
+    document.body,
   );
 }
 
@@ -298,7 +330,7 @@ function CalendarMonth({
   const grid = useMemo(() => buildMonthGrid(events, anchor, now), [events, anchor, now]);
   const selMeetings = useMemo(() => (selectedMs ? meetingsOn(events, selectedMs) : []), [events, selectedMs]);
   const selKey = selectedMs ? new Date(selectedMs).toDateString() : null;
-  const [detail, setDetail] = useState<AgendaEvent | null>(null); // junta abierta (detalle + unirse)
+  const [detail, setDetail] = useState<{ ev: AgendaEvent; rect: DOMRect } | null>(null); // nube abierta
 
   return (
     <motion.div variants={reveal} className="space-y-4">
@@ -366,7 +398,7 @@ function CalendarMonth({
                   {visible.map((ev) => (
                     <button
                       key={ev.id}
-                      onClick={() => setDetail(ev)}
+                      onClick={(e) => setDetail({ ev, rect: e.currentTarget.getBoundingClientRect() })}
                       title={ev.title}
                       className="focus-ring block w-full min-w-0 rounded text-left transition hover:brightness-95"
                     >
@@ -406,13 +438,13 @@ function CalendarMonth({
             <p className="rounded-card border border-line bg-surface px-3 py-4 text-center text-caption text-muted">Día despejado. Nada agendado.</p>
           ) : (
             <ul className="space-y-1.5">
-              {selMeetings.map((ev) => <li key={ev.id}><CalRow ev={ev} memberByEmail={memberByEmail} onOpen={() => setDetail(ev)} /></li>)}
+              {selMeetings.map((ev) => <li key={ev.id}><CalRow ev={ev} memberByEmail={memberByEmail} onOpen={(rect) => setDetail({ ev, rect })} /></li>)}
             </ul>
           )}
         </motion.div>
       )}
 
-      {detail && <MeetingDetailModal ev={detail} memberByEmail={memberByEmail} onClose={() => setDetail(null)} />}
+      {detail && <MeetingPopover ev={detail.ev} anchor={detail.rect} memberByEmail={memberByEmail} onClose={() => setDetail(null)} />}
     </motion.div>
   );
 }
