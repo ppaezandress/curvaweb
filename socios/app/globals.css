@@ -121,6 +121,10 @@ body{margin:0;color:var(--ink);font-family:var(--sans);font-size:14.5px;line-hei
 .bita-t b{color:var(--ink);font-weight:650}
 .bita-det{color:var(--ink);font-weight:500}
 .bita-ago{font-size:12px;color:var(--muted);font-family:var(--mono);white-space:nowrap;flex:none}
+/* Vista Actividad: registro completo agrupado por día */
+.acti{display:flex;flex-direction:column;gap:22px}
+.acti-day-h{display:flex;align-items:center;gap:9px;font-family:var(--sans);font-weight:600;font-size:13px;letter-spacing:-.01em;color:var(--cobalt);text-transform:capitalize;margin:0 2px 8px}
+.acti-day-c{font-size:11px;font-weight:600;color:var(--muted);background:var(--border);border-radius:99px;padding:1px 8px;text-transform:none}
 
 /* Foco de teclado visible en TODO lo interactivo (a11y — antes solo inputs lo tenían) */
 *:focus{outline:none}

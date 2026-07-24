@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef, Component, type ReactNode, ty
 import {
   LayoutDashboard, Calculator, FolderKanban, Receipt, SlidersHorizontal, UploadCloud, Check,
   FileText, Plus, ChevronDown, ChevronRight, ArrowRight, Wallet, Info, RotateCcw, AlertTriangle, Trash2,
-  Scale, CalendarRange, Users, Share2, Copy, Settings,
+  Scale, CalendarRange, Users, Share2, Copy, Settings, History,
 } from "lucide-react";
 import { cotizar, mergeCotConfig, COT_CONFIG_DEFAULT, COT_FORM_DEFAULT, type CotConfig, type CotForm } from "@/lib/cotizador";
 import {
@@ -199,6 +199,7 @@ const NAV = [
   { k: "personas", label: "Personas", Icon: Users },
   { k: "cajas", label: "Cajas", Icon: Wallet },
   { k: "facturas", label: "Facturas", Icon: Receipt },
+  { k: "actividad", label: "Actividad", Icon: History },
   { k: "reglas", label: "Reglas", Icon: SlidersHorizontal },
 ] as const;
 
@@ -446,6 +447,7 @@ export default function App() {
           {sec === "personas" && <Personas st={st} />}
           {sec === "cajas" && <Cajas st={st} update={update} setSec={setSec} log={log} />}
           {sec === "facturas" && <Facturas st={st} clientes={clientes} update={update} />}
+          {sec === "actividad" && <Actividad st={st} />}
           {sec === "reglas" && <ReglasView st={st} update={update} />}
         </ErrorBoundary>
       </main>
@@ -693,8 +695,11 @@ function Panel({ st, overhead, update, yoNombre, setSec }: { st: State; overhead
 
       {(st.bitacora || []).length > 0 && (
         <div className="card rise">
-          <h2>Últimos movimientos</h2>
-          <div className="bita">
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <h2 style={{ marginBottom: 0 }}>Últimos movimientos</h2>
+            <button className="link" onClick={() => setSec?.("actividad")}>Ver todo →</button>
+          </div>
+          <div className="bita" style={{ marginTop: 10 }}>
             {(st.bitacora || []).slice(0, 8).map((e) => {
               const quien = e.who === "A" ? st.params.nombreA : e.who === "B" ? st.params.nombreB : "Alguien";
               return (
@@ -846,6 +851,73 @@ function FirmaEditor({ nombreA, nombreB }: { nombreA: string; nombreB: string })
       </div>
       <p className="hint" style={{ marginTop: 8 }}>Cada firma se guarda solo en <b>este equipo</b> (no sube al servidor). Cada socio puede firmar en su propia compu. Al generar un comprobante eliges quién firma.</p>
     </div>
+  );
+}
+
+/* ---------------- Actividad (bitácora completa: quién hizo qué) ----------------
+   El registro de todo lo que Andrés y Balmo hacen en la app, agrupado por día y
+   filtrable por socio. Se alimenta de st.bitacora (máx 120, recientes primero) y
+   se sincroniza entre los dos. Es el rastro de accountability del Nivel 2. */
+function Actividad({ st }: { st: State }) {
+  const [filtro, setFiltro] = useState<"all" | "A" | "B">("all");
+  const nombreDe = (w: "A" | "B" | null) => (w === "A" ? st.params.nombreA : w === "B" ? st.params.nombreB : "Alguien");
+  const eventos = (st.bitacora || []).filter((e) => filtro === "all" || e.who === filtro);
+
+  // Agrupar por día calendario, con etiqueta Hoy / Ayer / fecha.
+  const hoyD = new Date().toDateString();
+  const ayerD = new Date(Date.now() - 86400000).toDateString();
+  const dayLabel = (ts: number) => {
+    const d = new Date(ts).toDateString();
+    if (d === hoyD) return "Hoy";
+    if (d === ayerD) return "Ayer";
+    return new Date(ts).toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  };
+  const grupos: { label: string; items: LogEvent[] }[] = [];
+  eventos.forEach((e) => {
+    const lbl = dayLabel(e.ts);
+    const last = grupos[grupos.length - 1];
+    if (last && last.label === lbl) last.items.push(e);
+    else grupos.push({ label: lbl, items: [e] });
+  });
+
+  return (
+    <>
+      <div className="page-h"><div><h1>Actividad</h1><p>Todo lo que hacen {st.params.nombreA} y {st.params.nombreB} en la app, con quién y cuándo. El registro para que nada quede sin rastro.</p></div></div>
+      <div className="proj-bar" style={{ marginBottom: 16 }}>
+        <div className="pb-group"><span className="pb-cap">Quién</span>
+          <div className="chips">
+            <button className="chip-btn sm" aria-pressed={filtro === "all"} onClick={() => setFiltro("all")}>Todos</button>
+            <button className="chip-btn sm" aria-pressed={filtro === "A"} onClick={() => setFiltro("A")}>{st.params.nombreA}</button>
+            <button className="chip-btn sm" aria-pressed={filtro === "B"} onClick={() => setFiltro("B")}>{st.params.nombreB}</button>
+          </div>
+        </div>
+      </div>
+      {eventos.length === 0 ? (
+        <div className="card" style={{ textAlign: "center", padding: "34px 24px" }}>
+          <p className="hint" style={{ margin: 0 }}>Aún no hay actividad {filtro !== "all" ? `de ${nombreDe(filtro)}` : "registrada"}. En cuanto guarden un proyecto, registren un pago o autoricen algo, aparecerá aquí.</p>
+        </div>
+      ) : (
+        <div className="acti">
+          {grupos.map((g) => (
+            <div key={g.label}>
+              <div className="acti-day-h">{g.label}<span className="acti-day-c">{g.items.length}</span></div>
+              <div className="card" style={{ padding: "4px 18px" }}>
+                <div className="bita">
+                  {g.items.map((e) => (
+                    <div key={e.id} className="bita-row">
+                      <span className={"bita-dot " + (e.who === "A" ? "a" : e.who === "B" ? "b" : "")} />
+                      <span className="bita-t"><b>{nombreDe(e.who)}</b> {e.act}{e.det ? <> · <span className="bita-det">{e.det}</span></> : null}</span>
+                      <span className="bita-ago">{agoStr(e.ts)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+          <p className="foot" style={{ marginTop: 2 }}>Se guardan los últimos 120 movimientos, sincronizados entre los dos socios.</p>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1320,7 +1392,7 @@ function Calculadora({ st, active, clientes, update, updateActive, setSec, setTo
         <div className="pb-actions">
           <button className="btn" title="Empieza (o continúa) un borrador sin guardar" onClick={nuevoBorrador}><Plus size={15} /> Nuevo</button>
           {confirmDescartar
-            ? <span className="pcard-delc">¿{active.borrador ? "Descartar borrador" : "Borrar proyecto"}? <button className="btn danger" onClick={active.borrador ? descartarBorrador : () => { update((s) => { s.projects = s.projects.filter((x) => x.id !== s.activeId); s.activeId = s.projects[0]?.id || ""; return s; }); setConfirmDescartar(false); }}>Sí</button><button className="btn ghost" onClick={() => setConfirmDescartar(false)}>No</button></span>
+            ? <span className="pcard-delc">¿{active.borrador ? "Descartar borrador" : "Borrar proyecto"}? <button className="btn danger" onClick={active.borrador ? descartarBorrador : () => { const nom = active.nombre; update((s) => { s.projects = s.projects.filter((x) => x.id !== s.activeId); s.activeId = s.projects[0]?.id || ""; return s; }); log?.("borró un proyecto", nom); setConfirmDescartar(false); }}>Sí</button><button className="btn ghost" onClick={() => setConfirmDescartar(false)}>No</button></span>
             : <button className="btn danger" title={active.borrador ? "Descarta este borrador" : "Borra el proyecto abierto"} onClick={() => setConfirmDescartar(true)}>{active.borrador ? "Descartar" : "Borrar"}</button>}
           <button className="btn primary" title={active.borrador ? "Guarda este proyecto y deja la Calculadora lista para el siguiente" : "Re-guarda este proyecto (congela sus reglas con las de hoy)"} onClick={guardarYNuevo}>{active.borrador ? <>Guardar proyecto <ArrowRight size={15} /></> : <>Actualizar <ArrowRight size={15} /></>}</button>
         </div>
@@ -1924,11 +1996,14 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
   };
   const exportPersona = (persona: string) => { abrirPdf(persona); setExported((s) => new Set(s).add(persona)); };
   const pagos = p.pagos || [];
-  const doDelete = () => update((s) => {
-    s.projects = s.projects.filter((x) => x.id !== p.id);
-    if (s.activeId === p.id) s.activeId = s.projects[0]?.id || "";
-    return s;
-  });
+  const doDelete = () => {
+    update((s) => {
+      s.projects = s.projects.filter((x) => x.id !== p.id);
+      if (s.activeId === p.id) s.activeId = s.projects[0]?.id || "";
+      return s;
+    });
+    log?.("borró un proyecto", p.nombre);
+  };
   const cobrado = pagos.reduce((a, x) => a + (+x.monto || 0), 0);
   const rec = pctRecibido(p);
   const plN = Math.max(1, Math.floor(p.plazoMeses || 1));
@@ -1956,10 +2031,16 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
   const cajaBudget = cajaMonto(p), gastado = sumaGastos(misGastos), cajaRestante = cajaBudget - gastado;
   const addGasto = () => {
     if (gMonto <= 0 || !gConcepto.trim()) return;
-    update((s) => { s.gastos.push({ id: uid(), n: gConcepto.trim(), m: Math.round(gMonto), categoria: gCat, fecha: gFecha, proyectoId: p.id }); return s; });
+    const concepto = gConcepto.trim(), monto = Math.round(gMonto);
+    update((s) => { s.gastos.push({ id: uid(), n: concepto, m: monto, categoria: gCat, fecha: gFecha, proyectoId: p.id }); return s; });
+    log?.("registró un gasto", `${fmtMXN(monto)} · ${concepto} en ${p.nombre}`);
     setGConcepto(""); setGMonto(0);
   };
-  const delGasto = (id: string) => update((s) => { s.gastos = s.gastos.filter((g) => g.id !== id); return s; });
+  const delGasto = (id: string) => {
+    const g = gastos.find((x) => x.id === id);
+    update((s) => { s.gastos = s.gastos.filter((x) => x.id !== id); return s; });
+    log?.("borró un gasto", g ? `${fmtMXN(g.m)} · ${g.n}` : p.nombre);
+  };
 
   return (
     <div className={"pcard" + (open ? " open" : "")}>
@@ -2004,8 +2085,8 @@ function ProyectoCard({ p, params, roster, gastos, open, onToggle, update, setAc
             <button className="btn ghost" onClick={() => compartir(`Reparto · ${p.nombre}`, textoReparto())}><Share2 size={14} /> WhatsApp</button>
             <button className="btn ghost" title={p.soloRegistro ? "Volver a contar este proyecto en los saldos de las Cajas." : "Ya saldado: se queda en el historial pero deja de contar en los saldos de las Cajas (su dinero ya salió)."} onClick={() => upP((x) => { x.soloRegistro = !x.soloRegistro; })}>{p.soloRegistro ? <><RotateCcw size={14} /> Volver a Cajas</> : <><Check size={14} /> Fuera de cajas</>}</button>
             {estado === "cancelado"
-              ? <button className="btn ghost" title="Reactivar: el estado vuelve a calcularse solo según lo cobrado" onClick={() => upP((x) => { x.estado = undefined; })}><RotateCcw size={14} /> Reactivar</button>
-              : <button className="btn ghost" title="Marca el proyecto como cancelado (sale de los totales)" onClick={() => upP((x) => { x.estado = "cancelado"; })}><Trash2 size={14} /> Cancelar</button>}
+              ? <button className="btn ghost" title="Reactivar: el estado vuelve a calcularse solo según lo cobrado" onClick={() => { upP((x) => { x.estado = undefined; }); log?.("reactivó un proyecto", p.nombre); }}><RotateCcw size={14} /> Reactivar</button>
+              : <button className="btn ghost" title="Marca el proyecto como cancelado (sale de los totales)" onClick={() => { upP((x) => { x.estado = "cancelado"; }); log?.("canceló un proyecto", p.nombre); }}><Trash2 size={14} /> Cancelar</button>}
           </div>
 
           <MesesProgreso p={p} cobradoMes={cobradoMes} onToggle={toggleMes} />
