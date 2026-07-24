@@ -27,14 +27,15 @@ export type GEvent = {
   hangoutLink?: string; // si es videollamada
 };
 
-// Lista eventos (singleEvents) en una ventana de tiempo.
-export async function listEvents(accessToken: string, timeMin: Date, timeMax: Date): Promise<GEvent[]> {
+// Lista eventos (singleEvents) en una ventana de tiempo. `max` sube el tope para ventanas
+// largas (p. ej. la semana): la vista de hoy pide 25, la agenda de 7 días pide más.
+export async function listEvents(accessToken: string, timeMin: Date, timeMax: Date, max = 25): Promise<GEvent[]> {
   const p = new URLSearchParams({
     timeMin: timeMin.toISOString(),
     timeMax: timeMax.toISOString(),
     singleEvents: "true",
     orderBy: "startTime",
-    maxResults: "25",
+    maxResults: String(max),
   });
   const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${p}`, {
     headers: { Authorization: `Bearer ${accessToken}` },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CalendarClock, Video, ChevronRight } from "lucide-react";
 
 type Ev = { id: string; title: string; start: number; end: number; attendees: string[]; hangoutLink?: string };
@@ -13,6 +14,10 @@ const hhmm = (ms: number) =>
 // resalta la que está en curso. Si no hay Google Calendar conectado, no renderiza nada.
 export function TodayMeetings() {
   const [events, setEvents] = useState<Ev[] | null>(null);
+  // "now" se captura en el callback de fetch (no en render): leer Date.now() durante el
+  // render es impuro (react-hooks/purity). Se refresca en cada carga; para una lista de
+  // juntas basta esa resolución (los badges "en curso"/"pronto" no necesitan el segundo).
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -20,7 +25,7 @@ export function TodayMeetings() {
       if (typeof document !== "undefined" && document.hidden) return;
       fetch("/api/gcal/day")
         .then((r) => r.json())
-        .then((d) => { if (alive && d.connected) setEvents((d.events as Ev[]) || []); })
+        .then((d) => { if (alive && d.connected) { setNow(Date.now()); setEvents((d.events as Ev[]) || []); } })
         .catch(() => {});
     };
     load();
@@ -30,7 +35,6 @@ export function TodayMeetings() {
 
   if (!events || events.length === 0) return null;
 
-  const now = Date.now();
   const upcoming = [...events].sort((a, b) => a.start - b.start).filter((e) => e.end > now - 15 * 60_000);
   if (upcoming.length === 0) return null;
 
@@ -40,6 +44,9 @@ export function TodayMeetings() {
         <CalendarClock size={15} className="text-accent" />
         <h3 className="text-sm font-bold text-fg">Juntas de hoy</h3>
         <span className="rounded-full bg-surface-2 px-1.5 text-caption font-semibold text-muted">{upcoming.length}</span>
+        <Link href="/agenda" className="ml-auto text-caption font-semibold text-accent transition hover:opacity-80 focus-ring">
+          Mi semana →
+        </Link>
       </div>
       <ul className="space-y-1.5">
         {upcoming.slice(0, 5).map((e) => {

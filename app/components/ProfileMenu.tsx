@@ -4,7 +4,7 @@ import { toast } from "@/lib/toast";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
-import { Camera, LogOut, Loader2, Settings, FolderOpen, Crop } from "lucide-react";
+import { Camera, LogOut, Loader2, Settings, FolderOpen, Crop, CalendarClock } from "lucide-react";
 import { popover } from "@/lib/motion";
 import { useApp } from "@/lib/app-context";
 import { useData } from "@/lib/data-context";
@@ -139,6 +139,9 @@ export function ProfileMenu() {
               <Crop size={16} /> Ajustar foto actual
             </button>
           )}
+          <Link href="/agenda" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
+            <CalendarClock size={16} /> Mi semana
+          </Link>
           <Link href="/recursos" onClick={() => setOpen(false)} className="flex w-full items-center gap-2.5 border-t border-line px-4 py-3 text-sm text-muted transition hover:bg-surface-2">
             <FolderOpen size={16} /> Recursos
           </Link>
